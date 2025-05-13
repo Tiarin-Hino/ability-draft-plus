@@ -1,0 +1,29 @@
+{
+  "name": "dota-ad-overlay",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "rebuild-sqlite3": "electron-rebuild -f -w better-sqlite3",
+    "rebuild-sharp": "electron-rebuild -f -w sharp",
+    "rebuild-tensorflow": "electron-rebuild -f -w @tensorflow/tfjs-node -v 31.7.7"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "@electron/rebuild": "^4.0.1"
+  },
+  "dependencies": {
+    "@tensorflow/tfjs-node": "^4.22.0",
+    "axios": "^1.8.4",
+    "better-sqlite3": "^11.9.1",
+    "cheerio": "^1.0.0",
+    "imghash": "^0.0.9",
+    "screenshot-desktop": "^1.15.1",
+    "setuptools": "^0.0.1",
+    "sharp": "^0.34.1"
+  }
+}

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
+    <title>Dota AD Overlay Control</title>
+    </head>
+<body>
+    <h1>Dota AD Overlay Control</h1>
+
+    <div>
+        <p>Fetch hero winrates from windrun.io.</p>
+        <button id="update-heroes-btn">Update Hero Winrates</button>
+    </div>
+    <hr>
+
+    <div>
+        <p>Fetch ability winrates (Regular & High-Skill) from windrun.io.</p>
+        <button id="update-abilities-btn">Update Ability Winrates</button>
+    </div>
+    <hr>
+
+    <div>
+         <p>Fetch ability pair winrates (>50%) from windrun.io.</p>
+        <button id="update-pairs-btn">Update Ability Pairs</button>
+    </div>
+    <hr>
+
+    <div>
+        <p>Manually scan the current draft screen (e.g., 2560x1440) to identify abilities.</p>
+        <button id="scan-draft-btn">Scan Draft Screen</button>
+    </div>
+    <hr>
+
+    <p id="status-message">Ready.</p>
+    <hr>
+
+    <h2>Scan Results:</h2>
+    <pre id="scan-results">Scan results will appear here...</pre>
+    <br> <script src="./renderer.js"></script>
+</body>
+</html>
