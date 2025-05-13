@@ -1,4 +1,3 @@
-// preload.js
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -9,15 +8,21 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Ability scraping trigger
   scrapeAbilities: () => ipcRenderer.send('scrape-abilities'),
 
-  // Ability Pairs scraping trigger (NEW)
+  // Ability Pairs scraping trigger
   scrapeAbilityPairs: () => ipcRenderer.send('scrape-ability-pairs'),
 
-  // Screen Scanning trigger (NEW)
-  scanDraftScreen: () => ipcRenderer.send('scan-draft-screen'),
+  // Screen Scanning trigger (now accepts resolution)
+  scanDraftScreen: (resolution) => ipcRenderer.send('scan-draft-screen', resolution),
+
+  // Request available resolutions
+  getAvailableResolutions: () => ipcRenderer.send('get-available-resolutions'),
 
   // Listener for status updates (reused for all)
   onUpdateStatus: (callback) => ipcRenderer.on('scrape-status', (_event, message) => callback(message)),
 
-  // Listener for scan results (NEW)
+  // Listener for scan results
   onScanResults: (callback) => ipcRenderer.on('scan-results', (_event, results) => callback(results)),
+
+  // Listener for available resolutions
+  onAvailableResolutions: (callback) => ipcRenderer.on('available-resolutions', (_event, resolutions) => callback(resolutions)),
 });

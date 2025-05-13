@@ -1,4 +1,3 @@
-// src/imageProcessor.js
 const fs = require('fs').promises; // Using synchronous fs.readFileSync for class_names for simplicity at startup
 const path = require('path');
 const screenshot = require('screenshot-desktop');
@@ -65,7 +64,6 @@ async function identifySlots(slotCoords, screenBuffer, currentClassNames) { // P
 
     for (let i = 0; i < slotCoords.length; i++) {
         const slotData = slotCoords[i];
-        if (!slotData /* ... basic coordinate validation ... */) { /* ... */ continue; }
         const { x, y, width, height } = slotData;
         let predictedAbilityName = null;
         const tensorsToDispose = [];
@@ -126,7 +124,7 @@ async function identifySlots(slotCoords, screenBuffer, currentClassNames) { // P
  * @returns {Promise<{ultimates: (string|null)[], standard: (string|null)[]}>} - Raw predicted ability names.
  */
 async function processDraftScreen(coordinatesPath, targetResolution) {
-    console.log('Starting screen processing with ML Model...');
+    console.log(`Starting screen processing with ML Model for ${targetResolution}...`); // Log it
 
     // Await both promises here to ensure they are resolved before proceeding
     const model = await modelPromise;
@@ -158,10 +156,13 @@ async function processDraftScreen(coordinatesPath, targetResolution) {
     try {
         const configData = await fs.readFile(coordinatesPath, 'utf-8');
         layoutConfig = JSON.parse(configData);
-    } catch (err) { /* ... error handling ... */ throw err; }
+    } catch (err) { throw err; }
 
     const coords = layoutConfig.resolutions?.[targetResolution];
-    if (!coords /* ... */) { /* ... */ throw new Error("Coordinates not found"); }
+    if (!coords) { 
+        console.error(`Coordinates not found for resolution: ${targetResolution} in ${coordinatesPath}`);
+        throw new Error(`Coordinates not found for resolution: ${targetResolution}`); 
+    }
     const { ultimate_slots_coords, standard_slots_coords } = coords;
     console.log(`Coordinates loaded. Processing ${ultimate_slots_coords.length} ult slots and ${standard_slots_coords.length} std slots.`);
 
@@ -169,7 +170,7 @@ async function processDraftScreen(coordinatesPath, targetResolution) {
     try {
         screenshotBuffer = await screenshot({ format: 'png' });
         console.log('Screenshot captured.');
-    } catch (err) { /* ... error handling ... */ throw err; }
+    } catch (err) { throw err; }
 
     console.log('Identifying ultimate slots using ML...');
     const identifiedUltimates = await identifySlots(ultimate_slots_coords, screenshotBuffer, resolvedClassNames); // Pass classNames
