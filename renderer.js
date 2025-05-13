@@ -118,37 +118,35 @@ if (window.electronAPI) {
 
     // --- Handle Scan Results from Main Process ---
     window.electronAPI.onScanResults((results) => {
-        console.log('Scan results received:', results);
+        console.log('Scan results/status received in main window renderer:', results);
         let output = '';
+        setButtonsState(false); // Always re-enable buttons on completion or error
+
         if (results && results.error) {
-            output = `Error during scan: ${results.error}`;
-            if (statusMessage) statusMessage.textContent = `Scan failed.`;
-        } else if (results) {
+            output = `Error during scan: ${results.error}\nResolution: ${results.resolution || selectedResolution}\nDuration: ${results.durationMs} ms`;
+            if (statusMessage) statusMessage.textContent = `Scan failed. See details below.`;
+        } else if (results && results.success) {
+            // Overlay was launched, main window is likely hidden.
+            // This message is mostly for logging or if the main window is shown again.
+            output = `${results.message}\nResolution: ${results.resolution}\nDuration: ${results.durationMs} ms.`;
+            if (statusMessage) statusMessage.textContent = `Scan successful. Overlay active.`;
+        } else if (results) { // Fallback for old style results if overlay didn't launch
             const ultimates = Array.isArray(results.ultimates) ? results.ultimates : [];
             const standard = Array.isArray(results.standard) ? results.standard : [];
             const durationMs = typeof results.durationMs === 'number' ? results.durationMs : 'N/A';
 
-            const formatWinrate = (rate) => {
-                if (rate === null || typeof rate !== 'number') {
-                    return '(WR: N/A)';
-                }
-                return `(${(rate * 100).toFixed(1)}%)`;
-            };
-
-            output += `Scan completed for ${results.resolution || selectedResolution} in ${durationMs} ms.\n\n`; // Include resolution
+            const formatWinrate = (rate) => { /* ... */ };
+            output += `Scan completed for ${results.resolution || selectedResolution} in ${durationMs} ms.\n\n`;
             output += `Identified Ultimates (${ultimates.length}):\n`;
             output += ultimates.map(item => `${item.name} ${formatWinrate(item.winrate)}`).join('\n') + '\n\n';
-
             output += `Identified Standard Abilities (${standard.length}):\n`;
             output += standard.map(item => `${item.name} ${formatWinrate(item.winrate)}`).join('\n');
-
-            if (statusMessage) statusMessage.textContent = `Scan complete.`;
+            if (statusMessage) statusMessage.textContent = `Scan complete (legacy display).`;
         } else {
             output = 'Received empty or invalid results.';
-            if (statusMessage) statusMessage.textContent = 'Scan Error.';
+            if (statusMessage) statusMessage.textContent = 'Scan Error (undefined results).';
         }
         if (scanResultsArea) scanResultsArea.textContent = output;
-        setButtonsState(false);
     });
 
 } else {

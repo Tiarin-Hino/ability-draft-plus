@@ -27,8 +27,6 @@ function extractAbilityNameAndIcon(imgElement) {
     return { name: name || null, url: imgSrc, filename: filename || null };
 }
 
-const ICONS_DIR = path.resolve(__dirname, '../../ability_icons');
-
 /**
  * Finds the hero_id for a given ability name by matching prefixes.
  * @param {string} abilityName - The ability name (e.g., "arc_warden_magnetic_field").
@@ -54,42 +52,37 @@ function findHeroIdForAbility(abilityName, heroNameToIdMap) {
 
 
 /**
- * Scrapes ability data (regular and high-skill) from windrun.io urls
- * and stores it in the database, including hero association.
+ * Scrapes ability data and stores it, including icons.
  * @param {string} dbPath - Path to the SQLite database file.
+ * @param {string} iconsDownloadPath - Path to the directory where icons should be saved.
  * @param {string} urlRegular - The URL for regular ability winrates.
  * @param {string} urlHighSkill - The URL for high-skill ability winrates.
  * @param {function(string): void} statusCallback - Function to send status updates.
  */
-async function scrapeAndStoreAbilities(dbPath, urlRegular, urlHighSkill, statusCallback) {
-    let db; // Define db connection variable outside try block
-    const abilityDataMap = new Map(); // Use a Map to store combined data
-    let heroNameToIdMap = new Map(); // Map to store hero names -> hero_ids
+async function scrapeAndStoreAbilities(dbPath, iconsDownloadPath, urlRegular, urlHighSkill, statusCallback) {
+    let db;
+    const abilityDataMap = new Map();
+    let heroNameToIdMap = new Map();
 
     try {
-        // --- Pre-fetch Hero IDs ---
         statusCallback('Fetching hero IDs from database...');
-        db = new Database(dbPath, { readonly: true });
+        db = new Database(dbPath, { readonly: true }); // Uses dbPath parameter
         try {
             const heroes = db.prepare('SELECT hero_id, name FROM Heroes').all();
             heroNameToIdMap = new Map(heroes.map(h => [h.name, h.hero_id]));
             if (heroNameToIdMap.size === 0) {
-                 statusCallback('Warning: Heroes table is empty. Cannot associate abilities with heroes.');
+                statusCallback('Warning: Heroes table is empty. Cannot associate abilities with heroes.');
             } else {
                 statusCallback(`Loaded ${heroNameToIdMap.size} heroes into map.`);
             }
         } catch (err) {
             statusCallback(`Warning: Failed to load heroes - ${err.message}. Ability-hero association might fail.`);
-             // Continue without hero association if loading fails
         } finally {
             if (db && db.open) db.close();
         }
-        // --- End Pre-fetch Hero IDs ---
 
-
-        // Ensure the icons directory exists
         statusCallback('Checking/creating icon directory...');
-        await fs.mkdir(ICONS_DIR, { recursive: true });
+        await fs.mkdir(iconsDownloadPath, { recursive: true }); // MODIFIED: Use iconsDownloadPath
 
         // --- Fetch and Parse Regular Winrates ---
         statusCallback(`Workspaceing regular ability data from ${urlRegular}...`);
@@ -106,21 +99,18 @@ async function scrapeAndStoreAbilities(dbPath, urlRegular, urlHighSkill, statusC
             const row = $regular(element);
             const imgElement = row.find('td.abil-picture img');
             const { name: abilityName, url: iconUrl, filename: iconFilename } = extractAbilityNameAndIcon(imgElement);
-            const winrateCell = row.find('td.color-range').eq(1); // Adjust index if needed
+            const winrateCell = row.find('td.color-range').eq(1);
             const regularWinrate = parseWinrate(winrateCell.text());
 
             if (abilityName) {
-                 // *** Find Hero ID ***
-                 const heroId = findHeroIdForAbility(abilityName, heroNameToIdMap);
-
-                // Initialize entry with regular winrate, high-skill is null for now
+                const heroId = findHeroIdForAbility(abilityName, heroNameToIdMap);
                 abilityDataMap.set(abilityName, {
                     name: abilityName,
-                    hero_id: heroId, // Store found hero_id
+                    hero_id: heroId,
                     winrate: regularWinrate,
-                    high_skill_winrate: null, // Initialize
-                    icon_url: iconUrl,       // Store URL temporarily
-                    icon_filename: iconFilename // Store filename
+                    high_skill_winrate: null,
+                    icon_url: iconUrl,
+                    icon_filename: iconFilename
                 });
             } else {
                 console.warn(`Skipping regular row ${index + 1}: Could not extract valid ability name.`);
@@ -142,24 +132,21 @@ async function scrapeAndStoreAbilities(dbPath, urlRegular, urlHighSkill, statusC
         rowsHighSkill.each((index, element) => {
             const row = $highSkill(element);
             const imgElement = row.find('td.abil-picture img');
-            const { name: abilityName, url: iconUrl, filename: iconFilename } = extractAbilityNameAndIcon(imgElement); // Get details for potential new entries
-            const winrateCell = row.find('td.color-range').eq(1); // Adjust index if needed
+            const { name: abilityName, url: iconUrl, filename: iconFilename } = extractAbilityNameAndIcon(imgElement);
+            const winrateCell = row.find('td.color-range').eq(1);
             const highSkillWinrate = parseWinrate(winrateCell.text());
 
             if (abilityName) {
                 const existingData = abilityDataMap.get(abilityName);
                 if (existingData) {
-                    // Update the high-skill winrate for the existing entry
                     existingData.high_skill_winrate = highSkillWinrate;
                 } else {
-                    // Ability found in high-skill but not regular? Add it.
                     console.warn(`Ability "${abilityName}" found in high-skill data but not regular. Adding.`);
-                     // *** Find Hero ID ***
                     const heroId = findHeroIdForAbility(abilityName, heroNameToIdMap);
                     abilityDataMap.set(abilityName, {
                         name: abilityName,
-                        hero_id: heroId, // Store found hero_id
-                        winrate: null, // No regular winrate found
+                        hero_id: heroId,
+                        winrate: null,
                         high_skill_winrate: highSkillWinrate,
                         icon_url: iconUrl,
                         icon_filename: iconFilename
@@ -169,6 +156,7 @@ async function scrapeAndStoreAbilities(dbPath, urlRegular, urlHighSkill, statusC
                 console.warn(`Skipping high-skill row ${index + 1}: Could not extract valid ability name.`);
             }
         });
+
 
         const finalAbilityList = Array.from(abilityDataMap.values());
         if (finalAbilityList.length === 0) {
@@ -181,7 +169,7 @@ async function scrapeAndStoreAbilities(dbPath, urlRegular, urlHighSkill, statusC
         statusCallback('Downloading and resizing icons...');
         for (const ability of finalAbilityList) {
             if (ability.icon_url && ability.icon_filename) {
-                const iconPath = path.join(ICONS_DIR, ability.icon_filename);
+                const iconPath = path.join(iconsDownloadPath, ability.icon_filename); // MODIFIED: Use iconsDownloadPath
                 try {
                     const response = await axios.get(ability.icon_url, { responseType: 'arraybuffer' });
                     const resizedBuffer = await sharp(response.data)
@@ -191,51 +179,48 @@ async function scrapeAndStoreAbilities(dbPath, urlRegular, urlHighSkill, statusC
                     await fs.writeFile(iconPath, resizedBuffer);
                     processedIconCount++;
                     if (processedIconCount % 50 === 0) {
-                        statusCallback(`Processed ${processedIconCount}/${finalAbilityList.length} icons...`);
+                        statusCallback(`Processed <span class="math-inline">\{processedIconCount\}/</span>{finalAbilityList.length} icons...`);
                     }
                 } catch (error) {
-                    // Keep existing error handling, ensure icon_filename is nulled on failure
                     if (error.response) { console.error(`Failed to download icon ${ability.icon_filename}: ${error.response.status}`); }
                     else if (error.code === 'ERR_INVALID_ARG_TYPE') { console.error(`Failed to process/resize icon ${ability.icon_filename}: Invalid image data.`); }
                     else { console.error(`Failed processing icon ${ability.icon_filename}: ${error.message}`); }
-                    ability.icon_filename = null; // Null filename on failure
+                    ability.icon_filename = null;
                 }
             } else {
-                ability.icon_filename = null; // Ensure null if URL/filename was missing
+                ability.icon_filename = null;
             }
         }
         statusCallback(`Icon processing complete. Processed ${processedIconCount} icons. Updating database...`);
         // --- End Download Icons Section ---
 
         // --- Database Update ---
-        db = new Database(dbPath); // Re-open connection for writing
-        db.pragma('journal_mode = WAL'); // Optional: WAL mode
+        db = new Database(dbPath); // Re-open connection for writing, uses dbPath parameter
+        db.pragma('journal_mode = WAL');
 
-        // Prepare statement for inserting or updating, now including hero_id
         const insertStmt = db.prepare(`
-            INSERT INTO Abilities (name, hero_id, winrate, high_skill_winrate, icon_filename)
-            VALUES (@name, @hero_id, @winrate, @high_skill_winrate, @icon_filename)
-            ON CONFLICT(name) DO UPDATE SET
-                hero_id = excluded.hero_id, -- Update hero_id too
-                winrate = excluded.winrate,
-                high_skill_winrate = excluded.high_skill_winrate,
-                icon_filename = excluded.icon_filename
-        `);
+           INSERT INTO Abilities (name, hero_id, winrate, high_skill_winrate, icon_filename)
+           VALUES (@name, @hero_id, @winrate, @high_skill_winrate, @icon_filename)
+           ON CONFLICT(name) DO UPDATE SET
+               hero_id = excluded.hero_id,
+               winrate = excluded.winrate,
+               high_skill_winrate = excluded.high_skill_winrate,
+               icon_filename = excluded.icon_filename
+       `);
 
-        // Use a transaction for bulk insert/update
         const insertTransaction = db.transaction((abilityData) => {
             let count = 0;
             for (const ability of abilityData) {
-                 if (!ability.name) { // Basic validation
+                if (!ability.name) {
                     console.warn('Skipping database insert for ability with no name.');
                     continue;
-                 }
+                }
                 const info = insertStmt.run({
                     name: ability.name,
-                    hero_id: ability.hero_id, // Pass the found hero_id (can be null)
+                    hero_id: ability.hero_id,
                     winrate: ability.winrate,
                     high_skill_winrate: ability.high_skill_winrate,
-                    icon_filename: ability.icon_filename // Pass the filename (or null)
+                    icon_filename: ability.icon_filename
                 });
                 if (info.changes > 0) count++;
             }
@@ -244,14 +229,11 @@ async function scrapeAndStoreAbilities(dbPath, urlRegular, urlHighSkill, statusC
 
         const processedDbCount = insertTransaction(finalAbilityList);
         statusCallback(`Database update successful. Processed ${processedDbCount} abilities.`);
-        // --- End Database Update ---
 
     } catch (error) {
         console.error('Error during ability scraping or database update:', error);
-        // Rethrow to be caught by the IPC handler in main.js
         throw new Error(`Ability scraping failed: ${error.message}`);
     } finally {
-        // Always ensure the database connection is closed
         if (db && db.open) {
             db.close();
             console.log('Database connection closed.');
