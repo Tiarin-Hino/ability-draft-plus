@@ -4,12 +4,20 @@ const Database = require('better-sqlite3');
 
 const AXIOS_TIMEOUT = 15000;
 
-function parseWinrate(text) {
+function parseWinrate(text) { // Also used for pick_order
+    if (!text) return null;
+    const cleanedText = text.trim().replace('%', ''); // Remove % for winrates, doesn't affect pick_order
+    const parsedValue = parseFloat(cleanedText);
+    return !isNaN(parsedValue) ? parsedValue : null;
+}
+
+function parseWinrateForPercentage(text) {
     if (!text) return null;
     const cleanedText = text.trim().replace('%', '');
     const parsedRate = parseFloat(cleanedText);
     return !isNaN(parsedRate) ? parsedRate / 100.0 : null;
 }
+
 
 function extractAbilityName(imgElement) {
     if (!imgElement || imgElement.length === 0) return { name: null };
@@ -28,9 +36,8 @@ function findHeroIdForAbility(abilityName, heroNameToIdMap) {
 
     for (let i = 1; i < parts.length; i++) {
         const potentialHeroName = parts.slice(0, i).join('_');
-        if (potentialHeroName == 'sandking') {
-            const adaptedName = 'sand_king'
-            return heroNameToIdMap.get(adaptedName);
+        if (potentialHeroName === 'sandking') { // Special case for sand_king
+            return heroNameToIdMap.get('sand_king');
         }
         if (heroNameToIdMap.has(potentialHeroName)) {
             return heroNameToIdMap.get(potentialHeroName);
@@ -74,8 +81,8 @@ async function scrapeAndStoreAbilities(dbPath, urlRegular, urlHighSkill, statusC
             const displayNameElement = row.find('td').eq(1).find('a');
             const displayName = displayNameElement.text().trim() || null;
 
-            const winrateCell = row.find('td.color-range').eq(1);
-            const regularWinrate = parseWinrate(winrateCell.text());
+            const winrateCell = row.find('td.color-range').eq(1); // Second td with color-range
+            const regularWinrate = parseWinrateForPercentage(winrateCell.text());
 
             if (abilityName) {
                 const heroId = findHeroIdForAbility(abilityName, heroNameToIdMap);
@@ -85,6 +92,7 @@ async function scrapeAndStoreAbilities(dbPath, urlRegular, urlHighSkill, statusC
                     hero_id: heroId,
                     winrate: regularWinrate,
                     high_skill_winrate: null,
+                    pick_order: null, // Initialize pick_order
                     is_ultimate: null,
                     ability_order: null
                 });
@@ -111,14 +119,26 @@ async function scrapeAndStoreAbilities(dbPath, urlRegular, urlHighSkill, statusC
             const displayNameElement = row.find('td').eq(1).find('a');
             const displayName = displayNameElement.text().trim() || null;
 
-            const winrateCell = row.find('td.color-range').eq(1);
-            const highSkillWinrate = parseWinrate(winrateCell.text());
+            // High skill winrate is the 2nd 'td.color-range' (index 1 of the collection)
+            const highSkillWinrateCell = row.find('td.color-range').eq(1);
+            const highSkillWinrate = parseWinrateForPercentage(highSkillWinrateCell.text());
+
+            // Pick order is the 5th 'td.color-range' (index 4 of the collection)
+            const pickOrderCell = row.find('td.color-range').eq(4);
+            let pickOrder = null;
+            if (pickOrderCell.hasClass('color-range')) {
+                pickOrder = parseWinrate(pickOrderCell.text()); // Use general parseWinrate, not specific to percentage
+            } else {
+                console.warn(`High-skill row ${index + 1} ("${abilityName}"): 5th td does not have class 'color-range'. Pick order might be missing or structure changed.`);
+            }
+
 
             if (abilityName) {
                 const existingData = abilityDataMap.get(abilityName);
                 if (existingData) {
                     existingData.high_skill_winrate = highSkillWinrate;
-                    if (!existingData.display_name && displayName) { // If display_name wasn't set from regular data
+                    existingData.pick_order = pickOrder; // Assign pick_order
+                    if (!existingData.display_name && displayName) {
                         existingData.display_name = displayName;
                     }
                 } else {
@@ -130,6 +150,7 @@ async function scrapeAndStoreAbilities(dbPath, urlRegular, urlHighSkill, statusC
                         hero_id: heroId,
                         winrate: null,
                         high_skill_winrate: highSkillWinrate,
+                        pick_order: pickOrder, // Assign pick_order
                         is_ultimate: null,
                         ability_order: null
                     });
@@ -149,13 +170,14 @@ async function scrapeAndStoreAbilities(dbPath, urlRegular, urlHighSkill, statusC
         db.pragma('journal_mode = WAL');
 
         const insertStmt = db.prepare(`
-            INSERT INTO Abilities (name, display_name, hero_id, winrate, high_skill_winrate, is_ultimate, ability_order)
-            VALUES (@name, @display_name, @hero_id, @winrate, @high_skill_winrate, @is_ultimate, @ability_order)
+            INSERT INTO Abilities (name, display_name, hero_id, winrate, high_skill_winrate, pick_order, is_ultimate, ability_order)
+            VALUES (@name, @display_name, @hero_id, @winrate, @high_skill_winrate, @pick_order, @is_ultimate, @ability_order)
             ON CONFLICT(name) DO UPDATE SET
-                display_name = excluded.display_name, -- <<< ADDED display_name
+                display_name = excluded.display_name,
                 hero_id = excluded.hero_id,
                 winrate = excluded.winrate,
                 high_skill_winrate = excluded.high_skill_winrate,
+                pick_order = excluded.pick_order, -- <<< ADDED pick_order
                 is_ultimate = excluded.is_ultimate,
                 ability_order = excluded.ability_order
         `);
@@ -173,7 +195,8 @@ async function scrapeAndStoreAbilities(dbPath, urlRegular, urlHighSkill, statusC
                     hero_id: ability.hero_id,
                     winrate: ability.winrate,
                     high_skill_winrate: ability.high_skill_winrate,
-                    is_ultimate: null,
+                    pick_order: ability.pick_order, // <<< ADDED pick_order
+                    is_ultimate: null, // Retain existing logic for these fields
                     ability_order: null,
                 });
                 if (info.changes > 0) count++;
@@ -186,6 +209,7 @@ async function scrapeAndStoreAbilities(dbPath, urlRegular, urlHighSkill, statusC
 
     } catch (error) {
         console.error('Error during ability scraping or database update:', error);
+        statusCallback(`Ability scraping failed: ${error.message}`); // Send error to UI
         throw new Error(`Ability scraping failed: ${error.message}`);
     } finally {
         if (db && db.open) {

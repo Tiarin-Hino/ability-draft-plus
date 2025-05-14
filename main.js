@@ -26,6 +26,7 @@ let isScanInProgress = false;
 let lastScanRawResults = null;
 let lastScanTargetResolution = null;
 
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 // --- Main Window Creation ---
 function createWindow() {
@@ -88,13 +89,6 @@ function createOverlayWindow(resolutionKey, allCoordinatesConfig) {
   overlayWindow.setAlwaysOnTop(true, 'screen-saver');
   overlayWindow.setVisibleOnAllWorkspaces(true);
   overlayWindow.setIgnoreMouseEvents(true, { forward: true });
-
-  // --- ADD THIS LINE FOR DEBUGGING ---
-  if (overlayWindow && overlayWindow.webContents) { // Check if webContents exists
-    console.log('[Main Debug] Opening DevTools for overlay window.');
-    overlayWindow.webContents.openDevTools({ mode: 'detach' }); // 'detach' opens it in a separate window
-  }
-  // --- END OF ADDED LINE ---
 
   console.log('[Main] Overlay window created and configured.');
 
@@ -260,6 +254,7 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution) => {
     const allDraftPoolInternalNames = [...new Set([...(predictedUltimatesInternalNames || []), ...(predictedStandardInternalNames || [])].filter(name => name !== null && name !== 'Unknown Ability'))];
     let abilityDetailsMap = new Map();
     if (allDraftPoolInternalNames.length > 0) {
+      // getAbilityDetails now also includes pickOrder
       abilityDetailsMap = getAbilityDetails(activeDbPath, allDraftPoolInternalNames);
     }
 
@@ -270,39 +265,36 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution) => {
         const combinations = await getHighWinrateCombinations(activeDbPath, internalName, allDraftPoolInternalNames);
         allAbilitiesWithSynergiesAndDetails.push({ ...details, highWinrateCombinations: combinations || [] });
       } else {
-        // This case should ideally not happen if the ML model only predicts known abilities
-        // and those abilities are in the DB.
-        allAbilitiesWithSynergiesAndDetails.push({ internalName, displayName: internalName, winrate: null, highSkillWinrate: null, highWinrateCombinations: [] });
+        allAbilitiesWithSynergiesAndDetails.push({ internalName, displayName: internalName, winrate: null, highSkillWinrate: null, pickOrder: null, highWinrateCombinations: [] });
       }
     }
 
-    // --- START: New logic to identify top 10 abilities ---
+    // --- START: MODIFIED logic to identify top 10 abilities by LOWEST pick_order ---
     let topTierAbilityNames = new Set();
     if (allAbilitiesWithSynergiesAndDetails.length > 0) {
-      const sortedByHighSkill = [...allAbilitiesWithSynergiesAndDetails] // Create a mutable copy
-        .filter(ability => ability.highSkillWinrate !== null && typeof ability.highSkillWinrate === 'number')
-        .sort((a, b) => b.highSkillWinrate - a.highSkillWinrate);
+      const sortedByPickOrder = [...allAbilitiesWithSynergiesAndDetails]
+        .filter(ability => ability.pickOrder !== null && typeof ability.pickOrder === 'number')
+        .sort((a, b) => a.pickOrder - b.pickOrder); // Ascending sort by pickOrder
 
-      const top10Abilities = sortedByHighSkill.slice(0, 10);
+      const top10Abilities = sortedByPickOrder.slice(0, 10);
       topTierAbilityNames = new Set(top10Abilities.map(ability => ability.internalName));
-      console.log('[Main] Top 10 abilities by high skill winrate:', top10Abilities.map(a => `${a.displayName} (${(a.highSkillWinrate * 100).toFixed(1)}%)`));
+      console.log('[Main] Top 10 abilities by lowest pick order:', top10Abilities.map(a => `${a.displayName} (Pick Order: ${a.pickOrder.toFixed(2)})`));
     }
-    // --- END: New logic to identify top 10 abilities ---
+    // --- END: MODIFIED logic ---
 
 
     const formatResultsForOverlay = (predictedNamesArray) => {
       if (!Array.isArray(predictedNamesArray)) return [];
       return predictedNamesArray.map(internalName => {
         if (internalName === null || internalName === 'Unknown Ability') {
-          return { internalName, displayName: 'Unknown Ability', winrate: null, highSkillWinrate: null, highWinrateCombinations: [], isTopTier: false };
+          return { internalName, displayName: 'Unknown Ability', winrate: null, highSkillWinrate: null, pickOrder: null, highWinrateCombinations: [], isTopTier: false };
         }
         const foundAbility = allAbilitiesWithSynergiesAndDetails.find(a => a.internalName === internalName);
-        const isTopTier = topTierAbilityNames.has(internalName); // Check if this ability is in the top tier set
+        const isTopTier = topTierAbilityNames.has(internalName);
         if (foundAbility) {
           return { ...foundAbility, isTopTier };
         }
-        // Fallback for abilities predicted but not found in allAbilitiesWithSynergiesAndDetails (should be rare)
-        return { internalName, displayName: internalName, winrate: null, highSkillWinrate: null, highWinrateCombinations: [], isTopTier };
+        return { internalName, displayName: internalName, winrate: null, highSkillWinrate: null, pickOrder: null, highWinrateCombinations: [], isTopTier };
       });
     };
 
@@ -349,6 +341,14 @@ ipcMain.on('take-snapshot', async (event) => {
   const failedSamplesDir = path.join(userDataPath, 'failed-samples');
 
   try {
+    // --- NEW: Tell overlay to hide borders ---
+    if (overlayWindow && !overlayWindow.isDestroyed() && overlayWindow.webContents && !overlayWindow.webContents.isDestroyed()) {
+      console.log('[Main Snapshot] Requesting overlay to hide borders.');
+      overlayWindow.webContents.send('toggle-hotspot-borders', false);
+      await delay(100); // Short delay to allow renderer to process and update visuals
+      console.log('[Main Snapshot] Delay complete after hiding borders.');
+    }
+
     await fs.mkdir(failedSamplesDir, { recursive: true });
     console.log(`[Main Snapshot] Ensured directory exists: ${failedSamplesDir}`);
 
@@ -376,7 +376,6 @@ ipcMain.on('take-snapshot', async (event) => {
       }
       try {
         const randomString = crypto.randomBytes(4).toString('hex');
-        // Use the predicted name, or a placeholder if null/unknown
         const abilityNameForFile = (slot.predictedName && slot.predictedName !== 'Unknown Ability') ? slot.predictedName : `unknown_ability_${slot.hero_order || 's'}_${slot.ability_order || 'u'}`;
         const filename = `${abilityNameForFile}-${randomString}.png`;
         const outputPath = path.join(failedSamplesDir, filename);
@@ -400,6 +399,12 @@ ipcMain.on('take-snapshot', async (event) => {
     console.error('[Main Snapshot] Error taking snapshot:', error);
     if (overlayWindow && !overlayWindow.isDestroyed()) {
       overlayWindow.webContents.send('snapshot-taken-status', { message: `Snapshot Error: ${error.message}`, error: true, allowRetry: true });
+    }
+  } finally {
+    // --- NEW: Tell overlay to show borders again ---
+    if (overlayWindow && !overlayWindow.isDestroyed() && overlayWindow.webContents && !overlayWindow.webContents.isDestroyed()) {
+      console.log('[Main Snapshot] Requesting overlay to show borders.');
+      overlayWindow.webContents.send('toggle-hotspot-borders', true);
     }
   }
 });

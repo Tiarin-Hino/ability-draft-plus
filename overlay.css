@@ -3,8 +3,6 @@ body {
     padding: 0;
     overflow: hidden;
     /* Important for transparent window */
-    /* For debugging overlay bounds - make it slightly visible. Remove for production. */
-    /* background-color: rgba(255, 0, 0, 0.05);  */
     width: 100vw;
     height: 100vh;
     cursor: default;
@@ -15,10 +13,13 @@ body {
     position: absolute;
     /* Positioned based on coordinates from main process */
     box-sizing: border-box;
-    /* For debugging hotspot areas - make them slightly visible. Remove or make fully transparent for production. */
-    /* background-color: rgba(0, 255, 0, 0.05); */
-    /* border: 1px dashed rgba(255, 255, 0, 0.3); */
-    /* Made it slightly more visible for debugging */
+}
+
+.ability-hotspot.snapshot-hidden-border {
+    border: none !important;
+    animation: none !important;
+    box-shadow: none !important;
+    /* Also hide box-shadow if it contributes to shimmer */
 }
 
 @keyframes shimmer {

@@ -11,6 +11,26 @@ let scanHasBeenPerformed = false;
 
 console.log('overlayRenderer.js loaded');
 
+// --- NEW: Function to toggle top-tier hotspot borders ---
+function toggleTopTierBordersVisibility(visible) {
+    const hotspots = document.querySelectorAll('.ability-hotspot.top-tier-ability');
+    hotspots.forEach(hotspot => {
+        if (visible) {
+            hotspot.classList.remove('snapshot-hidden-border');
+        } else {
+            hotspot.classList.add('snapshot-hidden-border');
+        }
+    });
+    console.log(`[OVERLAY RENDERER] Top-tier borders visibility set to: ${visible}`);
+}
+
+// --- NEW: Listen for command from main process to toggle borders ---
+if (window.electronAPI && window.electronAPI.onToggleHotspotBorders) {
+    window.electronAPI.onToggleHotspotBorders((visible) => {
+        toggleTopTierBordersVisibility(visible);
+    });
+}
+
 if (window.electronAPI && window.electronAPI.onOverlayData) {
     console.log('[OVERLAY RENDERER] Setting up onOverlayData listener');
     window.electronAPI.onOverlayData((data) => {
