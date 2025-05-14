@@ -1,9 +1,5 @@
 // src/database/setupDatabase.js
-const path = require('path');
 const Database = require('better-sqlite3');
-
-// Define the path to the database file (relative to project root)
-const dbPath = path.resolve(__dirname, '../../dota_ad_data.db');
 
 // SQL statements to create the tables
 const setupSql = `
@@ -46,11 +42,11 @@ const setupSql = `
  * Initializes the SQLite database and creates tables if they don't exist.
  * Also attempts to add new columns if they are missing (for backward compatibility).
  */
-function setupDatabase() {
+function setupDatabase(actualDbPath) {
     let db;
     try {
         // Open (or create) the database file
-        db = new Database(dbPath, { verbose: console.log }); // verbose logs SQL executions
+        db = new Database(actualDbPath, { verbose: console.log }); // verbose logs SQL executions
 
         // Execute the initial table creation/check SQL statements
         db.exec(setupSql);

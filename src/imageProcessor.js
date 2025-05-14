@@ -1,57 +1,73 @@
-const fs = require('fs').promises; // Using synchronous fs.readFileSync for class_names for simplicity at startup
-const path = require('path');
+const fs = require('fs').promises;
 const screenshot = require('screenshot-desktop');
 const sharp = require('sharp');
 const tf = require('@tensorflow/tfjs-node');
 
-// --- Model and Configuration ---
-const MODEL_DIR = path.join(__dirname, '..', 'model', 'tfjs_model');
-const MODEL_PATH = 'file://' + path.join(MODEL_DIR, 'model.json');
-const CLASS_NAMES_PATH = path.join(MODEL_DIR, 'class_names.json');
+let ABSOLUTE_MODEL_PATH;
+let ABSOLUTE_CLASS_NAMES_PATH;
 
-const IMG_HEIGHT = 96; // <<< MUST MATCH YOUR TRAINING CONFIGURATION
-const IMG_WIDTH = 96;  // <<< MUST MATCH YOUR TRAINING CONFIGURATION
+const IMG_HEIGHT = 96;
+const IMG_WIDTH = 96;
 
-// --- Load Class Names (Asynchronously) ---
-let CLASS_NAMES = []; // Initialize
-const classNamesPromise = fs.readFile(CLASS_NAMES_PATH, 'utf8')
-    .then(data => {
-        CLASS_NAMES = JSON.parse(data);
-        console.log(`Loaded ${CLASS_NAMES.length} class names from ${CLASS_NAMES_PATH}`);
-        return CLASS_NAMES;
-    })
-    .catch(err => {
-        console.error(`FATAL: Error loading class names from ${CLASS_NAMES_PATH}: ${err.message}`);
-        CLASS_NAMES = []; // Ensure it's an empty array on error
-        return CLASS_NAMES; // Or rethrow / handle error appropriately
-    });
+let CLASS_NAMES = [];
+let classNamesPromise;
+let modelPromise;
+let initialized = false;
 
-// --- Load TFJS Model (Asynchronously) ---
-console.log(`Attempting to load model from: ${MODEL_PATH}`);
-const modelPromise = tf.loadGraphModel(MODEL_PATH)
-    .then(model => {
-        console.log('TFJS Model loaded successfully.');
-        // Optional: Warm up the model once
-        try {
-            const dummyInput = tf.zeros([1, IMG_HEIGHT, IMG_WIDTH, 3]);
-            const warmupResult = model.predict(dummyInput);
-            tf.dispose([dummyInput, warmupResult]); // Dispose dummy tensors
-            console.log('Model warmed up.');
-        } catch (warmupErr) {
-            console.error('Error during model warmup:', warmupErr);
-        }
-        return model; // Return the loaded model
-    })
-    .catch(err => {
-        console.error(`FATAL: Error loading TFJS model from ${MODEL_PATH}: ${err.message}`);
-        // Consider how to handle this globally - maybe the app shouldn't start image processing.
-        return null; // Return null or re-throw to indicate failure
-    });
+/**
+ * Initializes the image processor with necessary paths.
+ * Must be called once before processDraftScreen.
+ * @param {string} modelPath - Absolute path to the model.json (e.g., 'file:///path/to/model.json').
+ * @param {string} classNamesPath - Absolute path to the class_names.json.
+ */
+function initializeImageProcessor(modelPath, classNamesPath) {
+    if (initialized) {
+        console.warn("Image processor already initialized.");
+        return;
+    }
+    ABSOLUTE_MODEL_PATH = modelPath;
+    ABSOLUTE_CLASS_NAMES_PATH = classNamesPath;
 
+    console.log(`Initializing ImageProcessor with Model: ${ABSOLUTE_MODEL_PATH}, Classes: ${ABSOLUTE_CLASS_NAMES_PATH}`);
 
-async function identifySlots(slotCoords, screenBuffer, currentClassNames) { // Pass classNames
-    const identified = [];
-    const model = await modelPromise;
+    classNamesPromise = fs.readFile(ABSOLUTE_CLASS_NAMES_PATH, 'utf8')
+        .then(data => {
+            CLASS_NAMES = JSON.parse(data);
+            console.log(`Loaded ${CLASS_NAMES.length} class names from ${ABSOLUTE_CLASS_NAMES_PATH}`);
+            return CLASS_NAMES;
+        })
+        .catch(err => {
+            console.error(`FATAL: Error loading class names from ${ABSOLUTE_CLASS_NAMES_PATH}: ${err.message}`);
+            CLASS_NAMES = [];
+            throw err; // Re-throw to indicate initialization failure
+        });
+
+    console.log(`Attempting to load model from: ${ABSOLUTE_MODEL_PATH}`);
+    modelPromise = tf.loadGraphModel(ABSOLUTE_MODEL_PATH)
+        .then(model => {
+            console.log('TFJS Model loaded successfully.');
+            try {
+                const dummyInput = tf.zeros([1, IMG_HEIGHT, IMG_WIDTH, 3]);
+                const warmupResult = model.predict(dummyInput);
+                tf.dispose([dummyInput, warmupResult]);
+                console.log('Model warmed up.');
+            } catch (warmupErr) {
+                console.error('Error during model warmup:', warmupErr);
+            }
+            return model;
+        })
+        .catch(err => {
+            console.error(`FATAL: Error loading TFJS model from ${ABSOLUTE_MODEL_PATH}: ${err.message}`);
+            throw err; // Re-throw to indicate initialization failure
+        });
+    initialized = true;
+}
+
+async function identifySlots(slotCoords, screenBuffer, currentClassNames) {
+    if (!initialized || !modelPromise || !classNamesPromise) {
+        throw new Error("Image processor not initialized. Call initializeImageProcessor first.");
+    }
+    const model = await modelPromise; // modelPromise is already defined at the module level
 
     if (!model) {
         console.error("Model not available for predictions.");
@@ -62,6 +78,7 @@ async function identifySlots(slotCoords, screenBuffer, currentClassNames) { // P
         return slotCoords.map(() => null);
     }
 
+    const identified = [];
     for (let i = 0; i < slotCoords.length; i++) {
         const slotData = slotCoords[i];
         const { x, y, width, height } = slotData;
@@ -73,29 +90,12 @@ async function identifySlots(slotCoords, screenBuffer, currentClassNames) { // P
                 .extract({ left: x, top: y, width: width, height: height })
                 .png().toBuffer();
 
-            let tensor = tf.node.decodeImage(croppedBuffer, 3); // Output is Int32Tensor, values [0, 255]
+            let tensor = tf.node.decodeImage(croppedBuffer, 3);
             tensorsToDispose.push(tensor);
-
-            // Resize to model's expected input size. Output is Float32Tensor, values [0, 255]
             let resizedTensor = tf.image.resizeBilinear(tensor, [IMG_HEIGHT, IMG_WIDTH]);
             tensorsToDispose.push(resizedTensor);
-
-            // --- REMOVE THIS MANUAL NORMALIZATION ---
-            // let normalizedTensor = resizedTensor.div(127.5).sub(1); 
-            // tensorsToDispose.push(normalizedTensor);
-            // --- END REMOVAL ---
-
-            // Create batch tensor directly from resizedTensor (values 0-255)
-            // The model itself has the Rescaling layer to handle normalization to [-1, 1]
             let batchTensor = resizedTensor.expandDims(0);
             tensorsToDispose.push(batchTensor);
-
-            // --- DEBUG: Check the input to model.predict just before it runs ---
-            // console.log(`Slot ${i} identifySlots: Input tensor shape: ${batchTensor.shape}`);
-            // const minValIdentify = batchTensor.min().dataSync()[0];
-            // const maxValIdentify = batchTensor.max().dataSync()[0];
-            // console.log(`Slot ${i} identifySlots: Input tensor Min: ${minValIdentify.toFixed(4)}, Max: ${maxValIdentify.toFixed(4)} (SHOULD BE 0-255)`);
-            // --- END DEBUG ---
 
             let prediction = model.predict(batchTensor);
             tensorsToDispose.push(prediction);
@@ -123,20 +123,24 @@ async function identifySlots(slotCoords, screenBuffer, currentClassNames) { // P
  * @param {string} targetResolution - The resolution key (e.g., "2560x1440").
  * @returns {Promise<{ultimates: (string|null)[], standard: (string|null)[]}>} - Raw predicted ability names.
  */
-async function processDraftScreen(coordinatesPath, targetResolution) {
-    console.log(`Starting screen processing with ML Model for ${targetResolution}...`); // Log it
+async function processDraftScreen(coordinatesPath, targetResolution) { // coordinatesPath is already a parameter
+    console.log(`Starting screen processing with ML Model for ${targetResolution}...`);
 
-    // Await both promises here to ensure they are resolved before proceeding
+    if (!initialized || !modelPromise || !classNamesPromise) { // Check initialization
+        console.error("Image processor not initialized. Call initializeImageProcessor first.");
+        throw new Error("Image processor not initialized.");
+    }
+
+    // Await promises here to ensure they are resolved before proceeding
     const model = await modelPromise;
-    const resolvedClassNames = await classNamesPromise; // <<< Await this!
+    const resolvedClassNames = await classNamesPromise;
 
     if (!model || !resolvedClassNames || resolvedClassNames.length === 0) {
         console.error("Model or Class Names not loaded. Aborting scan.");
-        // Construct an empty result or throw an error
         const emptyResults = (coordsArray) => coordsArray ? coordsArray.map(() => null) : [];
         let ultimate_coords_length = 0;
         let standard_coords_length = 0;
-        try { // Try to get lengths for empty results, but don't fail if coords also fail to load
+        try {
             const configData = await fs.readFile(coordinatesPath, 'utf-8');
             const layoutConfig = JSON.parse(configData);
             const coords = layoutConfig.resolutions?.[targetResolution];
@@ -154,14 +158,14 @@ async function processDraftScreen(coordinatesPath, targetResolution) {
 
     let layoutConfig;
     try {
-        const configData = await fs.readFile(coordinatesPath, 'utf-8');
+        const configData = await fs.readFile(coordinatesPath, 'utf-8'); // Uses passed coordinatesPath
         layoutConfig = JSON.parse(configData);
     } catch (err) { throw err; }
 
     const coords = layoutConfig.resolutions?.[targetResolution];
-    if (!coords) { 
+    if (!coords) {
         console.error(`Coordinates not found for resolution: ${targetResolution} in ${coordinatesPath}`);
-        throw new Error(`Coordinates not found for resolution: ${targetResolution}`); 
+        throw new Error(`Coordinates not found for resolution: ${targetResolution}`);
     }
     const { ultimate_slots_coords, standard_slots_coords } = coords;
     console.log(`Coordinates loaded. Processing ${ultimate_slots_coords.length} ult slots and ${standard_slots_coords.length} std slots.`);
@@ -173,10 +177,10 @@ async function processDraftScreen(coordinatesPath, targetResolution) {
     } catch (err) { throw err; }
 
     console.log('Identifying ultimate slots using ML...');
-    const identifiedUltimates = await identifySlots(ultimate_slots_coords, screenshotBuffer, resolvedClassNames); // Pass classNames
+    const identifiedUltimates = await identifySlots(ultimate_slots_coords, screenshotBuffer, resolvedClassNames);
 
     console.log('Identifying standard slots using ML...');
-    const identifiedStandard = await identifySlots(standard_slots_coords, screenshotBuffer, resolvedClassNames); // Pass classNames
+    const identifiedStandard = await identifySlots(standard_slots_coords, screenshotBuffer, resolvedClassNames);
 
     console.log('Screen processing function finished. Returning raw predicted names.');
     return {
@@ -185,4 +189,4 @@ async function processDraftScreen(coordinatesPath, targetResolution) {
     };
 }
 
-module.exports = { processDraftScreen };
+module.exports = { initializeImageProcessor, processDraftScreen };
