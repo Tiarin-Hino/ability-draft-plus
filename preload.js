@@ -25,4 +25,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   closeOverlay: () => ipcRenderer.send('close-overlay'),
   setOverlayMouseEvents: (ignore, forward = true) => ipcRenderer.send('set-overlay-mouse-ignore', ignore, { forward }),
   forceOverlayRepaint: () => ipcRenderer.send('force-overlay-repaint'),
+  activateOverlay: (resolution) => ipcRenderer.send('activate-overlay', resolution), // New for main window button
+  executeScanFromOverlay: (resolution) => ipcRenderer.send('execute-scan-from-overlay', resolution),
+  scanDraftScreen: (resolution) => ipcRenderer.send('scan-draft-screen', resolution), // Keep for now or deprecate later
+  onOverlayClosedResetUI: (callback) => ipcRenderer.on('overlay-closed-reset-ui', () => callback()),
 });

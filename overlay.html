@@ -1,16 +1,22 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'">
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'">
     <title>Dota AD Overlay</title>
     <link rel="stylesheet" href="overlay.css">
 </head>
+
 <body>
     <div id="tooltip" class="tooltip" style="display: none; position: absolute;"></div>
-    <div id="close-button-container" style="position: fixed; top: 10px; right: 10px; z-index: 10000;">
+    <div id="controls-container"
+        style="position: fixed; top: 10px; right: 10px; z-index: 10000; display: flex; gap: 5px;">
+        <button id="scan-now-btn" title="Scan Draft Screen">Scan Now</button>
         <button id="close-overlay-btn" title="Close Overlay (Esc)">X</button>
     </div>
     <script src="./overlayRenderer.js"></script>
 </body>
+
 </html>

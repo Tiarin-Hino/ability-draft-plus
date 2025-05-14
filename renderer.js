@@ -2,8 +2,8 @@
 const updateHeroesButton = document.getElementById('update-heroes-btn');
 const updateAbilitiesButton = document.getElementById('update-abilities-btn');
 const updatePairsButton = document.getElementById('update-pairs-btn');
-const scanDraftButton = document.getElementById('scan-draft-btn');
-const resolutionSelect = document.getElementById('resolution-select'); // New
+const activateOverlayButton = document.getElementById('activate-overlay-btn');
+const resolutionSelect = document.getElementById('resolution-select');
 const statusMessage = document.getElementById('status-message');
 const scanResultsArea = document.getElementById('scan-results');
 
@@ -11,24 +11,23 @@ let selectedResolution = ''; // Variable to store the selected resolution
 
 // Helper function to set button states
 function setButtonsState(disabled, message = null) {
-    const buttons = [updateHeroesButton, updateAbilitiesButton, updatePairsButton, scanDraftButton];
+    const buttons = [updateHeroesButton, updateAbilitiesButton, updatePairsButton, activateOverlayButton];
     buttons.forEach(btn => {
-        if (btn) btn.disabled = disabled; // Check if button exists
+        if (btn) btn.disabled = disabled;
     });
-    if (resolutionSelect) resolutionSelect.disabled = disabled; // Disable dropdown too
+    if (resolutionSelect) resolutionSelect.disabled = disabled;
 
-    if (message) {
-        buttons.forEach(btn => {
-            if (btn && btn.id !== 'scan-draft-btn') btn.textContent = message; // Avoid changing scan button text here
-        });
-        if (scanDraftButton) scanDraftButton.textContent = disabled ? 'Scanning...' : 'Scan Draft Screen';
-
+    if (message && disabled) { // Only set specific "in progress" messages if disabled is true
+        if (updateHeroesButton && activateOverlayButton !== updateHeroesButton) updateHeroesButton.textContent = message;
+        if (updateAbilitiesButton && activateOverlayButton !== updateAbilitiesButton) updateAbilitiesButton.textContent = message;
+        if (updatePairsButton && activateOverlayButton !== updatePairsButton) updatePairsButton.textContent = message;
+        if (activateOverlayButton) activateOverlayButton.textContent = 'Activating...'; // Specific message for this one
     } else {
-        // Reset text individually
+        // Reset to default text when enabling (disabled = false) or no specific message
         if (updateHeroesButton) updateHeroesButton.textContent = 'Update Hero Winrates';
         if (updateAbilitiesButton) updateAbilitiesButton.textContent = 'Update Ability Winrates';
         if (updatePairsButton) updatePairsButton.textContent = 'Update Ability Pairs';
-        if (scanDraftButton) scanDraftButton.textContent = 'Scan Draft Screen';
+        if (activateOverlayButton) activateOverlayButton.textContent = 'Activate Overlay';
     }
 }
 
@@ -93,68 +92,65 @@ if (window.electronAPI) {
         window.electronAPI.scrapeAbilityPairs();
     });
 
-    // --- Handle Scan Button Click ---
-    scanDraftButton.addEventListener('click', () => {
-        if (!selectedResolution) {
-            statusMessage.textContent = 'Please select a resolution first.';
-            scanResultsArea.textContent = 'Error: No resolution selected.';
-            return;
-        }
-        console.log(`Scan Draft button clicked for resolution: ${selectedResolution}`);
-        statusMessage.textContent = `Starting screen scan for ${selectedResolution}...`;
-        scanResultsArea.textContent = 'Processing...';
-        setButtonsState(true, 'Scanning...');
-        window.electronAPI.scanDraftScreen(selectedResolution); // Pass selected resolution
-    });
+    // --- Handle Activate Overlay Button Click ---
+    if (activateOverlayButton) {
+        activateOverlayButton.addEventListener('click', () => {
+            if (!selectedResolution) {
+                statusMessage.textContent = 'Please select a resolution first.';
+                return;
+            }
+            console.log(`Activate Overlay button clicked for resolution: ${selectedResolution}`);
+            statusMessage.textContent = `Activating overlay for ${selectedResolution}...`;
+            if (document.getElementById('scan-results')) { // Check if the element exists
+                document.getElementById('scan-results').textContent = 'Waiting for overlay activation...'; // Set this when activating
+            }
+            setButtonsState(true); // Disable buttons, text will be set by setButtonsState
+            activateOverlayButton.textContent = 'Activating...'; // Explicitly set this one's text
+            window.electronAPI.activateOverlay(selectedResolution);
+        });
+    }
 
     // --- Handle Status Updates from Main Process ---
     window.electronAPI.onUpdateStatus((message) => {
         console.log('Status from main:', message);
         statusMessage.textContent = message;
-        if (message.includes('complete') || message.includes('Error') || message.includes('failed')) {
+        if (message.includes('complete!') || message.includes('Error updating') || message.includes('failed:')) {
+            // This is for scraper updates
             setButtonsState(false);
+        }
+        // No need to handle 'Overlay activated' here for button states,
+        // as the new 'onOverlayClosedResetUI' will handle re-enabling.
+    });
+
+    // --- Handle Scan Results from Main Process (for main window) ---
+    // This will likely not receive detailed scan results anymore,
+    // but can receive status messages about the overlay or errors.
+    window.electronAPI.onScanResults((results) => {
+        console.log('Message/Status received in main window renderer (onScanResults):', results);
+
+        if (results && results.error) { // e.g. if activate-overlay itself had an error
+            setButtonsState(false); // Re-enable buttons on error
+            const output = `Error: ${results.error}\nResolution: ${results.resolution || selectedResolution}`;
+            if (document.getElementById('scan-results')) {
+                document.getElementById('scan-results').textContent = output;
+            }
+            statusMessage.textContent = `Overlay operation failed: ${results.error}`;
+        } else if (results && results.message) {
+            // Could be used for other general messages, but overlay closing handles UI reset now.
+            // statusMessage.textContent = results.message;
         }
     });
 
-    // --- Handle Scan Results from Main Process ---
-    window.electronAPI.onScanResults((results) => {
-        console.log('Scan results/status received in main window renderer:', results);
-        let output = '';
-        setButtonsState(false);
-
-        if (results && results.error) {
-            output = `Error during scan: ${results.error}\nResolution: ${results.resolution || selectedResolution}\nDuration: ${results.durationMs} ms`;
-            if (statusMessage) statusMessage.textContent = `Scan failed. See details below.`;
-        } else if (results && results.success) {
-            // Overlay was launched, main window is likely hidden.
-            // This message is mostly for logging or if the main window is shown again.
-            output = `${results.message}\nResolution: ${results.resolution}\nDuration: ${results.durationMs} ms.`;
-            if (statusMessage) statusMessage.textContent = `Scan successful. Overlay active.`;
-        } else if (results) { // Fallback for old style results if overlay didn't launch
-            const ultimates = Array.isArray(results.ultimates) ? results.ultimates : [];
-            const standard = Array.isArray(results.standard) ? results.standard : [];
-            const durationMs = typeof results.durationMs === 'number' ? results.durationMs : 'N/A';
-
-            const formatWinrate = (rate) => {
-                if (rate === null || typeof rate !== 'number') {
-                    return '(WR: N/A)';
-                }
-                return `(${(rate * 100).toFixed(1)}%)`;
-            };
-
-            output += `Scan completed for ${results.resolution || selectedResolution} in ${durationMs} ms.\n\n`;
-            output += `Identified Ultimates (${ultimates.length}):\n`;
-            output += ultimates.map(item => `${item.displayName} ${formatWinrate(item.winrate)}`).join('\n') + '\n\n';
-
-            output += `Identified Standard Abilities (${standard.length}):\n`;
-            output += standard.map(item => `${item.displayName} ${formatWinrate(item.winrate)}`).join('\n');
-
-            if (statusMessage) statusMessage.textContent = `Scan complete.`;
-        } else {
-            output = 'Received empty or invalid results.';
-            if (statusMessage) statusMessage.textContent = 'Scan Error (undefined results).';
+    // --- Handle Overlay Closed - Reset UI ---
+    window.electronAPI.onOverlayClosedResetUI(() => {
+        console.log('Overlay closed signal received. Re-enabling main window UI.');
+        setButtonsState(false); // Enable all buttons and reset their text
+        statusMessage.textContent = 'Ready. Overlay closed.'; // Reset status message
+        // scanResultsArea.textContent = 'Scan results will appear here...'; // Reset scan results area
+        if (document.getElementById('scan-results')) { // Check if the element exists
+            document.getElementById('scan-results').textContent = 'Scan results will appear here...';
         }
-        if (scanResultsArea) scanResultsArea.textContent = output;
+
     });
 
 } else {
