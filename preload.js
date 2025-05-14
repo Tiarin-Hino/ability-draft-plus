@@ -8,8 +8,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   scrapeAbilities: () => ipcRenderer.send('scrape-abilities'),
   // Ability Pairs scraping trigger
   scrapeAbilityPairs: () => ipcRenderer.send('scrape-ability-pairs'),
-  // Screen Scanning trigger (now accepts resolution)
-  scanDraftScreen: (resolution) => ipcRenderer.send('scan-draft-screen', resolution),
   // Request available resolutions
   getAvailableResolutions: () => ipcRenderer.send('get-available-resolutions'),
 
@@ -20,13 +18,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Listener for available resolutions
   onAvailableResolutions: (callback) => ipcRenderer.on('available-resolutions', (_event, resolutions) => callback(resolutions)),
 
-  // --- New for Overlay ---
+  // --- Overlay Specific ---
   onOverlayData: (callback) => ipcRenderer.on('overlay-data', (_event, data) => callback(data)),
   closeOverlay: () => ipcRenderer.send('close-overlay'),
   setOverlayMouseEvents: (ignore, forward = true) => ipcRenderer.send('set-overlay-mouse-ignore', ignore, { forward }),
-  forceOverlayRepaint: () => ipcRenderer.send('force-overlay-repaint'),
-  activateOverlay: (resolution) => ipcRenderer.send('activate-overlay', resolution), // New for main window button
+  activateOverlay: (resolution) => ipcRenderer.send('activate-overlay', resolution),
   executeScanFromOverlay: (resolution) => ipcRenderer.send('execute-scan-from-overlay', resolution),
-  scanDraftScreen: (resolution) => ipcRenderer.send('scan-draft-screen', resolution), // Keep for now or deprecate later
   onOverlayClosedResetUI: (callback) => ipcRenderer.on('overlay-closed-reset-ui', () => callback()),
+
+  // --- Snapshot Feature ---
+  takeSnapshot: () => ipcRenderer.send('take-snapshot'),
+  onSnapshotTaken: (callback) => ipcRenderer.on('snapshot-taken-status', (_event, status) => callback(status)),
 });

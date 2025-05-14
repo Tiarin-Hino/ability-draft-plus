@@ -12,10 +12,14 @@
 <body>
     <div id="tooltip" class="tooltip" style="display: none; position: absolute;"></div>
     <div id="controls-container"
-        style="position: fixed; top: 10px; right: 10px; z-index: 10000; display: flex; gap: 5px;">
-        <button id="scan-now-btn" title="Scan Draft Screen">Scan Now</button>
-        <button id="close-overlay-btn" title="Close Overlay (Esc)">X</button>
+        style="position: fixed; top: 10px; right: 10px; z-index: 10000; display: flex; flex-direction: column; gap: 5px; align-items: flex-end;">
+        <div style="display: flex; gap: 5px;">
+            <button id="scan-now-btn" title="Scan Draft Screen">Scan Now</button>
+            <button id="close-overlay-btn" title="Close Overlay (Esc)">X</button>
+        </div>
+        <button id="take-snapshot-btn" title="Save current ability icons for feedback" style="display: none;">Take Snapshot</button>
     </div>
+    <p id="snapshot-status" style="position: fixed; bottom: 10px; right: 10px; background-color: rgba(0,0,0,0.7); color: white; padding: 5px; border-radius: 3px; display: none; z-index: 10001;"></p>
     <script src="./overlayRenderer.js"></script>
 </body>
 
