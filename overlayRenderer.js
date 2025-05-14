@@ -41,8 +41,15 @@ if (window.electronAPI && window.electronAPI.onOverlayData) {
             if (abilityArray && Array.isArray(abilityArray) && coordArray && Array.isArray(coordArray)) {
                 console.log(`Creating hotspots for ${type}, count: ${abilityArray.length}`);
                 abilityArray.forEach((abilityInfo, index) => {
-                    if (abilityInfo.name && abilityInfo.name !== 'Unknown' && coordArray[index]) {
+                    if (abilityInfo && abilityInfo.displayName && abilityInfo.displayName !== 'Unknown Ability' && coordArray[index]) {
                         createHotspot(coordArray[index], abilityInfo);
+                    } else if (abilityInfo && abilityInfo.internalName && coordArray[index]) {
+                        // Fallback if displayName was problematic but internalName exists
+                        console.warn(`Using internalName as fallback for hotspot: ${abilityInfo.internalName}`);
+                        createHotspot(coordArray[index], {
+                            ...abilityInfo, // Spread existing properties like winrate
+                            displayName: abilityInfo.internalName // Use internalName as displayName
+                        });
                     }
                 });
             } else {
@@ -75,20 +82,20 @@ function createHotspot(coord, abilityData) {
     hotspot.style.width = `${coord.width}px`;
     hotspot.style.height = `${coord.height}px`;
 
-    hotspot.dataset.abilityName = abilityData.name;
+    hotspot.dataset.abilityName = abilityData.displayName;
     hotspot.dataset.winrate = abilityData.winrate !== null ? abilityData.winrate : 'N/A';
 
     hotspot.addEventListener('mouseenter', (event) => {
         console.log(`Mouse ENTER over ${hotspot.dataset.abilityName}`);
         // REMOVED: if (window.electronAPI) window.electronAPI.setOverlayMouseEvents(false);
 
-        const name = hotspot.dataset.abilityName;
+        const nameForDisplay = hotspot.dataset.abilityName;
         let wr = hotspot.dataset.winrate;
         const winrateText = wr !== 'N/A' ? `${(parseFloat(wr) * 100).toFixed(1)}% WR` : 'WR: N/A';
 
-        tooltipElement.innerHTML = `<strong>${name.replace(/_/g, ' ')}</strong>\n${winrateText}`;
+        tooltipElement.innerHTML = `<strong>${nameForDisplay.replace(/_/g, ' ')}</strong>\n${winrateText}`;
         tooltipElement.style.display = 'block';
-        console.log(`Tooltip displayed for ${name}`);
+        console.log(`Tooltip displayed for ${nameForDisplay}`);
         positionTooltip(event);
     });
 

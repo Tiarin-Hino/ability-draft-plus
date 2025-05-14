@@ -2,6 +2,8 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const Database = require('better-sqlite3');
 
+const AXIOS_TIMEOUT = 15000; // 15 seconds timeout for fetching hero page
+
 /**
  * Scrapes hero data from windrun.io and stores it in the database.
  * @param {string} dbPath - Path to the SQLite database file.
@@ -9,20 +11,23 @@ const Database = require('better-sqlite3');
  * @param {function(string): void} statusCallback - Function to send status updates.
  */
 async function scrapeAndStoreHeroes(dbPath, url, statusCallback) {
-    let db; // Define db connection variable outside try block
+    let db;
 
     try {
         statusCallback('Fetching hero data from windrun.io...');
+        console.log(`[HERO_SCRAPER_NETWORK] Attempting to fetch: ${url}`);
         const { data: html } = await axios.get(url, {
-            headers: { // Add headers to mimic a browser request slightly
+            headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            }
+            },
+            timeout: AXIOS_TIMEOUT
         });
+        console.log(`[HERO_SCRAPER_NETWORK] Successfully fetched: ${url}`);
 
         statusCallback('Parsing HTML data...');
         const $ = cheerio.load(html);
         const heroes = [];
-        const rows = $('tbody tr'); // Select all table rows in the tbody
+        const rows = $('tbody tr');
 
         if (rows.length === 0) {
             throw new Error('No hero data rows found on the page. DOM structure might have changed.');
@@ -32,57 +37,62 @@ async function scrapeAndStoreHeroes(dbPath, url, statusCallback) {
 
         rows.each((index, element) => {
             const row = $(element);
-            const heroImg = row.find('td.hero-picture img');
-            const winrateCell = row.find('td.color-range').first(); // Get the first cell with this class
+            const heroImg = row.find('td.hero-picture img'); // First td for image
 
-            // Extract hero name from image src (e.g., .../nevermore_full.png -> nevermore)
+            // --- Extract Display Name from the second td's <a> tag ---
+            const displayNameElement = row.find('td').eq(1).find('a');
+            const displayName = displayNameElement.text().trim() || null;
+            // --- End Extract Display Name ---
+
+            const winrateCell = row.find('td.color-range').first(); // First td with class color-range for winrate
+
+            // Extract internal hero name from image src
             const imgSrc = heroImg.attr('src');
-            let heroName = null;
+            let internalName = null;
             if (imgSrc) {
-                 // Get the filename, remove extension, handle potential variations
-                 const filename = imgSrc.split('/').pop(); // e.g., nevermore_full.png
-                 heroName = filename.replace(/_full\.png$|_vert\.jpg$/i, ''); // Remove common suffixes
+                const filename = imgSrc.split('/').pop();
+                internalName = filename.replace(/_full\.png$|_vert\.jpg$/i, '');
             }
 
-
             // Extract winrate text and convert to number
-            const winrateText = winrateCell.text().trim(); // e.g., "61.52%"
+            const winrateText = winrateCell.text().trim();
             let winrateValue = null;
             if (winrateText) {
                 const parsedRate = parseFloat(winrateText.replace('%', ''));
                 if (!isNaN(parsedRate)) {
-                    winrateValue = parsedRate / 100.0; // Store as decimal (e.g., 0.6152)
+                    winrateValue = parsedRate / 100.0;
                 }
             }
 
-            // Only add if we got valid data
-            if (heroName && winrateValue !== null) {
-                heroes.push({ name: heroName, winrate: winrateValue });
+            if (internalName && displayName && winrateValue !== null) {
+                heroes.push({
+                    name: internalName,
+                    displayName: displayName, // <<< ADDED
+                    winrate: winrateValue
+                });
             } else {
-                console.warn(`Skipping row ${index + 1}: Could not extract valid data (Name: ${heroName}, Winrate Text: ${winrateText})`);
+                console.warn(`Skipping hero row ${index + 1}: Could not extract all required data (InternalName: ${internalName}, DisplayName: ${displayName}, Winrate Text: ${winrateText})`);
             }
         });
 
         if (heroes.length === 0) {
-             throw new Error('Extracted 0 valid heroes. Check selectors or page content.');
+            throw new Error('Extracted 0 valid heroes. Check selectors or page content.');
         }
 
         statusCallback(`Extracted ${heroes.length} heroes. Updating database...`);
+        console.log(`[HERO_SCRAPER_DB] Attempting to update ${heroes.length} heroes in the database.`);
 
-        // --- Database Update ---
-        db = new Database(dbPath); // Open connection
-        // Enable WAL mode for potentially better write performance/concurrency, although less critical here
+        db = new Database(dbPath);
         db.pragma('journal_mode = WAL');
 
-        // Prepare statement for inserting or updating
         const insertStmt = db.prepare(`
-            INSERT INTO Heroes (name, winrate)
-            VALUES (@name, @winrate)
+            INSERT INTO Heroes (name, display_name, winrate)
+            VALUES (@name, @displayName, @winrate)
             ON CONFLICT(name) DO UPDATE SET
+                display_name = excluded.display_name, -- <<< ADDED
                 winrate = excluded.winrate
         `);
 
-        // Use a transaction for bulk insert/update
         const insertTransaction = db.transaction((heroData) => {
             for (const hero of heroData) {
                 insertStmt.run(hero);
@@ -91,18 +101,23 @@ async function scrapeAndStoreHeroes(dbPath, url, statusCallback) {
         });
 
         const processedCount = insertTransaction(heroes);
+        console.log(`[HERO_SCRAPER_DB] Database transaction complete. Processed ${processedCount} heroes.`);
         statusCallback(`Database update successful. Processed ${processedCount} heroes.`);
-        // --- End Database Update ---
 
     } catch (error) {
-        console.error('Error during scraping or database update:', error);
-        // Rethrow to be caught by the IPC handler in main.js
-        throw new Error(`Scraping failed: ${error.message}`);
+        console.error('Error during hero scraping or database update:', error);
+        if (error.code === 'ECONNABORTED' || (error.response && error.response.status === 524)) {
+            statusCallback(`Error fetching hero data: The request to windrun.io timed out or the server was too slow to respond. Please try again later.`);
+        } else if (error.message.includes('No hero data rows found') || error.message.includes('Extracted 0 valid heroes')) {
+            statusCallback(`Error fetching hero data: Could not parse data from windrun.io. The website structure might have changed.`);
+        } else {
+            statusCallback(`Error updating hero data: ${error.message}`);
+        }
+        throw error; // Rethrow to be caught by the IPC handler in main.js if needed for broader error handling
     } finally {
-        // Always ensure the database connection is closed
-        if (db) {
+        if (db && db.open) {
             db.close();
-            console.log('Database connection closed.');
+            console.log('[HERO_SCRAPER_DB] Database connection closed.');
         }
     }
 }

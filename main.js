@@ -2,14 +2,12 @@ const { app, BrowserWindow, ipcMain, screen } = require('electron');
 const path = require('path');
 const fs = require('fs').promises;
 const { performance } = require('perf_hooks');
-const { initializeImageProcessor } = require('./src/imageProcessor');
 const setupDatabase = require('./src/database/setupDatabase');
-const { getAbilityWinrates } = require('./src/database/queries');
+const { getAbilityDetails } = require('./src/database/queries');
 const { scrapeAndStoreHeroes } = require('./src/scraper/heroScraper');
 const { scrapeAndStoreAbilities } = require('./src/scraper/abilityScraper');
 const { scrapeAndStoreAbilityPairs } = require('./src/scraper/abilityPairScraper');
-const { processDraftScreen } = require('./src/imageProcessor');
-
+const { processDraftScreen, initializeImageProcessor } = require('./src/imageProcessor');
 
 const heroesUrl = 'https://windrun.io/heroes';
 const abilitiesUrl = 'https://windrun.io/abilities';
@@ -17,13 +15,14 @@ const abilitiesHighSkillUrl = 'https://windrun.io/ability-high-skill';
 const abilityPairsUrl = 'https://windrun.io/ability-pairs';
 
 let mainWindow;
+let activeDbPath;
 let overlayWindow = null;
 
 // --- Main Window Creation ---
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 800,
-    height: 700,
+    width: 1000,
+    height: 800,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
@@ -141,9 +140,13 @@ function createOverlayWindow(scanData, resolutionKey, allCoordinatesConfig) {
 app.whenReady().then(async () => {
   const userDataPath = app.getPath('userData');
   const appDbPathInUserData = path.join(userDataPath, 'dota_ad_data.db');
-  const bundledDbPathInApp = path.join(app.getAppPath(), 'dota_ad_data.db');
+  const bundledDbPathInApp = path.join(__dirname, 'dota_ad_data.db');
 
-  global.coordinatesPath = path.join(app.getAppPath(), 'config', 'layout_coordinates.json');
+  const appRootPath = app.getAppPath();
+  global.coordinatesPath = path.join(appRootPath, 'config', 'layout_coordinates.json');
+
+  activeDbPath = appDbPathInUserData;
+  console.log(`[Main] Active database path set to: ${activeDbPath}`);
 
   try {
     const modelPath = 'file://' + path.join(app.getAppPath(), 'model', 'tfjs_model', 'model.json');
@@ -157,27 +160,25 @@ app.whenReady().then(async () => {
   }
 
   try {
-    await fs.access(appDbPathInUserData);
-    console.log('[Main] Database found in userData.');
+    await fs.access(activeDbPath);
+    console.log(`[Main] Database found at ${activeDbPath}.`);
   } catch (e) {
-    console.log('[Main] Database not found in userData. Attempting to copy from app bundle...');
+    console.log(`[Main] Database not found at ${activeDbPath}. Attempting to copy from bundled DB at ${bundledDbPathInApp}...`);
     try {
       await fs.mkdir(userDataPath, { recursive: true });
-      await fs.copyFile(bundledDbPathInApp, appDbPathInUserData);
-      console.log('[Main] Bundled database successfully copied to userData.');
+      await fs.copyFile(bundledDbPathInApp, activeDbPath);
+      console.log(`[Main] Bundled database successfully copied to ${activeDbPath}.`);
     } catch (copyError) {
-      console.error('[Main] CRITICAL: Failed to copy bundled database to userData:', copyError);
-      app.quit();
-      return;
+      console.error(`[Main] CRITICAL: Failed to copy bundled database from ${bundledDbPathInApp} to ${activeDbPath}:`, copyError);
     }
   }
-  global.dbPath = appDbPathInUserData;
 
   try {
-    setupDatabase(global.dbPath);
-    console.log("[Main] Database schema verified/setup complete at:", global.dbPath);
+    console.log(`[Main] Initializing database schema at ${activeDbPath} via setupDatabase module...`);
+    setupDatabase();
+    console.log(`[Main] Database schema verified/setup complete for: ${activeDbPath}`);
   } catch (dbSetupError) {
-    console.error("[Main] CRITICAL: Failed to setup/verify database schema:", dbSetupError);
+    console.error("[Main] CRITICAL: Failed to initialize database schema. Error:", dbSetupError);
     app.quit();
     return;
   }
@@ -195,17 +196,19 @@ app.on('window-all-closed', function () {
   }
 });
 
+// --- Helper for IPC Status Updates ---
 function sendStatusToRenderer(targetWindow, message) {
   if (targetWindow && !targetWindow.isDestroyed()) {
     targetWindow.send('scrape-status', message);
   }
 }
 
+// --- IPC Listener to Get Available Resolutions ---
 ipcMain.on('get-available-resolutions', async (event) => {
   try {
-    const configData = await fs.readFile(global.coordinatesPath, 'utf-8'); // Use global
+    const configData = await fs.readFile(global.coordinatesPath, 'utf-8');
     const layoutConfig = JSON.parse(configData);
-    const resolutions = layoutConfig && layoutConfig.resolutions ? Object.keys(layoutConfig.resolutions) : [];
+    const resolutions = layoutConfig?.resolutions ? Object.keys(layoutConfig.resolutions) : [];
     event.sender.send('available-resolutions', resolutions);
   } catch (error) {
     console.error('Error reading layout_coordinates.json:', error);
@@ -216,15 +219,16 @@ ipcMain.on('get-available-resolutions', async (event) => {
   }
 });
 
+// --- IPC Listeners for Scraping (Now use activeDbPath) ---
 ipcMain.on('scrape-heroes', async (event) => {
   const sendStatus = (msg) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('scrape-status', msg); };
   try {
     sendStatus('Starting hero data update...');
-    await scrapeAndStoreHeroes(global.dbPath, heroesUrl, sendStatus);
+    await scrapeAndStoreHeroes(activeDbPath, heroesUrl, sendStatus);
     sendStatus('Hero data update complete!');
   } catch (error) {
     console.error('Hero scraping failed:', error);
-    sendStatus(`Error updating hero data: ${error.message}`);
+    sendStatusToRenderer(event, `Error updating hero data: ${error.message}`);
   }
 });
 
@@ -232,9 +236,8 @@ ipcMain.on('scrape-abilities', async (event) => {
   const sendStatus = (msg) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('scrape-status', msg); };
   try {
     sendStatus('Starting ability data update...');
-    const iconsDirPath = path.join(app.getPath('userData'), 'ability_icons');
-    await fs.mkdir(iconsDirPath, { recursive: true }); // Ensure it exists
-    await scrapeAndStoreAbilities(global.dbPath, iconsDirPath, abilitiesUrl, abilitiesHighSkillUrl, sendStatus);
+    // Use the globally set activeDbPath
+    await scrapeAndStoreAbilities(activeDbPath, abilitiesUrl, abilitiesHighSkillUrl, sendStatus);
     sendStatus('Ability data update complete!');
   } catch (error) {
     console.error('Ability scraping failed:', error);
@@ -246,7 +249,7 @@ ipcMain.on('scrape-ability-pairs', async (event) => {
   const sendStatus = (msg) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('scrape-status', msg); };
   try {
     sendStatus('Starting ability pairs update...');
-    await scrapeAndStoreAbilityPairs(global.dbPath, abilityPairsUrl, sendStatus);
+    await scrapeAndStoreAbilityPairs(activeDbPath, abilityPairsUrl, sendStatus);
     sendStatus('Ability pairs update complete!');
   } catch (error) {
     console.error('Ability pairs scraping failed:', error);
@@ -254,32 +257,65 @@ ipcMain.on('scrape-ability-pairs', async (event) => {
   }
 });
 
-
+// --- IPC Listener for Screen Scanning ---
 ipcMain.on('scan-draft-screen', async (event, selectedResolution) => {
-  if (!selectedResolution) { /* ... error handling ... */ return; }
+  if (!selectedResolution) {
+    console.error('Scan request received without a resolution.');
+    event.sender.send('scan-results', { error: 'No resolution provided for scanning.', durationMs: 0 });
+    return;
+  }
   console.log(`[Main] Received scan-draft-screen request for resolution: ${selectedResolution}.`);
   const startTime = performance.now();
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('scrape-status', `Processing screen with ML model for ${selectedResolution}...`);
 
   try {
     const rawResults = await processDraftScreen(global.coordinatesPath, selectedResolution);
-    const { ultimates: predictedUltimates, standard: predictedStandard } = rawResults;
-    const allIdentifiedNames = [...new Set([...predictedUltimates, ...predictedStandard].filter(name => name !== null))];
-    let winrateMap = new Map();
 
-    if (allIdentifiedNames.length > 0) {
-      winrateMap = getAbilityWinrates(global.dbPath, allIdentifiedNames);
-      console.log(`[Main] Fetched winrates for ${winrateMap.size} identified abilities.`);
+    const { ultimates: predictedUltimatesInternalNames, standard: predictedStandardInternalNames } = rawResults;
+    const allIdentifiedInternalNames = [
+      ...new Set([
+        ...(predictedUltimatesInternalNames || []),
+        ...(predictedStandardInternalNames || [])
+      ].filter(name => name !== null))
+    ];
+    let abilityDetailsMap = new Map();
+
+    if (allIdentifiedInternalNames.length > 0) {
+      try {
+        abilityDetailsMap = getAbilityDetails(activeDbPath, allIdentifiedInternalNames);
+        console.log(`Workspaceed winrates for ${abilityDetailsMap.size} identified abilities.`);
+      } catch (dbError) {
+        console.error(`Database query for winrates failed: ${dbError.message}`);
+      }
+    } else {
+      console.log('No abilities identified by ML model to fetch winrates for.');
     }
 
-    const formatResultsWithWinrates = (namesArray, wrMap) => namesArray.map(name => ({
-      name: name || 'Unknown',
-      winrate: name ? (wrMap.get(name) ?? null) : null
-    }));
+    const formatResultsForRenderer = (internalNamesArray) => {
+      if (!Array.isArray(internalNamesArray)) return [];
+      return internalNamesArray.map(internalName => {
+        const details = abilityDetailsMap.get(internalName);
+        if (details) {
+          return {
+            internalName: internalName,
+            displayName: details.displayName,
+            winrate: details.winrate
+          };
+        }
+        // Fallback if ML predicted a name not in DB or DB query failed for it
+        return {
+          internalName: internalName,
+          displayName: internalName || 'Unknown Ability', // Fallback display
+          winrate: null
+        };
+      });
+    };
 
-    const formattedUltimates = formatResultsWithWinrates(predictedUltimates, winrateMap);
-    const formattedStandard = formatResultsWithWinrates(predictedStandard, winrateMap);
-    const durationMs = Math.round(performance.now() - startTime);
+    const formattedUltimates = formatResultsForRenderer(predictedUltimatesInternalNames);
+    const formattedStandard = formatResultsForRenderer(predictedStandardInternalNames);
+
+    const endTime = performance.now();
+    const durationMs = Math.round(endTime - startTime);
 
     if (mainWindow && !mainWindow.isDestroyed()) {
       console.log('[Main] Hiding main window for overlay.');
@@ -295,12 +331,16 @@ ipcMain.on('scan-draft-screen', async (event, selectedResolution) => {
       layoutConfig
     );
     console.log(`[Main] Scan for ${selectedResolution} successful. Overlay initiated. Duration: ${durationMs} ms.`);
+
     if (event.sender && !event.sender.isDestroyed()) {
       event.sender.send('scan-results', {
-        success: true, message: `Overlay launched for ${selectedResolution}.`,
-        durationMs, resolution: selectedResolution
+        success: true, 
+        message: `Overlay launched for ${selectedResolution}.`,
+        durationMs, 
+        resolution: selectedResolution
       });
     }
+
   } catch (error) {
     console.error(`[Main] Error during scan-draft-screen for ${selectedResolution}:`, error);
     const durationMs = Math.round(performance.now() - startTime);

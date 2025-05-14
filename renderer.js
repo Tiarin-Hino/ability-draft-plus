@@ -120,7 +120,7 @@ if (window.electronAPI) {
     window.electronAPI.onScanResults((results) => {
         console.log('Scan results/status received in main window renderer:', results);
         let output = '';
-        setButtonsState(false); // Always re-enable buttons on completion or error
+        setButtonsState(false);
 
         if (results && results.error) {
             output = `Error during scan: ${results.error}\nResolution: ${results.resolution || selectedResolution}\nDuration: ${results.durationMs} ms`;
@@ -135,13 +135,21 @@ if (window.electronAPI) {
             const standard = Array.isArray(results.standard) ? results.standard : [];
             const durationMs = typeof results.durationMs === 'number' ? results.durationMs : 'N/A';
 
-            const formatWinrate = (rate) => { /* ... */ };
+            const formatWinrate = (rate) => {
+                if (rate === null || typeof rate !== 'number') {
+                    return '(WR: N/A)';
+                }
+                return `(${(rate * 100).toFixed(1)}%)`;
+            };
+
             output += `Scan completed for ${results.resolution || selectedResolution} in ${durationMs} ms.\n\n`;
             output += `Identified Ultimates (${ultimates.length}):\n`;
-            output += ultimates.map(item => `${item.name} ${formatWinrate(item.winrate)}`).join('\n') + '\n\n';
+            output += ultimates.map(item => `${item.displayName} ${formatWinrate(item.winrate)}`).join('\n') + '\n\n';
+
             output += `Identified Standard Abilities (${standard.length}):\n`;
-            output += standard.map(item => `${item.name} ${formatWinrate(item.winrate)}`).join('\n');
-            if (statusMessage) statusMessage.textContent = `Scan complete (legacy display).`;
+            output += standard.map(item => `${item.displayName} ${formatWinrate(item.winrate)}`).join('\n');
+
+            if (statusMessage) statusMessage.textContent = `Scan complete.`;
         } else {
             output = 'Received empty or invalid results.';
             if (statusMessage) statusMessage.textContent = 'Scan Error (undefined results).';
