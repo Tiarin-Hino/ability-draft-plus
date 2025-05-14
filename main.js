@@ -17,6 +17,7 @@ const abilityPairsUrl = 'https://windrun.io/ability-pairs';
 let mainWindow;
 let activeDbPath;
 let overlayWindow = null;
+let isScanInProgress = false; // Flag to prevent concurrent scans
 
 // --- Main Window Creation ---
 function createWindow() {
@@ -42,12 +43,15 @@ function createWindow() {
 }
 
 // --- Overlay Window Creation ---
-function createOverlayWindow(scanData, resolutionKey, allCoordinatesConfig) {
+function createOverlayWindow(resolutionKey, allCoordinatesConfig) {
   if (overlayWindow) {
     console.log('[Main] Closing existing overlay window before creating new one.');
     overlayWindow.close();
     overlayWindow = null;
   }
+
+  isScanInProgress = false;
+  console.log('[Main] isScanInProgress reset to false due to new overlay creation.');
 
   const primaryDisplay = screen.getPrimaryDisplay();
   const targetScreenWidth = primaryDisplay.bounds.width;
@@ -62,7 +66,7 @@ function createOverlayWindow(scanData, resolutionKey, allCoordinatesConfig) {
     transparent: true,
     // alwaysOnTop: true, // We will set this specifically after creation
     skipTaskbar: true,
-    focusable: true, // Ensure it can receive focus for Esc key, even if briefly
+    focusable: false, // Initially not focusable to allow click-through by default
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
@@ -86,54 +90,32 @@ function createOverlayWindow(scanData, resolutionKey, allCoordinatesConfig) {
   overlayWindow.webContents.on('did-finish-load', () => {
     console.log('[Main] Overlay window finished loading. Sending overlay-data.');
     overlayWindow.webContents.send('overlay-data', {
-      abilities: scanData,
+      scanData: null, // No scan data initially
       coordinatesConfig: allCoordinatesConfig,
-      targetResolution: resolutionKey
+      targetResolution: resolutionKey,
+      initialSetup: true // Flag to indicate this is the initial setup
     });
-  });
-
-  overlayWindow.on('blur', () => {
-    console.log('[Main] Overlay window BLURRED (lost focus).');
-    // Re-asserting alwaysOnTop and moveTop can help if it visually gets lost
-    // This was helpful because switching focus to DevTools brought it back.
-    if (overlayWindow && !overlayWindow.isDestroyed()) {
-      console.log('[Main] Re-asserting alwaysOnTop and moveTop on blur.');
-      overlayWindow.setAlwaysOnTop(true, 'screen-saver');
-      overlayWindow.moveTop(); // Ensure it's the topmost non-modal window
-    }
-  });
-
-  overlayWindow.on('focus', () => {
-    console.log('[Main] Overlay window FOCUSED.');
-    // When it gains focus (e.g., if user Alt-Tabs to it, or if we programmatically focus for Esc),
-    // ensure it's still set to ignore mouse events globally unless a specific element (like close button) overrides it.
-    // This might be redundant if mouse enter/leave on close button is robust, but belt-and-suspenders.
-    if (overlayWindow && !overlayWindow.isDestroyed() && !overlayWindow.webContents.isDevToolsFocused()) {
-      // Only if the DevTools itself isn't what's focused
-      // Check a flag or if mouse is over close button before re-asserting true
-      // For now, this might conflict with close button interaction if not careful.
-      // Let's rely on the close button's mouseenter/leave for now.
-      // console.log('[Main] Overlay focused, ensuring click-through (unless over interactive element).');
-      // overlayWindow.setIgnoreMouseEvents(true, { forward: true });
-    }
   });
 
   overlayWindow.on('closed', () => {
     overlayWindow = null;
-    console.log('[Main] Overlay window closed.');
+    isScanInProgress = false;
+    console.log('[Main] Overlay window closed. isScanInProgress reset to false.');
+
     if (mainWindow && !mainWindow.isDestroyed()) {
-      console.log('[Main] Main window exists and is not destroyed. Showing and focusing it.');
       mainWindow.show();
       mainWindow.focus();
-    } else if (mainWindow && mainWindow.isDestroyed()) {
-      console.log('[Main] Main window was destroyed during overlay.');
-      mainWindow = null;
-      // app.quit(); // or recreate if desired
+      // Send a message to the main window's renderer to reset its UI
+      if (mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
+        console.log('[Main] Notifying main window to re-enable UI.');
+        mainWindow.webContents.send('overlay-closed-reset-ui'); // New IPC message
+      }
     } else if (!mainWindow) {
-      console.log('[Main] Main window is null. Attempting to recreate.');
-      // createWindow(); // Recreate if it was fully closed
+      // createWindow(); // Or your logic for when main window doesn't exist
     }
   });
+  // Return the window object so we can send data to it later
+  return overlayWindow;
 }
 
 // --- App Ready ---
@@ -203,6 +185,156 @@ function sendStatusToRenderer(targetWindow, message) {
   }
 }
 
+// --- IPC Listener for Activating Overlay ---
+ipcMain.on('activate-overlay', async (event, selectedResolution) => {
+  if (!selectedResolution) {
+    console.error('[Main] Activate overlay request received without a resolution.');
+    event.sender.send('scrape-status', 'Error: No resolution provided for overlay.');
+    return;
+  }
+  console.log(`[Main] Received activate-overlay request for resolution: ${selectedResolution}.`);
+
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.hide();
+    console.log('[Main] Main window hidden for overlay activation.');
+    sendStatusToRenderer(mainWindow.webContents, `Overlay activated for ${selectedResolution}. Main window hidden.`);
+  }
+
+  try {
+    const configData = await fs.readFile(global.coordinatesPath, 'utf-8');
+    const layoutConfig = JSON.parse(configData);
+
+    // Create overlay without scan data. It will wait for a "scan now" command.
+    createOverlayWindow(selectedResolution, layoutConfig);
+    console.log(`[Main] Overlay launched for ${selectedResolution}. Waiting for scan command from overlay.`);
+    // Optionally send a success message back to the (now hidden) main window's renderer
+    // event.sender.send('scan-results', {
+    //   success: true,
+    //   message: `Overlay activated for ${selectedResolution}.`,
+    //   resolution: selectedResolution
+    // });
+
+  } catch (error) {
+    console.error(`[Main] Error during activate-overlay for ${selectedResolution}:`, error);
+    if (event.sender && !event.sender.isDestroyed()) {
+      event.sender.send('scrape-status', `Overlay Activation Error: ${error.message}`);
+    }
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.show(); // Show main window again if an error occurred
+    }
+  }
+});
+
+// --- IPC Listener for Screen Scanning (Triggered by Overlay) ---
+ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution) => {
+  if (isScanInProgress) {
+    console.warn('[Main] Scan request received, but a scan is already in progress. Ignoring this request.');
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      // Optionally send a status back to the overlay to indicate it's busy
+      overlayWindow.webContents.send('overlay-data', {
+        info: 'Scan already in progress. Please wait.', // Use a different key like 'info' or 'status'
+        targetResolution: selectedResolution,
+        initialSetup: false
+      });
+    }
+    return;
+  }
+
+  if (!overlayWindow || overlayWindow.isDestroyed()) {
+    console.error('[Main] Execute scan request received, but overlay window is not available.');
+    isScanInProgress = false; // Should not happen if guard is active, but good for safety
+    return;
+  }
+  if (!selectedResolution) {
+    console.error('[Main] Execute scan request received without a resolution.');
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      overlayWindow.webContents.send('overlay-data', { error: 'No resolution provided for scanning.' });
+    }
+    isScanInProgress = false; // Reset if error before scan starts
+    return;
+  }
+
+  isScanInProgress = true; // Set flag
+  console.log(`[Main] Starting scan for resolution: ${selectedResolution}. isScanInProgress = true.`);
+  const startTime = performance.now();
+
+  try {
+    const rawResults = await processDraftScreen(global.coordinatesPath, selectedResolution);
+    const { ultimates: predictedUltimatesInternalNames, standard: predictedStandardInternalNames } = rawResults;
+
+    const allDraftPoolInternalNames = [
+      ...new Set([
+        ...(predictedUltimatesInternalNames || []),
+        ...(predictedStandardInternalNames || [])
+      ].filter(name => name !== null && name !== 'Unknown Ability'))
+    ];
+
+    let abilityDetailsMap = new Map();
+    if (allDraftPoolInternalNames.length > 0) {
+      abilityDetailsMap = getAbilityDetails(activeDbPath, allDraftPoolInternalNames);
+    }
+
+    const allAbilitiesWithSynergies = [];
+    for (const internalName of allDraftPoolInternalNames) {
+      const details = abilityDetailsMap.get(internalName);
+      if (details) {
+        const combinations = await getHighWinrateCombinations(activeDbPath, internalName, allDraftPoolInternalNames);
+        allAbilitiesWithSynergies.push({
+          ...details,
+          highWinrateCombinations: combinations || []
+        });
+      } else {
+        allAbilitiesWithSynergies.push({
+          internalName: internalName,
+          displayName: internalName, winrate: null, highSkillWinrate: null, highWinrateCombinations: []
+        });
+      }
+    }
+
+    const formatResultsForOverlay = (predictedNamesArray) => {
+      if (!Array.isArray(predictedNamesArray)) return [];
+      return predictedNamesArray.map(internalName => {
+        if (internalName === null || internalName === 'Unknown Ability') {
+          return { internalName: internalName, displayName: 'Unknown Ability', winrate: null, highSkillWinrate: null, highWinrateCombinations: [] };
+        }
+        const foundAbility = allAbilitiesWithSynergies.find(a => a.internalName === internalName);
+        return foundAbility || { internalName: internalName, displayName: internalName, winrate: null, highSkillWinrate: null, highWinrateCombinations: [] };
+      });
+    };
+
+    const formattedUltimatesForOverlay = formatResultsForOverlay(predictedUltimatesInternalNames);
+    const formattedStandardForOverlay = formatResultsForOverlay(predictedStandardInternalNames);
+
+    const endTime = performance.now();
+    const durationMs = Math.round(endTime - startTime);
+
+    const configData = await fs.readFile(global.coordinatesPath, 'utf-8');
+    const layoutConfig = JSON.parse(configData);
+
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      overlayWindow.webContents.send('overlay-data', {
+        scanData: {
+          ultimates: formattedUltimatesForOverlay,
+          standard: formattedStandardForOverlay
+        },
+        coordinatesConfig: layoutConfig,
+        targetResolution: selectedResolution,
+        durationMs: durationMs,
+        initialSetup: false
+      });
+      console.log(`[Main] Scan for ${selectedResolution} successful. Data sent to overlay. Duration: ${durationMs} ms.`);
+    }
+  } catch (error) {
+    console.error(`[Main] Error during execute-scan-from-overlay for ${selectedResolution}:`, error);
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      overlayWindow.webContents.send('overlay-data', { error: error.message || 'Unknown error during scan.' });
+    }
+  } finally {
+    isScanInProgress = false; // Reset flag in finally block
+    console.log(`[Main] Scan process finished for ${selectedResolution}. isScanInProgress = false.`);
+  }
+});
+
 // --- IPC Listener to Get Available Resolutions ---
 ipcMain.on('get-available-resolutions', async (event) => {
   try {
@@ -257,146 +389,6 @@ ipcMain.on('scrape-ability-pairs', async (event) => {
   }
 });
 
-// --- IPC Listener for Screen Scanning ---
-ipcMain.on('scan-draft-screen', async (event, selectedResolution) => {
-  if (!selectedResolution) {
-    console.error('Scan request received without a resolution.');
-    event.sender.send('scan-results', { error: 'No resolution provided for scanning.', durationMs: 0 });
-    return;
-  }
-  console.log(`[Main] Received scan-draft-screen request for resolution: ${selectedResolution}.`);
-  const startTime = performance.now();
-  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('scrape-status', `Processing screen with ML model for ${selectedResolution}...`);
-
-  try {
-    const rawResults = await processDraftScreen(global.coordinatesPath, selectedResolution);
-
-    const { ultimates: predictedUltimatesInternalNames, standard: predictedStandardInternalNames } = rawResults;
-
-    // Consolidate all unique identified internal names from the draft pool
-    const allDraftPoolInternalNames = [
-      ...new Set([
-        ...(predictedUltimatesInternalNames || []),
-        ...(predictedStandardInternalNames || [])
-      ].filter(name => name !== null && name !== 'Unknown Ability')) // Ensure not null and not 'Unknown'
-    ];
-
-    let abilityDetailsMap = new Map();
-
-    if (allDraftPoolInternalNames.length > 0) {
-      try {
-        // Fetch basic details (including high_skill_winrate now)
-        abilityDetailsMap = getAbilityDetails(activeDbPath, allDraftPoolInternalNames);
-        console.log(`[Main] Fetched details for ${abilityDetailsMap.size} identified abilities.`);
-      } catch (dbError) {
-        console.error(`[Main] Database query for ability details failed: ${dbError.message}`);
-      }
-    } else {
-      console.log('[Main] No abilities identified by ML model to fetch details for.');
-    }
-
-    // --- NEW: Fetch High Winrate Combinations ---
-    const allAbilitiesWithSynergies = [];
-    for (const internalName of allDraftPoolInternalNames) {
-      const details = abilityDetailsMap.get(internalName);
-      if (details) {
-        const combinations = await getHighWinrateCombinations(activeDbPath, internalName, allDraftPoolInternalNames);
-        allAbilitiesWithSynergies.push({
-          ...details, // includes internalName, displayName, winrate, highSkillWinrate
-          highWinrateCombinations: combinations || [] // Ensure it's an array
-        });
-      } else {
-        // If an ability was in allDraftPoolInternalNames but not in abilityDetailsMap (e.g. DB error for that one)
-        allAbilitiesWithSynergies.push({
-          internalName: internalName,
-          displayName: internalName, // Fallback
-          winrate: null,
-          highSkillWinrate: null,
-          highWinrateCombinations: []
-        });
-      }
-    }
-    // --- END NEW ---
-
-    // Now, re-structure the data for the overlay based on the original slot order, using allAbilitiesWithSynergies
-    const formatResultsForOverlay = (predictedNamesArray) => {
-      if (!Array.isArray(predictedNamesArray)) return [];
-      return predictedNamesArray.map(internalName => {
-        if (internalName === null || internalName === 'Unknown Ability') {
-          return {
-            internalName: internalName, // Could be null or "Unknown Ability"
-            displayName: 'Unknown Ability',
-            winrate: null,
-            highSkillWinrate: null,
-            highWinrateCombinations: []
-          };
-        }
-        const foundAbility = allAbilitiesWithSynergies.find(a => a.internalName === internalName);
-        if (foundAbility) {
-          return foundAbility;
-        }
-        // Fallback if ML predicted a name that somehow didn't make it into allAbilitiesWithSynergies
-        // (should be rare if allDraftPoolInternalNames was comprehensive)
-        return {
-          internalName: internalName,
-          displayName: internalName, // Fallback display
-          winrate: null,
-          highSkillWinrate: null,
-          highWinrateCombinations: []
-        };
-      });
-    };
-
-    const formattedUltimatesForOverlay = formatResultsForOverlay(predictedUltimatesInternalNames);
-    const formattedStandardForOverlay = formatResultsForOverlay(predictedStandardInternalNames);
-
-    const endTime = performance.now();
-    const durationMs = Math.round(endTime - startTime);
-
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      console.log('[Main] Hiding main window for overlay.');
-      mainWindow.hide();
-    }
-
-    const configData = await fs.readFile(global.coordinatesPath, 'utf-8');
-    const layoutConfig = JSON.parse(configData);
-
-    createOverlayWindow(
-      {
-        ultimates: formattedUltimatesForOverlay, // Use the new structure
-        standard: formattedStandardForOverlay   // Use the new structure
-      },
-      selectedResolution,
-      layoutConfig
-    );
-    console.log(`[Main] Scan for ${selectedResolution} successful. Overlay initiated. Duration: ${durationMs} ms.`);
-
-    if (event.sender && !event.sender.isDestroyed()) {
-      event.sender.send('scan-results', {
-        success: true,
-        message: `Overlay launched for ${selectedResolution}.`,
-        durationMs,
-        resolution: selectedResolution
-        // No longer sending detailed ability data to main window's renderer for display,
-        // as the overlay handles this now.
-      });
-    }
-
-  } catch (error) {
-    console.error(`[Main] Error during scan-draft-screen for ${selectedResolution}:`, error);
-    const durationMs = Math.round(performance.now() - startTime);
-    if (event.sender && !event.sender.isDestroyed()) {
-      event.sender.send('scan-results', { error: error.message || 'Unknown error', durationMs, resolution: selectedResolution });
-    }
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.show();
-      if (mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
-        mainWindow.webContents.send('scrape-status', `Scan Error: ${error.message}`);
-      }
-    }
-  }
-});
-
 ipcMain.on('close-overlay', () => {
   console.log('[Main] Received close-overlay IPC.');
   if (overlayWindow) {
@@ -423,4 +415,8 @@ app.on('window-all-closed', function () {
   if (process.platform !== 'darwin') {
     app.quit();
   }
+});
+
+app.on('will-quit', () => {
+  isScanInProgress = false;
 });

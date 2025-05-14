@@ -1,10 +1,13 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
     <title>Dota AD Overlay Control</title>
-    </head>
+</head>
+
 <body>
     <h1>Dota AD Overlay Control</h1>
 
@@ -21,7 +24,7 @@
     <hr>
 
     <div>
-         <p>Fetch ability pair winrates (>50%) from windrun.io.</p>
+        <p>Fetch ability pair winrates (>50%) from windrun.io.</p>
         <button id="update-pairs-btn">Update Ability Pairs</button>
     </div>
     <hr>
@@ -31,8 +34,8 @@
         <select id="resolution-select">
             <option value="">Loading resolutions...</option>
         </select>
-        <p>Manually scan the current draft screen to identify abilities.</p>
-        <button id="scan-draft-btn">Scan Draft Screen</button>
+        <p>Activate the overlay to prepare for scanning.</p>
+        <button id="activate-overlay-btn">Activate Overlay</button>
     </div>
     <hr>
 
@@ -41,6 +44,8 @@
 
     <h2>Scan Results:</h2>
     <pre id="scan-results">Scan results will appear here...</pre>
-    <br> <script src="./renderer.js"></script>
+    <br>
+    <script src="./renderer.js"></script>
 </body>
+
 </html>
