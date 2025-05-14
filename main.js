@@ -88,6 +88,14 @@ function createOverlayWindow(resolutionKey, allCoordinatesConfig) {
   overlayWindow.setAlwaysOnTop(true, 'screen-saver');
   overlayWindow.setVisibleOnAllWorkspaces(true);
   overlayWindow.setIgnoreMouseEvents(true, { forward: true });
+
+  // --- ADD THIS LINE FOR DEBUGGING ---
+  if (overlayWindow && overlayWindow.webContents) { // Check if webContents exists
+    console.log('[Main Debug] Opening DevTools for overlay window.');
+    overlayWindow.webContents.openDevTools({ mode: 'detach' }); // 'detach' opens it in a separate window
+  }
+  // --- END OF ADDED LINE ---
+
   console.log('[Main] Overlay window created and configured.');
 
   overlayWindow.webContents.on('did-finish-load', () => {
@@ -222,7 +230,7 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution) => {
   if (isScanInProgress) {
     console.warn('[Main] Scan already in progress. Ignoring request.');
     if (overlayWindow && !overlayWindow.isDestroyed()) {
-      overlayWindow.webContents.send('overlay-data', { info: 'Scan already in progress.', targetResolution, initialSetup: false });
+      overlayWindow.webContents.send('overlay-data', { info: 'Scan already in progress.', targetResolution: lastScanTargetResolution, initialSetup: false });
     }
     return;
   }
@@ -239,14 +247,14 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution) => {
   }
 
   isScanInProgress = true;
-  lastScanRawResults = null; // Clear previous results before new scan
-  lastScanTargetResolution = selectedResolution; // Store current resolution
+  lastScanRawResults = null;
+  lastScanTargetResolution = selectedResolution;
   console.log(`[Main] Starting scan for ${selectedResolution}.`);
   const startTime = performance.now();
 
   try {
     const rawResults = await processDraftScreen(global.coordinatesPath, selectedResolution);
-    lastScanRawResults = rawResults; // <<<< STORE THE RAW RESULTS
+    lastScanRawResults = rawResults;
     const { ultimates: predictedUltimatesInternalNames, standard: predictedStandardInternalNames } = rawResults;
 
     const allDraftPoolInternalNames = [...new Set([...(predictedUltimatesInternalNames || []), ...(predictedStandardInternalNames || [])].filter(name => name !== null && name !== 'Unknown Ability'))];
@@ -255,25 +263,46 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution) => {
       abilityDetailsMap = getAbilityDetails(activeDbPath, allDraftPoolInternalNames);
     }
 
-    const allAbilitiesWithSynergies = [];
+    const allAbilitiesWithSynergiesAndDetails = [];
     for (const internalName of allDraftPoolInternalNames) {
       const details = abilityDetailsMap.get(internalName);
       if (details) {
         const combinations = await getHighWinrateCombinations(activeDbPath, internalName, allDraftPoolInternalNames);
-        allAbilitiesWithSynergies.push({ ...details, highWinrateCombinations: combinations || [] });
+        allAbilitiesWithSynergiesAndDetails.push({ ...details, highWinrateCombinations: combinations || [] });
       } else {
-        allAbilitiesWithSynergies.push({ internalName, displayName: internalName, winrate: null, highSkillWinrate: null, highWinrateCombinations: [] });
+        // This case should ideally not happen if the ML model only predicts known abilities
+        // and those abilities are in the DB.
+        allAbilitiesWithSynergiesAndDetails.push({ internalName, displayName: internalName, winrate: null, highSkillWinrate: null, highWinrateCombinations: [] });
       }
     }
+
+    // --- START: New logic to identify top 10 abilities ---
+    let topTierAbilityNames = new Set();
+    if (allAbilitiesWithSynergiesAndDetails.length > 0) {
+      const sortedByHighSkill = [...allAbilitiesWithSynergiesAndDetails] // Create a mutable copy
+        .filter(ability => ability.highSkillWinrate !== null && typeof ability.highSkillWinrate === 'number')
+        .sort((a, b) => b.highSkillWinrate - a.highSkillWinrate);
+
+      const top10Abilities = sortedByHighSkill.slice(0, 10);
+      topTierAbilityNames = new Set(top10Abilities.map(ability => ability.internalName));
+      console.log('[Main] Top 10 abilities by high skill winrate:', top10Abilities.map(a => `${a.displayName} (${(a.highSkillWinrate * 100).toFixed(1)}%)`));
+    }
+    // --- END: New logic to identify top 10 abilities ---
+
 
     const formatResultsForOverlay = (predictedNamesArray) => {
       if (!Array.isArray(predictedNamesArray)) return [];
       return predictedNamesArray.map(internalName => {
         if (internalName === null || internalName === 'Unknown Ability') {
-          return { internalName, displayName: 'Unknown Ability', winrate: null, highSkillWinrate: null, highWinrateCombinations: [] };
+          return { internalName, displayName: 'Unknown Ability', winrate: null, highSkillWinrate: null, highWinrateCombinations: [], isTopTier: false };
         }
-        const foundAbility = allAbilitiesWithSynergies.find(a => a.internalName === internalName);
-        return foundAbility || { internalName, displayName: internalName, winrate: null, highSkillWinrate: null, highWinrateCombinations: [] };
+        const foundAbility = allAbilitiesWithSynergiesAndDetails.find(a => a.internalName === internalName);
+        const isTopTier = topTierAbilityNames.has(internalName); // Check if this ability is in the top tier set
+        if (foundAbility) {
+          return { ...foundAbility, isTopTier };
+        }
+        // Fallback for abilities predicted but not found in allAbilitiesWithSynergiesAndDetails (should be rare)
+        return { internalName, displayName: internalName, winrate: null, highSkillWinrate: null, highWinrateCombinations: [], isTopTier };
       });
     };
 
@@ -296,7 +325,7 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution) => {
     }
   } catch (error) {
     console.error(`[Main] Error during scan for ${selectedResolution}:`, error);
-    lastScanRawResults = null; // Clear on error too
+    lastScanRawResults = null;
     if (overlayWindow && !overlayWindow.isDestroyed()) {
       overlayWindow.webContents.send('overlay-data', { error: error.message || 'Scan error.' });
     }
