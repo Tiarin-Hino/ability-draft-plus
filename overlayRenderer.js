@@ -36,14 +36,14 @@ if (window.electronAPI && window.electronAPI.onOverlayData) {
         const createHotspotsForType = (abilityArray, coordArray, type) => {
             if (abilityArray && Array.isArray(abilityArray) && coordArray && Array.isArray(coordArray)) {
                 console.log(`Creating hotspots for ${type}, count: ${abilityArray.length}`);
-                abilityArray.forEach((abilityInfo, index) => {
+                abilityArray.forEach((abilityInfo, index) => { // abilityInfo is now the richer object
                     if (abilityInfo && abilityInfo.displayName && abilityInfo.displayName !== 'Unknown Ability' && coordArray[index]) {
                         createHotspot(coordArray[index], abilityInfo, index, type);
                     } else if (abilityInfo && abilityInfo.internalName && coordArray[index]) {
-                        console.warn(`Using internalName as fallback for hotspot: ${abilityInfo.internalName}`);
+                        // This case might occur if displayName was null but internalName exists (e.g. "Unknown Ability" or error recovery)
                         createHotspot(coordArray[index], {
-                            ...abilityInfo,
-                            displayName: abilityInfo.internalName
+                            ...abilityInfo, // Pass the whole structure
+                            displayName: abilityInfo.internalName // Fallback display name
                         }, index, type);
                     }
                 });
@@ -75,25 +75,44 @@ function createHotspot(coord, abilityData, index, type) {
     hotspot.style.width = `${coord.width}px`;
     hotspot.style.height = `${coord.height}px`;
 
-    hotspot.dataset.abilityName = abilityData.displayName;
+    hotspot.dataset.abilityName = abilityData.displayName; // For display
+    hotspot.dataset.internalName = abilityData.internalName; // For potential future use
     hotspot.dataset.winrate = abilityData.winrate !== null ? abilityData.winrate : 'N/A';
+    hotspot.dataset.highSkillWinrate = abilityData.highSkillWinrate !== null ? abilityData.highSkillWinrate : 'N/A';
+    // Store combinations as a JSON string to be parsed on mouseenter
+    hotspot.dataset.combinations = JSON.stringify(abilityData.highWinrateCombinations || []);
 
     hotspot.addEventListener('mouseenter', (event) => {
         console.log(`Mouse ENTER over ${hotspot.dataset.abilityName}`);
 
         const nameForDisplay = hotspot.dataset.abilityName.replace(/_/g, ' ');
+
         let wr = hotspot.dataset.winrate;
         const winrateFormatted = wr !== 'N/A' ? `${(parseFloat(wr) * 100).toFixed(1)}%` : 'N/A';
 
-        tooltipElement.innerHTML = `
+        let hsWr = hotspot.dataset.highSkillWinrate;
+        const highSkillWinrateFormatted = hsWr !== 'N/A' ? `${(parseFloat(hsWr) * 100).toFixed(1)}%` : 'N/A';
+
+        let tooltipContent = `
             <div class="tooltip-title">${nameForDisplay}</div>
-            <div class="tooltip-winrate">Winrate - ${winrateFormatted}</div>
+            <div class="tooltip-winrate">Winrate: ${winrateFormatted}</div>
+            <div class="tooltip-winrate">High Skill WR: ${highSkillWinrateFormatted}</div>
         `;
 
-        tooltipElement.style.display = 'block'; // Make tooltip visible so its dimensions can be read
-        positionTooltip(hotspot); // Now position it
+        const combinations = JSON.parse(hotspot.dataset.combinations);
+        if (combinations && combinations.length > 0) {
+            tooltipContent += `<div class="tooltip-section-title">Strong Combos in Pool:</div>`;
+            combinations.slice(0, 5).forEach(combo => { // Show top 5
+                const comboPartnerName = (combo.partnerAbilityDisplayName || 'Unknown Partner').replace(/_/g, ' ');
+                const comboWrFormatted = combo.synergyWinrate !== null ? `${(parseFloat(combo.synergyWinrate) * 100).toFixed(1)}%` : 'N/A';
+                tooltipContent += `<div class="tooltip-combo">- ${comboPartnerName} (${comboWrFormatted})</div>`;
+            });
+        }
 
-        console.log(`Tooltip displayed for ${nameForDisplay}`);
+        tooltipElement.innerHTML = tooltipContent;
+        tooltipElement.style.display = 'block';
+        positionTooltip(hotspot);
+        console.log(`Tooltip displayed for ${nameForDisplay} with extended info.`);
     });
 
     hotspot.addEventListener('mouseleave', () => {

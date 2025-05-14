@@ -65,6 +65,25 @@ body {
 .tooltip-winrate {
     color: #c0c0c0;
     /* Slightly less bright for winrate text */
+    margin-bottom: 3px;
+}
+
+.tooltip-section-title {
+    font-weight: bold;
+    margin-top: 8px;
+    /* Space above the combo section title */
+    margin-bottom: 3px;
+    color: #d0d0d0;
+    /* Slightly different color for section title */
+}
+
+.tooltip-combo {
+    font-size: 13px;
+    /* Slightly smaller for combo lines */
+    color: #b0b0b0;
+    padding-left: 10px;
+    /* Indent combo items */
+    margin-bottom: 2px;
 }
 
 #close-overlay-btn {

@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs').promises;
 const { performance } = require('perf_hooks');
 const setupDatabase = require('./src/database/setupDatabase');
-const { getAbilityDetails } = require('./src/database/queries');
+const { getAbilityDetails, getHighWinrateCombinations } = require('./src/database/queries');
 const { scrapeAndStoreHeroes } = require('./src/scraper/heroScraper');
 const { scrapeAndStoreAbilities } = require('./src/scraper/abilityScraper');
 const { scrapeAndStoreAbilityPairs } = require('./src/scraper/abilityPairScraper');
@@ -272,47 +272,83 @@ ipcMain.on('scan-draft-screen', async (event, selectedResolution) => {
     const rawResults = await processDraftScreen(global.coordinatesPath, selectedResolution);
 
     const { ultimates: predictedUltimatesInternalNames, standard: predictedStandardInternalNames } = rawResults;
-    const allIdentifiedInternalNames = [
+
+    // Consolidate all unique identified internal names from the draft pool
+    const allDraftPoolInternalNames = [
       ...new Set([
         ...(predictedUltimatesInternalNames || []),
         ...(predictedStandardInternalNames || [])
-      ].filter(name => name !== null))
+      ].filter(name => name !== null && name !== 'Unknown Ability')) // Ensure not null and not 'Unknown'
     ];
+
     let abilityDetailsMap = new Map();
 
-    if (allIdentifiedInternalNames.length > 0) {
+    if (allDraftPoolInternalNames.length > 0) {
       try {
-        abilityDetailsMap = getAbilityDetails(activeDbPath, allIdentifiedInternalNames);
-        console.log(`Workspaceed winrates for ${abilityDetailsMap.size} identified abilities.`);
+        // Fetch basic details (including high_skill_winrate now)
+        abilityDetailsMap = getAbilityDetails(activeDbPath, allDraftPoolInternalNames);
+        console.log(`[Main] Fetched details for ${abilityDetailsMap.size} identified abilities.`);
       } catch (dbError) {
-        console.error(`Database query for winrates failed: ${dbError.message}`);
+        console.error(`[Main] Database query for ability details failed: ${dbError.message}`);
       }
     } else {
-      console.log('No abilities identified by ML model to fetch winrates for.');
+      console.log('[Main] No abilities identified by ML model to fetch details for.');
     }
 
-    const formatResultsForRenderer = (internalNamesArray) => {
-      if (!Array.isArray(internalNamesArray)) return [];
-      return internalNamesArray.map(internalName => {
-        const details = abilityDetailsMap.get(internalName);
-        if (details) {
+    // --- NEW: Fetch High Winrate Combinations ---
+    const allAbilitiesWithSynergies = [];
+    for (const internalName of allDraftPoolInternalNames) {
+      const details = abilityDetailsMap.get(internalName);
+      if (details) {
+        const combinations = await getHighWinrateCombinations(activeDbPath, internalName, allDraftPoolInternalNames);
+        allAbilitiesWithSynergies.push({
+          ...details, // includes internalName, displayName, winrate, highSkillWinrate
+          highWinrateCombinations: combinations || [] // Ensure it's an array
+        });
+      } else {
+        // If an ability was in allDraftPoolInternalNames but not in abilityDetailsMap (e.g. DB error for that one)
+        allAbilitiesWithSynergies.push({
+          internalName: internalName,
+          displayName: internalName, // Fallback
+          winrate: null,
+          highSkillWinrate: null,
+          highWinrateCombinations: []
+        });
+      }
+    }
+    // --- END NEW ---
+
+    // Now, re-structure the data for the overlay based on the original slot order, using allAbilitiesWithSynergies
+    const formatResultsForOverlay = (predictedNamesArray) => {
+      if (!Array.isArray(predictedNamesArray)) return [];
+      return predictedNamesArray.map(internalName => {
+        if (internalName === null || internalName === 'Unknown Ability') {
           return {
-            internalName: internalName,
-            displayName: details.displayName,
-            winrate: details.winrate
+            internalName: internalName, // Could be null or "Unknown Ability"
+            displayName: 'Unknown Ability',
+            winrate: null,
+            highSkillWinrate: null,
+            highWinrateCombinations: []
           };
         }
-        // Fallback if ML predicted a name not in DB or DB query failed for it
+        const foundAbility = allAbilitiesWithSynergies.find(a => a.internalName === internalName);
+        if (foundAbility) {
+          return foundAbility;
+        }
+        // Fallback if ML predicted a name that somehow didn't make it into allAbilitiesWithSynergies
+        // (should be rare if allDraftPoolInternalNames was comprehensive)
         return {
           internalName: internalName,
-          displayName: internalName || 'Unknown Ability', // Fallback display
-          winrate: null
+          displayName: internalName, // Fallback display
+          winrate: null,
+          highSkillWinrate: null,
+          highWinrateCombinations: []
         };
       });
     };
 
-    const formattedUltimates = formatResultsForRenderer(predictedUltimatesInternalNames);
-    const formattedStandard = formatResultsForRenderer(predictedStandardInternalNames);
+    const formattedUltimatesForOverlay = formatResultsForOverlay(predictedUltimatesInternalNames);
+    const formattedStandardForOverlay = formatResultsForOverlay(predictedStandardInternalNames);
 
     const endTime = performance.now();
     const durationMs = Math.round(endTime - startTime);
@@ -326,7 +362,10 @@ ipcMain.on('scan-draft-screen', async (event, selectedResolution) => {
     const layoutConfig = JSON.parse(configData);
 
     createOverlayWindow(
-      { ultimates: formattedUltimates, standard: formattedStandard },
+      {
+        ultimates: formattedUltimatesForOverlay, // Use the new structure
+        standard: formattedStandardForOverlay   // Use the new structure
+      },
       selectedResolution,
       layoutConfig
     );
@@ -338,6 +377,8 @@ ipcMain.on('scan-draft-screen', async (event, selectedResolution) => {
         message: `Overlay launched for ${selectedResolution}.`,
         durationMs,
         resolution: selectedResolution
+        // No longer sending detailed ability data to main window's renderer for display,
+        // as the overlay handles this now.
       });
     }
 
