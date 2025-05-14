@@ -138,3 +138,44 @@ body {
 #close-overlay-btn:hover {
     background-color: rgba(255, 0, 0, 0.9);
 }
+
+#take-snapshot-btn {
+    padding: 5px 10px;
+    background-color: rgba(255, 165, 0, 0.7);
+    /* Orange-ish */
+    color: white;
+    border: 1px solid rgba(200, 130, 0, 0.9);
+    border-radius: 3px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 12px;
+    margin-top: 5px;
+    /* Add some space if stacked */
+}
+
+#take-snapshot-btn:hover {
+    background-color: rgba(255, 165, 0, 0.9);
+}
+
+#take-snapshot-btn:disabled {
+    background-color: rgba(100, 100, 100, 0.5);
+    cursor: not-allowed;
+}
+
+#snapshot-status {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    background-color: rgba(20, 20, 30, 0.85);
+    color: #e0e0e0;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 13px;
+    z-index: 10001;
+    /* Ensure it's above other elements if necessary */
+    display: none;
+    /* Initially hidden */
+    border: 1px solid rgba(50, 50, 70, 0.8);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
