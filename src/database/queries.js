@@ -6,10 +6,10 @@ const Database = require('better-sqlite3');
  * @param {string[]} abilityNames - An array of ability names to query.
  * @returns {Map<string, number | null>} A Map where keys are ability names and values are winrates (or null if not found).
  */
-function getAbilityWinrates(dbPath, abilityNames) {
-    const winrateMap = new Map();
+function getAbilityDetails (dbPath, abilityNames) {
+    const detailsMap = new Map();
     if (!abilityNames || abilityNames.length === 0) {
-        return winrateMap; // Return empty map if no names provided
+        return detailsMap;
     }
 
     let db;
@@ -18,7 +18,7 @@ function getAbilityWinrates(dbPath, abilityNames) {
 
         // Prepare placeholder string for IN clause: (?, ?, ...)
         const placeholders = abilityNames.map(() => '?').join(', ');
-        const sql = `SELECT name, winrate FROM Abilities WHERE name IN (${placeholders})`;
+        const sql = `SELECT name, display_name, winrate FROM Abilities WHERE name IN (${placeholders})`;
 
         const stmt = db.prepare(sql);
         const rows = stmt.all(abilityNames); // Bind the array of names
@@ -26,7 +26,11 @@ function getAbilityWinrates(dbPath, abilityNames) {
         // Populate the map with results
         rows.forEach(row => {
             // Ensure winrate is stored as a number or null
-            winrateMap.set(row.name, (typeof row.winrate === 'number') ? row.winrate : null);
+            detailsMap.set(row.name, {
+                name: row.name, // Internal name
+                displayName: row.display_name || row.name, // Fallback to internal name if display_name is null/empty
+                winrate: (typeof row.winrate === 'number') ? row.winrate : null
+            });
         });
 
         // For names provided but not found in DB, map will not have an entry (or we could explicitly set null)
@@ -42,7 +46,7 @@ function getAbilityWinrates(dbPath, abilityNames) {
             db.close();
         }
     }
-    return winrateMap;
+    return detailsMap;
 }
 
-module.exports = { getAbilityWinrates };
+module.exports = { getAbilityDetails };
