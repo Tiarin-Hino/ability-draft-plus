@@ -334,9 +334,9 @@ ipcMain.on('scan-draft-screen', async (event, selectedResolution) => {
 
     if (event.sender && !event.sender.isDestroyed()) {
       event.sender.send('scan-results', {
-        success: true, 
+        success: true,
         message: `Overlay launched for ${selectedResolution}.`,
-        durationMs, 
+        durationMs,
         resolution: selectedResolution
       });
     }
@@ -372,10 +372,8 @@ ipcMain.on('close-overlay', () => {
 
 ipcMain.on('set-overlay-mouse-ignore', (event, ignore) => {
   if (overlayWindow && !overlayWindow.isDestroyed()) {
-    overlayWindow.setIgnoreMouseEvents(ignore, { forward: true });
+    overlayWindow.setIgnoreMouseEvents(ignore, { forward: true }); // ensure forward:true
     console.log(`[Main] Overlay mouse events ignore set to: ${ignore}`);
-  } else {
-    // console.log(`[Main] Attempted to set mouse ignore, but overlayWindow is not available. Ignore requested: ${ignore}`);
   }
 });
 

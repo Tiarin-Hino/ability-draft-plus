@@ -16,28 +16,55 @@ body {
     /* Positioned based on coordinates from main process */
     box-sizing: border-box;
     /* For debugging hotspot areas - make them slightly visible. Remove or make fully transparent for production. */
-    /* background-color: rgba(0, 255, 0, 0.1); */
-    /* border: 1px dashed yellow; */
+    /* background-color: rgba(0, 255, 0, 0.05); */
+    /* border: 1px dashed rgba(255, 255, 0, 0.3); */
+    /* Made it slightly more visible for debugging */
 }
 
 .tooltip {
-    /* position: absolute; set by JS */
-    background-color: rgba(20, 20, 20, 0.9);
-    color: #e0e0e0;
-    padding: 6px 10px;
-    border-radius: 4px;
+    position: absolute;
+    /* This will be managed by JS */
+    background-color: rgba(15, 15, 25, 0.92);
+    /* Darker, slightly blueish background */
+    color: #e8e8e8;
+    /* Lighter text color */
+    padding: 8px 12px;
+    /* Slightly more padding */
+    border-radius: 5px;
+    /* Rounded corners */
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    font-size: 13px;
+    /* Keep consistent font */
+    font-size: 14px;
+    /* Slightly larger font for readability */
     z-index: 99999;
-    /* Very high z-index */
     pointer-events: none;
     /* Tooltip itself should not capture mouse events */
     white-space: pre-line;
-    /* Allows \n for newlines */
-    border: 1px solid rgba(80, 80, 80, 0.7);
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-    max-width: 250px;
-    /* Prevent tooltip from becoming too wide */
+    border: 1px solid rgba(60, 60, 80, 0.8);
+    /* Slightly more prominent border */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+    /* More pronounced shadow */
+    max-width: 280px;
+    display: none;
+    /* Initially hidden */
+    /* NEW: Transition for smoother appearance/disappearance if desired, though instant is fine too */
+    /* transition: opacity 0.1s ease-in-out; */
+    /* opacity: 0; */
+    /* if using transition for fade-in/out */
+}
+
+.tooltip-title {
+    font-weight: bold;
+    margin-bottom: 4px;
+    /* Space between title and winrate */
+    color: #fafafa;
+    /* Even brighter for title */
+    font-size: 15px;
+}
+
+.tooltip-winrate {
+    color: #c0c0c0;
+    /* Slightly less bright for winrate text */
 }
 
 #close-overlay-btn {
@@ -50,12 +77,10 @@ body {
     font-weight: bold;
     font-size: 12px;
     opacity: 0.5;
-    /* Dim by default */
     transition: opacity 0.2s ease-in-out;
 }
 
 #close-overlay-btn:hover {
     background-color: rgba(255, 0, 0, 0.9);
     opacity: 1;
-    /* Full opacity on hover */
 }
