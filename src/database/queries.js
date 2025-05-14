@@ -34,7 +34,7 @@ function getAbilityDetails(dbPath, abilityNames) {
 
     } catch (err) {
         console.error(`Error fetching ability details: ${err.message}`);
-        return new Map();
+        return new Map(); // Return an empty map on error to avoid downstream issues
     } finally {
         if (db) {
             db.close();
@@ -44,7 +44,8 @@ function getAbilityDetails(dbPath, abilityNames) {
 }
 
 /**
- * Fetches high winrate combinations for a specific ability against a pool of other abilities.
+ * Fetches high winrate combinations for a specific ability against a pool of other abilities,
+ * ensuring that synergistic abilities are from different heroes.
  * @param {string} dbPath - Path to the SQLite database file.
  * @param {string} baseAbilityInternalName - The internal name of the ability to find synergies for.
  * @param {string[]} draftPoolInternalNames - An array of internal names of other abilities in the draft pool.
@@ -60,43 +61,13 @@ async function getHighWinrateCombinations(dbPath, baseAbilityInternalName, draft
     try {
         db = new Database(dbPath, { readonly: true });
 
-        // Get the ID and display name for the base ability
-        const baseAbilityRow = db.prepare('SELECT ability_id, display_name FROM Abilities WHERE name = ?').get(baseAbilityInternalName);
-        if (!baseAbilityRow) {
+        // Get the hero_id for the base ability
+        const baseAbilityInfo = db.prepare('SELECT hero_id FROM Abilities WHERE name = ?').get(baseAbilityInternalName);
+        if (!baseAbilityInfo) {
             console.warn(`Base ability ${baseAbilityInternalName} not found in DB for synergy check.`);
             return combinations;
         }
-        const baseAbilityId = baseAbilityRow.ability_id;
-
-        // Get IDs and display names for the draft pool abilities
-        const poolPlaceholders = draftPoolInternalNames.map(() => '?').join(', ');
-        const poolAbilitiesSql = `SELECT ability_id, name, display_name FROM Abilities WHERE name IN (${poolPlaceholders})`;
-        const poolAbilityRows = db.prepare(poolAbilitiesSql).all(draftPoolInternalNames);
-        const poolAbilityNameToDetailsMap = new Map(poolAbilityRows.map(row => [row.name, { id: row.ability_id, displayName: row.display_name || row.name }]));
-
-
-        // Prepare the synergy query
-        // We need to check both (base_ability_id = X AND synergy_ability_id = Y) OR (base_ability_id = Y AND synergy_ability_id = X)
-        // because we store pairs with the lower ID first.
-        const synergySql = `
-            SELECT
-                s.synergy_winrate,
-                CASE
-                    WHEN s.base_ability_id = ? THEN pa2.display_name
-                    ELSE pa1.display_name
-                END as partner_display_name,
-                 CASE
-                    WHEN s.base_ability_id = ? THEN pa2.name
-                    ELSE pa1.name
-                END as partner_internal_name
-            FROM AbilitySynergies s
-            JOIN Abilities pa1 ON s.base_ability_id = pa1.ability_id
-            JOIN Abilities pa2 ON s.synergy_ability_id = pa2.ability_id
-            WHERE
-                (s.base_ability_id = ? AND s.synergy_ability_id IN (SELECT ability_id FROM Abilities WHERE name IN (${poolPlaceholders}) AND name != ?)) OR
-                (s.synergy_ability_id = ? AND s.base_ability_id IN (SELECT ability_id FROM Abilities WHERE name IN (${poolPlaceholders}) AND name != ?))
-            ORDER BY s.synergy_winrate DESC
-        `;
+        const baseAbilityHeroId = baseAbilityInfo.hero_id;
 
         // Filter out the baseAbilityInternalName from the draftPoolInternalNames for the IN clause
         const otherPoolAbilities = draftPoolInternalNames.filter(name => name !== baseAbilityInternalName);
@@ -105,25 +76,36 @@ async function getHighWinrateCombinations(dbPath, baseAbilityInternalName, draft
         }
         const otherPoolPlaceholders = otherPoolAbilities.map(() => '?').join(', ');
 
-
-        const synergyQueryActual = `
+        // Query to fetch synergies
+        // Ensures that the partner ability's hero_id is different from the base ability's hero_id
+        // Also explicitly checks that ab_other.hero_id IS NOT NULL if baseAbilityHeroId IS NOT NULL,
+        // to handle cases where hero_id might be null for some abilities. If base hero_id is null,
+        // any partner is fine. If base hero_id is not null, partner hero_id must also not be null and different.
+        const synergyQuery = `
             SELECT
                 s.synergy_winrate,
                 ab_other.display_name AS partner_display_name,
-                ab_other.name AS partner_internal_name
+                ab_other.name AS partner_internal_name,
+                ab_other.hero_id AS partner_hero_id
             FROM AbilitySynergies s
             JOIN Abilities ab_base ON (s.base_ability_id = ab_base.ability_id OR s.synergy_ability_id = ab_base.ability_id)
             JOIN Abilities ab_other ON ((s.synergy_ability_id = ab_other.ability_id AND s.base_ability_id = ab_base.ability_id) OR (s.base_ability_id = ab_other.ability_id AND s.synergy_ability_id = ab_base.ability_id))
-            WHERE ab_base.name = ?
-              AND ab_other.name IN (${otherPoolPlaceholders})
-              AND ab_other.name != ?
+            WHERE ab_base.name = ?                                      -- The ability we are checking synergies for
+              AND ab_other.name IN (${otherPoolPlaceholders})           -- The partner ability must be in the current draft pool
+              AND ab_other.name != ?                                    -- The partner ability is not the same as the base ability
+              AND (
+                    ${baseAbilityHeroId === null ? '1=1' : 'ab_other.hero_id IS NOT NULL AND ab_other.hero_id != ?'}
+                  )                                                     -- Partner ability must be from a different hero (if base hero has a hero_id)
             ORDER BY s.synergy_winrate DESC;
         `;
 
+        const queryParams = [baseAbilityInternalName, ...otherPoolAbilities, baseAbilityInternalName];
+        if (baseAbilityHeroId !== null) {
+            queryParams.push(baseAbilityHeroId);
+        }
 
-        const synergyStmt = db.prepare(synergyQueryActual);
-        const synergyRows = synergyStmt.all(baseAbilityInternalName, ...otherPoolAbilities, baseAbilityInternalName);
-
+        const synergyStmt = db.prepare(synergyQuery);
+        const synergyRows = synergyStmt.all(...queryParams);
 
         synergyRows.forEach(row => {
             combinations.push({
@@ -144,4 +126,4 @@ async function getHighWinrateCombinations(dbPath, baseAbilityInternalName, draft
 }
 
 
-module.exports = { getAbilityDetails, getHighWinrateCombinations }; // Export new function
+module.exports = { getAbilityDetails, getHighWinrateCombinations };
