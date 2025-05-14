@@ -12,104 +12,131 @@ let scanHasBeenPerformed = false;
 console.log('overlayRenderer.js loaded');
 
 if (window.electronAPI && window.electronAPI.onOverlayData) {
-    console.log('Setting up onOverlayData listener');
+    console.log('[OVERLAY RENDERER] Setting up onOverlayData listener');
     window.electronAPI.onOverlayData((data) => {
-        console.log('Overlay data received in overlayRenderer (raw):', JSON.stringify(data));
-
-        if (data.error) {
-            console.error('Error from main process:', data.error);
+        // Robust logging of received data
+        console.log('[OVERLAY RENDERER] === New Overlay Data Received ===');
+        if (data && data.error) {
+            console.error('[OVERLAY RENDERER] Error message received from main process:', data.error);
             tooltipElement.innerHTML = `<div class="tooltip-title">Error</div><div class="tooltip-winrate">${data.error}</div>`;
             tooltipElement.style.display = 'block';
             if (scanNowButton) {
                 scanNowButton.disabled = false;
                 scanNowButton.style.display = 'inline-block';
             }
-            if (takeSnapshotButton) {
-                takeSnapshotButton.style.display = 'none'; // Hide on error too
-            }
+            if (takeSnapshotButton) takeSnapshotButton.style.display = 'none';
             scanHasBeenPerformed = false;
             return;
         }
 
-        if (data.coordinatesConfig) currentCoordinatesConfig = data.coordinatesConfig;
-        if (data.targetResolution) currentTargetResolution = data.targetResolution;
-
-        if (data.initialSetup) {
-            console.log('Initial setup for overlay.');
+        if (data && data.initialSetup) {
+            console.log('[OVERLAY RENDERER] Initial setup data received.');
             document.querySelectorAll('.ability-hotspot').forEach(el => el.remove());
             if (scanNowButton) {
                 scanNowButton.disabled = false;
                 scanNowButton.style.display = 'inline-block';
             }
             if (takeSnapshotButton) {
-                takeSnapshotButton.style.display = 'none'; // Hide on initial setup
+                takeSnapshotButton.style.display = 'none';
                 takeSnapshotButton.disabled = true;
             }
             scanHasBeenPerformed = false;
             tooltipElement.style.display = 'none';
             if (snapshotStatusElement) snapshotStatusElement.style.display = 'none';
-        } else if (data.scanData) {
-            console.log('Scan data received, populating hotspots. Full scanData payload:', JSON.stringify(data.scanData));
+            // Log context for initial setup
+            console.log('[OVERLAY RENDERER] currentCoordinatesConfig set:', JSON.stringify(data.coordinatesConfig, null, 2));
+            console.log('[OVERLAY RENDERER] currentTargetResolution set:', data.targetResolution);
+            if (data.coordinatesConfig) currentCoordinatesConfig = data.coordinatesConfig;
+            if (data.targetResolution) currentTargetResolution = data.targetResolution;
+
+        } else if (data && data.scanData) {
+            console.log('[OVERLAY RENDERER] Scan data received. Attempting to process and create hotspots.');
+            // Detailed logging of the actual scan data and context
+            console.log('[OVERLAY RENDERER] Full scanData payload:', JSON.stringify(data.scanData, null, 2));
+            console.log('[OVERLAY RENDERER] Using currentCoordinatesConfig:', JSON.stringify(currentCoordinatesConfig, null, 2));
+            console.log('[OVERLAY RENDERER] Using currentTargetResolution:', currentTargetResolution);
 
             const receivedScanDataObject = data.scanData;
-            if (!receivedScanDataObject || typeof receivedScanDataObject.ultimates === 'undefined' || typeof receivedScanDataObject.standard === 'undefined' ||
-                !currentCoordinatesConfig || !currentTargetResolution) {
-                console.error('Scan data is incomplete or context is missing.');
-                tooltipElement.innerHTML = '<div class="tooltip-title">Error</div><div class="tooltip-winrate">Incomplete data for overlay.</div>';
+
+            if (!receivedScanDataObject || typeof receivedScanDataObject.ultimates === 'undefined' || typeof receivedScanDataObject.standard === 'undefined') {
+                console.error('[OVERLAY RENDERER] CRITICAL: receivedScanDataObject is invalid or missing ultimates/standard arrays.', receivedScanDataObject);
+                tooltipElement.innerHTML = '<div class="tooltip-title">Error</div><div class="tooltip-winrate">Invalid scan data structure from main.</div>';
                 tooltipElement.style.display = 'block';
-                if (scanNowButton) {
-                    scanNowButton.disabled = false;
-                    scanNowButton.style.display = 'inline-block';
-                }
-                if (takeSnapshotButton) {
-                    takeSnapshotButton.style.display = 'none';
-                }
+                if (scanNowButton) { scanNowButton.disabled = false; scanNowButton.style.display = 'inline-block'; }
+                if (takeSnapshotButton) takeSnapshotButton.style.display = 'none';
+                scanHasBeenPerformed = false;
+                return;
+            }
+            if (!currentCoordinatesConfig || !currentTargetResolution) {
+                console.error('[OVERLAY RENDERER] CRITICAL: Context (coordinatesConfig or targetResolution) is missing.');
+                tooltipElement.innerHTML = '<div class="tooltip-title">Error</div><div class="tooltip-winrate">Overlay context missing for scan data.</div>';
+                tooltipElement.style.display = 'block';
+                if (scanNowButton) { scanNowButton.disabled = false; scanNowButton.style.display = 'inline-block'; }
+                if (takeSnapshotButton) takeSnapshotButton.style.display = 'none';
                 scanHasBeenPerformed = false;
                 return;
             }
 
+
             const resolutionCoords = currentCoordinatesConfig.resolutions[currentTargetResolution];
             if (!resolutionCoords) {
-                console.error('Coordinates for target resolution not found:', currentTargetResolution);
+                console.error(`[OVERLAY RENDERER] CRITICAL: Coordinates for target resolution '${currentTargetResolution}' not found in config.`);
                 tooltipElement.innerHTML = `<div class="tooltip-title">Error</div><div class="tooltip-winrate">No coordinates for ${currentTargetResolution}.</div>`;
                 tooltipElement.style.display = 'block';
                 if (scanNowButton) {
                     scanNowButton.disabled = false;
                     scanNowButton.style.display = 'inline-block';
                 }
-                if (takeSnapshotButton) {
-                    takeSnapshotButton.style.display = 'none';
-                }
+                if (takeSnapshotButton) takeSnapshotButton.style.display = 'none';
                 scanHasBeenPerformed = false;
                 return;
             }
 
-            document.querySelectorAll('.ability-hotspot').forEach(el => el.remove());
-            console.log('Previous hotspots cleared for new scan data.');
+            try {
+                document.querySelectorAll('.ability-hotspot').forEach(el => el.remove());
+                console.log('[OVERLAY RENDERER] Previous hotspots cleared.');
 
-            createHotspotsForType(receivedScanDataObject.ultimates, resolutionCoords.ultimate_slots_coords, 'ultimates');
-            createHotspotsForType(receivedScanDataObject.standard, resolutionCoords.standard_slots_coords, 'standard');
+                console.log('[OVERLAY RENDERER] Creating ultimate hotspots. Number of ultimates in data:', receivedScanDataObject.ultimates ? receivedScanDataObject.ultimates.length : 'N/A', 'Number of ult coords:', resolutionCoords.ultimate_slots_coords ? resolutionCoords.ultimate_slots_coords.length : 'N/A');
+                createHotspotsForType(receivedScanDataObject.ultimates, resolutionCoords.ultimate_slots_coords, 'ultimates');
 
-            console.log('Hotspot creation loop finished. Duration:', data.durationMs, 'ms');
-            if (scanNowButton) {
-                scanNowButton.style.display = 'none';
-                scanNowButton.disabled = true;
+                console.log('[OVERLAY RENDERER] Creating standard hotspots. Number of standard in data:', receivedScanDataObject.standard ? receivedScanDataObject.standard.length : 'N/A', 'Number of std coords:', resolutionCoords.standard_slots_coords ? resolutionCoords.standard_slots_coords.length : 'N/A');
+                createHotspotsForType(receivedScanDataObject.standard, resolutionCoords.standard_slots_coords, 'standard');
+
+                console.log('[OVERLAY RENDERER] Hotspot creation process finished. Scan duration from main:', data.durationMs, 'ms');
+
+                if (scanNowButton) {
+                    scanNowButton.style.display = 'none';
+                    scanNowButton.disabled = true;
+                }
+                if (takeSnapshotButton) {
+                    takeSnapshotButton.style.display = 'block';
+                    takeSnapshotButton.disabled = false;
+                }
+                scanHasBeenPerformed = true;
+                tooltipElement.style.display = 'none'; // Hide "Scanning..." tooltip
+                console.log('[OVERLAY RENDERER] UI updated successfully, "Scanning..." tooltip hidden.');
+                if (snapshotStatusElement) snapshotStatusElement.style.display = 'none';
+
+            } catch (hotspotError) {
+                console.error('[OVERLAY RENDERER] === ERROR DURING HOTSPOT CREATION OR UI UPDATE ===');
+                console.error(hotspotError.stack || hotspotError);
+                tooltipElement.innerHTML = `<div class="tooltip-title">Display Error</div><div class="tooltip-winrate" style="font-size: 10px; max-height: 50px; overflow-y: auto;">Failed to display abilities: ${hotspotError.message}</div>`;
+                tooltipElement.style.display = 'block';
+                if (scanNowButton) {
+                    scanNowButton.disabled = false;
+                    scanNowButton.style.display = 'inline-block';
+                }
+                if (takeSnapshotButton) takeSnapshotButton.style.display = 'none';
+                scanHasBeenPerformed = false;
             }
-            if (takeSnapshotButton) {
-                takeSnapshotButton.style.display = 'block'; // Show after successful scan
-                takeSnapshotButton.disabled = false;
-            }
-            scanHasBeenPerformed = true;
-            tooltipElement.style.display = 'none';
-            if (snapshotStatusElement) snapshotStatusElement.style.display = 'none';
         } else {
-            console.warn('Received overlay data not initialSetup and no scanData:', JSON.stringify(data));
+            console.warn('[OVERLAY RENDERER] Received overlay data that was not initialSetup and had no scanData or error field.', JSON.stringify(data, null, 2));
         }
     });
 } else {
-    console.error('electronAPI.onOverlayData is not available.');
+    console.error('[OVERLAY RENDERER] electronAPI.onOverlayData is not available. Preload script might have issues.');
     if (tooltipElement) {
-        tooltipElement.innerHTML = '<div class="tooltip-title">Error</div><div class="tooltip-winrate">Overlay API not available.</div>';
+        tooltipElement.innerHTML = '<div class="tooltip-title">API Error</div><div class="tooltip-winrate">Overlay API not available.</div>';
         tooltipElement.style.display = 'block';
     }
 }
@@ -214,18 +241,28 @@ function createHotspotsForType(abilityArray, coordArray, type) {
 
 function createHotspot(coord, abilityData, index, type) {
     const hotspot = document.createElement('div');
-    hotspot.className = 'ability-hotspot';
+    hotspot.className = 'ability-hotspot'; // Base class
     hotspot.id = `hotspot-${type}-${index}`;
     hotspot.style.left = `${coord.x}px`;
     hotspot.style.top = `${coord.y}px`;
     hotspot.style.width = `${coord.width}px`;
     hotspot.style.height = `${coord.height}px`;
 
+    // --- NEW: Add class if ability is top tier ---
+    if (abilityData.isTopTier) {
+        hotspot.classList.add('top-tier-ability');
+        console.log(`Hotspot for ${abilityData.displayName} marked as top-tier.`);
+    }
+    // --- END NEW ---
+
     hotspot.dataset.abilityName = abilityData.displayName;
     hotspot.dataset.internalName = abilityData.internalName;
     hotspot.dataset.winrate = abilityData.winrate !== null ? abilityData.winrate : 'N/A';
     hotspot.dataset.highSkillWinrate = abilityData.highSkillWinrate !== null ? abilityData.highSkillWinrate : 'N/A';
     hotspot.dataset.combinations = JSON.stringify(abilityData.highWinrateCombinations || []);
+    // Store the isTopTier flag in dataset as well, might be useful for debugging or other JS logic
+    hotspot.dataset.isTopTier = abilityData.isTopTier;
+
 
     hotspot.addEventListener('mouseenter', (event) => {
         const nameForDisplay = hotspot.dataset.abilityName.replace(/_/g, ' ');
@@ -234,7 +271,11 @@ function createHotspot(coord, abilityData, index, type) {
         let hsWr = hotspot.dataset.highSkillWinrate;
         const highSkillWinrateFormatted = hsWr !== 'N/A' ? `${(parseFloat(hsWr) * 100).toFixed(1)}%` : 'N/A';
 
+        // Optionally, add a visual cue in the tooltip as well
+        const topTierIndicator = hotspot.dataset.isTopTier === 'true' ? '<span style="color: #66ff66;">&#9733; Top Pick!</span><br>' : '';
+
         let tooltipContent = `
+            ${topTierIndicator}
             <div class="tooltip-title">${nameForDisplay}</div>
             <div class="tooltip-winrate">Winrate: ${winrateFormatted}</div>
             <div class="tooltip-winrate">High Skill WR: ${highSkillWinrateFormatted}</div>
