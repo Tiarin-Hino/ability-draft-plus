@@ -17,4 +17,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   takeSnapshot: () => ipcRenderer.send('take-snapshot'),
   onSnapshotTaken: (callback) => ipcRenderer.on('snapshot-taken-status', (_event, status) => callback(status)),
   onToggleHotspotBorders: (callback) => ipcRenderer.on('toggle-hotspot-borders', (_event, visible) => callback(visible)),
+  exportFailedSamples: () => ipcRenderer.send('export-failed-samples'),
+  onExportFailedSamplesStatus: (callback) => ipcRenderer.on('export-failed-samples-status', (_event, status) => callback(status)),
 });

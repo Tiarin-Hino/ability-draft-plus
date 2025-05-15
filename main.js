@@ -5,6 +5,12 @@ const crypto = require('crypto');
 const { performance } = require('perf_hooks');
 const Database = require('better-sqlite3');
 
+const { dialog } = require('electron');
+const archiver = require('archiver');
+const fsPromises = require('fs').promises;
+const stream = require('stream');
+const { promisify } = require('util');
+
 const setupDatabase = require('./src/database/setupDatabase');
 const { getAbilityDetails, getHighWinrateCombinations, getOPCombinationsInPool } = require('./src/database/queries');
 const { scrapeAndStoreHeroes } = require('./src/scraper/heroScraper');
@@ -348,6 +354,93 @@ ipcMain.on('activate-overlay', async (event, selectedResolution) => {
       event.sender.send('scrape-status', `Overlay Activation Error: ${error.message}`);
     }
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.show();
+  }
+});
+
+ipcMain.on('export-failed-samples', async (event) => {
+  const sendStatus = (message, error = false, inProgress = true, filePath = null) => {
+    if (event.sender && !event.sender.isDestroyed()) {
+      event.sender.send('export-failed-samples-status', { message, error, inProgress, filePath });
+    }
+  };
+
+  sendStatus('Starting export of failed samples...');
+
+  const userDataPath = app.getPath('userData');
+  const failedSamplesDir = path.join(userDataPath, 'failed-samples');
+  const downloadsPath = app.getPath('downloads');
+  const randomString = crypto.randomBytes(5).toString('hex');
+  const defaultZipName = `failed-samples-${randomString}.zip`;
+  const defaultZipPath = path.join(downloadsPath, defaultZipName);
+
+  try {
+
+    try {
+      await fsPromises.access(failedSamplesDir);
+    } catch (e) {
+      sendStatus('No failed samples directory found. Nothing to export.', false, false);
+      return;
+    }
+
+    const filesInDir = await fsPromises.readdir(failedSamplesDir);
+    const imageFiles = filesInDir.filter(file => file.toLowerCase().endsWith('.png'));
+
+    if (imageFiles.length === 0) {
+      sendStatus('No image files found in the failed samples directory. Nothing to export.', false, false);
+      return;
+    }
+
+    sendStatus(`Found ${imageFiles.length} samples. Prompting for save location...`);
+
+    const { filePath, canceled } = await dialog.showSaveDialog(mainWindow, {
+      title: 'Save Failed Samples Zip',
+      defaultPath: defaultZipPath,
+      filters: [
+        { name: 'Zip Archives', extensions: ['zip'] }
+      ]
+    });
+
+    if (canceled || !filePath) {
+      sendStatus('Export canceled by user.', false, false);
+      return;
+    }
+
+    sendStatus(`Exporting ${imageFiles.length} samples to ${filePath}... This may take a moment.`);
+
+    const output = fs.createWriteStream(filePath);
+    const archive = archiver('zip', {
+      zlib: { level: 9 }
+    });
+
+    const pipeline = promisify(stream.pipeline);
+
+    archive.on('warning', (err) => {
+      if (err.code === 'ENOENT') {
+        console.warn('[ZIP Warning]', err);
+      } else {
+        throw err;
+      }
+    });
+
+    archive.on('error', (err) => {
+      throw err;
+    });
+
+    await pipeline(archive, output);
+
+
+    for (const fileName of imageFiles) {
+      const fullPath = path.join(failedSamplesDir, fileName);
+      archive.file(fullPath, { name: fileName });
+    }
+
+    await archive.finalize();
+
+    sendStatus(`Successfully exported ${imageFiles.length} samples to ${filePath}`, false, false, filePath);
+
+  } catch (error) {
+    console.error('Error exporting failed samples:', error);
+    sendStatus(`Error during export: ${error.message}`, true, false);
   }
 });
 

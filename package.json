@@ -13,11 +13,12 @@
   "license": "ISC",
   "description": "",
   "devDependencies": {
-    "electron": "^31.0.0",
-    "@electron/rebuild": "^4.0.1"
+    "@electron/rebuild": "^4.0.1",
+    "electron": "^31.0.0"
   },
   "dependencies": {
     "@tensorflow/tfjs-node": "^4.22.0",
+    "archiver": "^7.0.1",
     "axios": "^1.8.4",
     "better-sqlite3": "^11.9.1",
     "cheerio": "^1.0.0",
