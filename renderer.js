@@ -29,6 +29,38 @@ function setButtonsState(disabled, initiatingButton = null) {
 
 if (window.electronAPI) {
 
+    window.electronAPI.getAvailableResolutions();
+
+    window.electronAPI.onAvailableResolutions((resolutions) => {
+        if (resolutionSelect) {
+            resolutionSelect.innerHTML = '';
+            if (resolutions && resolutions.length > 0) {
+                resolutions.forEach(res => {
+                    const option = document.createElement('option');
+                    option.value = res;
+                    option.textContent = res;
+                    resolutionSelect.appendChild(option);
+                });
+                if (resolutions.length > 0) {
+                    resolutionSelect.value = resolutions[0];
+                    selectedResolution = resolutions[0];
+                }
+            } else {
+                const option = document.createElement('option');
+                option.value = "";
+                option.textContent = "No resolutions found";
+                resolutionSelect.appendChild(option);
+            }
+        }
+    });
+
+    if (resolutionSelect) {
+        resolutionSelect.addEventListener('change', (event) => {
+            selectedResolution = event.target.value;
+            console.log(`Selected resolution: ${selectedResolution}`);
+        });
+    }
+
     if (updateAllDataButton) {
         updateAllDataButton.addEventListener('click', () => {
             console.log('Update Windrun Data button clicked.');
