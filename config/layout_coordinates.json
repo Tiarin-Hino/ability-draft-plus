@@ -107,6 +107,60 @@
         { "x": 1083, "y": 757, "width": 57, "height": 58, "hero_order": 11, "ability_order": 2 },
         { "x": 1176, "y": 757, "width": 55, "height": 58, "hero_order": 11, "ability_order": 3 }
       ]
+   },
+   "1366x767": {
+      "ultimate_slots_coords": [
+        { "x": 493, "y": 118, "width": 38, "height": 42, "hero_order": 0 },
+        { "x": 561, "y": 118, "width": 39, "height": 42, "hero_order": 1 },
+        { "x": 629, "y": 118, "width": 40, "height": 42, "hero_order": 2 },
+        { "x": 698, "y": 118, "width": 40, "height": 42, "hero_order": 7 },
+        { "x": 767, "y": 118, "width": 39, "height": 42, "hero_order": 6 },
+        { "x": 836, "y": 118, "width": 38, "height": 42, "hero_order": 5 },
+        { "x": 497, "y": 188, "width": 37, "height": 40, "hero_order": 3 },
+        { "x": 564, "y": 188, "width": 38, "height": 40, "hero_order": 4 },
+        { "x": 630, "y": 188, "width": 40, "height": 40, "hero_order": 10 },
+        { "x": 697, "y": 188, "width": 40, "height": 40, "hero_order": 11 },
+        { "x": 765, "y": 188, "width": 38, "height": 40, "hero_order": 9 },
+        { "x": 832, "y": 188, "width": 37, "height": 40, "hero_order": 8 }
+      ],
+      "standard_slots_coords": [
+        { "x": 520, "y": 245, "width": 34, "height": 30, "hero_order": 0, "ability_order": 1 },
+        { "x": 575, "y": 245, "width": 34, "height": 30, "hero_order": 0, "ability_order": 2 },
+        { "x": 629, "y": 245, "width": 36, "height": 30, "hero_order": 0, "ability_order": 3 },
+        { "x": 702, "y": 245, "width": 36, "height": 30, "hero_order": 5, "ability_order": 1 },
+        { "x": 757, "y": 245, "width": 34, "height": 30, "hero_order": 5, "ability_order": 2 },
+        { "x": 813, "y": 245, "width": 34, "height": 30, "hero_order": 5, "ability_order": 3 },
+        { "x": 516, "y": 291, "width": 34, "height": 31, "hero_order": 1, "ability_order": 1 },
+        { "x": 572, "y": 291, "width": 35, "height": 31, "hero_order": 1, "ability_order": 2 },
+        { "x": 628, "y": 291, "width": 36, "height": 31, "hero_order": 1, "ability_order": 3 },
+        { "x": 703, "y": 291, "width": 36, "height": 31, "hero_order": 6, "ability_order": 1 },
+        { "x": 759, "y": 291, "width": 35, "height": 31, "hero_order": 6, "ability_order": 2 },
+        { "x": 817, "y": 291, "width": 34, "height": 31, "hero_order": 6, "ability_order": 3 },
+        { "x": 510, "y": 340, "width": 36, "height": 33, "hero_order": 2, "ability_order": 1 },
+        { "x": 568, "y": 340, "width": 37, "height": 33, "hero_order": 2, "ability_order": 2 },
+        { "x": 626, "y": 340, "width": 38, "height": 33, "hero_order": 2, "ability_order": 3 },
+        { "x": 704, "y": 340, "width": 38, "height": 33, "hero_order": 7, "ability_order": 1 },
+        { "x": 762, "y": 340, "width": 37, "height": 33, "hero_order": 7, "ability_order": 2 },
+        { "x": 821, "y": 340, "width": 36, "height": 33, "hero_order": 7, "ability_order": 3 },
+        { "x": 503, "y": 422, "width": 37, "height": 36, "hero_order": 3, "ability_order": 1 },
+        { "x": 563, "y": 422, "width": 38, "height": 36, "hero_order": 3, "ability_order": 2 },
+        { "x": 623, "y": 422, "width": 40, "height": 36, "hero_order": 3, "ability_order": 3 },
+        { "x": 704, "y": 422, "width": 40, "height": 36, "hero_order": 8, "ability_order": 1 },
+        { "x": 766, "y": 422, "width": 38, "height": 36, "hero_order": 8, "ability_order": 2 },
+        { "x": 827, "y": 422, "width": 37, "height": 36, "hero_order": 8, "ability_order": 3 },
+        { "x": 498, "y": 478, "width": 38, "height": 39, "hero_order": 4, "ability_order": 1 },
+        { "x": 560, "y": 478, "width": 39, "height": 39, "hero_order": 4, "ability_order": 2 },
+        { "x": 622, "y": 478, "width": 40, "height": 39, "hero_order": 4, "ability_order": 3 },
+        { "x": 705, "y": 478, "width": 40, "height": 39, "hero_order": 9, "ability_order": 1 },
+        { "x": 768, "y": 478, "width": 39, "height": 39, "hero_order": 9, "ability_order": 2 },
+        { "x": 831, "y": 478, "width": 38, "height": 39, "hero_order": 9, "ability_order": 3 },
+        { "x": 492, "y": 538, "width": 39, "height": 42, "hero_order": 10, "ability_order": 1 },
+        { "x": 556, "y": 538, "width": 40, "height": 42, "hero_order": 10, "ability_order": 2 },
+        { "x": 620, "y": 538, "width": 41, "height": 42, "hero_order": 10, "ability_order": 3 },
+        { "x": 706, "y": 538, "width": 41, "height": 42, "hero_order": 11, "ability_order": 1 },
+        { "x": 771, "y": 538, "width": 40, "height": 42, "hero_order": 11, "ability_order": 2 },
+        { "x": 836, "y": 538, "width": 39, "height": 42, "hero_order": 11, "ability_order": 3 }
+      ]
    }
  }
 }
