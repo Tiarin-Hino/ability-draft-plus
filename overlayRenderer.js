@@ -11,6 +11,7 @@ const opCombinationsListElement = document.getElementById('op-combinations-list'
 let currentCoordinatesConfig = null;
 let currentTargetResolution = null;
 let scanHasBeenPerformed = false;
+let isTooltipVisible = false;
 
 console.log('overlayRenderer.js loaded');
 
@@ -28,7 +29,13 @@ function toggleTopTierBordersVisibility(visible) {
 
 if (window.electronAPI && window.electronAPI.onToggleHotspotBorders) {
     window.electronAPI.onToggleHotspotBorders((visible) => {
-        toggleTopTierBordersVisibility(visible);
+        if (visible) {
+            if (!isTooltipVisible) {
+                toggleTopTierBordersVisibility(true);
+            }
+        } else {
+            toggleTopTierBordersVisibility(false);
+        }
     });
 }
 
@@ -56,7 +63,6 @@ function updateOPCombinationsAlert(opCombinations) {
         console.log('[OVERLAY RENDERER] No OP combinations to display.');
     }
 }
-// <<< END NEW
 
 
 if (window.electronAPI && window.electronAPI.onOverlayData) {
@@ -67,6 +73,9 @@ if (window.electronAPI && window.electronAPI.onOverlayData) {
             console.error('[OVERLAY RENDERER] Error message received from main process:', data.error);
             tooltipElement.innerHTML = `<div class="tooltip-title">Error</div><div class="tooltip-winrate">${data.error}</div>`;
             tooltipElement.style.display = 'block';
+            isTooltipVisible = true;
+            toggleTopTierBordersVisibility(false);
+
             if (scanNowButton) {
                 scanNowButton.disabled = false;
                 scanNowButton.style.display = 'inline-block';
@@ -97,6 +106,9 @@ if (window.electronAPI && window.electronAPI.onOverlayData) {
             }
             scanHasBeenPerformed = false;
             tooltipElement.style.display = 'none';
+            isTooltipVisible = false;
+            toggleTopTierBordersVisibility(true);
+
             if (snapshotStatusElement) snapshotStatusElement.style.display = 'none';
             console.log('[OVERLAY RENDERER] currentCoordinatesConfig set:', JSON.stringify(data.coordinatesConfig, null, 2));
             console.log('[OVERLAY RENDERER] currentTargetResolution set:', data.targetResolution);
@@ -115,6 +127,9 @@ if (window.electronAPI && window.electronAPI.onOverlayData) {
                 console.error('[OVERLAY RENDERER] CRITICAL: receivedScanDataObject is invalid or missing ultimates/standard arrays.', receivedScanDataObject);
                 tooltipElement.innerHTML = '<div class="tooltip-title">Error</div><div class="tooltip-winrate">Invalid scan data structure from main.</div>';
                 tooltipElement.style.display = 'block';
+                isTooltipVisible = true;
+                toggleTopTierBordersVisibility(false);
+
                 if (scanNowButton) { scanNowButton.disabled = false; scanNowButton.style.display = 'inline-block'; }
                 if (takeSnapshotButton) takeSnapshotButton.style.display = 'none';
                 scanHasBeenPerformed = false;
@@ -125,6 +140,9 @@ if (window.electronAPI && window.electronAPI.onOverlayData) {
                 console.error('[OVERLAY RENDERER] CRITICAL: Context (coordinatesConfig or targetResolution) is missing.');
                 tooltipElement.innerHTML = '<div class="tooltip-title">Error</div><div class="tooltip-winrate">Overlay context missing for scan data.</div>';
                 tooltipElement.style.display = 'block';
+                isTooltipVisible = true;
+                toggleTopTierBordersVisibility(false);
+
                 if (scanNowButton) { scanNowButton.disabled = false; scanNowButton.style.display = 'inline-block'; }
                 if (takeSnapshotButton) takeSnapshotButton.style.display = 'none';
                 scanHasBeenPerformed = false;
@@ -138,6 +156,9 @@ if (window.electronAPI && window.electronAPI.onOverlayData) {
                 console.error(`[OVERLAY RENDERER] CRITICAL: Coordinates for target resolution '${currentTargetResolution}' not found in config.`);
                 tooltipElement.innerHTML = `<div class="tooltip-title">Error</div><div class="tooltip-winrate">No coordinates for ${currentTargetResolution}.</div>`;
                 tooltipElement.style.display = 'block';
+                isTooltipVisible = true;
+                toggleTopTierBordersVisibility(false);
+
                 if (scanNowButton) {
                     scanNowButton.disabled = false;
                     scanNowButton.style.display = 'inline-block';
@@ -170,6 +191,9 @@ if (window.electronAPI && window.electronAPI.onOverlayData) {
                 }
                 scanHasBeenPerformed = true;
                 tooltipElement.style.display = 'none';
+                isTooltipVisible = false;
+                toggleTopTierBordersVisibility(true);
+
                 console.log('[OVERLAY RENDERER] UI updated successfully, "Scanning..." tooltip hidden.');
                 if (snapshotStatusElement) snapshotStatusElement.style.display = 'none';
 
@@ -178,6 +202,9 @@ if (window.electronAPI && window.electronAPI.onOverlayData) {
                 console.error(hotspotError.stack || hotspotError);
                 tooltipElement.innerHTML = `<div class="tooltip-title">Display Error</div><div class="tooltip-winrate" style="font-size: 10px; max-height: 50px; overflow-y: auto;">Failed to display abilities: ${hotspotError.message}</div>`;
                 tooltipElement.style.display = 'block';
+                isTooltipVisible = true;
+                toggleTopTierBordersVisibility(false);
+
                 if (scanNowButton) {
                     scanNowButton.disabled = false;
                     scanNowButton.style.display = 'inline-block';
@@ -198,8 +225,10 @@ if (window.electronAPI && window.electronAPI.onOverlayData) {
     if (tooltipElement) {
         tooltipElement.innerHTML = '<div class="tooltip-title">API Error</div><div class="tooltip-winrate">Overlay API not available.</div>';
         tooltipElement.style.display = 'block';
+        isTooltipVisible = true;
+        toggleTopTierBordersVisibility(false);
     }
-    if (opAlertWindow) opAlertWindow.style.display = 'none'; // Hide OP alert if API is down
+    if (opAlertWindow) opAlertWindow.style.display = 'none';
 }
 
 if (scanNowButton && window.electronAPI && window.electronAPI.executeScanFromOverlay) {
@@ -211,12 +240,17 @@ if (scanNowButton && window.electronAPI && window.electronAPI.executeScanFromOve
             console.error('Cannot scan, target resolution not set.');
             tooltipElement.innerHTML = '<div class="tooltip-title">Error</div><div class="tooltip-winrate">Resolution not set.</div>';
             tooltipElement.style.display = 'block';
+            isTooltipVisible = true;
+            toggleTopTierBordersVisibility(false);
             scanNowButton.disabled = false;
             return;
         }
         console.log('Scan Now button clicked. Requesting scan for:', currentTargetResolution);
         tooltipElement.innerHTML = `<div class="tooltip-title">Scanning...</div><div class="tooltip-winrate">Identifying abilities for ${currentTargetResolution}. Please wait.</div>`;
         tooltipElement.style.display = 'block';
+        isTooltipVisible = true;
+        toggleTopTierBordersVisibility(false);
+
         if (controlsContainer) {
             const controlsRect = controlsContainer.getBoundingClientRect();
             tooltipElement.style.top = `${controlsRect.bottom + 5}px`;
@@ -341,11 +375,15 @@ function createHotspot(coord, abilityData, index, type) {
         }
         tooltipElement.innerHTML = tooltipContent;
         tooltipElement.style.display = 'block';
+        isTooltipVisible = true;
+        toggleTopTierBordersVisibility(false);
         positionTooltip(hotspot);
     });
 
     hotspot.addEventListener('mouseleave', () => {
         tooltipElement.style.display = 'none';
+        isTooltipVisible = false;
+        toggleTopTierBordersVisibility(true);
     });
     document.body.appendChild(hotspot);
 }
@@ -364,15 +402,28 @@ function positionTooltip(hotspotElement) {
     }
 
     let calculatedX = hotspotRect.left - tooltipWidth;
-    let calculatedY = hotspotRect.bottom - tooltipHeight;
+    let calculatedY = hotspotRect.top;
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
-    const margin = 5;
+    const margin = 10;
 
-    if (calculatedX < margin) calculatedX = margin;
-    if (calculatedX + tooltipWidth > viewportWidth - margin) calculatedX = viewportWidth - tooltipWidth - margin;
-    if (calculatedY < margin) calculatedY = margin;
-    if (calculatedY + tooltipHeight > viewportHeight - margin) calculatedY = viewportHeight - tooltipHeight - margin;
+    if (calculatedX < margin) {
+        calculatedX = hotspotRect.right + margin;
+    }
+    if (calculatedX + tooltipWidth > viewportWidth - margin) {
+        calculatedX = viewportWidth - tooltipWidth - margin;
+        if (calculatedX < hotspotRect.left - tooltipWidth - margin) {
+            calculatedX = hotspotRect.left - tooltipWidth - margin;
+        }
+    }
+
+    if (calculatedY + tooltipHeight > viewportHeight - margin) {
+        calculatedY = viewportHeight - tooltipHeight - margin;
+    }
+    if (calculatedY < margin) {
+        calculatedY = margin;
+    }
+
 
     tooltipElement.style.left = `${calculatedX}px`;
     tooltipElement.style.top = `${calculatedY}px`;

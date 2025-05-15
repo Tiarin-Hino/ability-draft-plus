@@ -67,7 +67,7 @@ async function scrapeAndStoreHeroes(dbPath, url, statusCallback) {
             if (internalName && displayName && winrateValue !== null) {
                 heroes.push({
                     name: internalName,
-                    displayName: displayName, // <<< ADDED
+                    displayName: displayName,
                     winrate: winrateValue
                 });
             } else {
@@ -89,7 +89,7 @@ async function scrapeAndStoreHeroes(dbPath, url, statusCallback) {
             INSERT INTO Heroes (name, display_name, winrate)
             VALUES (@name, @displayName, @winrate)
             ON CONFLICT(name) DO UPDATE SET
-                display_name = excluded.display_name, -- <<< ADDED
+                display_name = excluded.display_name,
                 winrate = excluded.winrate
         `);
 

@@ -32,7 +32,7 @@ const setupSql = `
         base_ability_id INTEGER NOT NULL,
         synergy_ability_id INTEGER NOT NULL,
         synergy_winrate REAL NOT NULL,
-        is_op BOOLEAN DEFAULT 0, -- <<< NEW: Added is_op column with a default of false (0)
+        is_op BOOLEAN DEFAULT 0, 
         FOREIGN KEY (base_ability_id) REFERENCES Abilities (ability_id) ON DELETE CASCADE ON UPDATE CASCADE,
         FOREIGN KEY (synergy_ability_id) REFERENCES Abilities (ability_id) ON DELETE CASCADE ON UPDATE CASCADE,
         UNIQUE (base_ability_id, synergy_ability_id)
@@ -41,6 +41,13 @@ const setupSql = `
     CREATE INDEX IF NOT EXISTS idx_abilities_hero_id ON Abilities (hero_id);
     CREATE INDEX IF NOT EXISTS idx_synergy_base_ability ON AbilitySynergies (base_ability_id);
     CREATE INDEX IF NOT EXISTS idx_synergy_pair_ability ON AbilitySynergies (synergy_ability_id);
+
+    CREATE TABLE IF NOT EXISTS Metadata (
+        key TEXT PRIMARY KEY,
+        value TEXT
+    );
+    -- Initialize with a NULL or empty value, it will be updated on first successful scrape
+    INSERT OR IGNORE INTO Metadata (key, value) VALUES ('last_successful_scrape_date', NULL);
 `;
 
 function setupDatabase() {
@@ -64,7 +71,6 @@ function setupDatabase() {
             { table: 'Heroes', column: 'display_name', type: 'TEXT' }
         ];
 
-        // <<< NEW: Add is_op to AbilitySynergies if it doesn't exist
         const synergyColumnsToAdd = [
             { table: 'AbilitySynergies', column: 'is_op', type: 'BOOLEAN DEFAULT 0' }
         ];
@@ -77,7 +83,6 @@ function setupDatabase() {
                 console.log(`Added ${column} column to ${table} table.`);
             } catch (err) {
                 if (err.message.includes('duplicate column name')) {
-                    console.log(`${column} column already exists in ${table} table.`);
                 } else {
                     console.error(`Error adding column ${column} to ${table}:`, err.message);
                 }
@@ -90,7 +95,6 @@ function setupDatabase() {
     } finally {
         if (db && db.open) {
             db.close();
-            console.log('Database connection closed.');
         }
     }
 }
