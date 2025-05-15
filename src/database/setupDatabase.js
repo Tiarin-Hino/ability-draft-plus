@@ -21,7 +21,7 @@ const setupSql = `
         hero_id INTEGER,
         winrate REAL,
         high_skill_winrate REAL,
-        pick_order REAL,                -- <<< NEW: Added pick_order column
+        pick_order REAL,
         is_ultimate BOOL,
         ability_order INT,
         FOREIGN KEY (hero_id) REFERENCES Heroes (hero_id) ON DELETE SET NULL ON UPDATE CASCADE
@@ -32,6 +32,7 @@ const setupSql = `
         base_ability_id INTEGER NOT NULL,
         synergy_ability_id INTEGER NOT NULL,
         synergy_winrate REAL NOT NULL,
+        is_op BOOLEAN DEFAULT 0, -- <<< NEW: Added is_op column with a default of false (0)
         FOREIGN KEY (base_ability_id) REFERENCES Abilities (ability_id) ON DELETE CASCADE ON UPDATE CASCADE,
         FOREIGN KEY (synergy_ability_id) REFERENCES Abilities (ability_id) ON DELETE CASCADE ON UPDATE CASCADE,
         UNIQUE (base_ability_id, synergy_ability_id)
@@ -56,14 +57,19 @@ function setupDatabase() {
             { table: 'Abilities', column: 'is_ultimate', type: 'BOOL' },
             { table: 'Abilities', column: 'ability_order', type: 'INT' },
             { table: 'Abilities', column: 'display_name', type: 'TEXT' },
-            { table: 'Abilities', column: 'pick_order', type: 'REAL' } // <<< NEW: Add pick_order here
+            { table: 'Abilities', column: 'pick_order', type: 'REAL' }
         ];
 
         const heroColumnsToAdd = [
             { table: 'Heroes', column: 'display_name', type: 'TEXT' }
         ];
 
-        const columnsToAdd = [...abilityColumnsToAdd, ...heroColumnsToAdd];
+        // <<< NEW: Add is_op to AbilitySynergies if it doesn't exist
+        const synergyColumnsToAdd = [
+            { table: 'AbilitySynergies', column: 'is_op', type: 'BOOLEAN DEFAULT 0' }
+        ];
+
+        const columnsToAdd = [...abilityColumnsToAdd, ...heroColumnsToAdd, ...synergyColumnsToAdd];
 
         for (const { table, column, type } of columnsToAdd) {
             try {

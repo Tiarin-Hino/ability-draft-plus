@@ -1,16 +1,16 @@
 const { app, BrowserWindow, ipcMain, screen } = require('electron');
 const path = require('path');
-const fs = require('fs').promises; // Use promise version of fs
-const crypto = require('crypto'); // For random string
+const fs = require('fs').promises;
+const crypto = require('crypto');
 const { performance } = require('perf_hooks');
 const setupDatabase = require('./src/database/setupDatabase');
-const { getAbilityDetails, getHighWinrateCombinations } = require('./src/database/queries');
+const { getAbilityDetails, getHighWinrateCombinations, getOPCombinationsInPool } = require('./src/database/queries');
 const { scrapeAndStoreHeroes } = require('./src/scraper/heroScraper');
 const { scrapeAndStoreAbilities } = require('./src/scraper/abilityScraper');
 const { scrapeAndStoreAbilityPairs } = require('./src/scraper/abilityPairScraper');
 const { processDraftScreen, initializeImageProcessor } = require('./src/imageProcessor');
-const screenshotDesktop = require('screenshot-desktop'); // Correct import
-const sharp = require('sharp'); // For cropping
+const screenshotDesktop = require('screenshot-desktop');
+const sharp = require('sharp');
 
 const heroesUrl = 'https://windrun.io/heroes';
 const abilitiesUrl = 'https://windrun.io/abilities';
@@ -21,14 +21,11 @@ let mainWindow;
 let activeDbPath;
 let overlayWindow = null;
 let isScanInProgress = false;
-
-// --- Store last scan results for snapshot ---
 let lastScanRawResults = null;
 let lastScanTargetResolution = null;
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-// --- Main Window Creation ---
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1000,
@@ -45,25 +42,22 @@ function createWindow() {
   mainWindow.on('closed', () => {
     console.log('[Main] Main window closed event fired.');
     mainWindow = null;
-    if (!overlayWindow) { // Only quit if overlay is also closed
+    if (!overlayWindow) {
       app.quit();
     }
   });
 }
 
-// --- Overlay Window Creation ---
 function createOverlayWindow(resolutionKey, allCoordinatesConfig) {
   if (overlayWindow) {
     console.log('[Main] Closing existing overlay window before creating new one.');
-    overlayWindow.close(); // This will trigger its 'closed' event
-    // overlayWindow = null; // Let the 'closed' event handle this
+    overlayWindow.close();
   }
 
   isScanInProgress = false;
   console.log('[Main] isScanInProgress reset to false due to new overlay creation.');
-  lastScanRawResults = null; // Reset last scan results for new overlay
+  lastScanRawResults = null;
   lastScanTargetResolution = null;
-
 
   const primaryDisplay = screen.getPrimaryDisplay();
   const targetScreenWidth = primaryDisplay.bounds.width;
@@ -98,6 +92,7 @@ function createOverlayWindow(resolutionKey, allCoordinatesConfig) {
       scanData: null,
       coordinatesConfig: allCoordinatesConfig,
       targetResolution: resolutionKey,
+      opCombinations: [],
       initialSetup: true
     });
   });
@@ -106,7 +101,7 @@ function createOverlayWindow(resolutionKey, allCoordinatesConfig) {
     console.log('[Main] Overlay window closed. Resetting relevant state.');
     overlayWindow = null;
     isScanInProgress = false;
-    lastScanRawResults = null; // Clear on close
+    lastScanRawResults = null;
     lastScanTargetResolution = null;
 
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -120,7 +115,6 @@ function createOverlayWindow(resolutionKey, allCoordinatesConfig) {
   return overlayWindow;
 }
 
-// --- App Ready ---
 app.whenReady().then(async () => {
   const userDataPath = app.getPath('userData');
   const appDbPathInUserData = path.join(userDataPath, 'dota_ad_data.db');
@@ -130,7 +124,6 @@ app.whenReady().then(async () => {
   activeDbPath = appDbPathInUserData;
   console.log(`[Main] Active database path: ${activeDbPath}`);
   console.log(`[Main] User data path: ${userDataPath}`);
-
 
   try {
     const modelPath = 'file://' + path.join(app.getAppPath(), 'model', 'tfjs_model', 'model.json');
@@ -153,13 +146,12 @@ app.whenReady().then(async () => {
       console.log(`[Main] Bundled DB copied to ${activeDbPath}.`);
     } catch (copyError) {
       console.error(`[Main] CRITICAL: Failed to copy DB:`, copyError);
-      // Potentially alert user and quit
     }
   }
 
   try {
     console.log(`[Main] Setting up database schema at ${activeDbPath}...`);
-    setupDatabase(); // Uses dbPath from its own scope, which should be userDataPath
+    setupDatabase();
     console.log(`[Main] DB schema setup complete for: ${activeDbPath}`);
   } catch (dbSetupError) {
     console.error("[Main] CRITICAL: DB schema setup failed:", dbSetupError);
@@ -170,7 +162,6 @@ app.whenReady().then(async () => {
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
 
-
 app.on('window-all-closed', function () {
   console.log('[Main] All windows closed.');
   if (process.platform !== 'darwin') {
@@ -179,9 +170,8 @@ app.on('window-all-closed', function () {
 });
 
 app.on('will-quit', () => {
-  isScanInProgress = false; // Ensure this is reset
+  isScanInProgress = false;
 });
-
 
 function sendStatusToRenderer(targetWindow, message) {
   if (targetWindow && !targetWindow.isDestroyed() && targetWindow.webContents && !targetWindow.webContents.isDestroyed()) {
@@ -200,7 +190,6 @@ ipcMain.on('activate-overlay', async (event, selectedResolution) => {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.hide();
     console.log('[Main] Main window hidden.');
-    // Send status to main window if its webContents are available
     if (mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
       sendStatusToRenderer(mainWindow.webContents, `Overlay activated for ${selectedResolution}. Main window hidden.`);
     }
@@ -209,7 +198,7 @@ ipcMain.on('activate-overlay', async (event, selectedResolution) => {
   try {
     const configData = await fs.readFile(global.coordinatesPath, 'utf-8');
     const layoutConfig = JSON.parse(configData);
-    createOverlayWindow(selectedResolution, layoutConfig); // This now returns the overlay window
+    createOverlayWindow(selectedResolution, layoutConfig);
     console.log(`[Main] Overlay launched for ${selectedResolution}.`);
   } catch (error) {
     console.error(`[Main] Error activating overlay for ${selectedResolution}:`, error);
@@ -224,7 +213,7 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution) => {
   if (isScanInProgress) {
     console.warn('[Main] Scan already in progress. Ignoring request.');
     if (overlayWindow && !overlayWindow.isDestroyed()) {
-      overlayWindow.webContents.send('overlay-data', { info: 'Scan already in progress.', targetResolution: lastScanTargetResolution, initialSetup: false });
+      overlayWindow.webContents.send('overlay-data', { info: 'Scan already in progress.', targetResolution: lastScanTargetResolution, initialSetup: false, opCombinations: [] });
     }
     return;
   }
@@ -235,7 +224,7 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution) => {
   if (!selectedResolution) {
     console.error('[Main] Scan request without resolution.');
     if (overlayWindow && !overlayWindow.isDestroyed()) {
-      overlayWindow.webContents.send('overlay-data', { error: 'No resolution for scanning.' });
+      overlayWindow.webContents.send('overlay-data', { error: 'No resolution for scanning.', opCombinations: [] });
     }
     return;
   }
@@ -254,7 +243,6 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution) => {
     const allDraftPoolInternalNames = [...new Set([...(predictedUltimatesInternalNames || []), ...(predictedStandardInternalNames || [])].filter(name => name !== null && name !== 'Unknown Ability'))];
     let abilityDetailsMap = new Map();
     if (allDraftPoolInternalNames.length > 0) {
-      // getAbilityDetails now also includes pickOrder
       abilityDetailsMap = getAbilityDetails(activeDbPath, allDraftPoolInternalNames);
     }
 
@@ -269,19 +257,21 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution) => {
       }
     }
 
-    // --- START: MODIFIED logic to identify top 10 abilities by LOWEST pick_order ---
     let topTierAbilityNames = new Set();
     if (allAbilitiesWithSynergiesAndDetails.length > 0) {
       const sortedByPickOrder = [...allAbilitiesWithSynergiesAndDetails]
         .filter(ability => ability.pickOrder !== null && typeof ability.pickOrder === 'number')
-        .sort((a, b) => a.pickOrder - b.pickOrder); // Ascending sort by pickOrder
-
+        .sort((a, b) => a.pickOrder - b.pickOrder);
       const top10Abilities = sortedByPickOrder.slice(0, 10);
       topTierAbilityNames = new Set(top10Abilities.map(ability => ability.internalName));
       console.log('[Main] Top 10 abilities by lowest pick order:', top10Abilities.map(a => `${a.displayName} (Pick Order: ${a.pickOrder.toFixed(2)})`));
     }
-    // --- END: MODIFIED logic ---
 
+    let opCombinationsInPool = [];
+    if (allDraftPoolInternalNames.length >= 2) {
+      opCombinationsInPool = await getOPCombinationsInPool(activeDbPath, allDraftPoolInternalNames);
+      console.log(`[Main] Found ${opCombinationsInPool.length} OP combinations in the current pool.`);
+    }
 
     const formatResultsForOverlay = (predictedNamesArray) => {
       if (!Array.isArray(predictedNamesArray)) return [];
@@ -311,6 +301,7 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution) => {
         coordinatesConfig: layoutConfig,
         targetResolution: selectedResolution,
         durationMs: durationMs,
+        opCombinations: opCombinationsInPool,
         initialSetup: false
       });
       console.log(`[Main] Scan for ${selectedResolution} successful. Data sent. Duration: ${durationMs} ms.`);
@@ -319,7 +310,7 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution) => {
     console.error(`[Main] Error during scan for ${selectedResolution}:`, error);
     lastScanRawResults = null;
     if (overlayWindow && !overlayWindow.isDestroyed()) {
-      overlayWindow.webContents.send('overlay-data', { error: error.message || 'Scan error.' });
+      overlayWindow.webContents.send('overlay-data', { error: error.message || 'Scan error.', opCombinations: [] });
     }
   } finally {
     isScanInProgress = false;
@@ -327,7 +318,6 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution) => {
   }
 });
 
-// --- IPC Listener for Taking Snapshot ---
 ipcMain.on('take-snapshot', async (event) => {
   if (!lastScanRawResults || !lastScanTargetResolution) {
     console.warn('[Main Snapshot] No scan data available to take a snapshot.');
@@ -341,11 +331,10 @@ ipcMain.on('take-snapshot', async (event) => {
   const failedSamplesDir = path.join(userDataPath, 'failed-samples');
 
   try {
-    // --- NEW: Tell overlay to hide borders ---
     if (overlayWindow && !overlayWindow.isDestroyed() && overlayWindow.webContents && !overlayWindow.webContents.isDestroyed()) {
       console.log('[Main Snapshot] Requesting overlay to hide borders.');
       overlayWindow.webContents.send('toggle-hotspot-borders', false);
-      await delay(100); // Short delay to allow renderer to process and update visuals
+      await delay(100);
       console.log('[Main Snapshot] Delay complete after hiding borders.');
     }
 
@@ -401,14 +390,12 @@ ipcMain.on('take-snapshot', async (event) => {
       overlayWindow.webContents.send('snapshot-taken-status', { message: `Snapshot Error: ${error.message}`, error: true, allowRetry: true });
     }
   } finally {
-    // --- NEW: Tell overlay to show borders again ---
     if (overlayWindow && !overlayWindow.isDestroyed() && overlayWindow.webContents && !overlayWindow.webContents.isDestroyed()) {
       console.log('[Main Snapshot] Requesting overlay to show borders.');
       overlayWindow.webContents.send('toggle-hotspot-borders', true);
     }
   }
 });
-
 
 ipcMain.on('get-available-resolutions', async (event) => {
   try {
@@ -433,10 +420,9 @@ ipcMain.on('scrape-heroes', async (event) => {
     sendStatus('Hero data update complete!');
   } catch (error) {
     console.error('Hero scraping failed:', error);
-    // event.sender might be destroyed if main window was hidden for overlay
     if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
       sendStatusToRenderer(mainWindow.webContents, `Error updating hero data: ${error.message}`);
-    } else if (event.sender && !event.sender.isDestroyed()) { // Fallback to original sender
+    } else if (event.sender && !event.sender.isDestroyed()) {
       sendStatusToRenderer(event.sender, `Error updating hero data: ${error.message}`);
     }
   }
@@ -478,7 +464,7 @@ ipcMain.on('close-overlay', () => {
   console.log('[Main] Received close-overlay IPC.');
   if (overlayWindow) {
     console.log('[Main] Closing overlayWindow from IPC.');
-    overlayWindow.close(); // This will trigger its 'closed' event
+    overlayWindow.close();
   } else {
     console.log('[Main] close-overlay IPC: no overlayWindow to close. Ensuring main window visible.');
     if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {

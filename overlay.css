@@ -43,101 +43,69 @@ body {
     border: 2px solid #32CD32;
     /* LimeGreen as a base */
     animation: shimmer 1.5s infinite ease-in-out;
-    /* Adjust width, color, and animation timing as needed */
-    /* Make sure border doesn't throw off positioning if it wasn't there before */
-    /* box-sizing: border-box; /* Already on .ability-hotspot */
 }
 
 .tooltip {
     position: absolute;
-    /* This will be managed by JS */
     background-color: rgba(15, 15, 25, 0.92);
-    /* Darker, slightly blueish background */
     color: #e8e8e8;
-    /* Lighter text color */
     padding: 8px 12px;
-    /* Slightly more padding */
     border-radius: 5px;
-    /* Rounded corners */
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    /* Keep consistent font */
     font-size: 14px;
-    /* Slightly larger font for readability */
     z-index: 99999;
     pointer-events: none;
-    /* Tooltip itself should not capture mouse events */
     white-space: pre-line;
     border: 1px solid rgba(60, 60, 80, 0.8);
-    /* Slightly more prominent border */
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
-    /* More pronounced shadow */
     max-width: 280px;
     display: none;
-    /* Initially hidden */
-    /* NEW: Transition for smoother appearance/disappearance if desired, though instant is fine too */
-    /* transition: opacity 0.1s ease-in-out; */
-    /* opacity: 0; */
-    /* if using transition for fade-in/out */
 }
 
 .tooltip-title {
     font-weight: bold;
     margin-bottom: 4px;
-    /* Space between title and winrate */
     color: #fafafa;
-    /* Even brighter for title */
     font-size: 15px;
 }
 
 .tooltip-winrate {
     color: #c0c0c0;
-    /* Slightly less bright for winrate text */
     margin-bottom: 3px;
 }
 
 .tooltip-section-title {
     font-weight: bold;
     margin-top: 8px;
-    /* Space above the combo section title */
     margin-bottom: 3px;
     color: #d0d0d0;
-    /* Slightly different color for section title */
 }
 
 .tooltip-combo {
     font-size: 13px;
-    /* Slightly smaller for combo lines */
     color: #b0b0b0;
     padding-left: 10px;
-    /* Indent combo items */
     margin-bottom: 2px;
 }
 
 #controls-container {
-    /* Styles for the container of Scan and Close buttons */
-    /* position: fixed; top: 10px; right: 10px; z-index: 10000; */
-    /* Handled inline for now */
     opacity: 0.7;
-    /* Make controls slightly transparent by default */
     transition: opacity 0.2s ease-in-out;
 }
 
 #controls-container:hover {
     opacity: 1;
-    /* Full opacity on hover */
 }
 
 #scan-now-btn {
     padding: 5px 10px;
     background-color: rgba(0, 128, 255, 0.7);
-    /* Blueish */
     color: white;
     border: 1px solid rgba(0, 100, 200, 0.9);
     border-radius: 3px;
     cursor: pointer;
     font-weight: bold;
     font-size: 12px;
-    /* opacity is handled by parent #controls-container */
 }
 
 #scan-now-btn:hover {
@@ -159,7 +127,6 @@ body {
     cursor: pointer;
     font-weight: bold;
     font-size: 12px;
-    /* opacity is handled by parent #controls-container */
 }
 
 #close-overlay-btn:hover {
@@ -169,7 +136,6 @@ body {
 #take-snapshot-btn {
     padding: 5px 10px;
     background-color: rgba(255, 165, 0, 0.7);
-    /* Orange-ish */
     color: white;
     border: 1px solid rgba(200, 130, 0, 0.9);
     border-radius: 3px;
@@ -177,7 +143,6 @@ body {
     font-weight: bold;
     font-size: 12px;
     margin-top: 5px;
-    /* Add some space if stacked */
 }
 
 #take-snapshot-btn:hover {
@@ -200,9 +165,48 @@ body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     font-size: 13px;
     z-index: 10001;
-    /* Ensure it's above other elements if necessary */
     display: none;
-    /* Initially hidden */
     border: 1px solid rgba(50, 50, 70, 0.8);
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+.op-alert-window {
+    position: fixed;
+    left: 20px;
+    /* Position on the left */
+    top: 50%;
+    /* Center vertically */
+    transform: translateY(-50%);
+    background-color: rgba(30, 10, 10, 0.85);
+    /* Dark red, semi-transparent */
+    color: #f0f0f0;
+    padding: 10px 15px;
+    border-radius: 8px;
+    border: 1px solid rgba(180, 50, 50, 0.7);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+    /* Below tooltip, but above hotspots */
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 14px;
+    max-width: 250px;
+    /* Adjust as needed */
+    display: none;
+    /* Initially hidden */
+}
+
+.op-alert-title {
+    font-size: 16px;
+    font-weight: bold;
+    color: #ff8080;
+    /* Lighter red for title */
+    text-align: center;
+    margin-bottom: 8px;
+    border-bottom: 1px solid rgba(150, 70, 70, 0.5);
+    padding-bottom: 5px;
+}
+
+#op-combinations-list div {
+    margin-bottom: 4px;
+    font-size: 13px;
+    color: #e0e0e0;
 }
