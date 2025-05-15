@@ -177,7 +177,7 @@ async function scrapeAndStoreAbilities(dbPath, urlRegular, urlHighSkill, statusC
                 hero_id = excluded.hero_id,
                 winrate = excluded.winrate,
                 high_skill_winrate = excluded.high_skill_winrate,
-                pick_order = excluded.pick_order, -- <<< ADDED pick_order
+                pick_order = excluded.pick_order,
                 is_ultimate = excluded.is_ultimate,
                 ability_order = excluded.ability_order
         `);
@@ -195,8 +195,8 @@ async function scrapeAndStoreAbilities(dbPath, urlRegular, urlHighSkill, statusC
                     hero_id: ability.hero_id,
                     winrate: ability.winrate,
                     high_skill_winrate: ability.high_skill_winrate,
-                    pick_order: ability.pick_order, // <<< ADDED pick_order
-                    is_ultimate: null, // Retain existing logic for these fields
+                    pick_order: ability.pick_order,
+                    is_ultimate: null,
                     ability_order: null,
                 });
                 if (info.changes > 0) count++;

@@ -3,6 +3,8 @@ const path = require('path');
 const fs = require('fs').promises;
 const crypto = require('crypto');
 const { performance } = require('perf_hooks');
+const Database = require('better-sqlite3');
+
 const setupDatabase = require('./src/database/setupDatabase');
 const { getAbilityDetails, getHighWinrateCombinations, getOPCombinationsInPool } = require('./src/database/queries');
 const { scrapeAndStoreHeroes } = require('./src/scraper/heroScraper');
@@ -23,8 +25,101 @@ let overlayWindow = null;
 let isScanInProgress = false;
 let lastScanRawResults = null;
 let lastScanTargetResolution = null;
+let isFirstRun = false;
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+async function updateLastSuccessfulScrapeDate(dbPathToUse) {
+  const currentDate = new Date();
+  const dateString = currentDate.toISOString().split('T')[0];
+  let db = null;
+  try {
+    db = new Database(dbPathToUse);
+    const stmt = db.prepare("INSERT OR REPLACE INTO Metadata (key, value) VALUES ('last_successful_scrape_date', ?)");
+    stmt.run(dateString);
+    console.log(`[Main] Last successful scrape date updated to: ${dateString}`);
+    return dateString;
+  } catch (error) {
+    console.error('[Main] Error updating last successful scrape date:', error);
+    return null;
+  } finally {
+    if (db && db.open) {
+      db.close();
+    }
+  }
+}
+
+async function getLastSuccessfulScrapeDate(dbPathToUse) {
+  let db = null;
+  try {
+    db = new Database(dbPathToUse, { readonly: true });
+    const row = db.prepare("SELECT value FROM Metadata WHERE key = 'last_successful_scrape_date'").get();
+    return row ? row.value : null;
+  } catch (error) {
+    console.error('[Main] Error fetching last successful scrape date:', error);
+    return null;
+  } finally {
+    if (db && db.open) {
+      db.close();
+    }
+  }
+}
+
+function sendLastUpdatedDateToRenderer(webContents, dateStringYYYYMMDD) {
+  if (webContents && !webContents.isDestroyed()) {
+    let displayDate = "Never";
+    if (dateStringYYYYMMDD) {
+      try {
+        const [year, month, day] = dateStringYYYYMMDD.split('-');
+        if (year && month && day) {
+          displayDate = `${month.padStart(2, '0')}/${day.padStart(2, '0')}/${year}`;
+        } else {
+          displayDate = "Invalid Date";
+        }
+      } catch (e) {
+        console.error("Error formatting date string for display:", e);
+        displayDate = "Date Error";
+      }
+    }
+    webContents.send('last-updated-date', displayDate);
+  }
+}
+
+async function performFullScrape(statusCallbackWebContents) {
+  const sendStatus = (msg) => {
+    if (statusCallbackWebContents && !statusCallbackWebContents.isDestroyed()) {
+      statusCallbackWebContents.send('scrape-status', msg);
+    }
+  };
+
+  try {
+    sendStatus('Starting all Windrun.io data updates...');
+    await delay(100);
+
+    sendStatus('Phase 1/3: Updating hero data...');
+    await scrapeAndStoreHeroes(activeDbPath, heroesUrl, sendStatus);
+    await delay(100);
+
+    sendStatus('Phase 2/3: Updating ability data...');
+    await scrapeAndStoreAbilities(activeDbPath, abilitiesUrl, abilitiesHighSkillUrl, sendStatus);
+    await delay(100);
+
+    sendStatus('Phase 3/3: Updating ability pair data...');
+    await scrapeAndStoreAbilityPairs(activeDbPath, abilityPairsUrl, sendStatus);
+
+    const newDate = await updateLastSuccessfulScrapeDate(activeDbPath);
+    sendLastUpdatedDateToRenderer(statusCallbackWebContents, newDate);
+
+    sendStatus('All Windrun.io data updates finished successfully!');
+    return true;
+  } catch (error) {
+    console.error('Consolidated scraping failed:', error.message);
+    sendStatus(`Error during data update. Operation halted. Check logs.`);
+    const currentDate = await getLastSuccessfulScrapeDate(activeDbPath);
+    sendLastUpdatedDateToRenderer(statusCallbackWebContents, currentDate);
+    return false;
+  }
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -38,6 +133,24 @@ function createWindow() {
   });
   mainWindow.loadFile('index.html');
   console.log('[Main] Main window created.');
+
+  mainWindow.webContents.on('did-finish-load', async () => {
+    const lastDate = await getLastSuccessfulScrapeDate(activeDbPath);
+    sendLastUpdatedDateToRenderer(mainWindow.webContents, lastDate);
+
+    if (isFirstRun) {
+      console.log("[Main] First run detected, performing initial data scrape.");
+      if (mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
+        mainWindow.webContents.send('set-ui-disabled-state', true);
+      }
+
+      const success = await performFullScrape(mainWindow.webContents);
+
+      if (mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
+        mainWindow.webContents.send('set-ui-disabled-state', false);
+      }
+    }
+  });
 
   mainWindow.on('closed', () => {
     console.log('[Main] Main window closed event fired.');
@@ -118,34 +231,56 @@ function createOverlayWindow(resolutionKey, allCoordinatesConfig) {
 app.whenReady().then(async () => {
   const userDataPath = app.getPath('userData');
   const appDbPathInUserData = path.join(userDataPath, 'dota_ad_data.db');
-  const bundledDbPathInApp = path.join(__dirname, 'dota_ad_data.db');
+
+  // Define appRootPath first
   const appRootPath = app.getAppPath();
+  console.log(`[Main] Application Root Path: ${appRootPath}`);
+
+  // Now define paths that depend on appRootPath
+  const bundledDbPathInApp = path.join(appRootPath, 'dota_ad_data.db');
   global.coordinatesPath = path.join(appRootPath, 'config', 'layout_coordinates.json');
+
   activeDbPath = appDbPathInUserData;
   console.log(`[Main] Active database path: ${activeDbPath}`);
   console.log(`[Main] User data path: ${userDataPath}`);
+  console.log(`[Main] Bundled DB path: ${bundledDbPathInApp}`);
+  console.log(`[Main] Coordinates config path: ${global.coordinatesPath}`);
+
 
   try {
-    const modelPath = 'file://' + path.join(app.getAppPath(), 'model', 'tfjs_model', 'model.json');
-    const classNamesPath = path.join(app.getAppPath(), 'model', 'tfjs_model', 'class_names.json');
+    // Now modelPath and classNamesPath can safely use appRootPath
+    const modelPath = 'file://' + path.join(appRootPath, 'model', 'tfjs_model', 'model.json');
+    const classNamesPath = path.join(appRootPath, 'model', 'tfjs_model', 'class_names.json');
+    console.log(`[Main] Attempting to initialize image processor with Model: ${modelPath}, Classes: ${classNamesPath}`);
     initializeImageProcessor(modelPath, classNamesPath);
     console.log('[Main] Image processor initialized.');
   } catch (initError) {
     console.error('[Main] CRITICAL: Image processor init failed:', initError);
-    app.quit(); return;
+    // Consider more graceful error handling, e.g., showing an error dialog to the user
+    // For now, quitting is a safe fallback.
+    // dialog.showErrorBox('Initialization Error', 'Failed to initialize the image processor. The application will now close.');
+    app.quit();
+    return; // Exit the async function
   }
 
   try {
     await fs.access(activeDbPath);
     console.log(`[Main] Database found at ${activeDbPath}.`);
+    isFirstRun = false;
   } catch (e) {
-    console.log(`[Main] DB not found at ${activeDbPath}. Copying from ${bundledDbPathInApp}...`);
+    console.log(`[Main] DB not found at ${activeDbPath}. Attempting to copy from bundled DB: ${bundledDbPathInApp}`);
+    isFirstRun = true;
     try {
       await fs.mkdir(userDataPath, { recursive: true });
       await fs.copyFile(bundledDbPathInApp, activeDbPath);
-      console.log(`[Main] Bundled DB copied to ${activeDbPath}.`);
+      console.log(`[Main] Bundled DB copied to ${activeDbPath}. This is considered a first run.`);
     } catch (copyError) {
-      console.error(`[Main] CRITICAL: Failed to copy DB:`, copyError);
+      console.error(`[Main] CRITICAL: Failed to copy DB from ${bundledDbPathInApp} to ${activeDbPath}:`, copyError.message);
+      isFirstRun = false;
+      // Show error to user if DB copy fails, as app functionality will be severely limited.
+      // dialog.showErrorBox('Database Error', `Failed to copy the application database. Please check permissions or try reinstalling.\nError: ${copyError.message}`);
+      // app.quit(); // Consider quitting if DB is essential and copy fails.
+      // For now, setupDatabase will attempt to run and likely fail, providing another error point.
     }
   }
 
@@ -155,11 +290,18 @@ app.whenReady().then(async () => {
     console.log(`[Main] DB schema setup complete for: ${activeDbPath}`);
   } catch (dbSetupError) {
     console.error("[Main] CRITICAL: DB schema setup failed:", dbSetupError);
-    app.quit(); return;
+    // dialog.showErrorBox('Database Setup Error', `Failed to set up the database. The application will now close.\nError: ${dbSetupError.message}`);
+    app.quit();
+    return; // Exit the async function
   }
 
   createWindow();
-  app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
+
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
+  });
 });
 
 app.on('window-all-closed', function () {
@@ -173,16 +315,16 @@ app.on('will-quit', () => {
   isScanInProgress = false;
 });
 
-function sendStatusToRenderer(targetWindow, message) {
-  if (targetWindow && !targetWindow.isDestroyed() && targetWindow.webContents && !targetWindow.webContents.isDestroyed()) {
-    targetWindow.send('scrape-status', message);
-  }
-}
+// IPC Handlers
+ipcMain.on('scrape-all-windrun-data', async (event) => {
+  await performFullScrape(event.sender); // event.sender is webContents
+});
+
 
 ipcMain.on('activate-overlay', async (event, selectedResolution) => {
   if (!selectedResolution) {
     console.error('[Main] Activate overlay: no resolution.');
-    event.sender.send('scrape-status', 'Error: No resolution for overlay.');
+    if (event.sender && !event.sender.isDestroyed()) event.sender.send('scrape-status', 'Error: No resolution for overlay.');
     return;
   }
   console.log(`[Main] Activating overlay for: ${selectedResolution}.`);
@@ -191,7 +333,7 @@ ipcMain.on('activate-overlay', async (event, selectedResolution) => {
     mainWindow.hide();
     console.log('[Main] Main window hidden.');
     if (mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
-      sendStatusToRenderer(mainWindow.webContents, `Overlay activated for ${selectedResolution}. Main window hidden.`);
+      mainWindow.webContents.send('scrape-status', `Overlay activated for ${selectedResolution}. Main window hidden.`);
     }
   }
 
@@ -264,13 +406,11 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution) => {
         .sort((a, b) => a.pickOrder - b.pickOrder);
       const top10Abilities = sortedByPickOrder.slice(0, 10);
       topTierAbilityNames = new Set(top10Abilities.map(ability => ability.internalName));
-      console.log('[Main] Top 10 abilities by lowest pick order:', top10Abilities.map(a => `${a.displayName} (Pick Order: ${a.pickOrder.toFixed(2)})`));
     }
 
     let opCombinationsInPool = [];
     if (allDraftPoolInternalNames.length >= 2) {
       opCombinationsInPool = await getOPCombinationsInPool(activeDbPath, allDraftPoolInternalNames);
-      console.log(`[Main] Found ${opCombinationsInPool.length} OP combinations in the current pool.`);
     }
 
     const formatResultsForOverlay = (predictedNamesArray) => {
@@ -304,7 +444,6 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution) => {
         opCombinations: opCombinationsInPool,
         initialSetup: false
       });
-      console.log(`[Main] Scan for ${selectedResolution} successful. Data sent. Duration: ${durationMs} ms.`);
     }
   } catch (error) {
     console.error(`[Main] Error during scan for ${selectedResolution}:`, error);
@@ -314,13 +453,11 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution) => {
     }
   } finally {
     isScanInProgress = false;
-    console.log(`[Main] Scan process finished for ${selectedResolution}.`);
   }
 });
 
 ipcMain.on('take-snapshot', async (event) => {
   if (!lastScanRawResults || !lastScanTargetResolution) {
-    console.warn('[Main Snapshot] No scan data available to take a snapshot.');
     if (overlayWindow && !overlayWindow.isDestroyed()) {
       overlayWindow.webContents.send('snapshot-taken-status', { message: 'Error: No scan data for snapshot.', error: true, allowRetry: true });
     }
@@ -332,18 +469,12 @@ ipcMain.on('take-snapshot', async (event) => {
 
   try {
     if (overlayWindow && !overlayWindow.isDestroyed() && overlayWindow.webContents && !overlayWindow.webContents.isDestroyed()) {
-      console.log('[Main Snapshot] Requesting overlay to hide borders.');
       overlayWindow.webContents.send('toggle-hotspot-borders', false);
       await delay(100);
-      console.log('[Main Snapshot] Delay complete after hiding borders.');
     }
 
     await fs.mkdir(failedSamplesDir, { recursive: true });
-    console.log(`[Main Snapshot] Ensured directory exists: ${failedSamplesDir}`);
-
     const fullScreenshotBuffer = await screenshotDesktop({ format: 'png' });
-    console.log('[Main Snapshot] Full screenshot taken.');
-
     const configData = await fs.readFile(global.coordinatesPath, 'utf-8');
     const layoutConfig = JSON.parse(configData);
     const coordsConfig = layoutConfig.resolutions?.[lastScanTargetResolution];
@@ -360,20 +491,18 @@ ipcMain.on('take-snapshot', async (event) => {
     let savedCount = 0;
     for (const slot of allSlots) {
       if (slot.x === undefined || slot.y === undefined || slot.width === undefined || slot.height === undefined) {
-        console.warn('[Main Snapshot] Skipping slot due to undefined coordinates:', slot);
         continue;
       }
       try {
         const randomString = crypto.randomBytes(4).toString('hex');
-        const abilityNameForFile = (slot.predictedName && slot.predictedName !== 'Unknown Ability') ? slot.predictedName : `unknown_ability_${slot.hero_order || 's'}_${slot.ability_order || 'u'}`;
-        const filename = `${abilityNameForFile}-${randomString}.png`;
+        const safePredictedName = (slot.predictedName && slot.predictedName !== 'Unknown Ability') ? slot.predictedName.replace(/[^a-z0-9_]/gi, '_') : `unknown_ability_${slot.hero_order || 's'}_${slot.ability_order || 'u'}`;
+        const filename = `${safePredictedName}-${randomString}.png`;
         const outputPath = path.join(failedSamplesDir, filename);
 
         await sharp(fullScreenshotBuffer)
           .extract({ left: slot.x, top: slot.y, width: slot.width, height: slot.height })
           .toFile(outputPath);
         savedCount++;
-        console.log(`[Main Snapshot] Saved: ${outputPath}`);
       } catch (cropError) {
         console.error(`[Main Snapshot] Error cropping/saving slot (${slot.predictedName || 'unknown'}): ${cropError.message}`);
       }
@@ -382,16 +511,13 @@ ipcMain.on('take-snapshot', async (event) => {
     if (overlayWindow && !overlayWindow.isDestroyed()) {
       overlayWindow.webContents.send('snapshot-taken-status', { message: `Snapshot: ${savedCount} images saved.`, error: false, allowRetry: true });
     }
-    console.log(`[Main Snapshot] Snapshot process complete. Saved ${savedCount} images.`);
 
   } catch (error) {
-    console.error('[Main Snapshot] Error taking snapshot:', error);
     if (overlayWindow && !overlayWindow.isDestroyed()) {
       overlayWindow.webContents.send('snapshot-taken-status', { message: `Snapshot Error: ${error.message}`, error: true, allowRetry: true });
     }
   } finally {
     if (overlayWindow && !overlayWindow.isDestroyed() && overlayWindow.webContents && !overlayWindow.webContents.isDestroyed()) {
-      console.log('[Main Snapshot] Requesting overlay to show borders.');
       overlayWindow.webContents.send('toggle-hotspot-borders', true);
     }
   }
@@ -404,10 +530,9 @@ ipcMain.on('get-available-resolutions', async (event) => {
     const resolutions = layoutConfig?.resolutions ? Object.keys(layoutConfig.resolutions) : [];
     event.sender.send('available-resolutions', resolutions);
   } catch (error) {
-    console.error('Error reading layout_coordinates.json:', error);
     event.sender.send('available-resolutions', []);
     if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
-      sendStatusToRenderer(mainWindow.webContents, `Error loading resolutions: ${error.message}`);
+      mainWindow.webContents.send('scrape-status', `Error loading resolutions: ${error.message}`);
     }
   }
 });
@@ -461,15 +586,15 @@ ipcMain.on('scrape-ability-pairs', async (event) => {
 });
 
 ipcMain.on('close-overlay', () => {
-  console.log('[Main] Received close-overlay IPC.');
   if (overlayWindow) {
-    console.log('[Main] Closing overlayWindow from IPC.');
     overlayWindow.close();
   } else {
-    console.log('[Main] close-overlay IPC: no overlayWindow to close. Ensuring main window visible.');
     if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
       mainWindow.show();
       mainWindow.focus();
+      if (mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
+        mainWindow.webContents.send('overlay-closed-reset-ui');
+      }
     }
   }
 });
@@ -477,6 +602,67 @@ ipcMain.on('close-overlay', () => {
 ipcMain.on('set-overlay-mouse-ignore', (event, ignore) => {
   if (overlayWindow && !overlayWindow.isDestroyed()) {
     overlayWindow.setIgnoreMouseEvents(ignore, { forward: true });
-    console.log(`[Main] Overlay mouse events ignore set to: ${ignore}`);
   }
 });
+
+function createOverlayWindow(resolutionKey, allCoordinatesConfig) {
+  if (overlayWindow) {
+    overlayWindow.close();
+  }
+
+  isScanInProgress = false;
+  lastScanRawResults = null;
+  lastScanTargetResolution = null;
+
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const targetScreenWidth = primaryDisplay.bounds.width;
+  const targetScreenHeight = primaryDisplay.bounds.height;
+
+  overlayWindow = new BrowserWindow({
+    width: targetScreenWidth,
+    height: targetScreenHeight,
+    x: primaryDisplay.bounds.x,
+    y: primaryDisplay.bounds.y,
+    frame: false,
+    transparent: true,
+    skipTaskbar: true,
+    focusable: false,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: false,
+      contextIsolation: true,
+    },
+  });
+
+  overlayWindow.loadFile(path.join(__dirname, 'overlay.html'));
+  overlayWindow.setAlwaysOnTop(true, 'screen-saver');
+  overlayWindow.setVisibleOnAllWorkspaces(true);
+  overlayWindow.setIgnoreMouseEvents(true, { forward: true });
+
+
+  overlayWindow.webContents.on('did-finish-load', () => {
+    overlayWindow.webContents.send('overlay-data', {
+      scanData: null,
+      coordinatesConfig: allCoordinatesConfig,
+      targetResolution: resolutionKey,
+      opCombinations: [],
+      initialSetup: true
+    });
+  });
+
+  overlayWindow.on('closed', () => {
+    overlayWindow = null;
+    isScanInProgress = false;
+    lastScanRawResults = null;
+    lastScanTargetResolution = null;
+
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.show();
+      mainWindow.focus();
+      if (mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
+        mainWindow.webContents.send('overlay-closed-reset-ui');
+      }
+    }
+  });
+  return overlayWindow;
+}
