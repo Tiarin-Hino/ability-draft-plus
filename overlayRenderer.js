@@ -1,9 +1,12 @@
 const tooltipElement = document.getElementById('tooltip');
 const closeOverlayButton = document.getElementById('close-overlay-btn');
 const scanNowButton = document.getElementById('scan-now-btn');
-const takeSnapshotButton = document.getElementById('take-snapshot-btn'); // New button
-const snapshotStatusElement = document.getElementById('snapshot-status'); // New status element
+const takeSnapshotButton = document.getElementById('take-snapshot-btn');
+const snapshotStatusElement = document.getElementById('snapshot-status');
 const controlsContainer = document.getElementById('controls-container');
+const opAlertWindow = document.getElementById('op-combinations-alert');
+const opCombinationsListElement = document.getElementById('op-combinations-list');
+
 
 let currentCoordinatesConfig = null;
 let currentTargetResolution = null;
@@ -11,7 +14,6 @@ let scanHasBeenPerformed = false;
 
 console.log('overlayRenderer.js loaded');
 
-// --- NEW: Function to toggle top-tier hotspot borders ---
 function toggleTopTierBordersVisibility(visible) {
     const hotspots = document.querySelectorAll('.ability-hotspot.top-tier-ability');
     hotspots.forEach(hotspot => {
@@ -24,17 +26,42 @@ function toggleTopTierBordersVisibility(visible) {
     console.log(`[OVERLAY RENDERER] Top-tier borders visibility set to: ${visible}`);
 }
 
-// --- NEW: Listen for command from main process to toggle borders ---
 if (window.electronAPI && window.electronAPI.onToggleHotspotBorders) {
     window.electronAPI.onToggleHotspotBorders((visible) => {
         toggleTopTierBordersVisibility(visible);
     });
 }
 
+function updateOPCombinationsAlert(opCombinations) {
+    if (!opAlertWindow || !opCombinationsListElement) {
+        console.error("OP Alert window elements not found in DOM.");
+        return;
+    }
+
+    opCombinationsListElement.innerHTML = '';
+
+    if (opCombinations && opCombinations.length > 0) {
+        opCombinations.forEach(combo => {
+            const comboDiv = document.createElement('div');
+            const ability1Display = (combo.ability1DisplayName || 'Ability 1').replace(/_/g, ' ');
+            const ability2Display = (combo.ability2DisplayName || 'Ability 2').replace(/_/g, ' ');
+            const wrFormatted = combo.synergyWinrate ? `(${(combo.synergyWinrate * 100).toFixed(1)}%)` : '';
+            comboDiv.textContent = `${ability1Display} + ${ability2Display} ${wrFormatted} WR`;
+            opCombinationsListElement.appendChild(comboDiv);
+        });
+        opAlertWindow.style.display = 'block';
+        console.log(`[OVERLAY RENDERER] Displaying ${opCombinations.length} OP combinations.`);
+    } else {
+        opAlertWindow.style.display = 'none';
+        console.log('[OVERLAY RENDERER] No OP combinations to display.');
+    }
+}
+// <<< END NEW
+
+
 if (window.electronAPI && window.electronAPI.onOverlayData) {
     console.log('[OVERLAY RENDERER] Setting up onOverlayData listener');
     window.electronAPI.onOverlayData((data) => {
-        // Robust logging of received data
         console.log('[OVERLAY RENDERER] === New Overlay Data Received ===');
         if (data && data.error) {
             console.error('[OVERLAY RENDERER] Error message received from main process:', data.error);
@@ -46,8 +73,16 @@ if (window.electronAPI && window.electronAPI.onOverlayData) {
             }
             if (takeSnapshotButton) takeSnapshotButton.style.display = 'none';
             scanHasBeenPerformed = false;
+            updateOPCombinationsAlert([]);
             return;
         }
+
+        if (data && data.opCombinations) {
+            updateOPCombinationsAlert(data.opCombinations);
+        } else if (data && data.initialSetup) {
+            updateOPCombinationsAlert([]);
+        }
+
 
         if (data && data.initialSetup) {
             console.log('[OVERLAY RENDERER] Initial setup data received.');
@@ -63,7 +98,6 @@ if (window.electronAPI && window.electronAPI.onOverlayData) {
             scanHasBeenPerformed = false;
             tooltipElement.style.display = 'none';
             if (snapshotStatusElement) snapshotStatusElement.style.display = 'none';
-            // Log context for initial setup
             console.log('[OVERLAY RENDERER] currentCoordinatesConfig set:', JSON.stringify(data.coordinatesConfig, null, 2));
             console.log('[OVERLAY RENDERER] currentTargetResolution set:', data.targetResolution);
             if (data.coordinatesConfig) currentCoordinatesConfig = data.coordinatesConfig;
@@ -71,7 +105,6 @@ if (window.electronAPI && window.electronAPI.onOverlayData) {
 
         } else if (data && data.scanData) {
             console.log('[OVERLAY RENDERER] Scan data received. Attempting to process and create hotspots.');
-            // Detailed logging of the actual scan data and context
             console.log('[OVERLAY RENDERER] Full scanData payload:', JSON.stringify(data.scanData, null, 2));
             console.log('[OVERLAY RENDERER] Using currentCoordinatesConfig:', JSON.stringify(currentCoordinatesConfig, null, 2));
             console.log('[OVERLAY RENDERER] Using currentTargetResolution:', currentTargetResolution);
@@ -85,6 +118,7 @@ if (window.electronAPI && window.electronAPI.onOverlayData) {
                 if (scanNowButton) { scanNowButton.disabled = false; scanNowButton.style.display = 'inline-block'; }
                 if (takeSnapshotButton) takeSnapshotButton.style.display = 'none';
                 scanHasBeenPerformed = false;
+                updateOPCombinationsAlert(data.opCombinations || []);
                 return;
             }
             if (!currentCoordinatesConfig || !currentTargetResolution) {
@@ -94,6 +128,7 @@ if (window.electronAPI && window.electronAPI.onOverlayData) {
                 if (scanNowButton) { scanNowButton.disabled = false; scanNowButton.style.display = 'inline-block'; }
                 if (takeSnapshotButton) takeSnapshotButton.style.display = 'none';
                 scanHasBeenPerformed = false;
+                updateOPCombinationsAlert(data.opCombinations || []);
                 return;
             }
 
@@ -109,6 +144,7 @@ if (window.electronAPI && window.electronAPI.onOverlayData) {
                 }
                 if (takeSnapshotButton) takeSnapshotButton.style.display = 'none';
                 scanHasBeenPerformed = false;
+                updateOPCombinationsAlert(data.opCombinations || []);
                 return;
             }
 
@@ -133,7 +169,7 @@ if (window.electronAPI && window.electronAPI.onOverlayData) {
                     takeSnapshotButton.disabled = false;
                 }
                 scanHasBeenPerformed = true;
-                tooltipElement.style.display = 'none'; // Hide "Scanning..." tooltip
+                tooltipElement.style.display = 'none';
                 console.log('[OVERLAY RENDERER] UI updated successfully, "Scanning..." tooltip hidden.');
                 if (snapshotStatusElement) snapshotStatusElement.style.display = 'none';
 
@@ -148,9 +184,13 @@ if (window.electronAPI && window.electronAPI.onOverlayData) {
                 }
                 if (takeSnapshotButton) takeSnapshotButton.style.display = 'none';
                 scanHasBeenPerformed = false;
+                updateOPCombinationsAlert(data.opCombinations || []);
             }
         } else {
             console.warn('[OVERLAY RENDERER] Received overlay data that was not initialSetup and had no scanData or error field.', JSON.stringify(data, null, 2));
+            if (data && data.opCombinations) {
+                updateOPCombinationsAlert(data.opCombinations);
+            }
         }
     });
 } else {
@@ -159,12 +199,14 @@ if (window.electronAPI && window.electronAPI.onOverlayData) {
         tooltipElement.innerHTML = '<div class="tooltip-title">API Error</div><div class="tooltip-winrate">Overlay API not available.</div>';
         tooltipElement.style.display = 'block';
     }
+    if (opAlertWindow) opAlertWindow.style.display = 'none'; // Hide OP alert if API is down
 }
 
 if (scanNowButton && window.electronAPI && window.electronAPI.executeScanFromOverlay) {
     scanNowButton.addEventListener('click', () => {
         if (scanHasBeenPerformed || scanNowButton.disabled) return;
         scanNowButton.disabled = true;
+        if (opAlertWindow) opAlertWindow.style.display = 'none';
         if (!currentTargetResolution) {
             console.error('Cannot scan, target resolution not set.');
             tooltipElement.innerHTML = '<div class="tooltip-title">Error</div><div class="tooltip-winrate">Resolution not set.</div>';
@@ -186,7 +228,6 @@ if (scanNowButton && window.electronAPI && window.electronAPI.executeScanFromOve
     });
 }
 
-// --- "Take Snapshot" Button Logic ---
 if (takeSnapshotButton && window.electronAPI && window.electronAPI.takeSnapshot) {
     takeSnapshotButton.addEventListener('click', () => {
         if (!scanHasBeenPerformed || takeSnapshotButton.disabled) {
@@ -194,7 +235,7 @@ if (takeSnapshotButton && window.electronAPI && window.electronAPI.takeSnapshot)
             return;
         }
         console.log('Take Snapshot button clicked.');
-        takeSnapshotButton.disabled = true; // Prevent multiple clicks
+        takeSnapshotButton.disabled = true;
         if (snapshotStatusElement) {
             snapshotStatusElement.textContent = 'Taking snapshot...';
             snapshotStatusElement.style.display = 'block';
@@ -203,25 +244,19 @@ if (takeSnapshotButton && window.electronAPI && window.electronAPI.takeSnapshot)
     });
 }
 
-// --- Listener for Snapshot Status ---
 if (window.electronAPI && window.electronAPI.onSnapshotTaken) {
     window.electronAPI.onSnapshotTaken((status) => {
         console.log('Snapshot status from main:', status);
         if (snapshotStatusElement) {
             snapshotStatusElement.textContent = status.message;
             snapshotStatusElement.style.display = 'block';
-
-            // Re-enable button if not a fatal error or allow another attempt
             if (!status.error || status.allowRetry) {
                 if (takeSnapshotButton) takeSnapshotButton.disabled = false;
             }
-
-            // Optionally hide the message after a few seconds
             setTimeout(() => {
                 snapshotStatusElement.style.display = 'none';
-            }, 5000); // Hide after 5 seconds
+            }, 5000);
         } else {
-            // Fallback if element not found, though it should be.
             if (takeSnapshotButton && (!status.error || status.allowRetry)) takeSnapshotButton.disabled = false;
         }
     });
@@ -261,26 +296,23 @@ function createHotspotsForType(abilityArray, coordArray, type) {
 
 function createHotspot(coord, abilityData, index, type) {
     const hotspot = document.createElement('div');
-    hotspot.className = 'ability-hotspot'; // Base class
+    hotspot.className = 'ability-hotspot';
     hotspot.id = `hotspot-${type}-${index}`;
     hotspot.style.left = `${coord.x}px`;
     hotspot.style.top = `${coord.y}px`;
     hotspot.style.width = `${coord.width}px`;
     hotspot.style.height = `${coord.height}px`;
 
-    // --- NEW: Add class if ability is top tier ---
     if (abilityData.isTopTier) {
         hotspot.classList.add('top-tier-ability');
         console.log(`Hotspot for ${abilityData.displayName} marked as top-tier.`);
     }
-    // --- END NEW ---
 
     hotspot.dataset.abilityName = abilityData.displayName;
     hotspot.dataset.internalName = abilityData.internalName;
     hotspot.dataset.winrate = abilityData.winrate !== null ? abilityData.winrate : 'N/A';
     hotspot.dataset.highSkillWinrate = abilityData.highSkillWinrate !== null ? abilityData.highSkillWinrate : 'N/A';
     hotspot.dataset.combinations = JSON.stringify(abilityData.highWinrateCombinations || []);
-    // Store the isTopTier flag in dataset as well, might be useful for debugging or other JS logic
     hotspot.dataset.isTopTier = abilityData.isTopTier;
 
 
@@ -290,8 +322,6 @@ function createHotspot(coord, abilityData, index, type) {
         const winrateFormatted = wr !== 'N/A' ? `${(parseFloat(wr) * 100).toFixed(1)}%` : 'N/A';
         let hsWr = hotspot.dataset.highSkillWinrate;
         const highSkillWinrateFormatted = hsWr !== 'N/A' ? `${(parseFloat(hsWr) * 100).toFixed(1)}%` : 'N/A';
-
-        // Optionally, add a visual cue in the tooltip as well
         const topTierIndicator = hotspot.dataset.isTopTier === 'true' ? '<span style="color: #66ff66;">&#9733; Top Pick!</span><br>' : '';
 
         let tooltipContent = `
@@ -302,11 +332,11 @@ function createHotspot(coord, abilityData, index, type) {
         `;
         const combinations = JSON.parse(hotspot.dataset.combinations);
         if (combinations && combinations.length > 0) {
-            tooltipContent += `<div class="tooltip-section-title">Strong Combos in Pool:</div>`;
+            tooltipContent += `<div class="tooltip-section-title">Strong Combinations in Pool:</div>`;
             combinations.slice(0, 5).forEach(combo => {
                 const comboPartnerName = (combo.partnerAbilityDisplayName || 'Unknown Partner').replace(/_/g, ' ');
                 const comboWrFormatted = combo.synergyWinrate !== null ? `${(parseFloat(combo.synergyWinrate) * 100).toFixed(1)}%` : 'N/A';
-                tooltipContent += `<div class="tooltip-combo">- ${comboPartnerName} (${comboWrFormatted})</div>`;
+                tooltipContent += `<div class="tooltip-combo">- ${comboPartnerName} (${comboWrFormatted} WR)</div>`;
             });
         }
         tooltipElement.innerHTML = tooltipContent;

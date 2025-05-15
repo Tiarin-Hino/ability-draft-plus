@@ -18,7 +18,6 @@ function getAbilityDetails(dbPath, abilityNames) {
         db = new Database(dbPath, { readonly: true });
 
         const placeholders = abilityNames.map(() => '?').join(', ');
-        // <<< UPDATED SQL: Added pick_order
         const sql = `SELECT name, display_name, winrate, high_skill_winrate, pick_order FROM Abilities WHERE name IN (${placeholders})`;
 
         const stmt = db.prepare(sql);
@@ -30,13 +29,13 @@ function getAbilityDetails(dbPath, abilityNames) {
                 displayName: row.display_name || row.name,
                 winrate: (typeof row.winrate === 'number') ? row.winrate : null,
                 highSkillWinrate: (typeof row.high_skill_winrate === 'number') ? row.high_skill_winrate : null,
-                pickOrder: (typeof row.pick_order === 'number') ? row.pick_order : null // <<< NEW: Added pickOrder
+                pickOrder: (typeof row.pick_order === 'number') ? row.pick_order : null
             });
         });
 
     } catch (err) {
         console.error(`Error fetching ability details: ${err.message}`);
-        return new Map();
+        return new Map(); // Return an empty map on error
     } finally {
         if (db) {
             db.close();
@@ -119,5 +118,69 @@ async function getHighWinrateCombinations(dbPath, baseAbilityInternalName, draft
     return combinations;
 }
 
+/**
+ * Fetches "OP" ability combinations present in the current draft pool.
+ * An OP combination is one where the 'is_op' flag is true in the AbilitySynergies table.
+ * @param {string} dbPath - Path to the SQLite database file.
+ * @param {string[]} draftPoolInternalNames - An array of internal names of all abilities in the draft pool.
+ * @returns {Promise<Array<{ability1DisplayName: string, ability2DisplayName: string, synergyWinrate: number}>>}
+ */
+async function getOPCombinationsInPool(dbPath, draftPoolInternalNames) {
+    const opCombinations = [];
+    if (!draftPoolInternalNames || draftPoolInternalNames.length < 2) { // Need at least two abilities for a pair
+        return opCombinations;
+    }
 
-module.exports = { getAbilityDetails, getHighWinrateCombinations };
+    let db;
+    try {
+        db = new Database(dbPath, { readonly: true });
+
+        // Create placeholders for the IN clause
+        const poolPlaceholders = draftPoolInternalNames.map(() => '?').join(',');
+
+        const opQuery = `
+            SELECT
+                a1.display_name AS ability1_display_name,
+                a1.name AS ability1_internal_name,
+                a2.display_name AS ability2_display_name,
+                a2.name AS ability2_internal_name,
+                s.synergy_winrate
+            FROM AbilitySynergies s
+            JOIN Abilities a1 ON s.base_ability_id = a1.ability_id
+            JOIN Abilities a2 ON s.synergy_ability_id = a2.ability_id
+            WHERE s.is_op = 1                         -- Check for the OP flag
+              AND a1.name IN (${poolPlaceholders})    -- Both abilities must be in the pool
+              AND a2.name IN (${poolPlaceholders})
+              AND a1.name < a2.name;                  -- Ensure each pair is reported once (a1 < a2)
+        `;
+        // The query parameters will be draftPoolInternalNames repeated twice for the two IN clauses.
+        const queryParams = [...draftPoolInternalNames, ...draftPoolInternalNames];
+        const opStmt = db.prepare(opQuery);
+        const opRows = opStmt.all(...queryParams);
+
+        opRows.forEach(row => {
+            // Filter again in JS to be absolutely sure both are in the current pool,
+            // as SQL IN clause with repeated params might not be strictly what we want here
+            // if an ability could be base and synergy in different DB rows but only one present in pool.
+            // The a1.name < a2.name handles uniqueness of pairs already.
+            if (draftPoolInternalNames.includes(row.ability1_internal_name) && draftPoolInternalNames.includes(row.ability2_internal_name)) {
+                opCombinations.push({
+                    ability1DisplayName: row.ability1_display_name || row.ability1_internal_name,
+                    ability2DisplayName: row.ability2_display_name || row.ability2_internal_name,
+                    synergyWinrate: row.synergy_winrate // You might want to display this too
+                });
+            }
+        });
+
+    } catch (err) {
+        console.error(`Error fetching OP combinations: ${err.message}`);
+    } finally {
+        if (db) {
+            db.close();
+        }
+    }
+    return opCombinations;
+}
+
+
+module.exports = { getAbilityDetails, getHighWinrateCombinations, getOPCombinationsInPool };

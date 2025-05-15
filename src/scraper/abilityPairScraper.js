@@ -3,11 +3,11 @@ const cheerio = require('cheerio');
 const Database = require('better-sqlite3');
 
 // --- Reusable Helper Functions ---
-function parseWinrate(text) {
+function parsePercentageValue(text) { // Renamed for clarity from parseWinrate
     if (!text) return null;
-    const cleanedText = text.trim().replace('%', '');
+    const cleanedText = text.trim().replace('%', '').replace(',', '.'); // Handle comma as decimal
     const parsedRate = parseFloat(cleanedText);
-    return !isNaN(parsedRate) ? parsedRate / 100.0 : null;
+    return !isNaN(parsedRate) ? parsedRate : null; // Return the direct percentage value
 }
 
 function extractAbilityName(imgSrc) {
@@ -27,7 +27,8 @@ function extractAbilityName(imgSrc) {
  */
 async function scrapeAndStoreAbilityPairs(dbPath, url, statusCallback) {
     let db;
-    const WINRATE_THRESHOLD = 0.50; // 50%
+    const WINRATE_THRESHOLD = 0.50; // 50% for synergy_winrate
+    const OP_THRESHOLD_PERCENTAGE = 0.09; // 9% for is_op flag
 
     try {
         statusCallback(`Workspaceing ability pairs data from ${url}...`);
@@ -39,6 +40,11 @@ async function scrapeAndStoreAbilityPairs(dbPath, url, statusCallback) {
         let colIndexAbilityOne = -1;
         let colIndexAbilityTwo = -1;
         let colIndexWinrate = -1;
+        let colIndexOpPercentage = -1;
+        // We need to find the column index for the OP percentage.
+        // Let's assume it's consistently the last td with a numeric percentage.
+        // If the site has a specific data-field for it, that would be more robust.
+        // For now, we'll iterate and find it.
 
         const headerCells = $('thead tr:nth-child(2) th');
         if (headerCells.length === 0) {
@@ -50,6 +56,8 @@ async function scrapeAndStoreAbilityPairs(dbPath, url, statusCallback) {
             if (dataField === 'ability-one-pic') colIndexAbilityOne = index;
             else if (dataField === 'ability-two-pic') colIndexAbilityTwo = index;
             else if (dataField === 'combined-winrate') colIndexWinrate = index;
+            else if (dataField === 'synergy') colIndexOpPercentage = index
+            // Add more specific data-field if available for the OP percentage column
         });
 
         if (colIndexAbilityOne === -1 || colIndexAbilityTwo === -1 || colIndexWinrate === -1) {
@@ -57,10 +65,8 @@ async function scrapeAndStoreAbilityPairs(dbPath, url, statusCallback) {
         }
         statusCallback(`Column indices found: Abil1=${colIndexAbilityOne}, Abil2=${colIndexAbilityTwo}, WR=${colIndexWinrate}`);
 
-        // --- Pre-fetch Ability Details (ID and hero_id) ---
         statusCallback('Fetching existing ability details (ID and Hero ID) from database...');
         db = new Database(dbPath, { readonly: true });
-        // Fetch ability_id, name, AND hero_id
         const abilities = db.prepare('SELECT ability_id, name, hero_id FROM Abilities').all();
         const abilityNameToDetailsMap = new Map(abilities.map(a => [a.name, { id: a.ability_id, heroId: a.hero_id }]));
         db.close();
@@ -70,7 +76,6 @@ async function scrapeAndStoreAbilityPairs(dbPath, url, statusCallback) {
             throw new Error("Ability details map is empty. Please run 'Update Ability Winrates' first.");
         }
 
-        // --- Extract Data from Table Body ---
         const rows = $('tbody tr');
         if (rows.length === 0) throw new Error('No ability pair data rows found in tbody.');
         statusCallback(`Found ${rows.length} pair rows. Processing...`);
@@ -81,6 +86,10 @@ async function scrapeAndStoreAbilityPairs(dbPath, url, statusCallback) {
             const row = $(element);
             const cells = row.find('td');
 
+            const tdOpPercentageValue = cells.eq(colIndexOpPercentage);
+            const opPercentageText = tdOpPercentageValue.text(); // Get text for synergy winrate
+            const opPercentageValue = parsePercentageValue(opPercentageText) / 100.0; // Convert to 0-1 scale
+
             if (cells.length > Math.max(colIndexAbilityOne, colIndexAbilityTwo, colIndexWinrate)) {
                 const tdAbilityOne = cells.eq(colIndexAbilityOne);
                 const tdAbilityTwo = cells.eq(colIndexAbilityTwo);
@@ -88,46 +97,46 @@ async function scrapeAndStoreAbilityPairs(dbPath, url, statusCallback) {
 
                 const name1 = extractAbilityName(tdAbilityOne.find('img').attr('src'));
                 const name2 = extractAbilityName(tdAbilityTwo.find('img').attr('src'));
-                const winrate = parseWinrate(tdWinrate.text());
+                const synergyWinrateText = tdWinrate.text(); // Get text for synergy winrate
+                const synergyWinrate = parsePercentageValue(synergyWinrateText) / 100.0; // Convert to 0-1 scale
 
-                if (name1 && name2 && winrate !== null) {
+                if (name1 && name2 && synergyWinrate !== null) {
                     const details1 = abilityNameToDetailsMap.get(name1);
                     const details2 = abilityNameToDetailsMap.get(name2);
 
-                    if (details1 && details2 && details1.id !== details2.id) { // Ensure both abilities exist in DB and are different
-
-                        // --- NEW: Check if abilities are from the same hero ---
-                        // Skip if both abilities have a hero_id and those hero_ids are the same.
-                        // If one or both hero_ids are null, the synergy is still considered (as they aren't from the *same* defined hero).
+                    if (details1 && details2 && details1.id !== details2.id) {
                         if (details1.heroId !== null && details2.heroId !== null && details1.heroId === details2.heroId) {
-                            console.warn(`Skipping pair row ${index + 1} ("${name1}" and "${name2}"): Abilities are from the same hero (Hero ID: ${details1.heroId}).`);
-                            return; // Skips to the next iteration of .each()
+                            // console.warn(`Skipping pair row ${index + 1} ("${name1}" and "${name2}"): Abilities are from the same hero (Hero ID: ${details1.heroId}).`);
+                            return;
                         }
-                        // --- END NEW CHECK ---
 
-                        if (winrate >= WINRATE_THRESHOLD) {
-                            // Enforce consistent ordering: lower ID first
+                        if (synergyWinrate >= WINRATE_THRESHOLD) {
                             const baseAbilityId = Math.min(details1.id, details2.id);
                             const synergyAbilityId = Math.max(details1.id, details2.id);
-                            pairsToInsert.push({ baseAbilityId, synergyAbilityId, winrate });
+                            const isOp = opPercentageValue !== null && opPercentageValue >= OP_THRESHOLD_PERCENTAGE;
+
+                            pairsToInsert.push({
+                                baseAbilityId,
+                                synergyAbilityId,
+                                winrate: synergyWinrate, // This is the synergy_winrate
+                                is_op: isOp ? 1 : 0 // Store as 1 for true, 0 for false
+                            });
                         }
                     } else if (!details1 || !details2) {
                         console.warn(`Skipping pair row ${index + 1}: Ability "${!details1 ? name1 : name2}" not found in local Abilities table.`);
                     }
                 } else {
-                    console.warn(`Skipping pair row ${index + 1}: Could not extract valid data (Name1: ${name1}, Name2: ${name2}, Winrate: ${winrate})`);
+                    console.warn(`Skipping pair row ${index + 1}: Could not extract valid data (Name1: ${name1}, Name2: ${name2}, SynergyWinrate: ${synergyWinrate})`);
                 }
             } else {
                 console.warn(`Skipping pair row ${index + 1}: Row does not have enough cells (needs at least ${Math.max(colIndexAbilityOne, colIndexAbilityTwo, colIndexWinrate) + 1}).`);
             }
         });
 
-        statusCallback(`Processed rows. Valid pairs to insert (>= ${WINRATE_THRESHOLD * 100}%, different heroes): ${pairsToInsert.length}.`);
+        statusCallback(`Processed rows. Valid pairs to insert (synergy >= ${WINRATE_THRESHOLD * 100}%, different heroes): ${pairsToInsert.length}.`);
 
-        // --- Database Update ---
         if (pairsToInsert.length === 0) {
             statusCallback('No valid pairs found to insert after filtering.');
-            // Still attempt to clear the table if it's part of the "refresh" strategy
             try {
                 db = new Database(dbPath);
                 db.pragma('journal_mode = WAL');
@@ -138,32 +147,27 @@ async function scrapeAndStoreAbilityPairs(dbPath, url, statusCallback) {
             } catch (clearError) {
                 console.error('Error clearing AbilitySynergies table when no new pairs:', clearError);
                 statusCallback(`Error clearing synergies: ${clearError.message}`);
-                throw clearError; // Rethrow if critical
+                throw clearError;
             }
             return;
         }
 
         statusCallback('Updating database with new pairs data...');
-        db = new Database(dbPath); // Re-open for writing
+        db = new Database(dbPath);
         db.pragma('journal_mode = WAL');
 
-        // --- Clear the AbilitySynergies table before inserting new data ---
         statusCallback('Clearing all existing ability synergies from the database...');
         const deleteInfo = db.prepare('DELETE FROM AbilitySynergies').run();
         statusCallback(`Cleared ${deleteInfo.changes} existing synergies.`);
-        // --- End Clear Table ---
 
-        // Prepare statement for insertion
-        // Since we cleared the table, a simple INSERT is fine.
-        // ON CONFLICT is kept for robustness in case the same pair (after ID ordering) is somehow duplicated in pairsToInsert.
         const insertStmt = db.prepare(`
-            INSERT INTO AbilitySynergies (base_ability_id, synergy_ability_id, synergy_winrate)
-            VALUES (@baseAbilityId, @synergyAbilityId, @winrate)
+            INSERT INTO AbilitySynergies (base_ability_id, synergy_ability_id, synergy_winrate, is_op)
+            VALUES (@baseAbilityId, @synergyAbilityId, @winrate, @is_op)
             ON CONFLICT(base_ability_id, synergy_ability_id) DO UPDATE SET
-               synergy_winrate = excluded.synergy_winrate
+               synergy_winrate = excluded.synergy_winrate,
+               is_op = excluded.is_op
         `);
 
-        // Use a transaction
         const insertTransaction = db.transaction((toInsert) => {
             let insertedCount = 0;
             for (const pair of toInsert) {
@@ -175,14 +179,12 @@ async function scrapeAndStoreAbilityPairs(dbPath, url, statusCallback) {
 
         const insertedCount = insertTransaction(pairsToInsert);
         statusCallback(`Database update successful. Inserted/Updated ${insertedCount} new synergies.`);
-        // --- End Database Update ---
 
     } catch (error) {
         console.error('Error during ability pair scraping or database update:', error);
-        // Ensure status callback reflects the error for the UI
         const finalErrorMessage = `Ability pairs scraping failed: ${error.message}`;
         statusCallback(finalErrorMessage);
-        throw new Error(finalErrorMessage); // Rethrow for main process to catch if needed
+        throw new Error(finalErrorMessage);
     } finally {
         if (db && db.open) {
             db.close();
