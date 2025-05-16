@@ -1,164 +1,147 @@
-# Troubleshooting Native Module Issues with @tensorflow/tfjs-node in Electron
+# Dota 2 Ability Draft Plus Overlay
 
-Integrating `@tensorflow/tfjs-node` into an Electron application can sometimes present challenges where the native `tfjs_binding.node` module fails to load at runtime. This typically manifests as an error like "The specified module could not be found," even if build tools like `electron-rebuild` report successful compilation.
+**Dota 2 Ability Draft Plus** is a desktop overlay tool designed to provide players with valuable statistical insights during the Ability Draft phase of a Dota 2 game. It leverages real-time game state information and a locally stored database to display win rates for heroes and abilities, and suggests powerful ability combinations. This version utilizes a Machine Learning model for accurate ability icon recognition.
 
-This document outlines a series of steps that were successful in resolving such an issue for an Electron project.
+**This project is currently focused on Windows, with potential for macOS/Linux support in the future.**
 
-**The Core Problem Encountered:**
+## Features
 
-The primary symptom was Electron (e.g., v31.x.x, which uses a Node.js version expecting N-API v9) throwing an error similar to:
-Error: The specified module could not be found.
-\?\C:...\node_modules@tensorflow\tfjs-node\lib\napi-v8\tfjs_binding.node
+* **Real-time Data:** Integrates with Dota 2's Game State Integration (GSI) to understand the current draft.
+* **In-Draft Insights:**
+    * Displays hero win rates when hovering over heroes.
+    * Shows ability win rates when hovering over abilities.
+    * Suggests strong ability combinations from the current draft pool, along with their win rates.
+* **ML-Powered Ability Recognition:** Uses a TensorFlow.js model to identify ability icons from the screen, replacing an older image hashing method for improved accuracy.
+* **Local Statistics Database:** All statistical data (hero win rates, ability win rates, synergy data) is stored in a local SQLite database.
+* **Manual Data Updates:** The application includes a control panel to scrape and update the local database from Windrun.io.
+* **Feedback Mechanism:** Allows users to export images of incorrectly identified abilities to help improve the ML model.
 
+## Project Structure
 
-This error occurred despite:
-1.  `electron-rebuild -f -w @tensorflow/tfjs-node -v [YOUR_ELECTRON_VERSION]` reporting "✔ Rebuild Complete".
-2.  The Electron runtime confirming (via `process.versions.napi`) that it expected a higher N-API version (e.g., N-API v9).
-3.  The `tfjs_binding.node` file being successfully compiled during the rebuild.
+The project is an Electron application with the following key components:
 
-The root cause was a combination of:
-* The build process (driven by `electron-rebuild` or internal `tfjs-node` scripts) potentially misplacing the compiled `tfjs_binding.node` into an incorrect N-API versioned subfolder (e.g., `lib/napi-v8/` instead of the expected `lib/napi-v9/`).
-* The `@tensorflow/tfjs-node` package's internal module loader (specifically the `binary.find` function often found in its `dist/index.js`) incorrectly attempting to load the binding from an older N-API versioned path.
+* `main.js`: The main Electron process, handling application lifecycle, IPC communication, GSI integration (conceptual), database interactions, and image processing orchestration.
+* `index.html` & `renderer.js`: The main control panel window for the application.
+* `overlay.html` & `overlayRenderer.js`: The transparent overlay window that displays information during the draft.
+* `preload.js`: Electron preload script for secure IPC communication between main and renderer processes.
+* `src/`: Contains the core logic:
+    * `database/`:
+        * `setupDatabase.js`: Manages SQLite database schema creation and updates.
+        * `queries.js`: Contains functions for querying the SQLite database.
+    * `scraper/`: Scripts for scraping data from Windrun.io (`heroScraper.js`, `abilityScraper.js`, `abilityPairScraper.js`).
+    * `imageProcessor.js`: Handles screen capture, ability icon cropping, and ML-based ability recognition using TensorFlow.js.
+* `model/tfjs_model/`: Contains the TensorFlow.js graph model (`model.json`, `*.bin` weight files) and `class_names.json` for ability icon recognition.
+* `config/layout_coordinates.json`: Defines screen coordinates for ability icons at different resolutions.
+* `dota_ad_data.db`: The bundled SQLite database (copied to user data on first run).
+* `patches/`: Contains patches applied via `patch-package` (e.g., for `@tensorflow/tfjs-node`).
+* `package.json`: Defines project dependencies, scripts, and build configurations.
 
-**Solution Steps:**
+## Installation and Running from Source
 
-The following sequence of actions helps ensure the correctly compiled native addon is built, correctly placed, and correctly loaded:
+These instructions are primarily for **Windows**.
 
-**1. Configure Python Environment for Native Module Compilation:**
+### Prerequisites
 
-Native Node.js modules often use `node-gyp` for compilation, which in turn relies on Python. Recent Python versions (3.12+) have removed the `distutils` module, which older versions of `node-gyp` (or the `gyp` tool it bundles) depend on, leading to build failures.
+1.  **Node.js:** Download and install Node.js (which includes npm). A version compatible with Electron and `@tensorflow/tfjs-node` is required. (e.g., Node.js 18.x or 20.x).
+2.  **Python:**
+    * **Crucial for `@tensorflow/tfjs-node` native module compilation:** Install a compatible Python version (e.g., **Python 3.9.x, 3.10.x, or 3.11.x**). Newer Python versions (3.12+) might cause issues as they removed `distutils` which `node-gyp` might depend on.
+    * Add Python to your system's PATH or ensure you can set the `PYTHON` environment variable correctly.
+3.  **C++ Build Tools (Windows):**
+    * **Option A (Recommended):** Install Visual Studio (e.g., Community Edition). Ensure the "Desktop development with C++" workload is selected during installation. This provides the necessary C++ compiler, SDKs, etc.
+    * **Option B (Alternative):** Try installing the standalone C++ build tools via `npm install --global --production windows-build-tools` from an Administrator PowerShell/Command Prompt. (This might install older versions, Visual Studio is preferred).
+4.  **Git:** For cloning the repository.
 
-* **Action:** Install a compatible Python version. Python 3.9.x, 3.10.x, or 3.11.x are recommended as they still include `distutils`.
-* **Action (Windows - PowerShell Admin):** Before running `npm install` or `electron-rebuild`, set the `PYTHON` environment variable for the current terminal session to point to this compatible Python executable:
-    ```powershell
-    $env:PYTHON = "C:\Path\To\Your\Python39\python.exe" 
-    # Verify: Get-ChildItem Env:PYTHON
+### Setup Steps
+
+1.  **Clone the Repository:**
+    ```bash
+    git clone [https://github.com/your-username/ability-draft-plus.git](https://github.com/your-username/ability-draft-plus.git)
+    cd ability-draft-plus
     ```
-    *(Replace `C:\Path\To\Your\Python39\python.exe` with the actual path to your chosen Python 3.9, 3.10, or 3.11 executable).*
 
-**2. Install Necessary Build Tools (Windows Specific):**
-
-* Ensure the C++ build toolchain is installed.
-    * **Option A (Recommended):** Install Visual Studio (e.g., Community Edition) and ensure the "Desktop development with C++" workload is selected.
-    * **Option B:** From an Administrator PowerShell or Command Prompt, try installing the standalone tools (this might install an older version):
-        ```bash
-        npm install --global --production windows-build-tools
-        ```
-
-**3. Use the Recommended `electron-rebuild` Package:**
-
-* The modern, scoped package `@electron/rebuild` is preferred.
-* **Action:** Ensure your `package.json` `devDependencies` includes it:
-    ```json
-    "devDependencies": {
-      "electron": "^31.0.0", // Or your project's specific Electron version
-      "@electron/rebuild": "^3.6.0" // Or the latest stable version
-    }
-    ```
-
-**4. Perform a Clean Installation of Project Dependencies:**
-
-* **Action:** In your project directory (ensure the `PYTHON` environment variable is set as per Step 1 if you're about to rebuild):
+2.  **Set `PYTHON` Environment Variable (Windows - PowerShell Admin):**
+    Before running `npm install`, it's critical to ensure `node-gyp` (used for building native modules) uses the correct Python version. Open PowerShell as Administrator and run:
     ```powershell
-    Remove-Item -Recurse -Force node_modules
-    Remove-Item package-lock.json -ErrorAction SilentlyContinue # If package-lock.json exists
+    # Replace with the actual path to your Python 3.9/3.10/3.11 executable
+    $env:PYTHON = "C:\Path\To\Your\Python39\python.exe"
+    # Verify (optional):
+    # Get-ChildItem Env:PYTHON
+    # node -p "process.env.PYTHON"
+    ```
+    *You might need to set this every time you open a new terminal for development unless you set it globally in your system environment variables.*
+
+3.  **Install Dependencies:**
+    ```bash
     npm install
     ```
+    This will install all project dependencies listed in `package.json`.
 
-**5. Rebuild Native Modules for Your Electron Version:**
-
-* **Action:** Execute the rebuild command specifically for `@tensorflow/tfjs-node`. It's crucial to target your specific Electron version using the `-v` flag.
-    ```powershell
-    # Ensure $env:PYTHON is set to your Python 3.9/3.10/3.11 path first
-    npm run rebuild-tensorflow 
+4.  **Apply Patches:**
+    The `patch-package` utility is configured to run automatically after `npm install` (due to the `postinstall` script in `package.json`). This applies critical modifications, especially for `@tensorflow/tfjs-node`, to ensure it works correctly within the Electron environment.
+    If you encounter issues and suspect patches weren't applied, you can try running it manually:
+    ```bash
+    npx patch-package
     ```
-    Your `package.json` script for `rebuild-tensorflow` should look like:
-    ```json
-    "scripts": {
-      "rebuild-tensorflow": "electron-rebuild -f -w @tensorflow/tfjs-node -v YOUR_ELECTRON_VERSION_HERE"
-    }
+
+5.  **Rebuild Native Modules for Electron:**
+    Native Node.js modules (like `@tensorflow/tfjs-node`, `better-sqlite3`, `sharp`) need to be compiled against the specific version of Node.js used by Electron.
+    * **Ensure your Electron version is correctly set in `package.json` under `scripts.rebuild-tensorflow`** (e.g., `-v 31.7.7` if your Electron is `^31.0.0`).
+    * Run the rebuild scripts (ensure your `PYTHON` environment variable is still set from Step 2):
+        ```bash
+        npm run rebuild-all
+        ```
+        This script executes:
+        * `npm run rebuild-sqlite3`
+        * `npm run rebuild-sharp`
+        * `npm run rebuild-tensorflow` (which is `electron-rebuild -f -w @tensorflow/tfjs-node -v YOUR_ELECTRON_VERSION`)
+
+    * **Troubleshooting Native Modules (`@tensorflow/tfjs-node` specifically):**
+        The current `README.md` in the root of this repository (which will be moved to `docs/TROUBLESHOOTING_TFJS_NODE.md`) contains detailed steps for resolving issues with `@tensorflow/tfjs-node`. This often involves:
+        * Verifying the correct Python version and C++ build tools.
+        * Ensuring `electron-rebuild` completes successfully.
+        * Manually verifying the placement of the compiled `.node` file (e.g., `tfjs_binding.node`) into the correct N-API versioned subfolder within `node_modules/@tensorflow/tfjs-node/lib/`. Your Electron runtime (check `process.versions.napi` in `main.js`) will indicate the expected N-API version (e.g., `napi-v9`).
+        * The patch applied by `patch-package` should handle the loader logic within `@tensorflow/tfjs-node/dist/index.js` to correctly find this `.node` file.
+
+### Running the Application
+
+Once the setup is complete:
+
+1.  **Start the Application:**
+    ```bash
+    npm start
     ```
-    (e.g., `-v 31.7.7`). Rebuild any other native modules (`better-sqlite3`, `sharp`, etc.) similarly.
+    This will launch the Electron application.
 
-**6. Manually Verify and Correct Placement of `tfjs_binding.node` (Workaround for Misplacement):**
+2.  **First Run - Data Scraping:**
+    On the first launch, the application will:
+    * Copy the bundled `dota_ad_data.db` to your user data directory.
+    * Automatically initiate a full data scrape from Windrun.io to populate the database with the latest hero, ability, and synergy statistics. This process can take a few minutes. The UI will indicate that it's syncing data.
 
-This step is crucial if `electron-rebuild` compiles the `.node` file but doesn't place it in the N-API versioned folder that your Electron runtime expects.
+3.  **Using the Application:**
+    * **Control Panel:** The main window allows you to manually update data from Windrun.io, select your screen resolution for the overlay, and activate the overlay.
+    * **Activate Overlay:** Once your Dota 2 game is in the Ability Draft phase, select your current screen resolution in the control panel and click "Activate Overlay". The control panel will hide, and the transparent overlay will appear.
+    * **Scan:** The overlay has a "Scan Now" button. Click this when the draft screen is visible to identify abilities.
+    * **Tooltips:** Hover over the identified ability icons (hotspots) to see win rates and synergy suggestions.
+    * **Take Snapshot:** If an ability is misidentified, click the "Take Snapshot" button. This saves cropped images of all currently displayed abilities to a `failed-samples` folder in your user data directory. These can be used to retrain and improve the ML model.
+    * **Export Failed Samples:** The main control panel has a button to zip and export these saved snapshot images.
+    * **Close Overlay:** Press `Esc` or click the "X" button on the overlay to close it and return to the main control panel.
 
-* **Action:**
-    1.  **Determine Expected N-API Version:** Add `console.log("Runtime N-API Version:", process.versions.napi);` at the top of your `main.js` and run your app (`npm start`) once to see what Electron reports. Let's assume it reports `9`.
-    2.  **Locate Compiled Binary:** After `electron-rebuild` (from Step 5) completes, the compiled `tfjs_binding.node` is often found in `node_modules/@tensorflow/tfjs-node/build/Release/tfjs_binding.node`. It might also be in an N-API folder that `electron-rebuild` *did* create, e.g., `node_modules/@tensorflow/tfjs-node/lib/napi-v8/tfjs_binding.node`.
-    3.  **Ensure Correct Placement:** Manually **copy** the `tfjs_binding.node` file (from `build/Release/` or the incorrect N-API folder) into the N-API versioned folder that Electron *expects*. For example, if Electron expects N-API v9:
-        * Target path: `node_modules/@tensorflow/tfjs-node/lib/napi-v9/tfjs_binding.node`
-        * Also ensure that any necessary accompanying DLLs (like `tensorflow.dll` on Windows) are present in this target `napi-v9` folder (they are often placed correctly by the `tfjs-node` install scripts).
+## Development Notes
 
-**7. Modify `@tensorflow/tfjs-node` Loader Logic (Workaround for Incorrect Path Resolution):**
+* **Database Updates:** The local SQLite database (`dota_ad_data.db` in your user data folder) is updated via the "Update Windrun Data" button in the app.
+* **ML Model:** The ability recognition model is located in `model/tfjs_model/`. To update or retrain this model, refer to the developer's internal documentation/workflow (which involved Google Colab for training and `tensorflowjs_converter` for conversion).
+* **Coordinates:** If the in-game Ability Draft UI changes significantly, `config/layout_coordinates.json` may need to be updated with new pixel coordinates for ability slots.
 
-Even if the `.node` file is correctly placed (e.g., in `lib/napi-v9/`), `@tensorflow/tfjs-node`'s internal loader might still try to load it from an older N-API path (e.g., `lib/napi-v8/`). This requires a targeted modification.
+## Contributing
 
-* **Action:** Edit the file `node_modules/@tensorflow/tfjs-node/dist/index.js`.
-    * Locate the section that loads the native binding. It usually involves `var bindingPath = binary.find(...)` followed by `var bindings = require(bindingPath)`.
-    * Modify this section to intelligently prioritize the correct N-API path based on `process.versions.napi`.
+(Optional: Add guidelines if you plan to accept contributions)
+Please refer to `CONTRIBUTING.md` for more details.
+Issues and feature requests can be submitted through the GitHub issues page.
 
-    ```javascript
-    // In node_modules/@tensorflow/tfjs-node/dist/index.js
-    // Ensure 'path' and 'fs' are required at the top of this file.
-    // var binary = require('@mapbox/node-pre-gyp'); // Or whatever 'binary' resolves to
+## License
 
-    // --- START MODIFICATION ---
-    var bindingPath;
-    var napiVersion = process.versions && process.versions.napi ? parseInt(process.versions.napi) : null;
-    // Construct preferred path based on runtime N-API version
-    var preferredNapiPath = napiVersion ? path.join(__dirname, '..', 'lib', 'napi-v' + napiVersion, 'tfjs_binding.node') : null;
+ISC License - see `LICENSE` file for details.
 
-    console.log('[TFJS-NODE DEBUG] Detected N-API version:', napiVersion);
-    console.log('[TFJS-NODE DEBUG] Preferred N-API path:', preferredNapiPath);
-
-    if (preferredNapiPath && fs.existsSync(preferredNapiPath)) {
-        console.log('[TFJS-NODE OVERRIDE] Using detected N-API version path:', preferredNapiPath);
-        bindingPath = preferredNapiPath;
-    } else {
-        // Fallback strategy if preferred path doesn't exist (e.g., try common fallbacks or original logic)
-        var fallbackNapiV8Path = path.join(__dirname, '..', 'lib', 'napi-v8', 'tfjs_binding.node');
-        if (fs.existsSync(fallbackNapiV8Path)) {
-             console.warn('[TFJS-NODE OVERRIDE] Preferred N-API path not found or N-API version unknown. Falling back to N-API v8 path:', fallbackNapiV8Path);
-             bindingPath = fallbackNapiV8Path;
-        } else {
-            console.warn('[TFJS-NODE OVERRIDE] Neither preferred N-API path nor N-API v8 path found. Attempting original binary.find logic (if defined).');
-            if (typeof binary !== 'undefined' && typeof binary.find === 'function') {
-                bindingPath = binary.find(path.resolve(path.join(__dirname, '/../package.json'))); // Original logic
-            } else {
-                // Last resort if binary.find isn't available or fails.
-                bindingPath = fallbackNapiV8Path; // Or another sensible default. This might still fail.
-                console.error('[TFJS-NODE OVERRIDE] binary.find not available, and fallbacks failed. Path resolution may be incorrect.');
-            }
-        }
-    }
-    console.log('[TFJS-NODE FINAL] Attempting to load binding from:', bindingPath);
-    // --- END MODIFICATION ---
-
-    // Original error throwing logic if bindingPath is still not found by any means:
-    if (!fs.existsSync(bindingPath)) {
-        throw new Error(
-            "The Node.js native addon module (tfjs_binding.node) can not " +
-            "be found at path: " + String(bindingPath) + ". \nPlease run command " +
-            "'npm rebuild @tensorflow/tfjs-node" +
-            (String(bindingPath).includes('tfjs-node-gpu') ? "-gpu" : "") + // Corrected conditional check
-            " --build-addon-from-source' to " +
-            "rebuild the native addon module. \nIf you have problem with building " +
-            "the addon module, please check " +
-            "[https://github.com/tensorflow/tfjs/blob/master/tfjs-node/](https://github.com/tensorflow/tfjs/blob/master/tfjs-node/)" +
-            "WINDOWS_TROUBLESHOOTING.md or file an issue."
-        );
-    }
-    var bindings = require(bindingPath); 
-    // ... (rest of the file, including tf.registerBackend)
-    ```
-* **Note on Modifying `node_modules`:** This change is a workaround. It will be overwritten if `@tensorflow/tfjs-node` is updated or reinstalled. For a more persistent solution within your project, consider using a tool like `patch-package`.
-
-**Important Considerations for Packaging Your Electron Application:**
-
-When packaging your app for distribution (e.g., using Electron Builder or Electron Forge):
-* The native module `tfjs_binding.node` (from the correct `lib/napi-vX/` folder) and any accompanying DLLs (like `tensorflow.dll` on Windows) *must* be included in the final application package.
-* The modifications made to `tfjs-node/dist/index.js` will be part of your `node_modules` and thus packaged, unless your build process fetches fresh modules. If using `patch-package`, ensure the patch is applied as part of your build/packaging pipeline.
-
-By systematically addressing the Python build environment, ensuring native modules are rebuilt for Electron, and then manually correcting any misplacement or loader issues for `tfjs-node`, you should be able to resolve these native module loading errors.
+##Acknowledgements
+* Data sourced from [Windrun.io](https://windrun.io)
+* Utilizes Dota 2's Game State Integration capabilities.
