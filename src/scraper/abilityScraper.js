@@ -2,7 +2,7 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const Database = require('better-sqlite3');
 
-const AXIOS_TIMEOUT = 15000;
+const AXIOS_TIMEOUT = 30000;
 
 function parseWinrate(text) { // Also used for pick_order
     if (!text) return null;

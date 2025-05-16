@@ -45,7 +45,6 @@
     },
     "files": [
       "**/*",
-      "!src/scraper/**",
       "!training_data/**",
       "!failed-samples/**",
       "!*.code-workspace",
