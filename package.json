@@ -1,20 +1,31 @@
 {
   "name": "dota-ad-overlay",
-  "version": "1.0.0",
+  "version": "0.0.1",
+  "description": "Dota 2 Ability Draft Overlay with ML-powered ability recognition",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "rebuild-sqlite3": "electron-rebuild -f -w better-sqlite3",
     "rebuild-sharp": "electron-rebuild -f -w sharp",
-    "rebuild-tensorflow": "electron-rebuild -f -w @tensorflow/tfjs-node -v 31.7.7"
+    "rebuild-tensorflow": "electron-rebuild -f -w @tensorflow/tfjs-node -v 31.7.7",
+    "rebuild-all": "npm run rebuild-sqlite3 && npm run rebuild-sharp && npm run rebuild-tensorflow",
+    "dist": "npm run rebuild-all && electron-builder",
+    "postinstall": "patch-package"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "dota2",
+    "ability draft",
+    "overlay",
+    "electron",
+    "tensorflow"
+  ],
+  "author": "Tiarin Hino",
   "license": "ISC",
-  "description": "",
   "devDependencies": {
     "@electron/rebuild": "^4.0.1",
-    "electron": "^31.0.0"
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3",
+    "patch-package": "^8.0.0"
   },
   "dependencies": {
     "@tensorflow/tfjs-node": "^4.22.0",
@@ -22,9 +33,81 @@
     "axios": "^1.8.4",
     "better-sqlite3": "^11.9.1",
     "cheerio": "^1.0.0",
-    "imghash": "^0.0.9",
     "screenshot-desktop": "^1.15.1",
-    "setuptools": "^0.0.1",
     "sharp": "^0.34.1"
+  },
+  "build": {
+    "appId": "com.tiarinhino.dotaadoverlay",
+    "productName": "Dota 2 Ability Draft Plus",
+    "copyright": "Copyright © 2025 Tiarin Hino",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!training_data/**",
+      "!failed-samples/**",
+      "!*.code-workspace",
+      "!README.md",
+      "!CONTRIBUTING.md",
+      "!LICENSE",
+      "!.env",
+      "!node_modules/@tensorflow/tfjs-node/deps/**",
+      "!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}",
+      "!**/node_modules/*/{test,__tests__,tests,powered-test,example,examples}",
+      "!**/node_modules/*.d.ts",
+      "!**/node_modules/.bin",
+      "!**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}",
+      "!.editorconfig",
+      "!**/._*",
+      "!**/{.DS_Store,.git,.hg,.svn,CVS,RCS,SCCS,.gitignore,.gitattributes}",
+      "!**/{thumbs.db,Thumbs.db,.pnp.*}",
+      "!**/*.map"
+    ],
+    "extraResources": [
+      {
+        "from": "dota_ad_data.db",
+        "to": "dota_ad_data.db"
+      },
+      {
+        "from": "config/layout_coordinates.json",
+        "to": "config/layout_coordinates.json"
+      },
+      {
+        "from": "model/tfjs_model",
+        "to": "model/tfjs_model"
+      }
+    ],
+    "asar": true,
+    "asarUnpack": [
+      "**/node_modules/@tensorflow/tfjs-node/lib/**/tfjs_binding.node",
+      "**/node_modules/@tensorflow/tfjs-node/deps/tensorflow.dll",
+      "**/node_modules/better-sqlite3/build/Release/better_sqlite3.node",
+      "**/node_modules/sharp/build/Release/**"
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   }
 }
