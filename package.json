@@ -1,6 +1,6 @@
 {
-  "name": "dota-ad-overlay",
-  "version": "0.0.1",
+  "name": "ability-draft-plus",
+  "version": "0.0.2",
   "description": "Dota 2 Ability Draft Overlay with ML-powered ability recognition",
   "main": "main.js",
   "scripts": {
@@ -37,7 +37,7 @@
     "sharp": "^0.34.1"
   },
   "build": {
-    "appId": "com.tiarinhino.dotaadoverlay",
+    "appId": "com.tiarinhino.dota2abilitydraftplus",
     "productName": "Dota 2 Ability Draft Plus",
     "copyright": "Copyright © 2025 Tiarin Hino",
     "directories": {
@@ -83,7 +83,8 @@
       "**/node_modules/@tensorflow/tfjs-node/lib/**/tfjs_binding.node",
       "**/node_modules/@tensorflow/tfjs-node/deps/tensorflow.dll",
       "**/node_modules/better-sqlite3/build/Release/better_sqlite3.node",
-      "**/node_modules/sharp/build/Release/**"
+      "**/node_modules/sharp/build/Release/**",
+      "**/node_modules/screenshot-desktop/lib/win32/**"
     ],
     "win": {
       "icon": "build/icon.ico",

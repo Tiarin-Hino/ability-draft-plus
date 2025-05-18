@@ -25,6 +25,12 @@ const abilitiesUrl = 'https://windrun.io/abilities';
 const abilitiesHighSkillUrl = 'https://windrun.io/ability-high-skill';
 const abilityPairsUrl = 'https://windrun.io/ability-pairs';
 
+const isPackaged = app.isPackaged;
+
+const appRootPathForDev = app.getAppPath(); // In dev, this is project root. In prod, app.asar.
+const resourcesPath = process.resourcesPath; // In prod, this is the 'resources' dir. In dev, it might be similar to appRootPath or electron/dist/resources.
+const baseResourcesPath = isPackaged ? resourcesPath : appRootPathForDev;
+
 let mainWindow;
 let activeDbPath;
 let overlayWindow = null;
@@ -243,10 +249,10 @@ app.whenReady().then(async () => {
   console.log(`[Main] Application Root Path: ${appRootPath}`);
 
   // Now define paths that depend on appRootPath
-  const bundledDbPathInApp = path.join(appRootPath, 'dota_ad_data.db');
-  global.coordinatesPath = path.join(appRootPath, 'config', 'layout_coordinates.json');
+  const bundledDbPathInApp = path.join(baseResourcesPath, 'dota_ad_data.db');
+  global.coordinatesPath = path.join(baseResourcesPath, 'config', 'layout_coordinates.json');
 
-  activeDbPath = appDbPathInUserData;
+  activeDbPath = path.join(app.getPath('userData'), 'dota_ad_data.db');
   console.log(`[Main] Active database path: ${activeDbPath}`);
   console.log(`[Main] User data path: ${userDataPath}`);
   console.log(`[Main] Bundled DB path: ${bundledDbPathInApp}`);
@@ -255,8 +261,9 @@ app.whenReady().then(async () => {
 
   try {
     // Now modelPath and classNamesPath can safely use appRootPath
-    const modelPath = 'file://' + path.join(appRootPath, 'model', 'tfjs_model', 'model.json');
-    const classNamesPath = path.join(appRootPath, 'model', 'tfjs_model', 'class_names.json');
+    const modelBasePath = path.join(baseResourcesPath, 'model', 'tfjs_model');
+    const modelPath = 'file://' + path.join(modelBasePath, 'model.json');
+    const classNamesPath = path.join(modelBasePath, 'class_names.json');
     console.log(`[Main] Attempting to initialize image processor with Model: ${modelPath}, Classes: ${classNamesPath}`);
     initializeImageProcessor(modelPath, classNamesPath);
     console.log('[Main] Image processor initialized.');
