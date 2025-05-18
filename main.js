@@ -7,7 +7,7 @@ const Database = require('better-sqlite3');
 
 const { dialog } = require('electron');
 const archiver = require('archiver');
-const fsPromises = require('fs').promises;
+// fsPromises is already available via fs.promises, stream and promisify are fine
 const stream = require('stream');
 const { promisify } = require('util');
 
@@ -27,8 +27,8 @@ const abilityPairsUrl = 'https://windrun.io/ability-pairs';
 
 const isPackaged = app.isPackaged;
 
-const appRootPathForDev = app.getAppPath(); // In dev, this is project root. In prod, app.asar.
-const resourcesPath = process.resourcesPath; // In prod, this is the 'resources' dir. In dev, it might be similar to appRootPath or electron/dist/resources.
+const appRootPathForDev = app.getAppPath();
+const resourcesPath = process.resourcesPath;
 const baseResourcesPath = isPackaged ? resourcesPath : appRootPathForDev;
 
 let mainWindow;
@@ -37,6 +37,7 @@ let overlayWindow = null;
 let isScanInProgress = false;
 let lastScanRawResults = null;
 let lastScanTargetResolution = null;
+let lastScaleFactor = 1; // Store the scale factor used for the current overlay
 let isFirstRun = false;
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -167,92 +168,29 @@ function createWindow() {
   mainWindow.on('closed', () => {
     console.log('[Main] Main window closed event fired.');
     mainWindow = null;
-    if (!overlayWindow) {
-      app.quit();
-    }
+    // if (!overlayWindow) { // This logic seems problematic if overlay is meant to persist
+    //   app.quit();
+    // }
   });
 }
 
-function createOverlayWindow(resolutionKey, allCoordinatesConfig) {
-  if (overlayWindow) {
-    console.log('[Main] Closing existing overlay window before creating new one.');
-    overlayWindow.close();
-  }
+// This function is defined twice in the provided main.js.
+// I will keep only the second, more complete one.
+// function createOverlayWindow(resolutionKey, allCoordinatesConfig) { ... }
 
-  isScanInProgress = false;
-  console.log('[Main] isScanInProgress reset to false due to new overlay creation.');
-  lastScanRawResults = null;
-  lastScanTargetResolution = null;
-
-  const primaryDisplay = screen.getPrimaryDisplay();
-  const targetScreenWidth = primaryDisplay.bounds.width;
-  const targetScreenHeight = primaryDisplay.bounds.height;
-
-  overlayWindow = new BrowserWindow({
-    width: targetScreenWidth,
-    height: targetScreenHeight,
-    x: primaryDisplay.bounds.x,
-    y: primaryDisplay.bounds.y,
-    frame: false,
-    transparent: true,
-    skipTaskbar: true,
-    focusable: false,
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      nodeIntegration: false,
-      contextIsolation: true,
-    },
-  });
-
-  overlayWindow.loadFile(path.join(__dirname, 'overlay.html'));
-  overlayWindow.setAlwaysOnTop(true, 'screen-saver');
-  overlayWindow.setVisibleOnAllWorkspaces(true);
-  overlayWindow.setIgnoreMouseEvents(true, { forward: true });
-
-  console.log('[Main] Overlay window created and configured.');
-
-  overlayWindow.webContents.on('did-finish-load', () => {
-    console.log('[Main] Overlay window finished loading. Sending overlay-data (initial).');
-    overlayWindow.webContents.send('overlay-data', {
-      scanData: null,
-      coordinatesConfig: allCoordinatesConfig,
-      targetResolution: resolutionKey,
-      opCombinations: [],
-      initialSetup: true
-    });
-  });
-
-  overlayWindow.on('closed', () => {
-    console.log('[Main] Overlay window closed. Resetting relevant state.');
-    overlayWindow = null;
-    isScanInProgress = false;
-    lastScanRawResults = null;
-    lastScanTargetResolution = null;
-
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.show();
-      mainWindow.focus();
-      if (mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
-        mainWindow.webContents.send('overlay-closed-reset-ui');
-      }
-    }
-  });
-  return overlayWindow;
-}
 
 app.whenReady().then(async () => {
   const userDataPath = app.getPath('userData');
-  const appDbPathInUserData = path.join(userDataPath, 'dota_ad_data.db');
+  // const appDbPathInUserData = path.join(userDataPath, 'dota_ad_data.db'); // Not used
 
-  // Define appRootPath first
   const appRootPath = app.getAppPath();
   console.log(`[Main] Application Root Path: ${appRootPath}`);
 
-  // Now define paths that depend on appRootPath
-  const bundledDbPathInApp = path.join(baseResourcesPath, 'dota_ad_data.db');
   global.coordinatesPath = path.join(baseResourcesPath, 'config', 'layout_coordinates.json');
+  activeDbPath = path.join(userDataPath, 'dota_ad_data.db'); // Use userDataPath consistently
+  const bundledDbPathInApp = path.join(baseResourcesPath, 'dota_ad_data.db');
 
-  activeDbPath = path.join(app.getPath('userData'), 'dota_ad_data.db');
+
   console.log(`[Main] Active database path: ${activeDbPath}`);
   console.log(`[Main] User data path: ${userDataPath}`);
   console.log(`[Main] Bundled DB path: ${bundledDbPathInApp}`);
@@ -260,20 +198,17 @@ app.whenReady().then(async () => {
 
 
   try {
-    // Now modelPath and classNamesPath can safely use appRootPath
     const modelBasePath = path.join(baseResourcesPath, 'model', 'tfjs_model');
-    const modelPath = 'file://' + path.join(modelBasePath, 'model.json');
+    const modelPathTfjs = 'file://' + path.join(modelBasePath, 'model.json').replace(/\\/g, '/'); // Ensure forward slashes for file URL
     const classNamesPath = path.join(modelBasePath, 'class_names.json');
-    console.log(`[Main] Attempting to initialize image processor with Model: ${modelPath}, Classes: ${classNamesPath}`);
-    initializeImageProcessor(modelPath, classNamesPath);
+    console.log(`[Main] Attempting to initialize image processor with Model: ${modelPathTfjs}, Classes: ${classNamesPath}`);
+    initializeImageProcessor(modelPathTfjs, classNamesPath);
     console.log('[Main] Image processor initialized.');
   } catch (initError) {
     console.error('[Main] CRITICAL: Image processor init failed:', initError);
-    // Consider more graceful error handling, e.g., showing an error dialog to the user
-    // For now, quitting is a safe fallback.
-    // dialog.showErrorBox('Initialization Error', 'Failed to initialize the image processor. The application will now close.');
+    dialog.showErrorBox('Initialization Error', `Failed to initialize the image processor: ${initError.message}. The application will now close.`);
     app.quit();
-    return; // Exit the async function
+    return;
   }
 
   try {
@@ -290,22 +225,20 @@ app.whenReady().then(async () => {
     } catch (copyError) {
       console.error(`[Main] CRITICAL: Failed to copy DB from ${bundledDbPathInApp} to ${activeDbPath}:`, copyError.message);
       isFirstRun = false;
-      // Show error to user if DB copy fails, as app functionality will be severely limited.
-      // dialog.showErrorBox('Database Error', `Failed to copy the application database. Please check permissions or try reinstalling.\nError: ${copyError.message}`);
-      // app.quit(); // Consider quitting if DB is essential and copy fails.
-      // For now, setupDatabase will attempt to run and likely fail, providing another error point.
+      dialog.showErrorBox('Database Error', `Failed to copy the application database. Please check permissions or try reinstalling.\nError: ${copyError.message}`);
+      // app.quit(); // Let setupDatabase attempt and fail for more specific error
     }
   }
 
   try {
     console.log(`[Main] Setting up database schema at ${activeDbPath}...`);
-    setupDatabase();
+    setupDatabase(); // setupDatabase uses its own dbPath logic, ensure it matches activeDbPath
     console.log(`[Main] DB schema setup complete for: ${activeDbPath}`);
   } catch (dbSetupError) {
     console.error("[Main] CRITICAL: DB schema setup failed:", dbSetupError);
-    // dialog.showErrorBox('Database Setup Error', `Failed to set up the database. The application will now close.\nError: ${dbSetupError.message}`);
+    dialog.showErrorBox('Database Setup Error', `Failed to set up the database: ${dbSetupError.message}. The application will now close.`);
     app.quit();
-    return; // Exit the async function
+    return;
   }
 
   createWindow();
@@ -325,12 +258,12 @@ app.on('window-all-closed', function () {
 });
 
 app.on('will-quit', () => {
-  isScanInProgress = false;
+  isScanInProgress = false; // Good to reset flags
 });
 
 // IPC Handlers
 ipcMain.on('scrape-all-windrun-data', async (event) => {
-  await performFullScrape(event.sender); // event.sender is webContents
+  await performFullScrape(event.sender);
 });
 
 
@@ -353,8 +286,13 @@ ipcMain.on('activate-overlay', async (event, selectedResolution) => {
   try {
     const configData = await fs.readFile(global.coordinatesPath, 'utf-8');
     const layoutConfig = JSON.parse(configData);
-    createOverlayWindow(selectedResolution, layoutConfig);
-    console.log(`[Main] Overlay launched for ${selectedResolution}.`);
+
+    const primaryDisplay = screen.getPrimaryDisplay();
+    lastScaleFactor = primaryDisplay.scaleFactor || 1; // Store the scale factor
+    console.log(`[Main] Primary display scaleFactor for overlay: ${lastScaleFactor}`);
+
+    createOverlayWindow(selectedResolution, layoutConfig, lastScaleFactor); // Pass scaleFactor
+    console.log(`[Main] Overlay launched for ${selectedResolution} with scaleFactor ${lastScaleFactor}.`);
   } catch (error) {
     console.error(`[Main] Error activating overlay for ${selectedResolution}:`, error);
     if (event.sender && !event.sender.isDestroyed()) {
@@ -381,15 +319,14 @@ ipcMain.on('export-failed-samples', async (event) => {
   const defaultZipPath = path.join(downloadsPath, defaultZipName);
 
   try {
-
     try {
-      await fsPromises.access(failedSamplesDir);
+      await fs.access(failedSamplesDir);
     } catch (e) {
       sendStatus('No failed samples directory found. Nothing to export.', false, false);
       return;
     }
 
-    const filesInDir = await fsPromises.readdir(failedSamplesDir);
+    const filesInDir = await fs.readdir(failedSamplesDir);
     const imageFiles = filesInDir.filter(file => file.toLowerCase().endsWith('.png'));
 
     if (imageFiles.length === 0) {
@@ -402,9 +339,7 @@ ipcMain.on('export-failed-samples', async (event) => {
     const { filePath, canceled } = await dialog.showSaveDialog(mainWindow, {
       title: 'Save Failed Samples Zip',
       defaultPath: defaultZipPath,
-      filters: [
-        { name: 'Zip Archives', extensions: ['zip'] }
-      ]
+      filters: [{ name: 'Zip Archives', extensions: ['zip'] }]
     });
 
     if (canceled || !filePath) {
@@ -413,35 +348,34 @@ ipcMain.on('export-failed-samples', async (event) => {
     }
 
     sendStatus(`Exporting ${imageFiles.length} samples to ${filePath}... This may take a moment.`);
-
-    const output = fs.createWriteStream(filePath);
-    const archive = archiver('zip', {
-      zlib: { level: 9 }
-    });
-
+    // Use fs from 'fs' for createWriteStream, not fs.promises
+    const output = require('fs').createWriteStream(filePath);
+    const archive = archiver('zip', { zlib: { level: 9 } });
     const pipeline = promisify(stream.pipeline);
 
+    // archive.pipe(output); // Simpler way to pipe
+
     archive.on('warning', (err) => {
-      if (err.code === 'ENOENT') {
-        console.warn('[ZIP Warning]', err);
-      } else {
-        throw err;
-      }
+      if (err.code === 'ENOENT') console.warn('[ZIP Warning]', err);
+      else throw err;
+    });
+    archive.on('error', (err) => { throw err; });
+
+    // Corrected pipeline usage
+    const closePromise = new Promise((resolve, reject) => {
+      output.on('close', resolve);
+      output.on('error', reject);
+      archive.on('error', reject);
     });
 
-    archive.on('error', (err) => {
-      throw err;
-    });
-
-    await pipeline(archive, output);
-
+    archive.pipe(output);
 
     for (const fileName of imageFiles) {
       const fullPath = path.join(failedSamplesDir, fileName);
       archive.file(fullPath, { name: fileName });
     }
-
     await archive.finalize();
+    await closePromise; // Wait for the stream to close
 
     sendStatus(`Successfully exported ${imageFiles.length} samples to ${filePath}`, false, false, filePath);
 
@@ -455,7 +389,13 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution) => {
   if (isScanInProgress) {
     console.warn('[Main] Scan already in progress. Ignoring request.');
     if (overlayWindow && !overlayWindow.isDestroyed()) {
-      overlayWindow.webContents.send('overlay-data', { info: 'Scan already in progress.', targetResolution: lastScanTargetResolution, initialSetup: false, opCombinations: [] });
+      overlayWindow.webContents.send('overlay-data', {
+        info: 'Scan already in progress.',
+        targetResolution: lastScanTargetResolution,
+        initialSetup: false,
+        opCombinations: [],
+        scaleFactor: lastScaleFactor // Send current scale factor
+      });
     }
     return;
   }
@@ -466,7 +406,7 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution) => {
   if (!selectedResolution) {
     console.error('[Main] Scan request without resolution.');
     if (overlayWindow && !overlayWindow.isDestroyed()) {
-      overlayWindow.webContents.send('overlay-data', { error: 'No resolution for scanning.', opCombinations: [] });
+      overlayWindow.webContents.send('overlay-data', { error: 'No resolution for scanning.', opCombinations: [], scaleFactor: lastScaleFactor });
     }
     return;
   }
@@ -474,10 +414,13 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution) => {
   isScanInProgress = true;
   lastScanRawResults = null;
   lastScanTargetResolution = selectedResolution;
-  console.log(`[Main] Starting scan for ${selectedResolution}.`);
+  console.log(`[Main] Starting scan for ${selectedResolution} with scaleFactor ${lastScaleFactor}.`);
   const startTime = performance.now();
 
   try {
+    // processDraftScreen uses physical pixels from layout_coordinates.json for cropping,
+    // so scaleFactor isn't directly needed here for the cropping logic itself.
+    // The screenshot is of the full (potentially scaled) display.
     const rawResults = await processDraftScreen(global.coordinatesPath, selectedResolution);
     lastScanRawResults = rawResults;
     const { ultimates: predictedUltimatesInternalNames, standard: predictedStandardInternalNames } = rawResults;
@@ -542,14 +485,15 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution) => {
         targetResolution: selectedResolution,
         durationMs: durationMs,
         opCombinations: opCombinationsInPool,
-        initialSetup: false
+        initialSetup: false,
+        scaleFactor: lastScaleFactor // Send the scaleFactor
       });
     }
   } catch (error) {
     console.error(`[Main] Error during scan for ${selectedResolution}:`, error);
-    lastScanRawResults = null;
+    lastScanRawResults = null; // Clear potentially faulty results
     if (overlayWindow && !overlayWindow.isDestroyed()) {
-      overlayWindow.webContents.send('overlay-data', { error: error.message || 'Scan error.', opCombinations: [] });
+      overlayWindow.webContents.send('overlay-data', { error: error.message || 'Scan error.', opCombinations: [], scaleFactor: lastScaleFactor });
     }
   } finally {
     isScanInProgress = false;
@@ -570,7 +514,7 @@ ipcMain.on('take-snapshot', async (event) => {
   try {
     if (overlayWindow && !overlayWindow.isDestroyed() && overlayWindow.webContents && !overlayWindow.webContents.isDestroyed()) {
       overlayWindow.webContents.send('toggle-hotspot-borders', false);
-      await delay(100);
+      await delay(100); // Give time for borders to disappear
     }
 
     await fs.mkdir(failedSamplesDir, { recursive: true });
@@ -580,9 +524,11 @@ ipcMain.on('take-snapshot', async (event) => {
     const coordsConfig = layoutConfig.resolutions?.[lastScanTargetResolution];
 
     if (!coordsConfig) {
-      throw new Error(`Coordinates for resolution ${lastScanTargetResolution} not found.`);
+      throw new Error(`Coordinates for resolution ${lastScanTargetResolution} not found for snapshot.`);
     }
 
+    // The coordinates in layout_coordinates.json are physical pixels.
+    // The screenshot is also of physical pixels. So no scaling adjustment needed here for cropping.
     const allSlots = [
       ...(coordsConfig.ultimate_slots_coords || []).map((coord, i) => ({ ...coord, predictedName: lastScanRawResults.ultimates?.[i] || 'unknown_ultimate' })),
       ...(coordsConfig.standard_slots_coords || []).map((coord, i) => ({ ...coord, predictedName: lastScanRawResults.standard?.[i] || 'unknown_standard' }))
@@ -591,6 +537,7 @@ ipcMain.on('take-snapshot', async (event) => {
     let savedCount = 0;
     for (const slot of allSlots) {
       if (slot.x === undefined || slot.y === undefined || slot.width === undefined || slot.height === undefined) {
+        console.warn(`[Main Snapshot] Skipping slot due to undefined coordinates:`, slot);
         continue;
       }
       try {
@@ -600,11 +547,16 @@ ipcMain.on('take-snapshot', async (event) => {
         const outputPath = path.join(failedSamplesDir, filename);
 
         await sharp(fullScreenshotBuffer)
-          .extract({ left: slot.x, top: slot.y, width: slot.width, height: slot.height })
+          .extract({
+            left: Math.round(slot.x), // Ensure integer values for sharp
+            top: Math.round(slot.y),
+            width: Math.round(slot.width),
+            height: Math.round(slot.height)
+          })
           .toFile(outputPath);
         savedCount++;
       } catch (cropError) {
-        console.error(`[Main Snapshot] Error cropping/saving slot (${slot.predictedName || 'unknown'}): ${cropError.message}`);
+        console.error(`[Main Snapshot] Error cropping/saving slot (${slot.predictedName || 'unknown'}): ${cropError.message} with coords:`, slot);
       }
     }
 
@@ -630,65 +582,63 @@ ipcMain.on('get-available-resolutions', async (event) => {
     const resolutions = layoutConfig?.resolutions ? Object.keys(layoutConfig.resolutions) : [];
     event.sender.send('available-resolutions', resolutions);
   } catch (error) {
-    event.sender.send('available-resolutions', []);
+    event.sender.send('available-resolutions', []); // Send empty on error
     if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
       mainWindow.webContents.send('scrape-status', `Error loading resolutions: ${error.message}`);
     }
   }
 });
 
+
+// Simplified sendStatusToRenderer for these specific handlers
+const sendStatusToRenderer = (webContents, message) => {
+  if (webContents && !webContents.isDestroyed()) {
+    webContents.send('scrape-status', message);
+  }
+};
+
 ipcMain.on('scrape-heroes', async (event) => {
-  const sendStatus = (msg) => { if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents && !mainWindow.webContents.isDestroyed()) mainWindow.webContents.send('scrape-status', msg); };
+  const targetWebContents = (mainWindow && !mainWindow.isDestroyed()) ? mainWindow.webContents : event.sender;
   try {
-    sendStatus('Starting hero data update...');
-    await scrapeAndStoreHeroes(activeDbPath, heroesUrl, sendStatus);
-    sendStatus('Hero data update complete!');
+    sendStatusToRenderer(targetWebContents, 'Starting hero data update...');
+    await scrapeAndStoreHeroes(activeDbPath, heroesUrl, (msg) => sendStatusToRenderer(targetWebContents, msg));
+    sendStatusToRenderer(targetWebContents, 'Hero data update complete!');
   } catch (error) {
     console.error('Hero scraping failed:', error);
-    if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
-      sendStatusToRenderer(mainWindow.webContents, `Error updating hero data: ${error.message}`);
-    } else if (event.sender && !event.sender.isDestroyed()) {
-      sendStatusToRenderer(event.sender, `Error updating hero data: ${error.message}`);
-    }
+    sendStatusToRenderer(targetWebContents, `Error updating hero data: ${error.message}`);
   }
 });
 
 ipcMain.on('scrape-abilities', async (event) => {
-  const sendStatus = (msg) => { if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents && !mainWindow.webContents.isDestroyed()) mainWindow.webContents.send('scrape-status', msg); };
+  const targetWebContents = (mainWindow && !mainWindow.isDestroyed()) ? mainWindow.webContents : event.sender;
   try {
-    sendStatus('Starting ability data update...');
-    await scrapeAndStoreAbilities(activeDbPath, abilitiesUrl, abilitiesHighSkillUrl, sendStatus);
-    sendStatus('Ability data update complete!');
+    sendStatusToRenderer(targetWebContents, 'Starting ability data update...');
+    await scrapeAndStoreAbilities(activeDbPath, abilitiesUrl, abilitiesHighSkillUrl, (msg) => sendStatusToRenderer(targetWebContents, msg));
+    sendStatusToRenderer(targetWebContents, 'Ability data update complete!');
   } catch (error) {
     console.error('Ability scraping failed:', error);
-    if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
-      sendStatusToRenderer(mainWindow.webContents, `Error updating ability data: ${error.message}`);
-    } else if (event.sender && !event.sender.isDestroyed()) {
-      sendStatusToRenderer(event.sender, `Error updating ability data: ${error.message}`);
-    }
+    sendStatusToRenderer(targetWebContents, `Error updating ability data: ${error.message}`);
   }
 });
 
 ipcMain.on('scrape-ability-pairs', async (event) => {
-  const sendStatus = (msg) => { if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents && !mainWindow.webContents.isDestroyed()) mainWindow.webContents.send('scrape-status', msg); };
+  const targetWebContents = (mainWindow && !mainWindow.isDestroyed()) ? mainWindow.webContents : event.sender;
   try {
-    sendStatus('Starting ability pairs update...');
-    await scrapeAndStoreAbilityPairs(activeDbPath, abilityPairsUrl, sendStatus);
-    sendStatus('Ability pairs update complete!');
+    sendStatusToRenderer(targetWebContents, 'Starting ability pairs update...');
+    await scrapeAndStoreAbilityPairs(activeDbPath, abilityPairsUrl, (msg) => sendStatusToRenderer(targetWebContents, msg));
+    sendStatusToRenderer(targetWebContents, 'Ability pairs update complete!');
   } catch (error) {
     console.error('Ability pairs scraping failed:', error);
-    if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
-      sendStatusToRenderer(mainWindow.webContents, `Error updating ability pairs: ${error.message}`);
-    } else if (event.sender && !event.sender.isDestroyed()) {
-      sendStatusToRenderer(event.sender, `Error updating ability pairs: ${error.message}`);
-    }
+    sendStatusToRenderer(targetWebContents, `Error updating ability pairs: ${error.message}`);
   }
 });
 
+
 ipcMain.on('close-overlay', () => {
   if (overlayWindow) {
-    overlayWindow.close();
+    overlayWindow.close(); // This will trigger the 'closed' event for the overlay
   } else {
+    // If overlay somehow doesn't exist but main window is hidden, show main window
     if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
       mainWindow.show();
       mainWindow.focus();
@@ -705,28 +655,32 @@ ipcMain.on('set-overlay-mouse-ignore', (event, ignore) => {
   }
 });
 
-function createOverlayWindow(resolutionKey, allCoordinatesConfig) {
+// Only one definition of createOverlayWindow
+function createOverlayWindow(resolutionKey, allCoordinatesConfig, scaleFactorToUse) {
   if (overlayWindow) {
-    overlayWindow.close();
+    console.log('[Main] Closing existing overlay window before creating new one.');
+    overlayWindow.close(); // This will trigger its 'closed' event handler
+    // It's better to let the 'closed' event handler reset these state variables
   }
 
-  isScanInProgress = false;
+  isScanInProgress = false; // Reset scan state
+  console.log('[Main] isScanInProgress reset to false due to new overlay creation.');
   lastScanRawResults = null;
   lastScanTargetResolution = null;
+  // lastScaleFactor is already set before this function is called
 
   const primaryDisplay = screen.getPrimaryDisplay();
-  const targetScreenWidth = primaryDisplay.bounds.width;
-  const targetScreenHeight = primaryDisplay.bounds.height;
+  const { width: screenWidth, height: screenHeight, x, y } = primaryDisplay.bounds;
 
   overlayWindow = new BrowserWindow({
-    width: targetScreenWidth,
-    height: targetScreenHeight,
-    x: primaryDisplay.bounds.x,
-    y: primaryDisplay.bounds.y,
+    width: screenWidth,
+    height: screenHeight,
+    x: x,
+    y: y,
     frame: false,
     transparent: true,
     skipTaskbar: true,
-    focusable: false,
+    focusable: false, // Important for overlay not stealing focus
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
@@ -735,33 +689,44 @@ function createOverlayWindow(resolutionKey, allCoordinatesConfig) {
   });
 
   overlayWindow.loadFile(path.join(__dirname, 'overlay.html'));
-  overlayWindow.setAlwaysOnTop(true, 'screen-saver');
+  overlayWindow.setAlwaysOnTop(true, 'screen-saver'); // 'screen-saver' is a good level
   overlayWindow.setVisibleOnAllWorkspaces(true);
-  overlayWindow.setIgnoreMouseEvents(true, { forward: true });
+  overlayWindow.setIgnoreMouseEvents(true, { forward: true }); // Initially ignore mouse events
 
+  console.log('[Main] Overlay window created and configured.');
 
   overlayWindow.webContents.on('did-finish-load', () => {
+    console.log('[Main] Overlay window finished loading. Sending overlay-data (initial).');
     overlayWindow.webContents.send('overlay-data', {
       scanData: null,
       coordinatesConfig: allCoordinatesConfig,
       targetResolution: resolutionKey,
       opCombinations: [],
-      initialSetup: true
+      initialSetup: true,
+      scaleFactor: scaleFactorToUse // Send the determined scaleFactor
     });
   });
 
   overlayWindow.on('closed', () => {
+    console.log('[Main] Overlay window closed. Resetting relevant state.');
     overlayWindow = null;
     isScanInProgress = false;
     lastScanRawResults = null;
     lastScanTargetResolution = null;
+    // lastScaleFactor remains as it was for the closed overlay, will be re-read for new one.
 
+    // Show and focus the main window if it exists and is not destroyed
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.show();
       mainWindow.focus();
+      // Send a message to the main window's renderer to reset its UI components
       if (mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
         mainWindow.webContents.send('overlay-closed-reset-ui');
       }
+    } else if (BrowserWindow.getAllWindows().length === 0) {
+      // If no windows are left (e.g. main window was closed before overlay), quit app.
+      // This case might need adjustment based on desired app lifecycle.
+      // app.quit();
     }
   });
   return overlayWindow;
