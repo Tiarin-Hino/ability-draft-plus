@@ -56,7 +56,7 @@ function initializeImageProcessor(modelPath, classNamesPath) {
     initialized = true;
 }
 
-async function identifySlots(slotCoordsArray, screenBuffer, currentClassNames, confidenceThreshold) {
+async function identifySlots(slotCoordsArray, screenBuffer, currentClassNames, confidenceThreshold, previouslyPickedNames = new Set()) {
     if (!initialized || !modelPromise || !classNamesPromise) {
         throw new Error("Image processor not initialized. Call initializeImageProcessor first.");
     }
@@ -64,11 +64,11 @@ async function identifySlots(slotCoordsArray, screenBuffer, currentClassNames, c
 
     if (!model) {
         console.error("Model not available for predictions.");
-        return slotCoordsArray.map(slotData => ({ // Ensure hero_order is preserved
+        return slotCoordsArray.map(slotData => ({
             name: null,
             confidence: 0,
             hero_order: slotData.hero_order,
-            ability_order: slotData.ability_order // Keep ability_order if present
+            ability_order: slotData.ability_order
         }));
     }
     if (!currentClassNames || currentClassNames.length === 0) {
@@ -84,7 +84,6 @@ async function identifySlots(slotCoordsArray, screenBuffer, currentClassNames, c
     const identifiedResults = [];
     for (let i = 0; i < slotCoordsArray.length; i++) {
         const slotData = slotCoordsArray[i];
-        // Ensure slotData has x, y, width, height
         if (typeof slotData.x !== 'number' || typeof slotData.y !== 'number' ||
             typeof slotData.width !== 'number' || typeof slotData.height !== 'number') {
             console.warn(`Skipping slot due to missing coordinate/dimension data:`, slotData);
@@ -119,12 +118,17 @@ async function identifySlots(slotCoordsArray, screenBuffer, currentClassNames, c
             const probabilities = predictionTensor.dataSync();
             const maxProbability = Math.max(...probabilities);
             const predictedIndex = probabilities.indexOf(maxProbability);
-
             predictionConfidence = maxProbability;
 
             if (predictionConfidence >= confidenceThreshold) {
                 if (predictedIndex >= 0 && predictedIndex < currentClassNames.length) {
-                    predictedAbilityName = currentClassNames[predictedIndex];
+                    const tempPredictedName = currentClassNames[predictedIndex];
+
+                    if (previouslyPickedNames.has(tempPredictedName)) {
+                        predictedAbilityName = null;
+                    } else {
+                        predictedAbilityName = tempPredictedName;
+                    }
                 } else {
                     console.warn(`Slot ${i} (hero_order: ${slotData.hero_order}): Predicted index ${predictedIndex} out of bounds for ${currentClassNames.length} classes, confidence ${predictionConfidence.toFixed(2)}.`);
                     predictedAbilityName = null;
@@ -142,8 +146,8 @@ async function identifySlots(slotCoordsArray, screenBuffer, currentClassNames, c
         identifiedResults.push({
             name: predictedAbilityName,
             confidence: predictionConfidence,
-            hero_order: slotData.hero_order, // Pass hero_order through
-            ability_order: slotData.ability_order // Pass ability_order through (will be undefined for selected_abilities)
+            hero_order: slotData.hero_order,
+            ability_order: slotData.ability_order
         });
     }
     return identifiedResults;
@@ -170,8 +174,7 @@ async function processDraftScreen(coordinatesPath, targetResolution, confidenceT
     const emptyResultsWithData = (coordsArray) => {
         if (!coordsArray || !Array.isArray(coordsArray)) return [];
         return coordsArray.map(slotData => ({
-            name: null,
-            confidence: 0,
+            name: null, confidence: 0,
             hero_order: slotData.hero_order,
             ability_order: slotData.ability_order
         }));
@@ -201,7 +204,6 @@ async function processDraftScreen(coordinatesPath, targetResolution, confidenceT
                 }
             }
         } catch (e) { console.error("Error reading layout for empty results:", e); }
-
         return {
             ultimates: emptyResultsWithData(ultimate_coords),
             standard: emptyResultsWithData(standard_coords),
@@ -232,28 +234,45 @@ async function processDraftScreen(coordinatesPath, targetResolution, confidenceT
         slot.ability_order === 2 && slot.hero_order !== 10 && slot.hero_order !== 11
     );
 
-    // Prepare selected_abilities_coords with width and height
     const selected_hero_abilities_coords_full = selected_abilities_params ? selected_abilities_coords.map(sac => ({
-        ...sac, // x, y, hero_order
+        ...sac,
         width: selected_abilities_params.width,
         height: selected_abilities_params.height,
-        // ability_order is not typically present for these, can be omitted or set to null/undefined
     })) : [];
-
 
     console.log(`Coordinates loaded. Ult: ${ultimate_slots_coords.length}, Std: ${standard_slots_coords.length}, HeroDef: ${hero_defining_slots_coords.length}, SelectedHeroAbils: ${selected_hero_abilities_coords_full.length}`);
 
     let screenshotBuffer;
     try {
         screenshotBuffer = await screenshot({ format: 'png' });
-    } catch (err) { throw err; }
+    } catch (err) {
+        console.error("[imageProcessor] Screenshot failed:", err);
+        throw err;
+    }
 
-    const identifiedUltimates = await identifySlots(ultimate_slots_coords, screenshotBuffer, resolvedClassNames, confidenceThreshold);
-    const identifiedStandard = await identifySlots(standard_slots_coords, screenshotBuffer, resolvedClassNames, confidenceThreshold);
-    const identifiedHeroDefiningAbilities = await identifySlots(hero_defining_slots_coords, screenshotBuffer, resolvedClassNames, confidenceThreshold);
+    // Step 1: Identify selected abilities first
+    // For selected abilities, we don't pass any `previouslyPickedNames` because this is the source of truth for picked abilities.
     const identifiedSelectedAbilities = await identifySlots(selected_hero_abilities_coords_full, screenshotBuffer, resolvedClassNames, confidenceThreshold);
 
-    console.log('Screen processing finished. Returning all identified categories.');
+    // Step 2: Create a set of confidently picked ability names from the selected slots
+    const pickedAbilityNames = new Set();
+    identifiedSelectedAbilities.forEach(result => {
+        if (result.name) { // If name is not null (i.e., confidently predicted)
+            pickedAbilityNames.add(result.name);
+        }
+    });
+    console.log('[imageProcessor] Abilities identified as picked by heroes:', Array.from(pickedAbilityNames));
+
+    // Step 3: Identify draft pool abilities, passing the set of picked names to filter them out
+    const identifiedUltimates = await identifySlots(ultimate_slots_coords, screenshotBuffer, resolvedClassNames, confidenceThreshold, pickedAbilityNames);
+    const identifiedStandard = await identifySlots(standard_slots_coords, screenshotBuffer, resolvedClassNames, confidenceThreshold, pickedAbilityNames);
+
+    // Hero defining abilities are a subset of standard abilities.
+    // The `main.js` process currently uses the `name` from these results to find hero details.
+    // These will also be filtered by `pickedAbilityNames`.
+    const identifiedHeroDefiningAbilities = await identifySlots(hero_defining_slots_coords, screenshotBuffer, resolvedClassNames, confidenceThreshold, pickedAbilityNames);
+
+    console.log('[imageProcessor] Screen processing finished. Returning all identified categories.');
     return {
         ultimates: identifiedUltimates,
         standard: identifiedStandard,

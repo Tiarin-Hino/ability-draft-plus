@@ -27,6 +27,14 @@ const abilityPairsUrl = 'https://windrun.io/ability-pairs';
 const MIN_PREDICTION_CONFIDENCE = 0.70;
 const isPackaged = app.isPackaged;
 
+const MIN_PICK_ORDER_FOR_NORMALIZATION = 1.0;
+const MAX_PICK_ORDER_FOR_NORMALIZATION = 40.0;
+const NUM_TOP_TIER_ABILITIES = 10; // Number of abilities to flag as "Top Tier"
+
+const WEIGHT_VALUE = 0.40;        // Weight for 'value_percentage'
+const WEIGHT_WINRATE = 0.20;      // Weight for 'winrate'
+const WEIGHT_PICK_ORDER = 0.40;   // Weight for 'avg_pick_order'
+
 const appRootPathForDev = app.getAppPath();
 const resourcesPath = process.resourcesPath;
 const baseResourcesPath = isPackaged ? resourcesPath : appRootPathForDev;
@@ -268,7 +276,7 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution) => {
 
   try {
     const rawResults = await processDraftScreen(global.coordinatesPath, selectedResolution, MIN_PREDICTION_CONFIDENCE);
-    lastScanRawResults = rawResults; // Store the full results including .selectedAbilities
+    lastScanRawResults = rawResults;
 
     const draftPoolAbilityNames = [
       ...new Set([
@@ -276,7 +284,6 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution) => {
         ...rawResults.standard.map(r => r.name).filter(name => name !== null)
       ])
     ];
-    // Also get names of selected abilities for detail fetching, but don't add them to draftPool for synergy checks
     const selectedAbilityNames = rawResults.selectedAbilities.map(r => r.name).filter(name => name !== null);
     const allNamesToFetchDetailsFor = [...new Set([...draftPoolAbilityNames, ...selectedAbilityNames])];
 
@@ -299,59 +306,106 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution) => {
       }
     }
 
-    const allAbilitiesWithSynergiesAndDetails = [];
-    for (const internalName of draftPoolAbilityNames) { // Synergy only for draftable pool
+    // Prepare abilities from the draft pool for scoring and synergy calculation
+    const draftPoolAbilitiesForScoring = [];
+    for (const internalName of draftPoolAbilityNames) {
       const details = abilityDetailsMap.get(internalName);
       if (details) {
         const combinations = await getHighWinrateCombinations(activeDbPath, internalName, draftPoolAbilityNames);
-        allAbilitiesWithSynergiesAndDetails.push({ ...details, highWinrateCombinations: combinations || [] });
+        draftPoolAbilitiesForScoring.push({
+          ...details,
+          highWinrateCombinations: combinations || [],
+          consolidatedScore: 0
+        });
       } else {
-        allAbilitiesWithSynergiesAndDetails.push({ internalName, displayName: internalName, winrate: null, highSkillWinrate: null, pickOrder: null, highWinrateCombinations: [] });
+        console.warn(`[Main] Details not found for draft pool ability: ${internalName}. It won't be scored for top picks.`);
       }
     }
 
-    let topTierAbilityNames = new Set();
-    if (allAbilitiesWithSynergiesAndDetails.length > 0) {
-      const sortedByPickOrder = [...allAbilitiesWithSynergiesAndDetails]
-        .filter(ability => ability.pickOrder !== null && typeof ability.pickOrder === 'number')
-        .sort((a, b) => a.pickOrder - b.pickOrder);
-      topTierAbilityNames = new Set(sortedByPickOrder.slice(0, 10).map(ability => ability.internalName));
-    }
+    // Calculate consolidated score for each ability in the draft pool
+    draftPoolAbilitiesForScoring.forEach(ability => {
+      let vRaw = ability.valuePercentage; // -1.0 to 1.0 from DB
+      let wRaw = ability.winrate;         // 0.0 to 1.0 from DB
+      let pRaw = ability.avgPickOrder;    // ~1 to ~40 from DB
+
+      // Normalize Value: -1 to 1  =>  0 to 1
+      const vScaled = (vRaw !== null && typeof vRaw === 'number') ? (vRaw + 1.0) / 2.0 : 0.5; // Neutral: 0.5
+
+      // Normalize Winrate: 0 to 1 (already in this range if not null)
+      const wNormalized = (wRaw !== null && typeof wRaw === 'number') ? wRaw : 0.5; // Neutral: 0.5 (50% WR)
+
+      // Normalize Pick Order: ~1-40 (lower is better) => 0 to 1 (higher is better)
+      let pNormalized = 0.5; // Neutral if null or out of expected range
+      if (pRaw !== null && typeof pRaw === 'number') {
+        const clampedPRaw = Math.max(MIN_PICK_ORDER_FOR_NORMALIZATION, Math.min(MAX_PICK_ORDER_FOR_NORMALIZATION, pRaw));
+        if ((MAX_PICK_ORDER_FOR_NORMALIZATION - MIN_PICK_ORDER_FOR_NORMALIZATION) > 0) {
+          pNormalized = (MAX_PICK_ORDER_FOR_NORMALIZATION - clampedPRaw) / (MAX_PICK_ORDER_FOR_NORMALIZATION - MIN_PICK_ORDER_FOR_NORMALIZATION);
+        } // Else, if min equals max, pNormalized remains 0.5
+      }
+
+      ability.consolidatedScore =
+        (WEIGHT_VALUE * vScaled) +
+        (WEIGHT_WINRATE * wNormalized) +
+        (WEIGHT_PICK_ORDER * pNormalized);
+    });
+
+    // Sort abilities by the new consolidated score
+    draftPoolAbilitiesForScoring.sort((a, b) => b.consolidatedScore - a.consolidatedScore);
+
+    // Determine top tier abilities based on the new score
+    const topTierAbilityNames = new Set(
+      draftPoolAbilitiesForScoring.slice(0, NUM_TOP_TIER_ABILITIES).map(ability => ability.internalName)
+    );
+
+    // Store the scored draft pool abilities in a map for easy lookup
+    const scoredDraftAbilitiesMap = new Map();
+    draftPoolAbilitiesForScoring.forEach(ab => scoredDraftAbilitiesMap.set(ab.internalName, ab));
+
 
     let opCombinationsInPool = [];
     if (draftPoolAbilityNames.length >= 2) {
       opCombinationsInPool = await getOPCombinationsInPool(activeDbPath, draftPoolAbilityNames);
     }
 
-    const formatResultsForOverlay = (predictedResultsArray, isSelectedAbilityList = false) => {
+    const formatResultsForUi = (predictedResultsArray, isSelectedAbilityList = false) => {
       if (!Array.isArray(predictedResultsArray)) return [];
       return predictedResultsArray.map(result => {
         const internalName = result.name;
         if (internalName === null) {
-          return { internalName: null, displayName: 'Unknown Ability', winrate: null, highSkillWinrate: null, pickOrder: null, highWinrateCombinations: [], isTopTier: false, confidence: result.confidence, hero_order: result.hero_order };
+          return { internalName: null, displayName: 'Unknown Ability', winrate: null, highSkillWinrate: null, avgPickOrder: null, valuePercentage: null, highWinrateCombinations: [], isTopTier: false, confidence: result.confidence, hero_order: result.hero_order, consolidatedScore: 0 };
         }
-        // For selected abilities, we just need their basic details, not synergies from the draft pool
-        const detailsSource = isSelectedAbilityList ? abilityDetailsMap : allAbilitiesWithSynergiesAndDetails.find(a => a.internalName === internalName);
-        const abilityDetail = isSelectedAbilityList ? abilityDetailsMap.get(internalName) : detailsSource;
+
+        let abilityDataSource;
+        if (isSelectedAbilityList) {
+          abilityDataSource = abilityDetailsMap.get(internalName);
+        } else {
+          abilityDataSource = scoredDraftAbilitiesMap.get(internalName);
+        }
 
         const isTopTier = !isSelectedAbilityList && topTierAbilityNames.has(internalName);
 
-        if (abilityDetail) {
+        if (abilityDataSource) {
           return {
-            ...abilityDetail, // Contains name, display_name, winrate, hs_winrate, pick_order
-            highWinrateCombinations: isSelectedAbilityList ? [] : (abilityDetail.highWinrateCombinations || []), // only for draft pool
+            internalName: abilityDataSource.internalName,
+            displayName: abilityDataSource.displayName || abilityDataSource.internalName,
+            winrate: abilityDataSource.winrate,
+            highSkillWinrate: abilityDataSource.highSkillWinrate,
+            avgPickOrder: abilityDataSource.avgPickOrder,
+            valuePercentage: abilityDataSource.valuePercentage,
+            highWinrateCombinations: isSelectedAbilityList ? [] : (abilityDataSource.highWinrateCombinations || []),
             isTopTier,
             confidence: result.confidence,
-            hero_order: result.hero_order // Ensure hero_order is passed for selected abilities
+            hero_order: result.hero_order,
+            consolidatedScore: isSelectedAbilityList ? 0 : (abilityDataSource.consolidatedScore || 0)
           };
         }
-        return { internalName, displayName: internalName, winrate: null, highSkillWinrate: null, pickOrder: null, highWinrateCombinations: [], isTopTier, confidence: result.confidence, hero_order: result.hero_order };
+        return { internalName, displayName: internalName, winrate: null, highSkillWinrate: null, avgPickOrder: null, valuePercentage: null, highWinrateCombinations: [], isTopTier, confidence: result.confidence, hero_order: result.hero_order, consolidatedScore: 0 };
       });
     };
 
-    const formattedUltimates = formatResultsForOverlay(rawResults.ultimates);
-    const formattedStandard = formatResultsForOverlay(rawResults.standard);
-    const formattedSelectedAbilities = formatResultsForOverlay(rawResults.selectedAbilities, true); // Pass true for isSelectedAbilityList
+    const formattedUltimates = formatResultsForUi(rawResults.ultimates);
+    const formattedStandard = formatResultsForUi(rawResults.standard);
+    const formattedSelectedAbilities = formatResultsForUi(rawResults.selectedAbilities, true);
 
     const endTime = performance.now();
     const durationMs = Math.round(endTime - startTime);
@@ -363,7 +417,7 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution) => {
         scanData: {
           ultimates: formattedUltimates,
           standard: formattedStandard,
-          selectedAbilities: formattedSelectedAbilities // Add selected abilities here
+          selectedAbilities: formattedSelectedAbilities
         },
         coordinatesConfig: layoutConfig,
         targetResolution: selectedResolution,
@@ -377,7 +431,7 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution) => {
 
   } catch (error) {
     console.error(`[Main] Error during scan for ${selectedResolution}:`, error);
-    lastScanRawResults = null; // Clear on error
+    lastScanRawResults = null;
     if (overlayWindow && !overlayWindow.isDestroyed()) {
       overlayWindow.webContents.send('overlay-data', { error: error.message || 'Scan error.', opCombinations: [], identifiedHeroes: [], selectedAbilities: [], scaleFactor: lastScaleFactor });
     }
@@ -414,10 +468,6 @@ ipcMain.on('take-snapshot', async (event) => {
       ...(lastScanRawResults.selectedAbilities || []).map((abilityResult, i) => { // Use actual coords from layout
         const params = coordsConfig.selected_abilities_params;
         const baseCoord = coordsConfig.selected_abilities_coords.find(c => c.hero_order === abilityResult.hero_order && i < 4); // simplistic mapping, needs improvement if more than 4 per hero
-        // This logic is a bit fragile if selected_abilities_coords isn't perfectly ordered or if one hero has fewer than 4
-        // For now, we'll assume a direct mapping based on index for the slot within a hero_order
-        // A more robust way would be to store the original coordinate object with the result.
-        // For now, we will find the specific slot for this hero_order and index.
         const specificCoord = coordsConfig.selected_abilities_coords.filter(c => c.hero_order === abilityResult.hero_order)[i % 4]; // Get i-th slot for this hero
         return specificCoord ? {
           ...specificCoord,

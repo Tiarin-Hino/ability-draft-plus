@@ -4,14 +4,16 @@ const Database = require('better-sqlite3');
 
 const AXIOS_TIMEOUT = 30000;
 
-function parseWinrate(text) { // Also used for pick_order
+// General parser for non-percentage numeric values (like avg_pick_order)
+function parseNumericValue(text) {
     if (!text) return null;
-    const cleanedText = text.trim().replace('%', ''); // Remove % for winrates, doesn't affect pick_order
+    const cleanedText = text.trim().replace(/[^0-9.-]+/g, ''); // Keep digits, dot, and minus
     const parsedValue = parseFloat(cleanedText);
     return !isNaN(parsedValue) ? parsedValue : null;
 }
 
-function parseWinrateForPercentage(text) {
+// Specific parser for percentage values (like winrate, value_percentage)
+function parsePercentageValue(text) {
     if (!text) return null;
     const cleanedText = text.trim().replace('%', '');
     const parsedRate = parseFloat(cleanedText);
@@ -34,15 +36,24 @@ function findHeroIdForAbility(abilityName, heroNameToIdMap) {
     const parts = abilityName.split('_');
     if (parts.length < 2) return null;
 
-    for (let i = 1; i < parts.length; i++) {
+    for (let i = parts.length - 1; i >= 1; i--) {
         const potentialHeroName = parts.slice(0, i).join('_');
-        if (potentialHeroName === 'sandking') { // Special case for sand_king
-            return heroNameToIdMap.get('sand_king');
-        }
         if (heroNameToIdMap.has(potentialHeroName)) {
             return heroNameToIdMap.get(potentialHeroName);
         }
+        // Handle special cases like 'sand_king' if parts were 'sand', 'king', 'ability_suffix'
+        if (i > 1) {
+            const twoPartName = parts.slice(0, i - 1).join('_') + '_' + parts[i - 1];
+            if (heroNameToIdMap.has(twoPartName)) {
+                return heroNameToIdMap.get(twoPartName);
+            }
+        }
     }
+    // Special case for sand_king which might appear as sandking_burrowstrike
+    if (abilityName.startsWith("sandking_")) {
+        return heroNameToIdMap.get('sand_king');
+    }
+
     return null;
 }
 
@@ -57,7 +68,7 @@ async function scrapeAndStoreAbilities(dbPath, urlRegular, urlHighSkill, statusC
         try {
             const heroes = db.prepare('SELECT hero_id, name FROM Heroes').all();
             heroNameToIdMap = new Map(heroes.map(h => [h.name, h.hero_id]));
-            statusCallback(heroNameToIdMap.size > 0 ? `Loaded ${heroNameToIdMap.size} heroes into map.` : 'Warning: Heroes table is empty.');
+            statusCallback(heroNameToIdMap.size > 0 ? `Loaded ${heroNameToIdMap.size} heroes into map.` : 'Warning: Heroes table is empty. Ability to hero linking will be impaired.');
         } catch (err) {
             statusCallback(`Warning: Failed to load heroes - ${err.message}.`);
         } finally {
@@ -70,7 +81,7 @@ async function scrapeAndStoreAbilities(dbPath, urlRegular, urlHighSkill, statusC
         const $regular = cheerio.load(htmlRegular);
         const rowsRegular = $regular('tbody tr');
 
-        if (rowsRegular.length === 0) throw new Error('No regular ability data rows found.');
+        if (rowsRegular.length === 0) throw new Error('No regular ability data rows found on windrun.io/abilities. DOM structure might have changed.');
         statusCallback(`Found ${rowsRegular.length} regular ability rows. Extracting...`);
 
         rowsRegular.each((index, element) => {
@@ -78,11 +89,21 @@ async function scrapeAndStoreAbilities(dbPath, urlRegular, urlHighSkill, statusC
             const imgElement = row.find('td.abil-picture img');
             const { name: abilityName } = extractAbilityName(imgElement);
 
-            const displayNameElement = row.find('td').eq(1).find('a');
+            const displayNameElement = row.find('td').eq(1).find('a'); // Second td for display name
             const displayName = displayNameElement.text().trim() || null;
 
-            const winrateCell = row.find('td.color-range').eq(1); // Second td with color-range
-            const regularWinrate = parseWinrateForPercentage(winrateCell.text());
+            // Winrate is the 2nd 'td.color-range' (index 1)
+            const winrateCell = row.find('td.color-range').eq(1);
+            const regularWinrate = parsePercentageValue(winrateCell.text());
+
+            // Avg Pick Order is the 3rd 'td.color-range' (index 2)
+            const avgPickOrderCell = row.find('td.color-range').eq(2);
+            const avgPickOrder = parseNumericValue(avgPickOrderCell.text());
+
+            // Value is the 4th 'td.color-range' (index 3)
+            const valueCell = row.find('td.color-range').eq(3);
+            const valuePercentage = parsePercentageValue(valueCell.text());
+
 
             if (abilityName) {
                 const heroId = findHeroIdForAbility(abilityName, heroNameToIdMap);
@@ -91,8 +112,9 @@ async function scrapeAndStoreAbilities(dbPath, urlRegular, urlHighSkill, statusC
                     display_name: displayName,
                     hero_id: heroId,
                     winrate: regularWinrate,
+                    avg_pick_order: avgPickOrder,
+                    value_percentage: valuePercentage,
                     high_skill_winrate: null,
-                    pick_order: null, // Initialize pick_order
                     is_ultimate: null,
                     ability_order: null
                 });
@@ -108,7 +130,7 @@ async function scrapeAndStoreAbilities(dbPath, urlRegular, urlHighSkill, statusC
         const $highSkill = cheerio.load(htmlHighSkill);
         const rowsHighSkill = $highSkill('tbody tr');
 
-        if (rowsHighSkill.length === 0) throw new Error('No high-skill ability data rows found.');
+        if (rowsHighSkill.length === 0) throw new Error('No high-skill ability data rows found on windrun.io/ability-high-skill. DOM structure might have changed.');
         statusCallback(`Found ${rowsHighSkill.length} high-skill ability rows. Merging...`);
 
         rowsHighSkill.each((index, element) => {
@@ -116,41 +138,34 @@ async function scrapeAndStoreAbilities(dbPath, urlRegular, urlHighSkill, statusC
             const imgElement = row.find('td.abil-picture img');
             const { name: abilityName } = extractAbilityName(imgElement);
 
-            const displayNameElement = row.find('td').eq(1).find('a');
-            const displayName = displayNameElement.text().trim() || null;
-
-            // High skill winrate is the 2nd 'td.color-range' (index 1 of the collection)
+            // High skill winrate is the 2nd 'td.color-range' (index 1) in high-skill page
             const highSkillWinrateCell = row.find('td.color-range').eq(1);
-            const highSkillWinrate = parseWinrateForPercentage(highSkillWinrateCell.text());
-
-            // Pick order is the 5th 'td.color-range' (index 4 of the collection)
-            const pickOrderCell = row.find('td.color-range').eq(4);
-            let pickOrder = null;
-            if (pickOrderCell.hasClass('color-range')) {
-                pickOrder = parseWinrate(pickOrderCell.text()); // Use general parseWinrate, not specific to percentage
-            } else {
-                console.warn(`High-skill row ${index + 1} ("${abilityName}"): 5th td does not have class 'color-range'. Pick order might be missing or structure changed.`);
-            }
+            const highSkillWinrate = parsePercentageValue(highSkillWinrateCell.text());
 
 
             if (abilityName) {
                 const existingData = abilityDataMap.get(abilityName);
                 if (existingData) {
                     existingData.high_skill_winrate = highSkillWinrate;
-                    existingData.pick_order = pickOrder; // Assign pick_order
-                    if (!existingData.display_name && displayName) {
-                        existingData.display_name = displayName;
+                    // If display_name was somehow missed in regular scrape but available here (unlikely but safe)
+                    if (!existingData.display_name) {
+                        const displayNameElementHS = row.find('td').eq(1).find('a');
+                        existingData.display_name = displayNameElementHS.text().trim() || existingData.display_name;
                     }
                 } else {
-                    console.warn(`Ability "${abilityName}" found in high-skill data but not regular. Adding.`);
+                    // This case should be rare if regular scrape is comprehensive
+                    console.warn(`Ability "${abilityName}" found in high-skill data but not in regular data. Adding with partial info.`);
+                    const displayNameElementHS = row.find('td').eq(1).find('a');
+                    const displayNameHS = displayNameElementHS.text().trim() || null;
                     const heroId = findHeroIdForAbility(abilityName, heroNameToIdMap);
                     abilityDataMap.set(abilityName, {
                         name: abilityName,
-                        display_name: displayName,
+                        display_name: displayNameHS,
                         hero_id: heroId,
                         winrate: null,
+                        avg_pick_order: null,
+                        value_percentage: null,
                         high_skill_winrate: highSkillWinrate,
-                        pick_order: pickOrder, // Assign pick_order
                         is_ultimate: null,
                         ability_order: null
                     });
@@ -162,24 +177,25 @@ async function scrapeAndStoreAbilities(dbPath, urlRegular, urlHighSkill, statusC
 
         const finalAbilityList = Array.from(abilityDataMap.values());
         if (finalAbilityList.length === 0) {
-            throw new Error('Merged data resulted in 0 valid abilities.');
+            throw new Error('Merged data resulted in 0 valid abilities. Check scraping logic or website structure.');
         }
-        statusCallback(`Merged data for ${finalAbilityList.length} abilities.`);
+        statusCallback(`Merged data for ${finalAbilityList.length} abilities. Updating database...`);
 
         db = new Database(dbPath);
         db.pragma('journal_mode = WAL');
 
         const insertStmt = db.prepare(`
-            INSERT INTO Abilities (name, display_name, hero_id, winrate, high_skill_winrate, pick_order, is_ultimate, ability_order)
-            VALUES (@name, @display_name, @hero_id, @winrate, @high_skill_winrate, @pick_order, @is_ultimate, @ability_order)
+            INSERT INTO Abilities (name, display_name, hero_id, winrate, high_skill_winrate, avg_pick_order, value_percentage, is_ultimate, ability_order)
+            VALUES (@name, @display_name, @hero_id, @winrate, @high_skill_winrate, @avg_pick_order, @value_percentage, @is_ultimate, @ability_order)
             ON CONFLICT(name) DO UPDATE SET
                 display_name = excluded.display_name,
                 hero_id = excluded.hero_id,
                 winrate = excluded.winrate,
                 high_skill_winrate = excluded.high_skill_winrate,
-                pick_order = excluded.pick_order,
-                is_ultimate = excluded.is_ultimate,
-                ability_order = excluded.ability_order
+                avg_pick_order = excluded.avg_pick_order,
+                value_percentage = excluded.value_percentage,
+                is_ultimate = excluded.is_ultimate,          -- Consider how these are updated if not scraped yet
+                ability_order = excluded.ability_order      -- Consider how these are updated if not scraped yet
         `);
 
         const insertTransaction = db.transaction((abilityData) => {
@@ -195,9 +211,10 @@ async function scrapeAndStoreAbilities(dbPath, urlRegular, urlHighSkill, statusC
                     hero_id: ability.hero_id,
                     winrate: ability.winrate,
                     high_skill_winrate: ability.high_skill_winrate,
-                    pick_order: ability.pick_order,
-                    is_ultimate: null,
-                    ability_order: null,
+                    avg_pick_order: ability.avg_pick_order,
+                    value_percentage: ability.value_percentage,
+                    is_ultimate: ability.is_ultimate,
+                    ability_order: ability.ability_order,
                 });
                 if (info.changes > 0) count++;
             }
@@ -209,12 +226,12 @@ async function scrapeAndStoreAbilities(dbPath, urlRegular, urlHighSkill, statusC
 
     } catch (error) {
         console.error('Error during ability scraping or database update:', error);
-        statusCallback(`Ability scraping failed: ${error.message}`); // Send error to UI
-        throw new Error(`Ability scraping failed: ${error.message}`);
+        statusCallback(`Ability scraping failed: ${error.message}. Check console for details.`);
+        throw error;
     } finally {
         if (db && db.open) {
             db.close();
-            console.log('Database connection closed.');
+            console.log('[AbilityScraper] Database connection closed.');
         }
     }
 }
