@@ -25,6 +25,7 @@ const abilitiesUrl = 'https://windrun.io/abilities';
 const abilitiesHighSkillUrl = 'https://windrun.io/ability-high-skill';
 const abilityPairsUrl = 'https://windrun.io/ability-pairs';
 
+const MIN_PREDICTION_CONFIDENCE = 0.70;
 const isPackaged = app.isPackaged;
 
 const appRootPathForDev = app.getAppPath();
@@ -412,20 +413,28 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution) => {
   }
 
   isScanInProgress = true;
-  lastScanRawResults = null;
+  lastScanRawResults = null; // This will now store { ultimates: [{name, confidence}, ...], standard: [...] }
   lastScanTargetResolution = selectedResolution;
-  console.log(`[Main] Starting scan for ${selectedResolution} with scaleFactor ${lastScaleFactor}.`);
+  console.log(`[Main] Starting scan for ${selectedResolution} with scaleFactor ${lastScaleFactor} and confidence threshold ${MIN_PREDICTION_CONFIDENCE}.`);
   const startTime = performance.now();
 
   try {
-    // processDraftScreen uses physical pixels from layout_coordinates.json for cropping,
-    // so scaleFactor isn't directly needed here for the cropping logic itself.
-    // The screenshot is of the full (potentially scaled) display.
-    const rawResults = await processDraftScreen(global.coordinatesPath, selectedResolution);
-    lastScanRawResults = rawResults;
-    const { ultimates: predictedUltimatesInternalNames, standard: predictedStandardInternalNames } = rawResults;
+    // Pass MIN_PREDICTION_CONFIDENCE to processDraftScreen
+    const rawResultsWithConfidence = await processDraftScreen(global.coordinatesPath, selectedResolution, MIN_PREDICTION_CONFIDENCE);
+    lastScanRawResults = rawResultsWithConfidence; // Store the full result including confidences
 
-    const allDraftPoolInternalNames = [...new Set([...(predictedUltimatesInternalNames || []), ...(predictedStandardInternalNames || [])].filter(name => name !== null && name !== 'Unknown Ability'))];
+    // Extract just the names for further processing, filtering out null names (which now represent low-confidence predictions)
+    const predictedUltimatesInternalNames = rawResultsWithConfidence.ultimates.map(r => r.name).filter(name => name !== null);
+    const predictedStandardInternalNames = rawResultsWithConfidence.standard.map(r => r.name).filter(name => name !== null);
+
+    // The rest of the logic for fetching details, combinations, etc., uses these filtered arrays of names.
+    // Abilities that were below the confidence threshold (and thus have r.name === null) will be naturally excluded.
+
+    const allDraftPoolInternalNames = [...new Set([...predictedUltimatesInternalNames, ...predictedStandardInternalNames])];
+    // Note: 'Unknown Ability' is already filtered by `name => name !== null` if `null` is used for low confidence.
+    // If 'Unknown Ability' is a specific string returned by the model even with high confidence, keep the original filter:
+    // const allDraftPoolInternalNames = [...new Set([...predictedUltimatesInternalNames, ...predictedStandardInternalNames])].filter(name => name !== null && name !== 'Unknown Ability');
+
     let abilityDetailsMap = new Map();
     if (allDraftPoolInternalNames.length > 0) {
       abilityDetailsMap = getAbilityDetails(activeDbPath, allDraftPoolInternalNames);
@@ -438,6 +447,7 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution) => {
         const combinations = await getHighWinrateCombinations(activeDbPath, internalName, allDraftPoolInternalNames);
         allAbilitiesWithSynergiesAndDetails.push({ ...details, highWinrateCombinations: combinations || [] });
       } else {
+        // This case should be less frequent if only high-confidence, known abilities are processed
         allAbilitiesWithSynergiesAndDetails.push({ internalName, displayName: internalName, winrate: null, highSkillWinrate: null, pickOrder: null, highWinrateCombinations: [] });
       }
     }
@@ -456,23 +466,30 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution) => {
       opCombinationsInPool = await getOPCombinationsInPool(activeDbPath, allDraftPoolInternalNames);
     }
 
-    const formatResultsForOverlay = (predictedNamesArray) => {
-      if (!Array.isArray(predictedNamesArray)) return [];
-      return predictedNamesArray.map(internalName => {
-        if (internalName === null || internalName === 'Unknown Ability') {
-          return { internalName, displayName: 'Unknown Ability', winrate: null, highSkillWinrate: null, pickOrder: null, highWinrateCombinations: [], isTopTier: false };
+    // IMPORTANT: The formatResultsForOverlay function now needs to handle the raw results
+    // which include abilities that might have been filtered out by confidence.
+    // The overlayRenderer.js expects an entry for each slot, even if it's 'Unknown Ability' or null.
+    // So, we use the original rawResultsWithConfidence.ultimates/standard which preserve slot order.
+    const formatResultsForOverlay = (predictedResultsWithConfidenceArray) => {
+      if (!Array.isArray(predictedResultsWithConfidenceArray)) return [];
+      return predictedResultsWithConfidenceArray.map(result => { // result is {name, confidence}
+        const internalName = result.name; // This can be null if filtered by confidence
+        if (internalName === null) { // If filtered by confidence, treat as unknown
+          return { internalName: null, displayName: 'Unknown Ability', winrate: null, highSkillWinrate: null, pickOrder: null, highWinrateCombinations: [], isTopTier: false, confidence: result.confidence };
         }
+        // If name is not null, it passed confidence, proceed as before
         const foundAbility = allAbilitiesWithSynergiesAndDetails.find(a => a.internalName === internalName);
         const isTopTier = topTierAbilityNames.has(internalName);
         if (foundAbility) {
-          return { ...foundAbility, isTopTier };
+          return { ...foundAbility, isTopTier, confidence: result.confidence };
         }
-        return { internalName, displayName: internalName, winrate: null, highSkillWinrate: null, pickOrder: null, highWinrateCombinations: [], isTopTier };
+        // Fallback for abilities that passed confidence but somehow not in allAbilitiesWithSynergiesAndDetails (should be rare)
+        return { internalName, displayName: internalName, winrate: null, highSkillWinrate: null, pickOrder: null, highWinrateCombinations: [], isTopTier, confidence: result.confidence };
       });
     };
 
-    const formattedUltimates = formatResultsForOverlay(predictedUltimatesInternalNames);
-    const formattedStandard = formatResultsForOverlay(predictedStandardInternalNames);
+    const formattedUltimates = formatResultsForOverlay(rawResultsWithConfidence.ultimates);
+    const formattedStandard = formatResultsForOverlay(rawResultsWithConfidence.standard);
     const endTime = performance.now();
     const durationMs = Math.round(endTime - startTime);
     const configData = await fs.readFile(global.coordinatesPath, 'utf-8');
@@ -480,18 +497,19 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution) => {
 
     if (overlayWindow && !overlayWindow.isDestroyed()) {
       overlayWindow.webContents.send('overlay-data', {
-        scanData: { ultimates: formattedUltimates, standard: formattedStandard },
+        scanData: { ultimates: formattedUltimates, standard: formattedStandard }, // This structure is what overlayRenderer expects
         coordinatesConfig: layoutConfig,
         targetResolution: selectedResolution,
         durationMs: durationMs,
         opCombinations: opCombinationsInPool,
         initialSetup: false,
-        scaleFactor: lastScaleFactor // Send the scaleFactor
+        scaleFactor: lastScaleFactor
       });
     }
+
   } catch (error) {
     console.error(`[Main] Error during scan for ${selectedResolution}:`, error);
-    lastScanRawResults = null; // Clear potentially faulty results
+    lastScanRawResults = null;
     if (overlayWindow && !overlayWindow.isDestroyed()) {
       overlayWindow.webContents.send('overlay-data', { error: error.message || 'Scan error.', opCombinations: [], scaleFactor: lastScaleFactor });
     }
@@ -527,11 +545,18 @@ ipcMain.on('take-snapshot', async (event) => {
       throw new Error(`Coordinates for resolution ${lastScanTargetResolution} not found for snapshot.`);
     }
 
-    // The coordinates in layout_coordinates.json are physical pixels.
-    // The screenshot is also of physical pixels. So no scaling adjustment needed here for cropping.
+    // Adapt how predictedName is extracted
     const allSlots = [
-      ...(coordsConfig.ultimate_slots_coords || []).map((coord, i) => ({ ...coord, predictedName: lastScanRawResults.ultimates?.[i] || 'unknown_ultimate' })),
-      ...(coordsConfig.standard_slots_coords || []).map((coord, i) => ({ ...coord, predictedName: lastScanRawResults.standard?.[i] || 'unknown_standard' }))
+      ...(coordsConfig.ultimate_slots_coords || []).map((coord, i) => ({
+        ...coord,
+        // lastScanRawResults.ultimates[i] is {name, confidence}
+        // Use the name if available, otherwise fallback for filename
+        predictedName: lastScanRawResults.ultimates?.[i]?.name || 'unknown_ultimate'
+      })),
+      ...(coordsConfig.standard_slots_coords || []).map((coord, i) => ({
+        ...coord,
+        predictedName: lastScanRawResults.standard?.[i]?.name || 'unknown_standard'
+      }))
     ];
 
     let savedCount = 0;
@@ -542,13 +567,16 @@ ipcMain.on('take-snapshot', async (event) => {
       }
       try {
         const randomString = crypto.randomBytes(4).toString('hex');
-        const safePredictedName = (slot.predictedName && slot.predictedName !== 'Unknown Ability') ? slot.predictedName.replace(/[^a-z0-9_]/gi, '_') : `unknown_ability_${slot.hero_order || 's'}_${slot.ability_order || 'u'}`;
+        // slot.predictedName here is already either the actual name or 'unknown_...'
+        const safePredictedName = (slot.predictedName && slot.predictedName !== 'Unknown Ability' && slot.predictedName !== 'unknown_ultimate' && slot.predictedName !== 'unknown_standard')
+          ? slot.predictedName.replace(/[^a-z0-9_]/gi, '_')
+          : `unknown_ability_${slot.hero_order || 's'}_${slot.ability_order || 'u'}`;
         const filename = `${safePredictedName}-${randomString}.png`;
         const outputPath = path.join(failedSamplesDir, filename);
 
         await sharp(fullScreenshotBuffer)
           .extract({
-            left: Math.round(slot.x), // Ensure integer values for sharp
+            left: Math.round(slot.x),
             top: Math.round(slot.y),
             width: Math.round(slot.width),
             height: Math.round(slot.height)
@@ -563,7 +591,6 @@ ipcMain.on('take-snapshot', async (event) => {
     if (overlayWindow && !overlayWindow.isDestroyed()) {
       overlayWindow.webContents.send('snapshot-taken-status', { message: `Snapshot: ${savedCount} images saved.`, error: false, allowRetry: true });
     }
-
   } catch (error) {
     if (overlayWindow && !overlayWindow.isDestroyed()) {
       overlayWindow.webContents.send('snapshot-taken-status', { message: `Snapshot Error: ${error.message}`, error: true, allowRetry: true });
