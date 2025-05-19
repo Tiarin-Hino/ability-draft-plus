@@ -53,7 +53,8 @@ body {
     border-radius: 5px;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     font-size: 14px;
-    z-index: 99999;
+    z-index: 10001;
+    /* Ensure tooltip is above OP window */
     pointer-events: none;
     white-space: pre-line;
     border: 1px solid rgba(60, 60, 80, 0.8);
@@ -88,7 +89,26 @@ body {
     margin-bottom: 2px;
 }
 
+/* Container for all top-right UI elements */
+#top-right-ui-container {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    /* Stack controls and OP window vertically */
+    align-items: flex-end;
+    /* Align items to the right */
+    gap: 5px;
+    /* Space between control buttons and OP window/button */
+}
+
 #controls-container {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    align-items: flex-end;
     opacity: 0.7;
     transition: opacity 0.2s ease-in-out;
 }
@@ -97,15 +117,23 @@ body {
     opacity: 1;
 }
 
-#scan-now-btn {
+#scan-now-btn,
+#close-overlay-btn,
+#take-snapshot-btn,
+#show-op-combinations-btn {
+    /* Apply common button styles */
     padding: 5px 10px;
-    background-color: rgba(0, 128, 255, 0.7);
     color: white;
-    border: 1px solid rgba(0, 100, 200, 0.9);
     border-radius: 3px;
     cursor: pointer;
     font-weight: bold;
     font-size: 12px;
+    text-align: center;
+}
+
+#scan-now-btn {
+    background-color: rgba(0, 128, 255, 0.7);
+    border: 1px solid rgba(0, 100, 200, 0.9);
 }
 
 #scan-now-btn:hover {
@@ -117,16 +145,9 @@ body {
     cursor: not-allowed;
 }
 
-
 #close-overlay-btn {
-    padding: 5px 10px;
     background-color: rgba(255, 0, 0, 0.7);
-    color: white;
     border: 1px solid rgba(200, 0, 0, 0.9);
-    border-radius: 3px;
-    cursor: pointer;
-    font-weight: bold;
-    font-size: 12px;
 }
 
 #close-overlay-btn:hover {
@@ -134,15 +155,9 @@ body {
 }
 
 #take-snapshot-btn {
-    padding: 5px 10px;
     background-color: rgba(255, 165, 0, 0.7);
-    color: white;
     border: 1px solid rgba(200, 130, 0, 0.9);
-    border-radius: 3px;
-    cursor: pointer;
-    font-weight: bold;
-    font-size: 12px;
-    margin-top: 5px;
+    /* margin-top: 5px; /* Removed as gap is handled by flex parent */
 }
 
 #take-snapshot-btn:hover {
@@ -165,20 +180,30 @@ body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     font-size: 13px;
     z-index: 10001;
+    /* Above tooltip if they overlap by chance */
     display: none;
     border: 1px solid rgba(50, 50, 70, 0.8);
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }
 
+/* OP Combinations Window Styling */
+#op-combinations-container {
+    display: flex;
+    /* To manage visibility of window vs button */
+    flex-direction: column;
+    align-items: flex-end;
+    /* Align to the right */
+}
+
 .op-alert-window {
-    position: fixed;
-    left: 20px;
-    /* Position on the left */
-    top: 50%;
-    /* Center vertically */
-    transform: translateY(-50%);
+    /* Removed position: fixed as it's now part of top-right-ui-container */
+    /* left: 20px; */
+    /* Old positioning, no longer needed */
+    /* top: 50%; */
+    /* transform: translateY(-50%); */
+    width: 250px;
+    /* Or whatever width you prefer */
     background-color: rgba(30, 10, 10, 0.85);
-    /* Dark red, semi-transparent */
     color: #f0f0f0;
     padding: 10px 15px;
     border-radius: 8px;
@@ -188,25 +213,60 @@ body {
     /* Below tooltip, but above hotspots */
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     font-size: 14px;
-    max-width: 250px;
-    /* Adjust as needed */
-    display: none;
-    /* Initially hidden */
+    /* max-width: 250px; /* Already set by width */
+    /* display: none; /* Control via JS */
+    opacity: 0.7;
+    transition: opacity 0.2s ease-in-out;
+}
+
+.op-alert-window:hover {
+    opacity: 1;
+}
+
+.op-alert-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    border-bottom: 1px solid rgba(150, 70, 70, 0.5);
+    padding-bottom: 5px;
 }
 
 .op-alert-title {
     font-size: 16px;
     font-weight: bold;
     color: #ff8080;
-    /* Lighter red for title */
-    text-align: center;
-    margin-bottom: 8px;
-    border-bottom: 1px solid rgba(150, 70, 70, 0.5);
-    padding-bottom: 5px;
+}
+
+.op-alert-hide-btn {
+    background-color: rgba(100, 50, 50, 0.6);
+    /* Slightly more button-like background */
+    border: 1px solid rgba(150, 70, 70, 0.8);
+    color: #e0e0e0;
+    font-size: 11px;
+    /* Adjusted for "Hide" text */
+    font-weight: bold;
+    cursor: pointer;
+    padding: 2px 6px;
+    /* Adjusted padding */
+    border-radius: 3px;
+    line-height: 1;
+    /* Ensure text is vertically centered if padding causes issues */
 }
 
 #op-combinations-list div {
     margin-bottom: 4px;
     font-size: 13px;
     color: #e0e0e0;
+}
+
+#show-op-combinations-btn {
+    background-color: rgba(100, 60, 60, 0.7);
+    /* Dark red-ish */
+    border: 1px solid rgba(150, 80, 80, 0.9);
+    /* display: none; /* Controlled by JS */
+}
+
+#show-op-combinations-btn:hover {
+    background-color: rgba(120, 80, 80, 0.9);
 }
