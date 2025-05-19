@@ -180,11 +180,7 @@ function createWindow() {
     sendLastUpdatedDateToRenderer(mainWindow.webContents, lastDate);
     if (isFirstRun) {
       if (mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
-        mainWindow.webContents.send('set-ui-disabled-state', true);
-      }
-      await performFullScrape(mainWindow.webContents);
-      if (mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
-        mainWindow.webContents.send('set-ui-disabled-state', false);
+        mainWindow.webContents.send('scrape-status', 'Using bundled data. Update manually if needed.');
       }
     }
   });
