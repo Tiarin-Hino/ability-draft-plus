@@ -89,13 +89,13 @@ The overlay appears once activated and provides the in-game assistance. Initiall
 * **Completely Free:** You don#t need to buy subsciprtion to use it. It is free to use and share.
 
 ## Screenshots:
-![Control Panel](https://github.com/Tiarin-Hino/ability-draft-plus/images/Control_Panel.png "Control Panel")
-![Idle Mode](https://github.com/Tiarin-Hino/ability-draft-plus/images/Idle_Mode.png "Idle Mode")
-![Initial Scan](https://github.com/Tiarin-Hino/ability-draft-plus/images/Initial_Scan.png "Initial Scan")
-![Ability Winrates](https://github.com/Tiarin-Hino/ability-draft-plus/images/Ability_Winrates.png "Ability Winrates")
-![Winter Wyvern Suggestions](https://github.com/Tiarin-Hino/ability-draft-plus/images/Winter_Wyvern_Suggestions.png "Winter Wyvern Suggestions")
-![Monkey King Suggestions](https://github.com/Tiarin-Hino/ability-draft-plus/images/Monkey_King_Suggestions.png "Monkey King Suggestions")
-![Filter Picked Abilities](https://github.com/Tiarin-Hino/ability-draft-plus/images/Filter_Picked_Abilities.png "Filter Picked Abilities")
+![Control Panel](/images/Control_Panel.png "Control Panel")
+![Idle Mode](/images/Idle_Mode.png "Idle Mode")
+![Initial Scan](/images/Initial_Scan.png "Initial Scan")
+![Ability Winrates](/images/Ability_Winrates.png "Ability Winrates")
+![Winter Wyvern Suggestions](/images/Winter_Wyvern_Suggestions.png "Winter Wyvern Suggestions")
+![Monkey King Suggestions](/images/Monkey_King_Suggestions.png "Monkey King Suggestions")
+![Filter Picked Abilities](/images/Filter_Picked_Abilities.png "Filter Picked Abilities")
 
 ---
 ## For Developers: Running from Source
