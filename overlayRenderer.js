@@ -109,7 +109,7 @@ function manageMyHeroButtons() {
                 const heroBoxX = heroCoordData.x / currentScaleFactor;
                 const heroBoxY = heroCoordData.y / currentScaleFactor;
                 const heroBoxWidth = resolutionCoords.heroes_params.width / currentScaleFactor;
-                if (hero.heroOrder <= 4) {
+                if (hero.heroOrder <= 4) { // Assuming heroOrder 0-4 are on the left, 5-9 on the right
                     button.style.left = `${heroBoxX - MY_HERO_BUTTON_WIDTH - MY_HERO_BUTTON_MARGIN}px`;
                 } else {
                     button.style.left = `${heroBoxX + heroBoxWidth + MY_HERO_BUTTON_MARGIN}px`;
@@ -133,7 +133,7 @@ function manageMyHeroButtons() {
             const button = document.createElement('button');
             button.className = 'change-my-hero-btn';
             button.textContent = 'Change Hero';
-            button.dataset.heroOrder = selectedHeroOrder;
+            button.dataset.heroOrder = selectedHeroOrder; // Store for potential future use, though click just deselects
             const heroBoxX = heroCoordData.x / currentScaleFactor;
             const heroBoxY = heroCoordData.y / currentScaleFactor;
             const heroBoxWidth = resolutionCoords.heroes_params.width / currentScaleFactor;
@@ -160,116 +160,121 @@ function manageMyHeroButtons() {
 if (window.electronAPI && window.electronAPI.onOverlayData) {
     window.electronAPI.onOverlayData((data) => {
         console.log('[OVERLAY RENDERER] === New Overlay Data Received ===');
+        // Determine scale factor
         if (typeof data.scaleFactor === 'number' && data.scaleFactor > 0) {
             currentScaleFactor = data.scaleFactor;
         } else if (data.initialSetup && (!data.scaleFactor || data.scaleFactor <= 0)) {
+            // Fallback for initial setup if scaleFactor isn't provided or invalid
             currentScaleFactor = 1;
+            console.warn('[OVERLAY RENDERER] Scale factor not provided or invalid during initial setup, defaulting to 1.');
         }
+        // Persist essential context
         if (data.coordinatesConfig) currentCoordinatesConfig = data.coordinatesConfig;
         if (data.targetResolution) currentTargetResolution = data.targetResolution;
 
+        // Handle error messages
         if (data && data.error) {
             console.error('[OVERLAY RENDERER] Error message received:', data.error);
             tooltipElement.innerHTML = `<div class="tooltip-title">Error</div><div class="tooltip-winrate">${data.error}</div>`;
             tooltipElement.style.display = 'block';
             isTooltipVisible = true;
-            toggleTopTierBordersVisibility(false);
-            document.querySelectorAll('.my-hero-btn, .change-my-hero-btn, .selected-ability-hotspot').forEach(el => el.remove());
+            toggleTopTierBordersVisibility(false); // Hide borders on error
+            // Clear dynamic elements
+            document.querySelectorAll('.my-hero-btn, .change-my-hero-btn, .selected-ability-hotspot, .ability-hotspot').forEach(el => el.remove());
+            // Reset scan button state
             if (scanNowButton) {
                 scanNowButton.disabled = false;
-                scanNowButton.style.display = 'inline-block';
+                scanNowButton.style.display = 'inline-block'; // Ensure it's visible
             }
             if (takeSnapshotButton) takeSnapshotButton.style.display = 'none';
-            scanHasBeenPerformed = false;
-            updateOPCombinationsDisplay([]);
-            return;
+            scanHasBeenPerformed = false; // Reset scan status
+            updateOPCombinationsDisplay([]); // Clear OP combinations
+            return; // Stop further processing on error
         }
 
+        // Update OP Combinations window
         if (data && typeof data.opCombinations !== 'undefined') {
             updateOPCombinationsDisplay(data.opCombinations);
         }
 
+        // Update identified heroes cache (used by manageMyHeroButtons)
         if (data && data.identifiedHeroes) {
             identifiedHeroesCache = data.identifiedHeroes;
-            if (scanHasBeenPerformed) { // Only manage buttons if a scan has occurred
+            // Manage hero buttons only if a scan has occurred or during initial setup if heroes are present
+            if (scanHasBeenPerformed || data.initialSetup) {
                 manageMyHeroButtons();
             }
         }
 
 
+        // Handle initial setup of the overlay
         if (data && data.initialSetup) {
             console.log('[OVERLAY RENDERER] Initial setup.');
+            // Clear previous dynamic elements
             document.querySelectorAll('.ability-hotspot, .selected-ability-hotspot, .my-hero-btn, .change-my-hero-btn').forEach(el => el.remove());
-            selectedHeroOrder = null;
-            identifiedHeroesCache = data.identifiedHeroes || []; // Cache if provided during initial setup
+            selectedHeroOrder = null; // Reset selected hero
+            identifiedHeroesCache = data.identifiedHeroes || []; // Cache heroes if provided
 
             scanHasBeenPerformed = false; // Reset scan status
             if (scanNowButton) {
                 scanNowButton.disabled = false;
-                scanNowButton.style.display = 'inline-block';
+                scanNowButton.style.display = 'inline-block'; // Ensure visible and enabled
             }
             if (takeSnapshotButton) {
-                takeSnapshotButton.style.display = 'none';
+                takeSnapshotButton.style.display = 'none'; // Hide snapshot button initially
                 takeSnapshotButton.disabled = true;
             }
-            tooltipElement.style.display = 'none';
+            tooltipElement.style.display = 'none'; // Hide tooltip
             isTooltipVisible = false;
-            toggleTopTierBordersVisibility(true);
-            if (snapshotStatusElement) snapshotStatusElement.style.display = 'none';
+            toggleTopTierBordersVisibility(true); // Show top-tier borders if any
+            if (snapshotStatusElement) snapshotStatusElement.style.display = 'none'; // Hide snapshot status
+
+            // If opCombinations is not explicitly provided in initialSetup, clear it.
             if (typeof data.opCombinations === 'undefined') {
                 updateOPCombinationsDisplay([]);
             }
             manageMyHeroButtons(); // Attempt to draw buttons if heroes identified initially
-            updateMyHeroAbilityHighlights();
+            updateMyHeroAbilityHighlights(); // Update highlights (likely removing all initially)
 
 
+            // Handle data from a completed scan
         } else if (data && data.scanData) {
             console.log('[OVERLAY RENDERER] Scan data received.');
             scanHasBeenPerformed = true;
             const receivedScanDataObject = data.scanData;
 
+            // Validate essential data structures
             if (!receivedScanDataObject || typeof receivedScanDataObject.ultimates === 'undefined' || typeof receivedScanDataObject.standard === 'undefined') {
-                console.error('[OVERLAY RENDERER] Scan data object invalid.');
-                updateOPCombinationsDisplay(data.opCombinations || []);
-                document.querySelectorAll('.my-hero-btn, .change-my-hero-btn, .selected-ability-hotspot').forEach(el => el.remove());
-                return;
+                console.error('[OVERLAY RENDERER] Scan data object invalid. Ultimates or standard abilities missing.');
+                updateOPCombinationsDisplay(data.opCombinations || []); // Still try to update OP combos
+                document.querySelectorAll('.my-hero-btn, .change-my-hero-btn, .selected-ability-hotspot, .ability-hotspot').forEach(el => el.remove());
+                return; // Abort if core scan data is missing
             }
             if (!currentCoordinatesConfig || !currentTargetResolution) {
-                console.error('[OVERLAY RENDERER] Context missing for scan data.');
+                console.error('[OVERLAY RENDERER] Coordinate configuration or target resolution missing for scan data display.');
                 updateOPCombinationsDisplay(data.opCombinations || []);
-                document.querySelectorAll('.my-hero-btn, .change-my-hero-btn, .selected-ability-hotspot').forEach(el => el.remove());
+                document.querySelectorAll('.my-hero-btn, .change-my-hero-btn, .selected-ability-hotspot, .ability-hotspot').forEach(el => el.remove());
                 return;
             }
             const resolutionCoords = currentCoordinatesConfig.resolutions[currentTargetResolution];
             if (!resolutionCoords) {
-                console.error(`[OVERLAY RENDERER] Coords for ${currentTargetResolution} not found.`);
+                console.error(`[OVERLAY RENDERER] Coordinate data for resolution "${currentTargetResolution}" not found.`);
                 updateOPCombinationsDisplay(data.opCombinations || []);
-                document.querySelectorAll('.my-hero-btn, .change-my-hero-btn, .selected-ability-hotspot').forEach(el => el.remove());
+                document.querySelectorAll('.my-hero-btn, .change-my-hero-btn, .selected-ability-hotspot, .ability-hotspot').forEach(el => el.remove());
                 return;
             }
 
+            // Attempt to update UI elements based on scan data
             try {
-                document.querySelectorAll('.ability-hotspot, .selected-ability-hotspot').forEach(el => el.remove());
+                document.querySelectorAll('.ability-hotspot, .selected-ability-hotspot').forEach(el => el.remove()); // Clear old hotspots
                 createHotspotsForType(receivedScanDataObject.ultimates, resolutionCoords.ultimate_slots_coords, 'ultimates');
                 createHotspotsForType(receivedScanDataObject.standard, resolutionCoords.standard_slots_coords, 'standard');
 
-                // Create hotspots for selected abilities
+                // Create hotspots for selected abilities (player-picked abilities)
                 if (receivedScanDataObject.selectedAbilities && resolutionCoords.selected_abilities_coords && resolutionCoords.selected_abilities_params) {
-                    // Map ability data to coordinate data; this assumes the order matches or a unique key can be formed.
-                    // For selected abilities, we need their specific coordinates.
-                    // The `formattedSelectedAbilities` from main.js already contains `hero_order`.
-                    // We need to iterate through `resolutionCoords.selected_abilities_coords` and find the matching ability data.
-
                     const selectedAbilityHotspotData = [];
                     resolutionCoords.selected_abilities_coords.forEach((coordEntry, index) => {
-                        // Find the ability data that matches this coordinate's hero_order and its position within that hero's selected abilities
-                        // This assumes `receivedScanDataObject.selectedAbilities` is grouped or can be filtered by hero_order
-                        // and then indexed.
                         const abilitiesForThisHeroOrder = receivedScanDataObject.selectedAbilities.filter(ab => ab.hero_order === coordEntry.hero_order);
-
-                        // Determine which ability in `abilitiesForThisHeroOrder` corresponds to `coordEntry`
-                        // This requires knowing the order of slots for each hero as defined in `selected_abilities_coords`
-                        // We need a way to map the `index` of `coordEntry` within its `hero_order` group
                         let specificAbilityData = null;
                         let countForHeroOrder = 0;
                         for (let i = 0; i < index; i++) {
@@ -279,68 +284,71 @@ if (window.electronAPI && window.electronAPI.onOverlayData) {
                         }
                         specificAbilityData = abilitiesForThisHeroOrder[countForHeroOrder];
 
-
                         if (specificAbilityData && specificAbilityData.internalName) {
                             selectedAbilityHotspotData.push({
-                                coord: { // Construct full coordinate object for createHotspot
+                                coord: {
                                     x: coordEntry.x,
                                     y: coordEntry.y,
                                     width: resolutionCoords.selected_abilities_params.width,
                                     height: resolutionCoords.selected_abilities_params.height,
-                                    hero_order: coordEntry.hero_order // Pass hero_order for highlighting
+                                    hero_order: coordEntry.hero_order
                                 },
-                                abilityData: specificAbilityData, // This is { internalName, displayName, winrate, etc., hero_order }
-                                type: 'selected' // Distinguish type for ID or class
+                                abilityData: specificAbilityData,
+                                type: 'selected'
                             });
                         }
                     });
-
                     selectedAbilityHotspotData.forEach(item => {
-                        createHotspot(item.coord, item.abilityData, `sel-${item.coord.hero_order}-${item.abilityData.internalName.slice(0, 5)}`, item.type, true /*isSelecteAbilityHotspot*/);
+                        createHotspot(item.coord, item.abilityData, `sel-${item.coord.hero_order}-${item.abilityData.internalName.slice(0, 5)}`, item.type, true);
                     });
                 }
 
-
-                if (data.identifiedHeroes) { // This should always be present with scanData now
+                // Update identified heroes (if provided) and manage "My Hero" buttons
+                if (data.identifiedHeroes) {
                     identifiedHeroesCache = data.identifiedHeroes;
                 }
                 manageMyHeroButtons();
                 updateMyHeroAbilityHighlights();
 
-
+                // Ensure Scan Now button remains visible and enabled
                 if (scanNowButton) {
-                    scanNowButton.style.display = 'none';
-                    scanNowButton.disabled = true;
+                    scanNowButton.style.display = 'inline-block';
+                    scanNowButton.disabled = false;
                 }
                 if (takeSnapshotButton) {
-                    takeSnapshotButton.style.display = 'block';
+                    takeSnapshotButton.style.display = 'block'; // Show snapshot button after a successful scan
                     takeSnapshotButton.disabled = false;
                 }
-                tooltipElement.style.display = 'none';
+                tooltipElement.style.display = 'none'; // Hide tooltip after scan, will reappear on hover
                 isTooltipVisible = false;
-                toggleTopTierBordersVisibility(true);
-                if (snapshotStatusElement) snapshotStatusElement.style.display = 'none';
+                toggleTopTierBordersVisibility(true); // Ensure top-tier borders are visible
+                if (snapshotStatusElement) snapshotStatusElement.style.display = 'none'; // Hide snapshot status
 
             } catch (hotspotError) {
-                console.error('[OVERLAY RENDERER] Error during hotspot/UI update:', hotspotError);
+                console.error('[OVERLAY RENDERER] Error during hotspot/UI update after scan:', hotspotError);
+                // Attempt to still show OP combinations even if hotspot creation fails
                 updateOPCombinationsDisplay(data.opCombinations || []);
-                document.querySelectorAll('.my-hero-btn, .change-my-hero-btn, .selected-ability-hotspot').forEach(el => el.remove());
+                document.querySelectorAll('.my-hero-btn, .change-my-hero-btn, .selected-ability-hotspot, .ability-hotspot').forEach(el => el.remove());
             }
         } else if (!data.initialSetup) {
+            // This case might occur if data is sent that isn't an error, initial setup, or a full scan.
             // console.warn('[OVERLAY RENDERER] Received non-initial, non-scanData:', JSON.stringify(data, null, 2));
         }
     });
 } else {
+    // Critical error: Electron API not available.
     console.error('[OVERLAY RENDERER] electronAPI.onOverlayData is not available. Preload script might have issues.');
     if (tooltipElement) {
-        tooltipElement.innerHTML = '<div class="tooltip-title">API Error</div><div class="tooltip-winrate">Overlay API not available.</div>';
+        tooltipElement.innerHTML = '<div class="tooltip-title">API Error</div><div class="tooltip-winrate">Overlay API not available. Cannot function.</div>';
         tooltipElement.style.display = 'block';
         isTooltipVisible = true;
         toggleTopTierBordersVisibility(false);
     }
     if (opCombinationsWindow) opCombinationsWindow.style.display = 'none';
     if (showOpCombinationsButton) showOpCombinationsButton.style.display = 'none';
-    document.querySelectorAll('.my-hero-btn, .change-my-hero-btn, .selected-ability-hotspot').forEach(el => el.remove());
+    // Clear any dynamic elements that might be present
+    document.querySelectorAll('.my-hero-btn, .change-my-hero-btn, .selected-ability-hotspot, .ability-hotspot').forEach(el => el.remove());
+    if (scanNowButton) scanNowButton.disabled = true; // Disable scan button as it won't work
 }
 
 
@@ -360,24 +368,34 @@ if (showOpCombinationsButton && opCombinationsWindow && hideOpCombinationsButton
 
 if (scanNowButton && window.electronAPI && window.electronAPI.executeScanFromOverlay) {
     scanNowButton.addEventListener('click', () => {
-        if (scanNowButton.disabled) return;
-        scanNowButton.disabled = true;
+        if (scanNowButton.disabled) return; // Prevent multiple rapid clicks if needed
+
+        scanNowButton.disabled = true; // Temporarily disable to prevent spamming while processing starts
+        // It will be re-enabled explicitly when scan data is processed or on error.
+
+        // Clear previous scan results visually
         if (opCombinationsWindow) opCombinationsWindow.style.display = 'none';
         if (showOpCombinationsButton) showOpCombinationsButton.style.display = 'none';
         document.querySelectorAll('.my-hero-btn, .change-my-hero-btn, .selected-ability-hotspot, .ability-hotspot').forEach(el => el.remove());
         selectedHeroOrder = null;
         identifiedHeroesCache = [];
-        scanHasBeenPerformed = false; // Reset for a new scan cycle
+        // scanHasBeenPerformed = false; // Reset for a new scan cycle -- this is already done in onOverlayData for initialSetup
+        // Keeping it false here ensures "My Hero" buttons don't appear prematurely.
 
         if (!currentTargetResolution) {
             console.error('Cannot scan, target resolution not set.');
             tooltipElement.innerHTML = '<div class="tooltip-title">Error</div><div class="tooltip-winrate">Resolution not set.</div>';
             tooltipElement.style.display = 'block'; isTooltipVisible = true; toggleTopTierBordersVisibility(false);
-            scanNowButton.disabled = false; return;
+            scanNowButton.disabled = false; // Re-enable if there's an immediate pre-scan error
+            return;
         }
+
         tooltipElement.innerHTML = `<div class="tooltip-title">Scanning...</div><div class="tooltip-winrate">Identifying for ${currentTargetResolution}.</div>`;
         tooltipElement.style.display = 'block'; isTooltipVisible = true; toggleTopTierBordersVisibility(false);
-        if (controlsContainer) { /* position tooltip */ }
+
+        // Position tooltip near the scan button or a fixed point if controlsContainer is complex
+        if (controlsContainer) { /* you might want to position tooltipElement based on controlsContainer or scanNowButton rect */ }
+
         window.electronAPI.executeScanFromOverlay(currentTargetResolution);
     });
 }
@@ -385,11 +403,11 @@ if (scanNowButton && window.electronAPI && window.electronAPI.executeScanFromOve
 
 if (takeSnapshotButton && window.electronAPI && window.electronAPI.takeSnapshot) {
     takeSnapshotButton.addEventListener('click', () => {
-        if (!scanHasBeenPerformed || takeSnapshotButton.disabled) {
+        if (!scanHasBeenPerformed || takeSnapshotButton.disabled) { // Ensure scan was done and button is enabled
             return;
         }
         console.log('Take Snapshot button clicked.');
-        takeSnapshotButton.disabled = true;
+        takeSnapshotButton.disabled = true; // Disable to prevent multiple clicks
         if (snapshotStatusElement) {
             snapshotStatusElement.textContent = 'Taking snapshot...';
             snapshotStatusElement.style.display = 'block';
@@ -404,13 +422,18 @@ if (window.electronAPI && window.electronAPI.onSnapshotTaken) {
         if (snapshotStatusElement) {
             snapshotStatusElement.textContent = status.message;
             snapshotStatusElement.style.display = 'block';
+
+            // Re-enable button if not a fatal error or if retries are allowed
             if (!status.error || status.allowRetry) {
                 if (takeSnapshotButton) takeSnapshotButton.disabled = false;
             }
+
+            // Auto-hide message after a delay
             setTimeout(() => {
                 snapshotStatusElement.style.display = 'none';
-            }, 5000);
+            }, 5000); // Display for 5 seconds
         } else {
+            // Fallback if status element isn't found, still manage button state
             if (takeSnapshotButton && (!status.error || status.allowRetry)) takeSnapshotButton.disabled = false;
         }
     });
@@ -419,19 +442,22 @@ if (window.electronAPI && window.electronAPI.onSnapshotTaken) {
 
 function makeControlsInteractive(interactive) {
     if (window.electronAPI && window.electronAPI.setOverlayMouseEvents) {
-        // Make hero selection buttons also interactive
-        const heroButtons = document.querySelectorAll('.my-hero-btn, .change-my-hero-btn');
+        // Check if mouse is over any of the interactive UI elements in the top-right
+        const isOverControls = controlsContainer ? controlsContainer.matches(':hover') : false;
+        const isOverOpWindow = opCombinationsWindow ? opCombinationsWindow.matches(':hover') : false;
+        const isOverShowOpButton = showOpCombinationsButton ? showOpCombinationsButton.matches(':hover') : false;
+
         let onHeroButton = false;
-        heroButtons.forEach(btn => {
+        document.querySelectorAll('.my-hero-btn, .change-my-hero-btn').forEach(btn => {
             if (btn.matches(':hover')) {
                 onHeroButton = true;
             }
         });
 
-        if (interactive || onHeroButton) {
-            window.electronAPI.setOverlayMouseEvents(false); // Make overlay clickable
+        if (interactive || isOverControls || isOverOpWindow || isOverShowOpButton || onHeroButton) {
+            window.electronAPI.setOverlayMouseEvents(false); // Make overlay clickable (accept mouse events)
         } else {
-            window.electronAPI.setOverlayMouseEvents(true); // Make overlay pass through clicks
+            window.electronAPI.setOverlayMouseEvents(true);  // Make overlay pass through clicks
         }
     }
 }
@@ -441,37 +467,27 @@ if (controlsContainer) {
     controlsContainer.addEventListener('mouseenter', () => makeControlsInteractive(true));
     controlsContainer.addEventListener('mouseleave', () => makeControlsInteractive(false));
 }
-if (opCombinationsWindow) {
+if (opCombinationsWindow) { // The container for the OP list
     opCombinationsWindow.addEventListener('mouseenter', () => makeControlsInteractive(true));
     opCombinationsWindow.addEventListener('mouseleave', () => makeControlsInteractive(false));
 }
-if (showOpCombinationsButton) {
+if (showOpCombinationsButton) { // The button to show the OP list
     showOpCombinationsButton.addEventListener('mouseenter', () => makeControlsInteractive(true));
     showOpCombinationsButton.addEventListener('mouseleave', () => makeControlsInteractive(false));
 }
 
-// Add event delegation for dynamically created hero buttons
+// Add event delegation for dynamically created "My Hero" and "Change Hero" buttons
 document.body.addEventListener('mouseenter', (event) => {
     if (event.target.matches('.my-hero-btn') || event.target.matches('.change-my-hero-btn')) {
         makeControlsInteractive(true);
     }
-}, true); // Use capture phase
+}, true); // Use capture phase to ensure it fires
 
 document.body.addEventListener('mouseleave', (event) => {
     if (event.target.matches('.my-hero-btn') || event.target.matches('.change-my-hero-btn')) {
-        // Check if mouse is still over another interactive element before making non-interactive
-        setTimeout(() => { // Delay to allow mouse to enter another element
-            const isOverControls = controlsContainer ? controlsContainer.matches(':hover') : false;
-            const isOverOpWindow = opCombinationsWindow ? opCombinationsWindow.matches(':hover') : false;
-            const isOverShowOpButton = showOpCombinationsButton ? showOpCombinationsButton.matches(':hover') : false;
-            let isOverAnyHeroButton = false;
-            document.querySelectorAll('.my-hero-btn, .change-my-hero-btn').forEach(btn => {
-                if (btn.matches(':hover')) isOverAnyHeroButton = true;
-            });
-
-            if (!isOverControls && !isOverOpWindow && !isOverShowOpButton && !isOverAnyHeroButton) {
-                makeControlsInteractive(false);
-            }
+        // Delay slightly to check if the mouse entered another interactive element immediately
+        setTimeout(() => {
+            makeControlsInteractive(false); // This will re-evaluate all hover states
         }, 0);
     }
 }, true); // Use capture phase
@@ -491,24 +507,27 @@ function createHotspotsForType(abilityResultArray, coordArray, type) {
 
 function createHotspot(coord, abilityData, indexOrUniqueId, type, isSelectedAbilityHotspot = false) {
     const hotspot = document.createElement('div');
-    // Use a more specific class for selected ability hotspots for easier querying
     hotspot.className = isSelectedAbilityHotspot ? 'ability-hotspot selected-ability-hotspot' : 'ability-hotspot';
-    hotspot.id = `hotspot-${type}-${indexOrUniqueId}`; // indexOrUniqueId can be a string for selected
+    hotspot.id = `hotspot-${type}-${indexOrUniqueId}`;
 
+    // Apply scaling factor
     hotspot.style.left = `${coord.x / currentScaleFactor}px`;
     hotspot.style.top = `${coord.y / currentScaleFactor}px`;
     hotspot.style.width = `${coord.width / currentScaleFactor}px`;
     hotspot.style.height = `${coord.height / currentScaleFactor}px`;
 
-    // Store hero_order on the hotspot for highlighting "my hero's" abilities
+    // Store hero_order for highlighting "my hero's" abilities
     if (typeof coord.hero_order === 'number') { // For selected abilities, coord will have hero_order
         hotspot.dataset.heroOrder = coord.hero_order;
     } else if (typeof abilityData.hero_order === 'number') { // For draft pool abilities, abilityData might have it
-        hotspot.dataset.heroOrder = abilityData.hero_order; // This might be undefined for draft pool abilities from imageProcessor
+        // This might be undefined for draft pool abilities if not directly assigned during prediction
+        // For draft pool, hero_order isn't as relevant for individual hotspots as it is for selected ones.
+        // But if available, store it.
+        hotspot.dataset.heroOrder = abilityData.hero_order;
     }
 
 
-    if (abilityData.isTopTier && !isSelectedAbilityHotspot) { // Top tier only for draft pool
+    if (abilityData.isTopTier && !isSelectedAbilityHotspot) { // Top tier only for draft pool abilities
         hotspot.classList.add('top-tier-ability');
     }
 
@@ -522,9 +541,10 @@ function createHotspot(coord, abilityData, indexOrUniqueId, type, isSelectedAbil
     hotspot.dataset.internalName = abilityData.internalName;
     hotspot.dataset.winrate = abilityData.winrate !== null ? abilityData.winrate : 'N/A';
     hotspot.dataset.highSkillWinrate = abilityData.highSkillWinrate !== null ? abilityData.highSkillWinrate : 'N/A';
-    // Selected abilities usually don't have combinations relevant to the draft pool in the same way
+    // Selected abilities usually don't have combinations relevant *from* the draft pool in the same way the tooltip suggests.
+    // The tooltip shows combinations *with* this ability from the draft pool.
     hotspot.dataset.combinations = isSelectedAbilityHotspot ? JSON.stringify([]) : JSON.stringify(abilityData.highWinrateCombinations || []);
-    hotspot.dataset.isTopTier = String(abilityData.isTopTier === true && !isSelectedAbilityHotspot);
+    hotspot.dataset.isTopTier = String(abilityData.isTopTier === true && !isSelectedAbilityHotspot); // Only for draft pool
     hotspot.dataset.confidence = abilityData.confidence !== null ? abilityData.confidence.toFixed(2) : 'N/A';
 
 
@@ -548,9 +568,9 @@ function createHotspot(coord, abilityData, indexOrUniqueId, type, isSelectedAbil
             ${confidenceIndicator} 
         `;
         const combinations = JSON.parse(hotspot.dataset.combinations);
-        if (combinations && combinations.length > 0) { // Combinations usually for draft pool
+        if (combinations && combinations.length > 0) { // Combinations usually for draft pool abilities
             tooltipContent += `<div class="tooltip-section-title">Strong Combinations in Pool:</div>`;
-            combinations.slice(0, 5).forEach(combo => {
+            combinations.slice(0, 5).forEach(combo => { // Show top 5
                 const comboPartnerName = (combo.partnerAbilityDisplayName || 'Unknown Partner').replace(/_/g, ' ');
                 const comboWrFormatted = combo.synergyWinrate !== null ? `${(parseFloat(combo.synergyWinrate) * 100).toFixed(1)}%` : 'N/A';
                 tooltipContent += `<div class="tooltip-combo">- ${comboPartnerName} (${comboWrFormatted} WR)</div>`;
@@ -564,7 +584,7 @@ function createHotspot(coord, abilityData, indexOrUniqueId, type, isSelectedAbil
         if (hotspot.classList.contains('top-tier-ability')) { // Specifically hide border for the hovered top-tier hotspot
             hotspot.classList.add('snapshot-hidden-border');
         }
-        positionTooltip(hotspot);
+        positionTooltip(hotspot); // Position the tooltip relative to the hotspot
     });
 
     hotspot.addEventListener('mouseleave', () => {
@@ -577,11 +597,14 @@ function createHotspot(coord, abilityData, indexOrUniqueId, type, isSelectedAbil
 
 function positionTooltip(hotspotElement) {
     if (!tooltipElement || !hotspotElement) return;
+
     const hotspotRect = hotspotElement.getBoundingClientRect();
     const tooltipWidth = tooltipElement.offsetWidth;
     const tooltipHeight = tooltipElement.offsetHeight;
 
+    // If dimensions are not yet available (e.g., display:none just removed), try again shortly
     if (isNaN(tooltipWidth) || isNaN(tooltipHeight) || tooltipWidth === 0 || tooltipHeight === 0) {
+        // Fallback or very basic positioning if dimensions are weird
         tooltipElement.style.left = `${hotspotRect.left}px`;
         tooltipElement.style.top = `${hotspotRect.bottom}px`;
         return;
@@ -589,34 +612,40 @@ function positionTooltip(hotspotElement) {
 
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
-    const margin = 10;
+    const margin = 10; // Margin from viewport edges and hotspot
 
+    // Try placing to the left of the hotspot first
     let calculatedX = hotspotRect.left - tooltipWidth - margin;
     let calculatedY = hotspotRect.top;
 
+    // If it overflows left, try placing to the right
     if (calculatedX < margin) {
         calculatedX = hotspotRect.right + margin;
     }
 
+    // If it still overflows right (e.g., hotspot is wide or near right edge), adjust
     if (calculatedX + tooltipWidth > viewportWidth - margin) {
-        calculatedX = viewportWidth - tooltipWidth - margin;
+        calculatedX = viewportWidth - tooltipWidth - margin; // Stick to right edge
     }
+    // Final check to ensure it's not off-screen left if all else fails
     if (calculatedX < margin) {
         calculatedX = margin;
     }
 
+
+    // Adjust Y to keep tooltip within viewport
     if (calculatedY + tooltipHeight > viewportHeight - margin) {
-        calculatedY = viewportHeight - tooltipHeight - margin;
+        calculatedY = viewportHeight - tooltipHeight - margin; // Stick to bottom edge
     }
     if (calculatedY < margin) {
-        calculatedY = margin;
+        calculatedY = margin; // Stick to top edge
     }
 
     tooltipElement.style.left = `${calculatedX}px`;
     tooltipElement.style.top = `${calculatedY}px`;
-    tooltipElement.style.right = 'auto';
-    tooltipElement.style.bottom = 'auto';
-    tooltipElement.style.transform = 'none';
+    tooltipElement.style.right = 'auto'; // Clear any previous 'right'
+    tooltipElement.style.bottom = 'auto'; // Clear any previous 'bottom'
+    tooltipElement.style.transform = 'none'; // Clear any previous transform
 }
 
 
