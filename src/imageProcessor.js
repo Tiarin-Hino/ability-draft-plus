@@ -14,12 +14,6 @@ let classNamesPromise;
 let modelPromise;
 let initialized = false;
 
-/**
- * Initializes the image processor with necessary paths.
- * Must be called once before processDraftScreen.
- * @param {string} modelPath - Absolute path to the model.json (e.g., 'file:///path/to/model.json').
- * @param {string} classNamesPath - Absolute path to the class_names.json.
- */
 function initializeImageProcessor(modelPath, classNamesPath) {
     if (initialized) {
         console.warn("Image processor already initialized.");
@@ -39,10 +33,9 @@ function initializeImageProcessor(modelPath, classNamesPath) {
         .catch(err => {
             console.error(`FATAL: Error loading class names from ${ABSOLUTE_CLASS_NAMES_PATH}: ${err.message}`);
             CLASS_NAMES = [];
-            throw err; // Re-throw to indicate initialization failure
+            throw err;
         });
 
-    console.log(`Attempting to load model from: ${ABSOLUTE_MODEL_PATH}`);
     modelPromise = tf.loadGraphModel(ABSOLUTE_MODEL_PATH)
         .then(model => {
             console.log('TFJS Model loaded successfully.');
@@ -58,12 +51,12 @@ function initializeImageProcessor(modelPath, classNamesPath) {
         })
         .catch(err => {
             console.error(`FATAL: Error loading TFJS model from ${ABSOLUTE_MODEL_PATH}: ${err.message}`);
-            throw err; // Re-throw to indicate initialization failure
+            throw err;
         });
     initialized = true;
 }
 
-async function identifySlots(slotCoords, screenBuffer, currentClassNames, confidenceThreshold) { // Added confidenceThreshold
+async function identifySlots(slotCoordsArray, screenBuffer, currentClassNames, confidenceThreshold) {
     if (!initialized || !modelPromise || !classNamesPromise) {
         throw new Error("Image processor not initialized. Call initializeImageProcessor first.");
     }
@@ -71,16 +64,38 @@ async function identifySlots(slotCoords, screenBuffer, currentClassNames, confid
 
     if (!model) {
         console.error("Model not available for predictions.");
-        return slotCoords.map(() => ({ name: null, confidence: 0 })); // Return object
+        return slotCoordsArray.map(slotData => ({ // Ensure hero_order is preserved
+            name: null,
+            confidence: 0,
+            hero_order: slotData.hero_order,
+            ability_order: slotData.ability_order // Keep ability_order if present
+        }));
     }
     if (!currentClassNames || currentClassNames.length === 0) {
         console.error("Class names argument is empty or not provided to identifySlots.");
-        return slotCoords.map(() => ({ name: null, confidence: 0 })); // Return object
+        return slotCoordsArray.map(slotData => ({
+            name: null,
+            confidence: 0,
+            hero_order: slotData.hero_order,
+            ability_order: slotData.ability_order
+        }));
     }
 
-    const identifiedResults = []; // Store objects { name, confidence }
-    for (let i = 0; i < slotCoords.length; i++) {
-        const slotData = slotCoords[i];
+    const identifiedResults = [];
+    for (let i = 0; i < slotCoordsArray.length; i++) {
+        const slotData = slotCoordsArray[i];
+        // Ensure slotData has x, y, width, height
+        if (typeof slotData.x !== 'number' || typeof slotData.y !== 'number' ||
+            typeof slotData.width !== 'number' || typeof slotData.height !== 'number') {
+            console.warn(`Skipping slot due to missing coordinate/dimension data:`, slotData);
+            identifiedResults.push({
+                name: null,
+                confidence: 0,
+                hero_order: slotData.hero_order,
+                ability_order: slotData.ability_order
+            });
+            continue;
+        }
         const { x, y, width, height } = slotData;
         let predictedAbilityName = null;
         let predictionConfidence = 0;
@@ -98,45 +113,50 @@ async function identifySlots(slotCoords, screenBuffer, currentClassNames, confid
             let batchTensor = resizedTensor.expandDims(0);
             tensorsToDispose.push(batchTensor);
 
-            let predictionTensor = model.predict(batchTensor); // This is a tensor of probabilities
+            let predictionTensor = model.predict(batchTensor);
             tensorsToDispose.push(predictionTensor);
 
-            const probabilities = predictionTensor.dataSync(); // Get all probabilities
-            const maxProbability = Math.max(...probabilities); // Find the highest probability
-            const predictedIndex = probabilities.indexOf(maxProbability); // Find the index of that probability
+            const probabilities = predictionTensor.dataSync();
+            const maxProbability = Math.max(...probabilities);
+            const predictedIndex = probabilities.indexOf(maxProbability);
 
-            predictionConfidence = maxProbability; // Store the confidence
+            predictionConfidence = maxProbability;
 
-            if (predictionConfidence >= confidenceThreshold) { // Check against threshold
+            if (predictionConfidence >= confidenceThreshold) {
                 if (predictedIndex >= 0 && predictedIndex < currentClassNames.length) {
                     predictedAbilityName = currentClassNames[predictedIndex];
                 } else {
-                    console.warn(`Slot ${i}: Predicted index ${predictedIndex} out of bounds for ${currentClassNames.length} classes, even with confidence ${predictionConfidence.toFixed(2)}.`);
-                    predictedAbilityName = null; // Explicitly null if index is bad
+                    console.warn(`Slot ${i} (hero_order: ${slotData.hero_order}): Predicted index ${predictedIndex} out of bounds for ${currentClassNames.length} classes, confidence ${predictionConfidence.toFixed(2)}.`);
+                    predictedAbilityName = null;
                 }
             } else {
-                // console.log(`Slot ${i}: Prediction confidence ${predictionConfidence.toFixed(2)} below threshold ${confidenceThreshold}. Skipping.`);
-                predictedAbilityName = null; // Explicitly null if below threshold
+                predictedAbilityName = null;
             }
         } catch (err) {
-            console.error(`Error processing slot ${i} with ML model: ${err.message}`);
+            console.error(`Error processing slot ${i} (hero_order: ${slotData.hero_order}) with ML model: ${err.message}`);
             predictedAbilityName = null;
             predictionConfidence = 0;
         } finally {
             tf.dispose(tensorsToDispose);
         }
-        identifiedResults.push({ name: predictedAbilityName, confidence: predictionConfidence });
+        identifiedResults.push({
+            name: predictedAbilityName,
+            confidence: predictionConfidence,
+            hero_order: slotData.hero_order, // Pass hero_order through
+            ability_order: slotData.ability_order // Pass ability_order through (will be undefined for selected_abilities)
+        });
     }
-    return identifiedResults; // Return array of objects
+    return identifiedResults;
 }
 
 /**
  * Takes a screenshot, crops ability slots based on TFJS model predictions.
  * @param {string} coordinatesPath - Path to layout_coordinates.json.
  * @param {string} targetResolution - The resolution key (e.g., "2560x1440").
- * @returns {Promise<{ultimates: (string|null)[], standard: (string|null)[]}>} - Raw predicted ability names.
+ * @param {number} confidenceThreshold - The minimum confidence score for a prediction to be considered valid.
+ * @returns {Promise<{ultimates: Array, standard: Array, heroDefiningAbilities: Array, selectedAbilities: Array}>}
  */
-async function processDraftScreen(coordinatesPath, targetResolution, confidenceThreshold) { // Added confidenceThreshold
+async function processDraftScreen(coordinatesPath, targetResolution, confidenceThreshold) {
     console.log(`Starting screen processing with ML Model for ${targetResolution} (Confidence: ${confidenceThreshold})...`);
 
     if (!initialized || !modelPromise || !classNamesPromise) {
@@ -147,24 +167,46 @@ async function processDraftScreen(coordinatesPath, targetResolution, confidenceT
     const model = await modelPromise;
     const resolvedClassNames = await classNamesPromise;
 
+    const emptyResultsWithData = (coordsArray) => {
+        if (!coordsArray || !Array.isArray(coordsArray)) return [];
+        return coordsArray.map(slotData => ({
+            name: null,
+            confidence: 0,
+            hero_order: slotData.hero_order,
+            ability_order: slotData.ability_order
+        }));
+    };
+
     if (!model || !resolvedClassNames || resolvedClassNames.length === 0) {
         console.error("Model or Class Names not loaded. Aborting scan.");
-        const emptyResultsWithConfidence = (coordsArray) => coordsArray ? coordsArray.map(() => ({ name: null, confidence: 0 })) : [];
-        let ultimate_coords_length = 0;
-        let standard_coords_length = 0;
+        let ultimate_coords = [], standard_coords = [], hero_defining_coords = [], selected_hero_abilities_coords_full = [];
         try {
             const configData = await fs.readFile(coordinatesPath, 'utf-8');
             const layoutConfig = JSON.parse(configData);
             const coords = layoutConfig.resolutions?.[targetResolution];
             if (coords) {
-                ultimate_coords_length = coords.ultimate_slots_coords.length;
-                standard_coords_length = coords.standard_slots_coords.length;
+                ultimate_coords = coords.ultimate_slots_coords || [];
+                standard_coords = coords.standard_slots_coords || [];
+                if (Array.isArray(coords.standard_slots_coords)) {
+                    hero_defining_coords = coords.standard_slots_coords.filter(slot =>
+                        slot.ability_order === 2 && slot.hero_order !== 10 && slot.hero_order !== 11
+                    );
+                }
+                if (coords.selected_abilities_coords && coords.selected_abilities_params) {
+                    selected_hero_abilities_coords_full = coords.selected_abilities_coords.map(sac => ({
+                        ...sac,
+                        width: coords.selected_abilities_params.width,
+                        height: coords.selected_abilities_params.height,
+                    }));
+                }
             }
-        } catch (_) { }
+        } catch (e) { console.error("Error reading layout for empty results:", e); }
 
         return {
-            ultimates: emptyResultsWithConfidence(layoutConfig?.resolutions?.[targetResolution]?.ultimate_slots_coords),
-            standard: emptyResultsWithConfidence(layoutConfig?.resolutions?.[targetResolution]?.standard_slots_coords),
+            ultimates: emptyResultsWithData(ultimate_coords),
+            standard: emptyResultsWithData(standard_coords),
+            heroDefiningAbilities: emptyResultsWithData(hero_defining_coords),
+            selectedAbilities: emptyResultsWithData(selected_hero_abilities_coords_full)
         };
     }
 
@@ -179,28 +221,44 @@ async function processDraftScreen(coordinatesPath, targetResolution, confidenceT
         console.error(`Coordinates not found for resolution: ${targetResolution} in ${coordinatesPath}`);
         throw new Error(`Coordinates not found for resolution: ${targetResolution}`);
     }
-    const { ultimate_slots_coords, standard_slots_coords } = coords;
-    console.log(`Coordinates loaded. Processing ${ultimate_slots_coords.length} ult slots and ${standard_slots_coords.length} std slots.`);
+    const {
+        ultimate_slots_coords = [],
+        standard_slots_coords = [],
+        selected_abilities_coords = [],
+        selected_abilities_params
+    } = coords;
 
+    const hero_defining_slots_coords = standard_slots_coords.filter(slot =>
+        slot.ability_order === 2 && slot.hero_order !== 10 && slot.hero_order !== 11
+    );
+
+    // Prepare selected_abilities_coords with width and height
+    const selected_hero_abilities_coords_full = selected_abilities_params ? selected_abilities_coords.map(sac => ({
+        ...sac, // x, y, hero_order
+        width: selected_abilities_params.width,
+        height: selected_abilities_params.height,
+        // ability_order is not typically present for these, can be omitted or set to null/undefined
+    })) : [];
+
+
+    console.log(`Coordinates loaded. Ult: ${ultimate_slots_coords.length}, Std: ${standard_slots_coords.length}, HeroDef: ${hero_defining_slots_coords.length}, SelectedHeroAbils: ${selected_hero_abilities_coords_full.length}`);
 
     let screenshotBuffer;
     try {
         screenshotBuffer = await screenshot({ format: 'png' });
-        console.log('Screenshot captured.');
     } catch (err) { throw err; }
 
-    console.log('Identifying ultimate slots using ML...');
-    // Pass confidenceThreshold to identifySlots
-    const identifiedUltimatesWithConfidence = await identifySlots(ultimate_slots_coords, screenshotBuffer, resolvedClassNames, confidenceThreshold);
+    const identifiedUltimates = await identifySlots(ultimate_slots_coords, screenshotBuffer, resolvedClassNames, confidenceThreshold);
+    const identifiedStandard = await identifySlots(standard_slots_coords, screenshotBuffer, resolvedClassNames, confidenceThreshold);
+    const identifiedHeroDefiningAbilities = await identifySlots(hero_defining_slots_coords, screenshotBuffer, resolvedClassNames, confidenceThreshold);
+    const identifiedSelectedAbilities = await identifySlots(selected_hero_abilities_coords_full, screenshotBuffer, resolvedClassNames, confidenceThreshold);
 
-    console.log('Identifying standard slots using ML...');
-    // Pass confidenceThreshold to identifySlots
-    const identifiedStandardWithConfidence = await identifySlots(standard_slots_coords, screenshotBuffer, resolvedClassNames, confidenceThreshold);
-
-    console.log('Screen processing function finished. Returning raw predicted names and confidences.');
-    return { // Return structure now includes confidence
-        ultimates: identifiedUltimatesWithConfidence, // Array of {name, confidence}
-        standard: identifiedStandardWithConfidence  // Array of {name, confidence}
+    console.log('Screen processing finished. Returning all identified categories.');
+    return {
+        ultimates: identifiedUltimates,
+        standard: identifiedStandard,
+        heroDefiningAbilities: identifiedHeroDefiningAbilities,
+        selectedAbilities: identifiedSelectedAbilities
     };
 }
 

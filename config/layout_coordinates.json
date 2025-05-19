@@ -1,6 +1,68 @@
 {
   "resolutions": {
     "2560x1440": {
+      "heroes_params": {
+        "width": 427,
+        "height": 195
+      },
+      "heroes_coords": [
+        { "x": 352, "y": 195, "hero_order": 0 },
+        { "x": 352, "y": 411, "hero_order": 1 },
+        { "x": 352, "y": 627, "hero_order": 2 },
+        { "x": 352, "y": 843, "hero_order": 3 },
+        { "x": 352, "y": 1059, "hero_order": 4 },
+        { "x": 1781, "y": 195, "hero_order": 5 },
+        { "x": 1781, "y": 411, "hero_order": 6 },
+        { "x": 1781, "y": 627, "hero_order": 7 },
+        { "x": 1781, "y": 843, "hero_order": 8 },
+        { "x": 1781, "y": 1059, "hero_order": 9 }
+      ],
+      "selected_abilities_params": {
+        "width": 73,
+        "height": 73
+      },
+      "selected_abilities_coords": [
+        { "x": 454, "y": 308, "hero_order": 0 },
+        { "x": 535, "y": 308, "hero_order": 0 },
+        { "x": 616, "y": 308, "hero_order": 0 },
+        { "x": 697, "y": 308, "hero_order": 0 },
+        { "x": 454, "y": 524, "hero_order": 1 },
+        { "x": 535, "y": 524, "hero_order": 1 },
+        { "x": 616, "y": 524, "hero_order": 1 },
+        { "x": 697, "y": 524, "hero_order": 1 },
+        { "x": 454, "y": 740, "hero_order": 2 },
+        { "x": 535, "y": 740, "hero_order": 2 },
+        { "x": 616, "y": 740, "hero_order": 2 },
+        { "x": 697, "y": 740, "hero_order": 2 },
+        { "x": 454, "y": 956, "hero_order": 3 },
+        { "x": 535, "y": 956, "hero_order": 3 },
+        { "x": 616, "y": 956, "hero_order": 3 },
+        { "x": 697, "y": 956, "hero_order": 3 },
+        { "x": 454, "y": 1172, "hero_order": 4 },
+        { "x": 535, "y": 1172, "hero_order": 4 },
+        { "x": 616, "y": 1172, "hero_order": 4 },
+        { "x": 697, "y": 1172, "hero_order": 4 },
+        { "x": 1790, "y": 308, "hero_order": 5 },
+        { "x": 1871, "y": 308, "hero_order": 5 },
+        { "x": 1952, "y": 308, "hero_order": 5 },
+        { "x": 2033, "y": 308, "hero_order": 5 },
+        { "x": 1790, "y": 524, "hero_order": 6 },
+        { "x": 1871, "y": 524, "hero_order": 6 },
+        { "x": 1952, "y": 524, "hero_order": 6 },
+        { "x": 2033, "y": 524, "hero_order": 6 },
+        { "x": 1790, "y": 740, "hero_order": 7 },
+        { "x": 1871, "y": 740, "hero_order": 7 },
+        { "x": 1952, "y": 740, "hero_order": 7 },
+        { "x": 2033, "y": 740, "hero_order": 7 },
+        { "x": 1790, "y": 956, "hero_order": 8 },
+        { "x": 1871, "y": 956, "hero_order": 8 },
+        { "x": 1952, "y": 956, "hero_order": 8 },
+        { "x": 2033, "y": 956, "hero_order": 8 },
+        { "x": 1790, "y": 1172, "hero_order": 9 },
+        { "x": 1871, "y": 1172, "hero_order": 9 },
+        { "x": 1952, "y": 1172, "hero_order": 9 },
+        { "x": 2033, "y": 1172, "hero_order": 9 }
+      ],
       "ultimate_slots_coords": [
         { "x": 925, "y": 221, "width": 70, "height": 78, "hero_order": 0 },
         { "x": 1050, "y": 221, "width": 78, "height": 80, "hero_order": 1 },

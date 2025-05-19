@@ -182,5 +182,45 @@ async function getOPCombinationsInPool(dbPath, draftPoolInternalNames) {
     return opCombinations;
 }
 
+/**
+ * Fetches hero details by an ability name that belongs to that hero.
+ * @param {string} dbPath - Path to the SQLite database file.
+ * @param {string} abilityName - The internal name of the ability.
+ * @returns {Promise<{heroId: number, heroName: string, heroDisplayName: string} | null>}
+ */
+async function getHeroDetailsByAbilityName(dbPath, abilityName) {
+    if (!abilityName) {
+        return null;
+    }
 
-module.exports = { getAbilityDetails, getHighWinrateCombinations, getOPCombinationsInPool };
+    let db;
+    try {
+        db = new Database(dbPath, { readonly: true });
+        const query = `
+            SELECT H.hero_id, H.name AS heroName, H.display_name AS heroDisplayName
+            FROM Abilities A
+            JOIN Heroes H ON A.hero_id = H.hero_id
+            WHERE A.name = ?;
+        `;
+        const stmt = db.prepare(query);
+        const heroDetails = stmt.get(abilityName);
+
+        return heroDetails || null;
+
+    } catch (err) {
+        console.error(`Error fetching hero details by ability name ${abilityName}: ${err.message}`);
+        return null;
+    } finally {
+        if (db) {
+            db.close();
+        }
+    }
+}
+
+
+module.exports = {
+    getAbilityDetails,
+    getHighWinrateCombinations,
+    getOPCombinationsInPool,
+    getHeroDetailsByAbilityName
+};

@@ -270,3 +270,43 @@ body {
 #show-op-combinations-btn:hover {
     background-color: rgba(120, 80, 80, 0.9);
 }
+
+.my-hero-btn,
+.change-my-hero-btn {
+    position: absolute;
+    padding: 4px 8px;
+    font-size: 11px;
+    font-weight: bold;
+    color: white;
+    background-color: rgba(0, 120, 255, 0.75);
+    /* A distinct blue */
+    border: 1px solid rgba(0, 100, 200, 0.9);
+    border-radius: 4px;
+    cursor: pointer;
+    z-index: 9999;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    white-space: nowrap;
+}
+
+.my-hero-btn:hover,
+.change-my-hero-btn:hover {
+    background-color: rgba(0, 120, 255, 0.95);
+}
+
+.change-my-hero-btn {
+    background-color: rgba(255, 140, 0, 0.8);
+    /* Orange for change button */
+    border: 1px solid rgba(220, 120, 0, 0.9);
+}
+
+.change-my-hero-btn:hover {
+    background-color: rgba(255, 140, 0, 1);
+}
+
+.selected-ability-hotspot.my-hero-selected-ability {
+    border: 2px solid #FFD700 !important;
+    /* Gold border for emphasis */
+    box-shadow: 0 0 8px 2px rgba(255, 215, 0, 0.7) !important;
+    /* Gold glow */
+    /* Ensure it overrides other border/shadow styles if needed */
+}
