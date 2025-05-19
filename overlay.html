@@ -15,7 +15,8 @@
     <div id="top-right-ui-container">
         <div id="controls-container">
             <div style="display: flex; gap: 5px;">
-                <button id="scan-now-btn" title="Scan Draft Screen">Scan Now</button>
+                <button id="initial-scan-btn" title="Perform Initial Scan">Initial Scan</button>
+                <button id="rescan-btn" title="Rescan Draft Screen" style="display: none;">Rescan</button>
                 <button id="close-overlay-btn" title="Close Overlay (Esc)">X</button>
             </div>
             <button id="take-snapshot-btn" title="Save current ability icons for feedback" style="display: none;">Take
@@ -36,6 +37,7 @@
     </div>
 
     <p id="snapshot-status"></p>
+    <div id="scan-status-popup" style="display: none;"></div>
     <script src="./overlayRenderer.js"></script>
 </body>
 

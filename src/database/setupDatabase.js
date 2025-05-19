@@ -11,7 +11,8 @@ const setupSql = `
         hero_id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT UNIQUE NOT NULL,      -- Internal name, e.g., "antimage"
         display_name TEXT,              -- Display name, e.g., "Anti-Mage"
-        winrate REAL
+        winrate REAL,
+        windrun_id INTEGER
     );
 
     CREATE TABLE IF NOT EXISTS Abilities (
@@ -65,12 +66,13 @@ function setupDatabase() {
             { table: 'Abilities', column: 'is_ultimate', type: 'BOOL' },
             { table: 'Abilities', column: 'ability_order', type: 'INT' },
             { table: 'Abilities', column: 'display_name', type: 'TEXT' },
-            { table: 'Abilities', column: 'avg_pick_order', type: 'REAL' }, // New
-            { table: 'Abilities', column: 'value_percentage', type: 'REAL' } // New
+            { table: 'Abilities', column: 'avg_pick_order', type: 'REAL' },
+            { table: 'Abilities', column: 'value_percentage', type: 'REAL' }
         ];
 
         const heroColumnsToAdd = [
-            { table: 'Heroes', column: 'display_name', type: 'TEXT' }
+            { table: 'Heroes', column: 'display_name', type: 'TEXT' },
+            { table: 'Heroes', column: 'windrun_id', type: 'INTEGER' }
         ];
 
         const synergyColumnsToAdd = [
@@ -88,32 +90,6 @@ function setupDatabase() {
                 } else {
                     console.error(`Error adding column ${column} to ${table}:`, err.message);
                 }
-            }
-        }
-
-        // Explicitly try to drop the old 'pick_order' column if it exists
-        try {
-            const oldPickOrderColumnExists = db.pragma(`table_info(Abilities)`).some(col => col.name === 'pick_order');
-            if (oldPickOrderColumnExists) {
-                const sqliteVersion = db.pragma('compile_options').find(opt => opt.startsWith('VERSION='));
-                if (sqliteVersion) {
-                    const versionNumber = sqliteVersion.split('=')[1];
-                    const [major, minor] = versionNumber.split('.').map(Number);
-                    if (major > 3 || (major === 3 && minor >= 35)) {
-                        db.exec('ALTER TABLE Abilities DROP COLUMN pick_order');
-                        console.log("Dropped old 'pick_order' column from Abilities table.");
-                    } else {
-                        console.warn("SQLite version < 3.35.0. Cannot automatically drop old 'pick_order' column. Manual database adjustment might be needed if this column persists and causes issues.");
-                    }
-                } else {
-                    console.warn("Could not determine SQLite version. Old 'pick_order' column might not be dropped automatically.");
-                }
-            }
-        } catch (err) {
-            if (err.message.includes("no such column") || err.message.includes("Cannot drop column")) {
-
-            } else {
-                console.error("Error trying to drop old 'pick_order' column:", err.message);
             }
         }
 

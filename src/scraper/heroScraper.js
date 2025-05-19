@@ -39,9 +39,10 @@ async function scrapeAndStoreHeroes(dbPath, url, statusCallback) {
             const row = $(element);
             const heroImg = row.find('td.hero-picture img'); // First td for image
 
-            // --- Extract Display Name from the second td's <a> tag ---
+            // --- Extract Display Name and Windrun ID from the second td's <a> tag ---
             const displayNameElement = row.find('td').eq(1).find('a');
             const displayName = displayNameElement.text().trim() || null;
+            const windrunId = displayNameElement.attr('href').split('/').pop() || null;
             // --- End Extract Display Name ---
 
             const winrateCell = row.find('td.color-range').first(); // First td with class color-range for winrate
@@ -68,7 +69,8 @@ async function scrapeAndStoreHeroes(dbPath, url, statusCallback) {
                 heroes.push({
                     name: internalName,
                     displayName: displayName,
-                    winrate: winrateValue
+                    winrate: winrateValue,
+                    windrunId: windrunId
                 });
             } else {
                 console.warn(`Skipping hero row ${index + 1}: Could not extract all required data (InternalName: ${internalName}, DisplayName: ${displayName}, Winrate Text: ${winrateText})`);
@@ -86,11 +88,12 @@ async function scrapeAndStoreHeroes(dbPath, url, statusCallback) {
         db.pragma('journal_mode = WAL');
 
         const insertStmt = db.prepare(`
-            INSERT INTO Heroes (name, display_name, winrate)
-            VALUES (@name, @displayName, @winrate)
+            INSERT INTO Heroes (name, display_name, winrate, windrun_id)
+            VALUES (@name, @displayName, @winrate, @windrunId)
             ON CONFLICT(name) DO UPDATE SET
                 display_name = excluded.display_name,
-                winrate = excluded.winrate
+                winrate = excluded.winrate,
+                windrun_id = excluded.windrun_id
         `);
 
         const insertTransaction = db.transaction((heroData) => {

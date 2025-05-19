@@ -13,6 +13,7 @@ const { promisify } = require('util');
 const setupDatabase = require('./src/database/setupDatabase');
 const { getAbilityDetails, getHighWinrateCombinations, getOPCombinationsInPool, getHeroDetailsByAbilityName } = require('./src/database/queries');
 const { scrapeAndStoreHeroes } = require('./src/scraper/heroScraper');
+const { scrapeAndStoreHeroAbilities } = require('./src/scraper/heroAbilityScraper');
 const { scrapeAndStoreAbilities } = require('./src/scraper/abilityScraper');
 const { scrapeAndStoreAbilityPairs } = require('./src/scraper/abilityPairScraper');
 const { processDraftScreen, initializeImageProcessor } = require('./src/imageProcessor');
@@ -26,6 +27,8 @@ const abilityPairsUrl = 'https://windrun.io/ability-pairs';
 
 const MIN_PREDICTION_CONFIDENCE = 0.70;
 const isPackaged = app.isPackaged;
+
+let mySelectedHeroIdForScan = null;
 
 const MIN_PICK_ORDER_FOR_NORMALIZATION = 1.0;
 const MAX_PICK_ORDER_FOR_NORMALIZATION = 40.0;
@@ -113,14 +116,24 @@ async function performFullScrape(statusCallbackWebContents) {
   try {
     sendStatus('Starting all Windrun.io data updates...');
     await delay(100);
-    sendStatus('Phase 1/3: Updating hero data...');
+
+    sendStatus('Phase 1/4: Updating hero data...');
     await scrapeAndStoreHeroes(activeDbPath, heroesUrl, sendStatus);
     await delay(100);
-    sendStatus('Phase 2/3: Updating ability data...');
+
+    sendStatus('Phase 2/4: Updating general ability data...');
     await scrapeAndStoreAbilities(activeDbPath, abilitiesUrl, abilitiesHighSkillUrl, sendStatus);
     await delay(100);
-    sendStatus('Phase 3/3: Updating ability pair data...');
+
+    sendStatus('Phase 3/4: Updating ability pair data...');
     await scrapeAndStoreAbilityPairs(activeDbPath, abilityPairsUrl, sendStatus);
+    await delay(100);
+
+    sendStatus('Phase 4/4: Updating all hero-specific ability data...');
+
+    await scrapeAndStoreHeroAbilities(activeDbPath, sendStatus, false);
+    await delay(100);
+
     const newDate = await updateLastSuccessfulScrapeDate(activeDbPath);
     sendLastUpdatedDateToRenderer(statusCallbackWebContents, newDate);
     sendStatus('All Windrun.io data updates finished successfully!');
@@ -133,6 +146,23 @@ async function performFullScrape(statusCallbackWebContents) {
     return false;
   }
 }
+
+ipcMain.on('scrape-missing-hero-abilities', async (event) => {
+  const targetWebContents = (mainWindow && !mainWindow.isDestroyed()) ? mainWindow.webContents : event.sender;
+  const sendStatusUpdate = (msg) => {
+    if (targetWebContents && !targetWebContents.isDestroyed()) {
+      targetWebContents.send('scrape-status', msg);
+    }
+  };
+  try {
+    sendStatusUpdate('Starting update for missing hero-specific abilities...');
+    await scrapeAndStoreHeroAbilities(activeDbPath, sendStatusUpdate, true);
+    sendStatusUpdate('Update for missing hero-specific abilities complete!');
+  } catch (error) {
+    console.error('Scraping missing hero abilities failed:', error);
+    sendStatusUpdate(`Error updating missing hero abilities: ${error.message}`);
+  }
+});
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -255,7 +285,7 @@ ipcMain.on('export-failed-samples', async (event) => {
   }
 });
 
-ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution) => {
+ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, selectedHeroOrderFromOverlay) => {
   if (isScanInProgress) {
     if (overlayWindow && !overlayWindow.isDestroyed()) {
       overlayWindow.webContents.send('overlay-data', { info: 'Scan in progress.', targetResolution: lastScanTargetResolution, initialSetup: false, opCombinations: [], identifiedHeroes: [], selectedAbilities: [], scaleFactor: lastScaleFactor });
@@ -272,11 +302,34 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution) => {
   isScanInProgress = true;
   lastScanRawResults = null;
   lastScanTargetResolution = selectedResolution;
+  mySelectedHeroIdForScan = null;
   const startTime = performance.now();
 
   try {
     const rawResults = await processDraftScreen(global.coordinatesPath, selectedResolution, MIN_PREDICTION_CONFIDENCE);
     lastScanRawResults = rawResults;
+
+    if (typeof selectedHeroOrderFromOverlay === 'number' && identifiedHeroesCache && identifiedHeroesCache.length > 0) {
+      const myHeroData = identifiedHeroesCache.find(h => h.heroOrder === selectedHeroOrderFromOverlay);
+      if (myHeroData) {
+        let db;
+        try {
+          db = new Database(activeDbPath, { readonly: true });
+          const heroRow = db.prepare('SELECT hero_id FROM Heroes WHERE display_name = ? OR name = ?').get(myHeroData.heroName, myHeroData.heroName);
+          if (heroRow) {
+            mySelectedHeroIdForScan = heroRow.hero_id;
+            console.log(`[Main] "My Hero" selected: ${myHeroData.heroName} (Order: ${selectedHeroOrderFromOverlay}, DB Hero ID: ${mySelectedHeroIdForScan})`);
+          } else {
+            console.warn(`[Main] Could not find DB hero_id for selected hero: ${myHeroData.heroName}`);
+          }
+        } catch (e) {
+          console.error('[Main] Error fetching selected hero_id:', e);
+        } finally {
+          if (db && db.open) db.close();
+        }
+      }
+    }
+
 
     const draftPoolAbilityNames = [
       ...new Set([
@@ -284,29 +337,78 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution) => {
         ...rawResults.standard.map(r => r.name).filter(name => name !== null)
       ])
     ];
-    const selectedAbilityNames = rawResults.selectedAbilities.map(r => r.name).filter(name => name !== null);
-    const allNamesToFetchDetailsFor = [...new Set([...draftPoolAbilityNames, ...selectedAbilityNames])];
+    const selectedAbilityNamesByHeroes = rawResults.selectedAbilities.map(r => r.name).filter(name => name !== null);
+    const allNamesToFetchDetailsFor = [...new Set([...draftPoolAbilityNames, ...selectedAbilityNamesByHeroes])];
 
     let abilityDetailsMap = new Map();
-    if (allNamesToFetchDetailsFor.length > 0) {
+    let heroSpecificTableUsed = false;
+    if (mySelectedHeroIdForScan) {
+      let db;
+      try {
+        db = new Database(activeDbPath, { readonly: true });
+        const heroAbilityTableName = `HeroAbilities_${mySelectedHeroIdForScan}`;
+        const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name = ?").get(heroAbilityTableName);
+
+        if (tableCheck) {
+          const rowCount = db.prepare(`SELECT COUNT(*) as count FROM ${heroAbilityTableName}`).get();
+          if (rowCount && rowCount.count > 0) {
+            if (allNamesToFetchDetailsFor.length > 0) {
+              const placeholders = allNamesToFetchDetailsFor.map(() => '?').join(', ');
+              const sql = `
+                            SELECT name, display_name, winrate, avg_pick_order, value_percentage 
+                            FROM ${heroAbilityTableName}
+                            WHERE name IN (${placeholders})
+                        `;
+              const stmt = db.prepare(sql);
+              const rows = stmt.all(allNamesToFetchDetailsFor);
+              rows.forEach(row => {
+                abilityDetailsMap.set(row.name, {
+                  internalName: row.name,
+                  displayName: row.display_name || row.name,
+                  winrate: (typeof row.winrate === 'number') ? row.winrate : null,
+                  highSkillWinrate: null,
+                  avgPickOrder: (typeof row.avg_pick_order === 'number') ? row.avg_pick_order : null,
+                  valuePercentage: (typeof row.value_percentage === 'number') ? row.value_percentage : null
+                });
+              });
+              heroSpecificTableUsed = true;
+              console.log(`[Main] Using hero-specific ability data from ${heroAbilityTableName} for scoring.`);
+            }
+          } else {
+            console.warn(`[Main] Hero-specific table ${heroAbilityTableName} is empty. Falling back to general Abilities table.`);
+          }
+        } else {
+          console.warn(`[Main] Hero-specific table ${heroAbilityTableName} not found. Falling back to general Abilities table.`);
+        }
+      } catch (e) {
+        console.error(`[Main] Error accessing hero-specific table: ${e.message}. Falling back.`);
+      } finally {
+        if (db && db.open) db.close();
+      }
+    }
+
+    if (!heroSpecificTableUsed && allNamesToFetchDetailsFor.length > 0) {
+      console.log('[Main] Using general Abilities table for scoring.');
       abilityDetailsMap = getAbilityDetails(activeDbPath, allNamesToFetchDetailsFor);
     }
 
     const identifiedHeroes = [];
     const heroDefiningAbilities = rawResults.heroDefiningAbilities.filter(r => r.name !== null);
     for (const heroAbility of heroDefiningAbilities) {
-      const heroDetails = await getHeroDetailsByAbilityName(activeDbPath, heroAbility.name);
+      const heroDetails = await getHeroDetailsByAbilityName(activeDbPath, heroAbility.name); //
       if (heroDetails) {
         identifiedHeroes.push({
           heroOrder: heroAbility.hero_order,
           heroName: heroDetails.heroDisplayName || heroDetails.heroName,
+          dbHeroId: heroDetails.hero_id, // Make sure this line is present to store the hero_id
           originalAbilityName: heroAbility.name,
           confidence: heroAbility.confidence
         });
       }
     }
+    identifiedHeroesCache = identifiedHeroes;
 
-    // Prepare abilities from the draft pool for scoring and synergy calculation
+
     const draftPoolAbilitiesForScoring = [];
     for (const internalName of draftPoolAbilityNames) {
       const details = abilityDetailsMap.get(internalName);
@@ -318,53 +420,40 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution) => {
           consolidatedScore: 0
         });
       } else {
-        console.warn(`[Main] Details not found for draft pool ability: ${internalName}. It won't be scored for top picks.`);
       }
     }
 
     // Calculate consolidated score for each ability in the draft pool
     draftPoolAbilitiesForScoring.forEach(ability => {
-      let vRaw = ability.valuePercentage; // -1.0 to 1.0 from DB
-      let wRaw = ability.winrate;         // 0.0 to 1.0 from DB
-      let pRaw = ability.avgPickOrder;    // ~1 to ~40 from DB
+      let vRaw = ability.valuePercentage;
+      let wRaw = ability.winrate;
+      let pRaw = ability.avgPickOrder;
 
-      // Normalize Value: -1 to 1  =>  0 to 1
-      const vScaled = (vRaw !== null && typeof vRaw === 'number') ? (vRaw + 1.0) / 2.0 : 0.5; // Neutral: 0.5
-
-      // Normalize Winrate: 0 to 1 (already in this range if not null)
-      const wNormalized = (wRaw !== null && typeof wRaw === 'number') ? wRaw : 0.5; // Neutral: 0.5 (50% WR)
-
-      // Normalize Pick Order: ~1-40 (lower is better) => 0 to 1 (higher is better)
-      let pNormalized = 0.5; // Neutral if null or out of expected range
+      const vScaled = (vRaw !== null && typeof vRaw === 'number') ? (vRaw + 1.0) / 2.0 : 0.5;
+      const wNormalized = (wRaw !== null && typeof wRaw === 'number') ? wRaw : 0.5;
+      let pNormalized = 0.5;
       if (pRaw !== null && typeof pRaw === 'number') {
         const clampedPRaw = Math.max(MIN_PICK_ORDER_FOR_NORMALIZATION, Math.min(MAX_PICK_ORDER_FOR_NORMALIZATION, pRaw));
         if ((MAX_PICK_ORDER_FOR_NORMALIZATION - MIN_PICK_ORDER_FOR_NORMALIZATION) > 0) {
           pNormalized = (MAX_PICK_ORDER_FOR_NORMALIZATION - clampedPRaw) / (MAX_PICK_ORDER_FOR_NORMALIZATION - MIN_PICK_ORDER_FOR_NORMALIZATION);
-        } // Else, if min equals max, pNormalized remains 0.5
+        }
       }
-
       ability.consolidatedScore =
         (WEIGHT_VALUE * vScaled) +
         (WEIGHT_WINRATE * wNormalized) +
         (WEIGHT_PICK_ORDER * pNormalized);
     });
 
-    // Sort abilities by the new consolidated score
     draftPoolAbilitiesForScoring.sort((a, b) => b.consolidatedScore - a.consolidatedScore);
-
-    // Determine top tier abilities based on the new score
     const topTierAbilityNames = new Set(
       draftPoolAbilitiesForScoring.slice(0, NUM_TOP_TIER_ABILITIES).map(ability => ability.internalName)
     );
-
-    // Store the scored draft pool abilities in a map for easy lookup
     const scoredDraftAbilitiesMap = new Map();
     draftPoolAbilitiesForScoring.forEach(ab => scoredDraftAbilitiesMap.set(ab.internalName, ab));
 
-
     let opCombinationsInPool = [];
     if (draftPoolAbilityNames.length >= 2) {
-      opCombinationsInPool = await getOPCombinationsInPool(activeDbPath, draftPoolAbilityNames);
+      opCombinationsInPool = await getOPCombinationsInPool(activeDbPath, draftPoolAbilityNames); //
     }
 
     const formatResultsForUi = (predictedResultsArray, isSelectedAbilityList = false) => {
@@ -423,9 +512,10 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution) => {
         targetResolution: selectedResolution,
         durationMs: durationMs,
         opCombinations: opCombinationsInPool,
-        identifiedHeroes: identifiedHeroes,
+        identifiedHeroes: identifiedHeroesCache,
         initialSetup: false,
-        scaleFactor: lastScaleFactor
+        scaleFactor: lastScaleFactor,
+        myHeroDbIdUsed: mySelectedHeroIdForScan
       });
     }
 
@@ -433,7 +523,7 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution) => {
     console.error(`[Main] Error during scan for ${selectedResolution}:`, error);
     lastScanRawResults = null;
     if (overlayWindow && !overlayWindow.isDestroyed()) {
-      overlayWindow.webContents.send('overlay-data', { error: error.message || 'Scan error.', opCombinations: [], identifiedHeroes: [], selectedAbilities: [], scaleFactor: lastScaleFactor });
+      overlayWindow.webContents.send('overlay-data', { error: error.message || 'Scan error.', opCombinations: [], identifiedHeroes: identifiedHeroesCache, selectedAbilities: [], scaleFactor: lastScaleFactor });
     }
   } finally {
     isScanInProgress = false;
@@ -577,5 +667,6 @@ function createOverlayWindow(resolutionKey, allCoordinatesConfig, scaleFactorToU
       if (mainWindow.webContents && !mainWindow.webContents.isDestroyed()) mainWindow.webContents.send('overlay-closed-reset-ui');
     }
   });
+  //overlayWindow.webContents.openDevTools({ mode: 'detach' }); // Uncomment for debugging
   return overlayWindow;
 }

@@ -2,6 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
   scrapeAllWindrunData: () => ipcRenderer.send('scrape-all-windrun-data'),
+  scrapeMissingHeroAbilities: () => ipcRenderer.send('scrape-missing-hero-abilities'),
   getAvailableResolutions: () => ipcRenderer.send('get-available-resolutions'),
   onUpdateStatus: (callback) => ipcRenderer.on('scrape-status', (_event, message) => callback(message)),
   onScanResults: (callback) => ipcRenderer.on('scan-results', (_event, results) => callback(results)),
@@ -12,7 +13,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   closeOverlay: () => ipcRenderer.send('close-overlay'),
   setOverlayMouseEvents: (ignore, forward = true) => ipcRenderer.send('set-overlay-mouse-ignore', ignore, { forward }),
   activateOverlay: (resolution) => ipcRenderer.send('activate-overlay', resolution),
-  executeScanFromOverlay: (resolution) => ipcRenderer.send('execute-scan-from-overlay', resolution),
+  executeScanFromOverlay: (resolution, selectedHeroOrder) => ipcRenderer.send('execute-scan-from-overlay', resolution, selectedHeroOrder),
   onOverlayClosedResetUI: (callback) => ipcRenderer.on('overlay-closed-reset-ui', () => callback()),
   takeSnapshot: () => ipcRenderer.send('take-snapshot'),
   onSnapshotTaken: (callback) => ipcRenderer.on('snapshot-taken-status', (_event, status) => callback(status)),

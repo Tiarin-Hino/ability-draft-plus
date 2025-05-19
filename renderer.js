@@ -1,5 +1,6 @@
 // Get references to elements
 const updateAllDataButton = document.getElementById('update-all-data-btn');
+const updateMissingHeroAbilitiesButton = document.getElementById('update-missing-hero-abilities-btn');
 const activateOverlayButton = document.getElementById('activate-overlay-btn');
 const resolutionSelect = document.getElementById('resolution-select');
 const statusMessage = document.getElementById('status-message');
@@ -10,7 +11,7 @@ const exportFailedSamplesButton = document.getElementById('export-failed-samples
 let selectedResolution = '';
 
 function setButtonsState(disabled, initiatingButton = null) {
-    const buttonsToDisable = [updateAllDataButton, activateOverlayButton, exportFailedSamplesButton];
+    const buttonsToDisable = [updateAllDataButton, updateMissingHeroAbilitiesButton, activateOverlayButton, exportFailedSamplesButton];
     buttonsToDisable.forEach(btn => {
         if (btn) btn.disabled = disabled;
     });
@@ -18,14 +19,17 @@ function setButtonsState(disabled, initiatingButton = null) {
 
     if (disabled) {
         if (initiatingButton === updateAllDataButton) {
-            updateAllDataButton.textContent = 'Updating Data...';
+            updateAllDataButton.textContent = 'Updating All Data...';
+        } else if (initiatingButton === updateMissingHeroAbilitiesButton) {
+            updateMissingHeroAbilitiesButton.textContent = 'Updating Missing...';
         } else if (initiatingButton === activateOverlayButton) {
             activateOverlayButton.textContent = 'Activating...';
         } else if (initiatingButton === exportFailedSamplesButton) {
             exportFailedSamplesButton.textContent = 'Exporting...';
         }
     } else {
-        if (updateAllDataButton) updateAllDataButton.textContent = 'Update Windrun Data';
+        if (updateAllDataButton) updateAllDataButton.textContent = 'Update Windrun Data (Full)';
+        if (updateMissingHeroAbilitiesButton) updateMissingHeroAbilitiesButton.textContent = 'Update Missing Hero Abilities';
         if (activateOverlayButton) activateOverlayButton.textContent = 'Activate Overlay';
         if (exportFailedSamplesButton) exportFailedSamplesButton.textContent = 'Export Failed Samples';
     }
@@ -61,6 +65,15 @@ if (window.electronAPI) {
             if (exportFailedSamplesButton) exportFailedSamplesButton.disabled = true;
         }
     });
+
+    if (updateMissingHeroAbilitiesButton) {
+        updateMissingHeroAbilitiesButton.addEventListener('click', () => {
+            console.log('Update Missing Hero Abilities button clicked.');
+            statusMessage.textContent = 'Requesting update for missing hero abilities...';
+            setButtonsState(true, updateMissingHeroAbilitiesButton);
+            window.electronAPI.scrapeMissingHeroAbilities();
+        });
+    }
 
     if (resolutionSelect) {
         resolutionSelect.addEventListener('change', (event) => {
@@ -114,7 +127,8 @@ if (window.electronAPI) {
             message.toLowerCase().includes('finished successfully!') ||
             message.toLowerCase().includes('operation halted') ||
             message.toLowerCase().includes('export finished') ||
-            message.toLowerCase().includes('export error')
+            message.toLowerCase().includes('export error') ||
+            message.toLowerCase().includes('nothing to do')
         ) {
             setButtonsState(false);
         }
@@ -147,7 +161,7 @@ if (window.electronAPI) {
             setButtonsState(isDisabled, isDisabled ? updateAllDataButton : null);
             if (isDisabled) {
                 statusMessage.textContent = "Performing initial data synchronization with Windrun.io...";
-                if (updateAllDataButton) updateAllDataButton.textContent = 'Syncing Data...'; // Specific text for auto-sync
+                if (updateAllDataButton) updateAllDataButton.textContent = 'Syncing Data...';
             }
         });
     }
