@@ -90,24 +90,31 @@ The overlay appears once activated and provides the in-game assistance. Initiall
 
 ## Screenshots:
 **Control Panel**
+
 ![Control Panel](/images/Control_Panel.png "Control Panel")
 
 **Idle Mode**
+
 ![Idle Mode](/images/Idle_Mode.png "Idle Mode")
 
 **Initial Scan**
+
 ![Initial Scan](/images/Initial_Scan.png "Initial Scan")
 
 **Ability Winrates**
+
 ![Ability Winrates](/images/Ability_Winrates.png "Ability Winrates")
 
 **Winter Wyvern Suggestions**
+
 ![Winter Wyvern Suggestions](/images/Winter_Wyvern_Suggestions.png "Winter Wyvern Suggestions")
 
 **Monkey King Suggestions**
+
 ![Monkey King Suggestions](/images/Monkey_King_Suggestions.png "Monkey King Suggestions")
 
 **Filter Picked Abilities**
+
 ![Filter Picked Abilities](/images/Filter_Picked_Abilities.png "Filter Picked Abilities")
 
 ---
