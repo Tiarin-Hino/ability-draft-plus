@@ -165,6 +165,8 @@ async function scrapeAndStoreHeroAbilities(dbPath, statusCallback, scrapeOnlyMis
                 const imgElement = row.find('td.abil-picture img');
                 const abilityName = extractAbilityNameFromImg(imgElement);
                 const displayNameElement = row.find('td').eq(1).find('a').first();
+                const pickPercentageCell = row.find('td.color-range').eq(0);
+                const pickPercentage = parsePercentageValue(pickPercentageCell.text());
                 let abilityDisplayName = displayNameElement.text().trim() || null;
                 if (!abilityDisplayName) {
                     abilityDisplayName = row.find('td').eq(1).text().trim() || null;
@@ -176,7 +178,7 @@ async function scrapeAndStoreHeroAbilities(dbPath, statusCallback, scrapeOnlyMis
                 const valueCell = row.find('td.color-range').eq(5);
                 const valuePercentage = parsePercentageValue(valueCell.text());
 
-                if (abilityName) {
+                if (abilityName && pickPercentage >= 0.1) {
                     abilitiesForHero.push({
                         name: abilityName,
                         display_name: abilityDisplayName || abilityName,
