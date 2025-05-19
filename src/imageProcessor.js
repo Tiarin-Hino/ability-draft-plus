@@ -63,26 +63,27 @@ function initializeImageProcessor(modelPath, classNamesPath) {
     initialized = true;
 }
 
-async function identifySlots(slotCoords, screenBuffer, currentClassNames) {
+async function identifySlots(slotCoords, screenBuffer, currentClassNames, confidenceThreshold) { // Added confidenceThreshold
     if (!initialized || !modelPromise || !classNamesPromise) {
         throw new Error("Image processor not initialized. Call initializeImageProcessor first.");
     }
-    const model = await modelPromise; // modelPromise is already defined at the module level
+    const model = await modelPromise;
 
     if (!model) {
         console.error("Model not available for predictions.");
-        return slotCoords.map(() => null);
+        return slotCoords.map(() => ({ name: null, confidence: 0 })); // Return object
     }
     if (!currentClassNames || currentClassNames.length === 0) {
         console.error("Class names argument is empty or not provided to identifySlots.");
-        return slotCoords.map(() => null);
+        return slotCoords.map(() => ({ name: null, confidence: 0 })); // Return object
     }
 
-    const identified = [];
+    const identifiedResults = []; // Store objects { name, confidence }
     for (let i = 0; i < slotCoords.length; i++) {
         const slotData = slotCoords[i];
         const { x, y, width, height } = slotData;
         let predictedAbilityName = null;
+        let predictionConfidence = 0;
         const tensorsToDispose = [];
 
         try {
@@ -97,24 +98,36 @@ async function identifySlots(slotCoords, screenBuffer, currentClassNames) {
             let batchTensor = resizedTensor.expandDims(0);
             tensorsToDispose.push(batchTensor);
 
-            let prediction = model.predict(batchTensor);
-            tensorsToDispose.push(prediction);
+            let predictionTensor = model.predict(batchTensor); // This is a tensor of probabilities
+            tensorsToDispose.push(predictionTensor);
 
-            const predictedIndex = prediction.argMax(1).dataSync()[0];
+            const probabilities = predictionTensor.dataSync(); // Get all probabilities
+            const maxProbability = Math.max(...probabilities); // Find the highest probability
+            const predictedIndex = probabilities.indexOf(maxProbability); // Find the index of that probability
 
-            if (predictedIndex >= 0 && predictedIndex < currentClassNames.length) {
-                predictedAbilityName = currentClassNames[predictedIndex];
+            predictionConfidence = maxProbability; // Store the confidence
+
+            if (predictionConfidence >= confidenceThreshold) { // Check against threshold
+                if (predictedIndex >= 0 && predictedIndex < currentClassNames.length) {
+                    predictedAbilityName = currentClassNames[predictedIndex];
+                } else {
+                    console.warn(`Slot ${i}: Predicted index ${predictedIndex} out of bounds for ${currentClassNames.length} classes, even with confidence ${predictionConfidence.toFixed(2)}.`);
+                    predictedAbilityName = null; // Explicitly null if index is bad
+                }
             } else {
-                console.warn(`Slot ${i}: Predicted index ${predictedIndex} out of bounds for ${currentClassNames.length} classes.`);
+                // console.log(`Slot ${i}: Prediction confidence ${predictionConfidence.toFixed(2)} below threshold ${confidenceThreshold}. Skipping.`);
+                predictedAbilityName = null; // Explicitly null if below threshold
             }
         } catch (err) {
             console.error(`Error processing slot ${i} with ML model: ${err.message}`);
+            predictedAbilityName = null;
+            predictionConfidence = 0;
         } finally {
             tf.dispose(tensorsToDispose);
         }
-        identified.push(predictedAbilityName);
+        identifiedResults.push({ name: predictedAbilityName, confidence: predictionConfidence });
     }
-    return identified;
+    return identifiedResults; // Return array of objects
 }
 
 /**
@@ -123,21 +136,20 @@ async function identifySlots(slotCoords, screenBuffer, currentClassNames) {
  * @param {string} targetResolution - The resolution key (e.g., "2560x1440").
  * @returns {Promise<{ultimates: (string|null)[], standard: (string|null)[]}>} - Raw predicted ability names.
  */
-async function processDraftScreen(coordinatesPath, targetResolution) { // coordinatesPath is already a parameter
-    console.log(`Starting screen processing with ML Model for ${targetResolution}...`);
+async function processDraftScreen(coordinatesPath, targetResolution, confidenceThreshold) { // Added confidenceThreshold
+    console.log(`Starting screen processing with ML Model for ${targetResolution} (Confidence: ${confidenceThreshold})...`);
 
-    if (!initialized || !modelPromise || !classNamesPromise) { // Check initialization
+    if (!initialized || !modelPromise || !classNamesPromise) {
         console.error("Image processor not initialized. Call initializeImageProcessor first.");
         throw new Error("Image processor not initialized.");
     }
 
-    // Await promises here to ensure they are resolved before proceeding
     const model = await modelPromise;
     const resolvedClassNames = await classNamesPromise;
 
     if (!model || !resolvedClassNames || resolvedClassNames.length === 0) {
         console.error("Model or Class Names not loaded. Aborting scan.");
-        const emptyResults = (coordsArray) => coordsArray ? coordsArray.map(() => null) : [];
+        const emptyResultsWithConfidence = (coordsArray) => coordsArray ? coordsArray.map(() => ({ name: null, confidence: 0 })) : [];
         let ultimate_coords_length = 0;
         let standard_coords_length = 0;
         try {
@@ -151,14 +163,14 @@ async function processDraftScreen(coordinatesPath, targetResolution) { // coordi
         } catch (_) { }
 
         return {
-            ultimates: Array(ultimate_coords_length).fill(null),
-            standard: Array(standard_coords_length).fill(null),
+            ultimates: emptyResultsWithConfidence(layoutConfig?.resolutions?.[targetResolution]?.ultimate_slots_coords),
+            standard: emptyResultsWithConfidence(layoutConfig?.resolutions?.[targetResolution]?.standard_slots_coords),
         };
     }
 
     let layoutConfig;
     try {
-        const configData = await fs.readFile(coordinatesPath, 'utf-8'); // Uses passed coordinatesPath
+        const configData = await fs.readFile(coordinatesPath, 'utf-8');
         layoutConfig = JSON.parse(configData);
     } catch (err) { throw err; }
 
@@ -170,6 +182,7 @@ async function processDraftScreen(coordinatesPath, targetResolution) { // coordi
     const { ultimate_slots_coords, standard_slots_coords } = coords;
     console.log(`Coordinates loaded. Processing ${ultimate_slots_coords.length} ult slots and ${standard_slots_coords.length} std slots.`);
 
+
     let screenshotBuffer;
     try {
         screenshotBuffer = await screenshot({ format: 'png' });
@@ -177,15 +190,17 @@ async function processDraftScreen(coordinatesPath, targetResolution) { // coordi
     } catch (err) { throw err; }
 
     console.log('Identifying ultimate slots using ML...');
-    const identifiedUltimates = await identifySlots(ultimate_slots_coords, screenshotBuffer, resolvedClassNames);
+    // Pass confidenceThreshold to identifySlots
+    const identifiedUltimatesWithConfidence = await identifySlots(ultimate_slots_coords, screenshotBuffer, resolvedClassNames, confidenceThreshold);
 
     console.log('Identifying standard slots using ML...');
-    const identifiedStandard = await identifySlots(standard_slots_coords, screenshotBuffer, resolvedClassNames);
+    // Pass confidenceThreshold to identifySlots
+    const identifiedStandardWithConfidence = await identifySlots(standard_slots_coords, screenshotBuffer, resolvedClassNames, confidenceThreshold);
 
-    console.log('Screen processing function finished. Returning raw predicted names.');
-    return {
-        ultimates: identifiedUltimates,
-        standard: identifiedStandard
+    console.log('Screen processing function finished. Returning raw predicted names and confidences.');
+    return { // Return structure now includes confidence
+        ultimates: identifiedUltimatesWithConfidence, // Array of {name, confidence}
+        standard: identifiedStandardWithConfidence  // Array of {name, confidence}
     };
 }
 

@@ -319,49 +319,43 @@ if (controlsContainer) {
     });
 }
 
-function createHotspotsForType(abilityArray, coordArray, type) {
-    if (abilityArray && Array.isArray(abilityArray) && coordArray && Array.isArray(coordArray)) {
-        // console.log(`Creating hotspots for ${type}, count: ${abilityArray.length}`);
-        abilityArray.forEach((abilityInfo, index) => {
-            if (abilityInfo && abilityInfo.displayName && abilityInfo.displayName !== 'Unknown Ability' && coordArray[index]) {
+function createHotspotsForType(abilityResultArray, coordArray, type) { // abilityResultArray is now array of {name, confidence, ...} from main.js formatResultsForOverlay
+    if (abilityResultArray && Array.isArray(abilityResultArray) && coordArray && Array.isArray(coordArray)) {
+        abilityResultArray.forEach((abilityInfo, index) => { // abilityInfo is { internalName, displayName, ..., confidence }
+            // Only create a hotspot if the ability name is not null (i.e., it passed the confidence threshold)
+            // and is not 'Unknown Ability' explicitly set for low confidence ones
+            if (abilityInfo && abilityInfo.internalName && abilityInfo.displayName !== 'Unknown Ability' && coordArray[index]) {
                 createHotspot(coordArray[index], abilityInfo, index, type);
-            } else if (abilityInfo && abilityInfo.internalName && coordArray[index]) { // Fallback if displayName is missing
-                createHotspot(coordArray[index], { ...abilityInfo, displayName: abilityInfo.internalName }, index, type);
+            } else {
+                // console.log(`Skipping hotspot creation for ${type} index ${index} due to low confidence or unknown ability.`);
             }
         });
     } else {
-        console.warn(`Cannot create hotspots for ${type}: invalid data. Abilities: ${!!abilityArray}, Coords: ${!!coordArray}`);
+        console.warn(`Cannot create hotspots for ${type}: invalid data. Abilities: ${!!abilityResultArray}, Coords: ${!!coordArray}`);
     }
 }
 
-function createHotspot(coord, abilityData, index, type) {
+function createHotspot(coord, abilityData, index, type) { // abilityData already contains confidence
     const hotspot = document.createElement('div');
     hotspot.className = 'ability-hotspot';
     hotspot.id = `hotspot-${type}-${index}`;
 
-    // Adjust coordinates by scaleFactor for display
-    // The coordinates from layout_coordinates.json are for 100% scale (physical pixels at 100%)
-    // When display scaling is > 100%, these physical pixel values are correct for *capturing* from the scaled screen.
-    // For *displaying* on the overlay (which Electron handles in logical pixels), we need to convert
-    // these physical coordinates back to logical coordinates.
     hotspot.style.left = `${coord.x / currentScaleFactor}px`;
     hotspot.style.top = `${coord.y / currentScaleFactor}px`;
     hotspot.style.width = `${coord.width / currentScaleFactor}px`;
     hotspot.style.height = `${coord.height / currentScaleFactor}px`;
 
-
     if (abilityData.isTopTier) {
         hotspot.classList.add('top-tier-ability');
-        // console.log(`Hotspot for ${abilityData.displayName} marked as top-tier.`);
     }
 
-    // Store data attributes (these are not scaled)
-    hotspot.dataset.abilityName = abilityData.displayName;
-    hotspot.dataset.internalName = abilityData.internalName;
+    hotspot.dataset.abilityName = abilityData.displayName; // This is already 'Unknown Ability' if confidence was low
+    hotspot.dataset.internalName = abilityData.internalName; // This is null if confidence was low
     hotspot.dataset.winrate = abilityData.winrate !== null ? abilityData.winrate : 'N/A';
     hotspot.dataset.highSkillWinrate = abilityData.highSkillWinrate !== null ? abilityData.highSkillWinrate : 'N/A';
     hotspot.dataset.combinations = JSON.stringify(abilityData.highWinrateCombinations || []);
-    hotspot.dataset.isTopTier = String(abilityData.isTopTier === true); // Ensure string 'true'/'false'
+    hotspot.dataset.isTopTier = String(abilityData.isTopTier === true);
+    hotspot.dataset.confidence = abilityData.confidence !== null ? abilityData.confidence.toFixed(2) : 'N/A'; // Store confidence
 
 
     hotspot.addEventListener('mouseenter', (event) => {
@@ -371,33 +365,37 @@ function createHotspot(coord, abilityData, index, type) {
         let hsWr = hotspot.dataset.highSkillWinrate;
         const highSkillWinrateFormatted = hsWr !== 'N/A' ? `${(parseFloat(hsWr) * 100).toFixed(1)}%` : 'N/A';
         const topTierIndicator = hotspot.dataset.isTopTier === 'true' ? '<span style="color: #66ff66;">&#9733; Top Pick!</span><br>' : '';
+        const confidenceIndicator = hotspot.dataset.confidence !== 'N/A' ? `<span style="font-size: 0.8em; color: #aaa;">Confidence: ${hotspot.dataset.confidence}</span><br>` : '';
+
 
         let tooltipContent = `
             ${topTierIndicator}
             <div class="tooltip-title">${nameForDisplay}</div>
             <div class="tooltip-winrate">Winrate: ${winrateFormatted}</div>
             <div class="tooltip-winrate">High Skill WR: ${highSkillWinrateFormatted}</div>
+            ${confidenceIndicator} 
         `;
         const combinations = JSON.parse(hotspot.dataset.combinations);
         if (combinations && combinations.length > 0) {
             tooltipContent += `<div class="tooltip-section-title">Strong Combinations in Pool:</div>`;
-            combinations.slice(0, 5).forEach(combo => { // Show top 5
+            combinations.slice(0, 5).forEach(combo => {
                 const comboPartnerName = (combo.partnerAbilityDisplayName || 'Unknown Partner').replace(/_/g, ' ');
                 const comboWrFormatted = combo.synergyWinrate !== null ? `${(parseFloat(combo.synergyWinrate) * 100).toFixed(1)}%` : 'N/A';
                 tooltipContent += `<div class="tooltip-combo">- ${comboPartnerName} (${comboWrFormatted} WR)</div>`;
             });
         }
+
         tooltipElement.innerHTML = tooltipContent;
         tooltipElement.style.display = 'block';
         isTooltipVisible = true;
-        toggleTopTierBordersVisibility(false); // Hide borders when tooltip is visible
-        positionTooltip(hotspot); // Pass the hotspot element itself
+        toggleTopTierBordersVisibility(false);
+        positionTooltip(hotspot);
     });
 
     hotspot.addEventListener('mouseleave', () => {
         tooltipElement.style.display = 'none';
         isTooltipVisible = false;
-        toggleTopTierBordersVisibility(true); // Show borders again when tooltip hides
+        toggleTopTierBordersVisibility(true);
     });
     document.body.appendChild(hotspot);
 }
