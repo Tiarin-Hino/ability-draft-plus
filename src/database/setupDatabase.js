@@ -19,9 +19,10 @@ const setupSql = `
         name TEXT UNIQUE NOT NULL,      -- Internal name, e.g., "abaddon_frostmourne"
         display_name TEXT,              -- Display name, e.g., "Curse of Avernus"
         hero_id INTEGER,
-        winrate REAL,
-        high_skill_winrate REAL,
-        pick_order REAL,
+        winrate REAL,                   -- Regular winrate from abilities URL
+        high_skill_winrate REAL,        -- Winrate from ability-high-skill URL
+        avg_pick_order REAL,            -- Avg pick rate from abilities URL (3rd color-range)
+        value_percentage REAL,          -- Value from abilities URL (4th color-range, percentage)
         is_ultimate BOOL,
         ability_order INT,
         FOREIGN KEY (hero_id) REFERENCES Heroes (hero_id) ON DELETE SET NULL ON UPDATE CASCADE
@@ -58,13 +59,14 @@ function setupDatabase() {
         db.exec(setupSql);
         console.log('Base table setup complete or already exists.');
 
-        const abilityColumnsToAdd = [
+        const abilityColumnsToEnsure = [
             { table: 'Abilities', column: 'high_skill_winrate', type: 'REAL' },
             { table: 'Abilities', column: 'hero_id', type: 'INTEGER' },
             { table: 'Abilities', column: 'is_ultimate', type: 'BOOL' },
             { table: 'Abilities', column: 'ability_order', type: 'INT' },
             { table: 'Abilities', column: 'display_name', type: 'TEXT' },
-            { table: 'Abilities', column: 'pick_order', type: 'REAL' }
+            { table: 'Abilities', column: 'avg_pick_order', type: 'REAL' }, // New
+            { table: 'Abilities', column: 'value_percentage', type: 'REAL' } // New
         ];
 
         const heroColumnsToAdd = [
@@ -75,9 +77,9 @@ function setupDatabase() {
             { table: 'AbilitySynergies', column: 'is_op', type: 'BOOLEAN DEFAULT 0' }
         ];
 
-        const columnsToAdd = [...abilityColumnsToAdd, ...heroColumnsToAdd, ...synergyColumnsToAdd];
+        const columnsToProcess = [...abilityColumnsToEnsure, ...heroColumnsToAdd, ...synergyColumnsToAdd];
 
-        for (const { table, column, type } of columnsToAdd) {
+        for (const { table, column, type } of columnsToProcess) {
             try {
                 db.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`).run();
                 console.log(`Added ${column} column to ${table} table.`);
@@ -88,6 +90,33 @@ function setupDatabase() {
                 }
             }
         }
+
+        // Explicitly try to drop the old 'pick_order' column if it exists
+        try {
+            const oldPickOrderColumnExists = db.pragma(`table_info(Abilities)`).some(col => col.name === 'pick_order');
+            if (oldPickOrderColumnExists) {
+                const sqliteVersion = db.pragma('compile_options').find(opt => opt.startsWith('VERSION='));
+                if (sqliteVersion) {
+                    const versionNumber = sqliteVersion.split('=')[1];
+                    const [major, minor] = versionNumber.split('.').map(Number);
+                    if (major > 3 || (major === 3 && minor >= 35)) {
+                        db.exec('ALTER TABLE Abilities DROP COLUMN pick_order');
+                        console.log("Dropped old 'pick_order' column from Abilities table.");
+                    } else {
+                        console.warn("SQLite version < 3.35.0. Cannot automatically drop old 'pick_order' column. Manual database adjustment might be needed if this column persists and causes issues.");
+                    }
+                } else {
+                    console.warn("Could not determine SQLite version. Old 'pick_order' column might not be dropped automatically.");
+                }
+            }
+        } catch (err) {
+            if (err.message.includes("no such column") || err.message.includes("Cannot drop column")) {
+
+            } else {
+                console.error("Error trying to drop old 'pick_order' column:", err.message);
+            }
+        }
+
         console.log('Database schema setup/update complete.');
     } catch (err) {
         console.error('Error setting up database:', err.message);

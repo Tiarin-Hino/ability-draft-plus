@@ -5,7 +5,7 @@ const Database = require('better-sqlite3');
  * @param {string} dbPath - Path to the SQLite database file.
  * @param {string[]} abilityNames - An array of ability internal names to query.
  * @returns {Map<string, object | null>} A Map where keys are ability internal names
- * and values are objects containing { internalName, displayName, winrate, highSkillWinrate, pickOrder } or null if not found.
+ * and values are objects containing { internalName, displayName, winrate, highSkillWinrate, avgPickOrder, valuePercentage } or null if not found.
  */
 function getAbilityDetails(dbPath, abilityNames) {
     const detailsMap = new Map();
@@ -18,7 +18,11 @@ function getAbilityDetails(dbPath, abilityNames) {
         db = new Database(dbPath, { readonly: true });
 
         const placeholders = abilityNames.map(() => '?').join(', ');
-        const sql = `SELECT name, display_name, winrate, high_skill_winrate, pick_order FROM Abilities WHERE name IN (${placeholders})`;
+        const sql = `
+            SELECT name, display_name, winrate, high_skill_winrate, avg_pick_order, value_percentage 
+            FROM Abilities 
+            WHERE name IN (${placeholders})
+        `;
 
         const stmt = db.prepare(sql);
         const rows = stmt.all(abilityNames);
@@ -29,7 +33,8 @@ function getAbilityDetails(dbPath, abilityNames) {
                 displayName: row.display_name || row.name,
                 winrate: (typeof row.winrate === 'number') ? row.winrate : null,
                 highSkillWinrate: (typeof row.high_skill_winrate === 'number') ? row.high_skill_winrate : null,
-                pickOrder: (typeof row.pick_order === 'number') ? row.pick_order : null
+                avgPickOrder: (typeof row.avg_pick_order === 'number') ? row.avg_pick_order : null,
+                valuePercentage: (typeof row.value_percentage === 'number') ? row.value_percentage : null
             });
         });
 
