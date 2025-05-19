@@ -1,7 +1,10 @@
 const tooltipElement = document.getElementById('tooltip');
 const scanStatusPopup = document.getElementById('scan-status-popup');
 const closeOverlayButton = document.getElementById('close-overlay-btn');
-const scanNowButton = document.getElementById('scan-now-btn');
+
+const initialScanButton = document.getElementById('initial-scan-btn');
+const rescanButton = document.getElementById('rescan-btn');
+
 const takeSnapshotButton = document.getElementById('take-snapshot-btn');
 const snapshotStatusElement = document.getElementById('snapshot-status');
 const controlsContainer = document.getElementById('controls-container');
@@ -26,6 +29,45 @@ const MY_HERO_BUTTON_HEIGHT = 25;
 const MY_HERO_BUTTON_MARGIN = 5;
 
 console.log('overlayRenderer.js loaded');
+
+function triggerScan(isInitialScan) {
+    const scanButtonToDisable = isInitialScan ? initialScanButton : rescanButton;
+
+    if (scanButtonToDisable && scanButtonToDisable.disabled) return;
+    if (scanButtonToDisable) scanButtonToDisable.disabled = true;
+    if (takeSnapshotButton) takeSnapshotButton.disabled = true;
+
+
+    document.querySelectorAll('.ability-hotspot, .selected-ability-hotspot').forEach(el => el.remove());
+    if (opCombinationsWindow) opCombinationsWindow.style.display = 'none';
+    if (showOpCombinationsButton) showOpCombinationsButton.style.display = 'none';
+    if (tooltipElement) tooltipElement.style.display = 'none';
+    isTooltipVisible = false;
+
+    toggleTopTierBordersVisibility(false);
+
+    if (!currentTargetResolution) {
+        console.error('[OVERLAY RENDERER] Cannot scan, target resolution not set.');
+        if (scanStatusPopup) {
+            scanStatusPopup.textContent = 'Error: Resolution not set.';
+            scanStatusPopup.style.backgroundColor = 'rgba(200,0,0,0.8)';
+            scanStatusPopup.style.display = 'block';
+        }
+        if (scanButtonToDisable) scanButtonToDisable.disabled = false;
+        if (takeSnapshotButton && (initialScanButton.style.display === 'none')) takeSnapshotButton.disabled = false;
+        return;
+    }
+
+    if (scanStatusPopup) {
+        scanStatusPopup.textContent = `Scanning for ${currentTargetResolution}...`;
+        scanStatusPopup.style.backgroundColor = 'rgba(0,100,200,0.8)';
+        scanStatusPopup.style.display = 'block';
+    }
+
+    const heroOrderForThisScan = isInitialScan ? null : selectedHeroOrder;
+    console.log(`[OVERLAY RENDERER] Triggering scan. Initial: ${isInitialScan}, Hero Order: ${heroOrderForThisScan}`);
+    window.electronAPI.executeScanFromOverlay(currentTargetResolution, heroOrderForThisScan);
+}
 
 function toggleTopTierBordersVisibility(visible) {
     const hotspots = document.querySelectorAll('.ability-hotspot.top-tier-ability');
@@ -120,7 +162,10 @@ function manageMyHeroButtons() {
                 button.style.height = `${MY_HERO_BUTTON_HEIGHT}px`;
                 button.addEventListener('click', () => {
                     selectedHeroOrder = parseInt(button.dataset.heroOrder);
-                    console.log(`[OVERLAY RENDERER] Hero ${selectedHeroOrder} selected.`);
+                    const selectedHero = identifiedHeroesCache.find(h => h.heroOrder === selectedHeroOrder);
+                    const heroNameToLog = selectedHero ? selectedHero.heroName : 'Unknown Hero';
+                    console.log(`[OVERLAY RENDERER] Hero ${selectedHeroOrder} (${heroNameToLog}) selected.`);
+
                     manageMyHeroButtons();
                     updateMyHeroAbilityHighlights();
                 });
@@ -160,37 +205,41 @@ function manageMyHeroButtons() {
 
 if (window.electronAPI && window.electronAPI.onOverlayData) {
     window.electronAPI.onOverlayData((data) => {
-        console.log('[OVERLAY RENDERER] === New Overlay Data Received ===');
+        console.log('[OVERLAY RENDERER] === New Overlay Data Received ===', JSON.stringify(data, null, 2));
+
         if (typeof data.scaleFactor === 'number' && data.scaleFactor > 0) {
             currentScaleFactor = data.scaleFactor;
-        } else if (data.initialSetup && (!data.scaleFactor || data.scaleFactor <= 0)) {
-            currentScaleFactor = 1;
-            console.warn('[OVERLAY RENDERER] Scale factor not provided or invalid during initial setup, defaulting to 1.');
         }
-        if (data.coordinatesConfig) currentCoordinatesConfig = data.coordinatesConfig;
-        if (data.targetResolution) currentTargetResolution = data.targetResolution;
+        if (data.coordinatesConfig) {
+            currentCoordinatesConfig = data.coordinatesConfig;
+            console.log('[OVERLAY RENDERER] Updated currentCoordinatesConfig');
+        }
+        if (data.targetResolution) {
+            currentTargetResolution = data.targetResolution;
+            console.log('[OVERLAY RENDERER] Updated currentTargetResolution:', currentTargetResolution);
+        }
+
         if (scanStatusPopup) scanStatusPopup.style.display = 'none';
 
+        // Handle errors first
         if (data && data.error) {
-            console.error('[OVERLAY RENDERER] Error message received:', data.error);
+            console.error('[OVERLAY RENDERER] Error message received from main:', data.error);
             if (scanStatusPopup) {
                 scanStatusPopup.textContent = `Error: ${data.error}`;
                 scanStatusPopup.style.backgroundColor = 'rgba(200, 0, 0, 0.8)';
                 scanStatusPopup.style.display = 'block';
             }
-            isTooltipVisible = false;
-            toggleTopTierBordersVisibility(false);
-            document.querySelectorAll('.my-hero-btn, .change-my-hero-btn, .selected-ability-hotspot, .ability-hotspot').forEach(el => el.remove());
-            if (scanNowButton) {
-                scanNowButton.disabled = false;
-                scanNowButton.style.display = 'inline-block';
+
+            if (initialScanButton && initialScanButton.disabled) {
+                initialScanButton.disabled = false;
             }
-            if (takeSnapshotButton) takeSnapshotButton.style.display = 'none';
-            scanHasBeenPerformed = false;
-            updateOPCombinationsDisplay([]);
+            if (rescanButton && rescanButton.disabled) {
+                rescanButton.disabled = false;
+            }
+            if (takeSnapshotButton && takeSnapshotButton.disabled && initialScanButton && initialScanButton.style.display === 'none') {
+                takeSnapshotButton.disabled = false;
+            }
             return;
-        } else if (scanStatusPopup) {
-            scanStatusPopup.style.backgroundColor = 'rgba(0,100,200,0.8)';
         }
 
         if (data && typeof data.opCombinations !== 'undefined') {
@@ -199,63 +248,68 @@ if (window.electronAPI && window.electronAPI.onOverlayData) {
 
         if (data && data.identifiedHeroes) {
             identifiedHeroesCache = data.identifiedHeroes;
-            if (scanHasBeenPerformed || data.initialSetup) {
-                manageMyHeroButtons();
-            }
         }
 
+
         if (data && data.initialSetup) {
-            console.log('[OVERLAY RENDERER] Initial setup.');
+            console.log('[OVERLAY RENDERER] Processing initialSetup...');
             document.querySelectorAll('.ability-hotspot, .selected-ability-hotspot, .my-hero-btn, .change-my-hero-btn').forEach(el => el.remove());
             selectedHeroOrder = null;
-            identifiedHeroesCache = data.identifiedHeroes || [];
 
-            scanHasBeenPerformed = false;
-            if (scanNowButton) {
-                scanNowButton.disabled = false;
-                scanNowButton.style.display = 'inline-block';
+            if (initialScanButton) {
+                initialScanButton.style.display = 'inline-block';
+                initialScanButton.disabled = false;
             }
+            if (rescanButton) rescanButton.style.display = 'none';
             if (takeSnapshotButton) {
                 takeSnapshotButton.style.display = 'none';
                 takeSnapshotButton.disabled = true;
             }
             if (tooltipElement) tooltipElement.style.display = 'none';
             isTooltipVisible = false;
-            toggleTopTierBordersVisibility(true);
+            toggleTopTierBordersVisibility(false);
             if (snapshotStatusElement) snapshotStatusElement.style.display = 'none';
 
-            if (typeof data.opCombinations === 'undefined') {
-                updateOPCombinationsDisplay([]);
-            }
             manageMyHeroButtons();
             updateMyHeroAbilityHighlights();
-
+            console.log('[OVERLAY RENDERER] Initial setup complete.');
 
         } else if (data && data.scanData) {
-            console.log('[OVERLAY RENDERER] Scan data received.');
+            console.log('[OVERLAY RENDERER] Processing scanData...');
             scanHasBeenPerformed = true;
-            const receivedScanDataObject = data.scanData;
 
-            if (!receivedScanDataObject || typeof receivedScanDataObject.ultimates === 'undefined' || typeof receivedScanDataObject.standard === 'undefined') {
-                console.error('[OVERLAY RENDERER] Scan data object invalid. Ultimates or standard abilities missing.');
-                updateOPCombinationsDisplay(data.opCombinations || []);
-                document.querySelectorAll('.my-hero-btn, .change-my-hero-btn, .selected-ability-hotspot, .ability-hotspot').forEach(el => el.remove());
-                return;
-            }
             if (!currentCoordinatesConfig || !currentTargetResolution) {
-                console.error('[OVERLAY RENDERER] Coordinate configuration or target resolution missing for scan data display.');
-                updateOPCombinationsDisplay(data.opCombinations || []);
-                document.querySelectorAll('.my-hero-btn, .change-my-hero-btn, .selected-ability-hotspot, .ability-hotspot').forEach(el => el.remove());
+                console.error('[OVERLAY RENDERER] Crucial config (coordinates or resolution) missing. Cannot display hotspots.');
+                if (initialScanButton && initialScanButton.style.display !== 'none' && initialScanButton.disabled) {
+                    initialScanButton.disabled = false;
+                } else if (rescanButton && rescanButton.disabled) {
+                    rescanButton.disabled = false;
+                }
                 return;
             }
             const resolutionCoords = currentCoordinatesConfig.resolutions[currentTargetResolution];
             if (!resolutionCoords) {
-                console.error(`[OVERLAY RENDERER] Coordinate data for resolution "${currentTargetResolution}" not found.`);
-                updateOPCombinationsDisplay(data.opCombinations || []);
-                document.querySelectorAll('.my-hero-btn, .change-my-hero-btn, .selected-ability-hotspot, .ability-hotspot').forEach(el => el.remove());
+                console.error(`[OVERLAY RENDERER] Coordinate data for resolution "${currentTargetResolution}" not found. Cannot display hotspots.`);
+                if (initialScanButton && initialScanButton.style.display !== 'none' && initialScanButton.disabled) {
+                    initialScanButton.disabled = false;
+                } else if (rescanButton && rescanButton.disabled) {
+                    rescanButton.disabled = false;
+                }
                 return;
             }
 
+            const receivedScanDataObject = data.scanData;
+            if (!receivedScanDataObject || typeof receivedScanDataObject.ultimates === 'undefined' || typeof receivedScanDataObject.standard === 'undefined') {
+                console.error('[OVERLAY RENDERER] Scan data object invalid or missing ultimates/standard abilities.');
+                if (initialScanButton && initialScanButton.style.display !== 'none' && initialScanButton.disabled) {
+                    initialScanButton.disabled = false;
+                } else if (rescanButton && rescanButton.disabled) {
+                    rescanButton.disabled = false;
+                }
+                return;
+            }
+
+            console.log('[OVERLAY RENDERER] All checks passed, proceeding to create hotspots.');
             try {
                 document.querySelectorAll('.ability-hotspot, .selected-ability-hotspot').forEach(el => el.remove());
                 createHotspotsForType(receivedScanDataObject.ultimates, resolutionCoords.ultimate_slots_coords, 'ultimates');
@@ -292,32 +346,35 @@ if (window.electronAPI && window.electronAPI.onOverlayData) {
                         createHotspot(item.coord, item.abilityData, `sel-${item.coord.hero_order}-${item.abilityData.internalName.slice(0, 5)}`, item.type, true);
                     });
                 }
-
-                if (data.identifiedHeroes) {
-                    identifiedHeroesCache = data.identifiedHeroes;
-                }
-                manageMyHeroButtons();
-                updateMyHeroAbilityHighlights();
-
-                if (scanNowButton) {
-                    scanNowButton.style.display = 'inline-block';
-                    scanNowButton.disabled = false;
-                }
-                if (takeSnapshotButton) {
-                    takeSnapshotButton.style.display = 'block';
-                    takeSnapshotButton.disabled = false;
-                }
-                if (tooltipElement) tooltipElement.style.display = 'none';
-                isTooltipVisible = false;
-                toggleTopTierBordersVisibility(true);
-                if (snapshotStatusElement) snapshotStatusElement.style.display = 'none';
+                console.log('[OVERLAY RENDERER] Hotspots creation attempted.');
 
             } catch (hotspotError) {
-                console.error('[OVERLAY RENDERER] Error during hotspot/UI update after scan:', hotspotError);
-                updateOPCombinationsDisplay(data.opCombinations || []);
-                document.querySelectorAll('.my-hero-btn, .change-my-hero-btn, .selected-ability-hotspot, .ability-hotspot').forEach(el => el.remove());
+                console.error('[OVERLAY RENDERER] Error during hotspot creation:', hotspotError);
             }
-        } else if (!data.initialSetup) {
+
+            manageMyHeroButtons();
+            updateMyHeroAbilityHighlights();
+
+            if (initialScanButton && initialScanButton.style.display !== 'none') {
+                initialScanButton.style.display = 'none';
+                if (rescanButton) {
+                    rescanButton.style.display = 'inline-block';
+                    rescanButton.disabled = false;
+                }
+            } else if (rescanButton) {
+                rescanButton.disabled = false;
+            }
+
+            if (takeSnapshotButton) {
+                takeSnapshotButton.style.display = 'block';
+                takeSnapshotButton.disabled = false;
+            }
+
+            if (tooltipElement) tooltipElement.style.display = 'none';
+            isTooltipVisible = false;
+            toggleTopTierBordersVisibility(true);
+            if (snapshotStatusElement) snapshotStatusElement.style.display = 'none';
+            console.log('[OVERLAY RENDERER] Scan data processing finished.');
         }
     });
 } else {
@@ -349,42 +406,19 @@ if (showOpCombinationsButton && opCombinationsWindow && hideOpCombinationsButton
 }
 
 
-if (scanNowButton && window.electronAPI && window.electronAPI.executeScanFromOverlay) {
-    scanNowButton.addEventListener('click', () => {
-        if (scanNowButton.disabled) return;
-        scanNowButton.disabled = true;
-
-        document.querySelectorAll('.ability-hotspot, .selected-ability-hotspot, .my-hero-btn, .change-my-hero-btn').forEach(el => el.remove());
-        if (opCombinationsWindow) opCombinationsWindow.style.display = 'none';
-        if (showOpCombinationsButton) showOpCombinationsButton.style.display = 'none';
-        if (tooltipElement) tooltipElement.style.display = 'none';
-        isTooltipVisible = false;
-        selectedHeroOrder = null;
-        identifiedHeroesCache = [];
-
-        toggleTopTierBordersVisibility(false);
-
-        if (!currentTargetResolution) {
-            console.error('[OVERLAY RENDERER] Cannot scan, target resolution not set.');
-            if (scanStatusPopup) {
-                scanStatusPopup.textContent = 'Error: Resolution not set.';
-                scanStatusPopup.style.backgroundColor = 'rgba(200,0,0,0.8)';
-                scanStatusPopup.style.display = 'block';
-            }
-            scanNowButton.disabled = false;
-            return;
-        }
-
-        if (scanStatusPopup) {
-            scanStatusPopup.textContent = `Scanning for ${currentTargetResolution}...`;
-            scanStatusPopup.style.backgroundColor = 'rgba(0,100,200,0.8)';
-            scanStatusPopup.style.display = 'block';
-        }
-
-        window.electronAPI.executeScanFromOverlay(currentTargetResolution);
+if (initialScanButton && window.electronAPI && window.electronAPI.executeScanFromOverlay) {
+    initialScanButton.addEventListener('click', () => {
+        console.log('[OVERLAY RENDERER] Initial Scan button clicked.');
+        triggerScan(true);
     });
 }
 
+if (rescanButton && window.electronAPI && window.electronAPI.executeScanFromOverlay) {
+    rescanButton.addEventListener('click', () => {
+        console.log('[OVERLAY RENDERER] Rescan button clicked.');
+        triggerScan(false);
+    });
+}
 
 if (takeSnapshotButton && window.electronAPI && window.electronAPI.takeSnapshot) {
     takeSnapshotButton.addEventListener('click', () => {
