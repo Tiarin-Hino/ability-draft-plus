@@ -1,6 +1,5 @@
 // Get references to elements
 const updateAllDataButton = document.getElementById('update-all-data-btn');
-const updateMissingHeroAbilitiesButton = document.getElementById('update-missing-hero-abilities-btn');
 const activateOverlayButton = document.getElementById('activate-overlay-btn');
 const resolutionSelect = document.getElementById('resolution-select');
 const statusMessage = document.getElementById('status-message');
@@ -20,8 +19,6 @@ function setButtonsState(disabled, initiatingButton = null) {
     if (disabled) {
         if (initiatingButton === updateAllDataButton) {
             updateAllDataButton.textContent = 'Updating All Data...';
-        } else if (initiatingButton === updateMissingHeroAbilitiesButton) {
-            updateMissingHeroAbilitiesButton.textContent = 'Updating Missing...';
         } else if (initiatingButton === activateOverlayButton) {
             activateOverlayButton.textContent = 'Activating...';
         } else if (initiatingButton === exportFailedSamplesButton) {
@@ -29,7 +26,6 @@ function setButtonsState(disabled, initiatingButton = null) {
         }
     } else {
         if (updateAllDataButton) updateAllDataButton.textContent = 'Update Windrun Data (Full)';
-        if (updateMissingHeroAbilitiesButton) updateMissingHeroAbilitiesButton.textContent = 'Update Missing Hero Abilities';
         if (activateOverlayButton) activateOverlayButton.textContent = 'Activate Overlay';
         if (exportFailedSamplesButton) exportFailedSamplesButton.textContent = 'Export Failed Samples';
     }
