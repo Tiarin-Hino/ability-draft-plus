@@ -13,7 +13,6 @@ const { promisify } = require('util');
 const setupDatabase = require('./src/database/setupDatabase');
 const { getAbilityDetails, getHighWinrateCombinations, getOPCombinationsInPool, getHeroDetailsByAbilityName } = require('./src/database/queries');
 const { scrapeAndStoreHeroes } = require('./src/scraper/heroScraper');
-const { scrapeAndStoreHeroAbilities } = require('./src/scraper/heroAbilityScraper');
 const { scrapeAndStoreAbilities } = require('./src/scraper/abilityScraper');
 const { scrapeAndStoreAbilityPairs } = require('./src/scraper/abilityPairScraper');
 const { processDraftScreen, initializeImageProcessor } = require('./src/imageProcessor');
@@ -129,11 +128,6 @@ async function performFullScrape(statusCallbackWebContents) {
     await scrapeAndStoreAbilityPairs(activeDbPath, abilityPairsUrl, sendStatus);
     await delay(100);
 
-    sendStatus('Phase 4/4: Updating all hero-specific ability data...');
-
-    await scrapeAndStoreHeroAbilities(activeDbPath, sendStatus, false);
-    await delay(100);
-
     const newDate = await updateLastSuccessfulScrapeDate(activeDbPath);
     sendLastUpdatedDateToRenderer(statusCallbackWebContents, newDate);
     sendStatus('All Windrun.io data updates finished successfully!');
@@ -146,23 +140,6 @@ async function performFullScrape(statusCallbackWebContents) {
     return false;
   }
 }
-
-ipcMain.on('scrape-missing-hero-abilities', async (event) => {
-  const targetWebContents = (mainWindow && !mainWindow.isDestroyed()) ? mainWindow.webContents : event.sender;
-  const sendStatusUpdate = (msg) => {
-    if (targetWebContents && !targetWebContents.isDestroyed()) {
-      targetWebContents.send('scrape-status', msg);
-    }
-  };
-  try {
-    sendStatusUpdate('Starting update for missing hero-specific abilities...');
-    await scrapeAndStoreHeroAbilities(activeDbPath, sendStatusUpdate, true);
-    sendStatusUpdate('Update for missing hero-specific abilities complete!');
-  } catch (error) {
-    console.error('Scraping missing hero abilities failed:', error);
-    sendStatusUpdate(`Error updating missing hero abilities: ${error.message}`);
-  }
-});
 
 function createWindow() {
   mainWindow = new BrowserWindow({

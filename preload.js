@@ -2,7 +2,6 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
   scrapeAllWindrunData: () => ipcRenderer.send('scrape-all-windrun-data'),
-  scrapeMissingHeroAbilities: () => ipcRenderer.send('scrape-missing-hero-abilities'),
   getAvailableResolutions: () => ipcRenderer.send('get-available-resolutions'),
   onUpdateStatus: (callback) => ipcRenderer.on('scrape-status', (_event, message) => callback(message)),
   onScanResults: (callback) => ipcRenderer.on('scan-results', (_event, results) => callback(results)),
