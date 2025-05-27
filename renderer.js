@@ -10,7 +10,7 @@ const exportFailedSamplesButton = document.getElementById('export-failed-samples
 let selectedResolution = '';
 
 function setButtonsState(disabled, initiatingButton = null) {
-    const buttonsToDisable = [updateAllDataButton, updateMissingHeroAbilitiesButton, activateOverlayButton, exportFailedSamplesButton];
+    const buttonsToDisable = [updateAllDataButton, activateOverlayButton, exportFailedSamplesButton];
     buttonsToDisable.forEach(btn => {
         if (btn) btn.disabled = disabled;
     });
@@ -61,15 +61,6 @@ if (window.electronAPI) {
             if (exportFailedSamplesButton) exportFailedSamplesButton.disabled = true;
         }
     });
-
-    if (updateMissingHeroAbilitiesButton) {
-        updateMissingHeroAbilitiesButton.addEventListener('click', () => {
-            console.log('Update Missing Hero Abilities button clicked.');
-            statusMessage.textContent = 'Requesting update for missing hero abilities...';
-            setButtonsState(true, updateMissingHeroAbilitiesButton);
-            window.electronAPI.scrapeMissingHeroAbilities();
-        });
-    }
 
     if (resolutionSelect) {
         resolutionSelect.addEventListener('change', (event) => {
