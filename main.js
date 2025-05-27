@@ -303,7 +303,6 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
       }
     }
 
-
     const draftPoolAbilityNames = [
       ...new Set([
         ...rawResults.ultimates.map(r => r.name).filter(name => name !== null),
@@ -314,53 +313,8 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
     const allNamesToFetchDetailsFor = [...new Set([...draftPoolAbilityNames, ...selectedAbilityNamesByHeroes])];
 
     let abilityDetailsMap = new Map();
-    let heroSpecificTableUsed = false;
-    if (mySelectedHeroIdForScan) {
-      let db;
-      try {
-        db = new Database(activeDbPath, { readonly: true });
-        const heroAbilityTableName = `HeroAbilities_${mySelectedHeroIdForScan}`;
-        const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name = ?").get(heroAbilityTableName);
 
-        if (tableCheck) {
-          const rowCount = db.prepare(`SELECT COUNT(*) as count FROM ${heroAbilityTableName}`).get();
-          if (rowCount && rowCount.count > 0) {
-            if (allNamesToFetchDetailsFor.length > 0) {
-              const placeholders = allNamesToFetchDetailsFor.map(() => '?').join(', ');
-              const sql = `
-                            SELECT name, display_name, winrate, avg_pick_order, value_percentage 
-                            FROM ${heroAbilityTableName}
-                            WHERE name IN (${placeholders})
-                        `;
-              const stmt = db.prepare(sql);
-              const rows = stmt.all(allNamesToFetchDetailsFor);
-              rows.forEach(row => {
-                abilityDetailsMap.set(row.name, {
-                  internalName: row.name,
-                  displayName: row.display_name || row.name,
-                  winrate: (typeof row.winrate === 'number') ? row.winrate : null,
-                  highSkillWinrate: null,
-                  avgPickOrder: (typeof row.avg_pick_order === 'number') ? row.avg_pick_order : null,
-                  valuePercentage: (typeof row.value_percentage === 'number') ? row.value_percentage : null
-                });
-              });
-              heroSpecificTableUsed = true;
-              console.log(`[Main] Using hero-specific ability data from ${heroAbilityTableName} for scoring.`);
-            }
-          } else {
-            console.warn(`[Main] Hero-specific table ${heroAbilityTableName} is empty. Falling back to general Abilities table.`);
-          }
-        } else {
-          console.warn(`[Main] Hero-specific table ${heroAbilityTableName} not found. Falling back to general Abilities table.`);
-        }
-      } catch (e) {
-        console.error(`[Main] Error accessing hero-specific table: ${e.message}. Falling back.`);
-      } finally {
-        if (db && db.open) db.close();
-      }
-    }
-
-    if (!heroSpecificTableUsed && allNamesToFetchDetailsFor.length > 0) {
+    if (allNamesToFetchDetailsFor.length > 0) {
       console.log('[Main] Using general Abilities table for scoring.');
       abilityDetailsMap = getAbilityDetails(activeDbPath, allNamesToFetchDetailsFor);
     }

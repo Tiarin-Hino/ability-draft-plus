@@ -27,7 +27,6 @@ This is the main window you see when you start the application.
 * **Update Windrun Data (Optional but Recommended):**
     * The application comes with a pre-filled database of hero and ability statistics.
     * To get the absolute latest data from [Windrun.io](https://windrun.io), click the "**Update Windrun Data (Full)**" button. This process can take a few minutes. The "Last updated" date will reflect the most recent successful scrape.
-    * The "**Update Missing Hero Abilities**" button attempts to fetch data only for heroes whose specific ability tables are missing or empty, useful for retrying failed individual hero scrapes.
 * **Select Screen Resolution:**
     * From the dropdown menu, select the screen resolution you are currently using for Dota 2. This is crucial for the overlay to correctly identify ability icons.
 * **Activate Overlay:**
