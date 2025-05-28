@@ -119,9 +119,9 @@ body {
 }
 
 #initial-scan-btn,
-/* Added from overlay.html */
 #rescan-btn,
-/* Added from overlay.html */
+#reset-overlay-btn,
+/* ADDED */
 #close-overlay-btn,
 #take-snapshot-btn,
 #show-op-combinations-btn {
@@ -136,7 +136,6 @@ body {
 }
 
 #initial-scan-btn {
-    /* Style for initial scan button */
     background-color: rgba(0, 128, 255, 0.7);
     border: 1px solid rgba(0, 100, 200, 0.9);
 }
@@ -151,7 +150,6 @@ body {
 }
 
 #rescan-btn {
-    /* Style for rescan button */
     background-color: rgba(0, 150, 136, 0.7);
     /* Teal like color */
     border: 1px solid rgba(0, 120, 110, 0.9);
@@ -166,6 +164,18 @@ body {
     cursor: not-allowed;
 }
 
+/* ADDED Styling for Reset Button */
+#reset-overlay-btn {
+    background-color: rgba(255, 193, 7, 0.7);
+    /* Amber/Orange color */
+    border: 1px solid rgba(200, 150, 0, 0.9);
+}
+
+#reset-overlay-btn:hover {
+    background-color: rgba(255, 193, 7, 0.9);
+}
+
+/* END ADDED */
 
 #close-overlay-btn {
     background-color: rgba(255, 0, 0, 0.7);
@@ -191,7 +201,6 @@ body {
 }
 
 #snapshot-status,
-/* Combined with scan-status-popup */
 #scan-status-popup {
     position: fixed;
     bottom: 10px;
@@ -251,7 +260,6 @@ body {
 }
 
 .op-alert-hide-btn {
-    /* Matches ID from overlay.html */
     background-color: rgba(100, 50, 50, 0.6);
     border: 1px solid rgba(150, 70, 70, 0.8);
     color: #e0e0e0;
@@ -290,7 +298,6 @@ body {
     background-color: rgba(150, 150, 255, 0.05);
 }
 
-/* Style for the selected "My Model" hero model hotspot */
 .hero-model-hotspot.is-my-model {
     border: 3px solid #33FFDD !important;
     /* Cyan/Teal border */
@@ -298,12 +305,10 @@ body {
     /* Cyan/Teal glow */
 }
 
-/* Style for "Top Tier" hero models */
 .hero-model-hotspot.top-tier-hero-model {
     border: 3px solid #FFD700 !important;
     /* Gold border */
     animation: shimmerGold 1.5s infinite ease-in-out;
-    /* box-shadow is part of animation */
 }
 
 @keyframes shimmerGold {
@@ -323,8 +328,6 @@ body {
     }
 }
 
-
-/* Buttons for "My Model" */
 .my-model-btn,
 .change-my-model-btn {
     position: absolute;
@@ -348,7 +351,6 @@ body {
 
 .my-model-btn {
     background-color: rgba(0, 200, 150, 0.7);
-    /* Tealish */
     border: 1px solid rgba(0, 170, 120, 0.9);
 }
 
@@ -358,7 +360,6 @@ body {
 
 .change-my-model-btn {
     background-color: rgba(255, 100, 100, 0.7);
-    /* Reddish for "unset" */
     border: 1px solid rgba(220, 80, 80, 0.9);
 }
 
@@ -366,7 +367,6 @@ body {
     background-color: rgba(255, 100, 100, 0.9);
 }
 
-/* Styles for original "My Hero" (drafting) buttons */
 .my-hero-btn-original,
 .change-my-hero-btn-original {
     position: absolute;
@@ -375,12 +375,10 @@ body {
     font-weight: bold;
     color: white;
     background-color: rgba(0, 120, 255, 0.75);
-    /* Default "My Hero" blue */
     border: 1px solid rgba(0, 100, 200, 0.9);
     border-radius: 4px;
     cursor: pointer;
     z-index: 9999;
-    /* Slightly lower than My Model buttons */
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
     white-space: nowrap;
     opacity: 0.7;
@@ -399,7 +397,6 @@ body {
 
 .change-my-hero-btn-original {
     background-color: rgba(255, 140, 0, 0.8);
-    /* Orange for "Change Hero" */
     border: 1px solid rgba(220, 120, 0, 0.9);
 }
 
@@ -407,10 +404,7 @@ body {
     background-color: rgba(255, 140, 0, 1);
 }
 
-/* Style for abilities picked by "My Hero" (drafting context) */
 .selected-ability-hotspot.my-hero-selected-ability {
     border: 3px solid #00CF00 !important;
-    /* Bright Green border */
     box-shadow: 0 0 10px 4px rgba(0, 220, 0, 0.75) !important;
-    /* Brighter Green glow */
 }
