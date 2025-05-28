@@ -5,7 +5,7 @@ const Database = require('better-sqlite3');
  * @param {string} dbPath - Path to the SQLite database file.
  * @param {string[]} abilityNames - An array of ability internal names to query.
  * @returns {Map<string, object | null>} A Map where keys are ability internal names
- * and values are objects containing { internalName, displayName, winrate, highSkillWinrate, avgPickOrder, valuePercentage } or null if not found.
+ * and values are objects containing { internalName, displayName, winrate, highSkillWinrate, avgPickOrder, valuePercentage, is_ultimate, ability_order } or null if not found.
  */
 function getAbilityDetails(dbPath, abilityNames) {
     const detailsMap = new Map();
@@ -19,7 +19,7 @@ function getAbilityDetails(dbPath, abilityNames) {
 
         const placeholders = abilityNames.map(() => '?').join(', ');
         const sql = `
-            SELECT name, display_name, winrate, high_skill_winrate, avg_pick_order, value_percentage 
+            SELECT name, display_name, winrate, high_skill_winrate, avg_pick_order, value_percentage, is_ultimate, ability_order 
             FROM Abilities 
             WHERE name IN (${placeholders})
         `;
@@ -34,13 +34,15 @@ function getAbilityDetails(dbPath, abilityNames) {
                 winrate: (typeof row.winrate === 'number') ? row.winrate : null,
                 highSkillWinrate: (typeof row.high_skill_winrate === 'number') ? row.high_skill_winrate : null,
                 avgPickOrder: (typeof row.avg_pick_order === 'number') ? row.avg_pick_order : null,
-                valuePercentage: (typeof row.value_percentage === 'number') ? row.value_percentage : null
+                valuePercentage: (typeof row.value_percentage === 'number') ? row.value_percentage : null,
+                is_ultimate: row.is_ultimate, // Fetched as 0 or 1 (or null) from SQLite for BOOL
+                ability_order: row.ability_order
             });
         });
 
     } catch (err) {
         console.error(`Error fetching ability details: ${err.message}`);
-        return new Map(); // Return an empty map on error
+        return new Map();
     } finally {
         if (db) {
             db.close();
@@ -132,7 +134,7 @@ async function getHighWinrateCombinations(dbPath, baseAbilityInternalName, draft
  */
 async function getOPCombinationsInPool(dbPath, draftPoolInternalNames) {
     const opCombinations = [];
-    if (!draftPoolInternalNames || draftPoolInternalNames.length < 2) { // Need at least two abilities for a pair
+    if (!draftPoolInternalNames || draftPoolInternalNames.length < 2) {
         return opCombinations;
     }
 
@@ -140,7 +142,6 @@ async function getOPCombinationsInPool(dbPath, draftPoolInternalNames) {
     try {
         db = new Database(dbPath, { readonly: true });
 
-        // Create placeholders for the IN clause
         const poolPlaceholders = draftPoolInternalNames.map(() => '?').join(',');
 
         const opQuery = `
@@ -153,26 +154,21 @@ async function getOPCombinationsInPool(dbPath, draftPoolInternalNames) {
             FROM AbilitySynergies s
             JOIN Abilities a1 ON s.base_ability_id = a1.ability_id
             JOIN Abilities a2 ON s.synergy_ability_id = a2.ability_id
-            WHERE s.is_op = 1                         -- Check for the OP flag
-              AND a1.name IN (${poolPlaceholders})    -- Both abilities must be in the pool
+            WHERE s.is_op = 1                     
+              AND a1.name IN (${poolPlaceholders})
               AND a2.name IN (${poolPlaceholders})
-              AND a1.name < a2.name;                  -- Ensure each pair is reported once (a1 < a2)
+              AND a1.name < a2.name;             
         `;
-        // The query parameters will be draftPoolInternalNames repeated twice for the two IN clauses.
         const queryParams = [...draftPoolInternalNames, ...draftPoolInternalNames];
         const opStmt = db.prepare(opQuery);
         const opRows = opStmt.all(...queryParams);
 
         opRows.forEach(row => {
-            // Filter again in JS to be absolutely sure both are in the current pool,
-            // as SQL IN clause with repeated params might not be strictly what we want here
-            // if an ability could be base and synergy in different DB rows but only one present in pool.
-            // The a1.name < a2.name handles uniqueness of pairs already.
             if (draftPoolInternalNames.includes(row.ability1_internal_name) && draftPoolInternalNames.includes(row.ability2_internal_name)) {
                 opCombinations.push({
                     ability1DisplayName: row.ability1_display_name || row.ability1_internal_name,
                     ability2DisplayName: row.ability2_display_name || row.ability2_internal_name,
-                    synergyWinrate: row.synergy_winrate // You might want to display this too
+                    synergyWinrate: row.synergy_winrate
                 });
             }
         });
@@ -197,7 +193,6 @@ async function getHeroDetailsByAbilityName(dbPath, abilityName) {
     if (!abilityName) {
         return null;
     }
-
     let db;
     try {
         db = new Database(dbPath, { readonly: true });
@@ -209,9 +204,7 @@ async function getHeroDetailsByAbilityName(dbPath, abilityName) {
         `;
         const stmt = db.prepare(query);
         const heroDetails = stmt.get(abilityName);
-
         return heroDetails || null;
-
     } catch (err) {
         console.error(`Error fetching hero details by ability name ${abilityName}: ${err.message}`);
         return null;
@@ -223,10 +216,10 @@ async function getHeroDetailsByAbilityName(dbPath, abilityName) {
 }
 
 /**
- * Fetches hero details including winrate by hero_id.
+ * Fetches hero details including winrate, avg_pick_order, and value_percentage by hero_id.
  * @param {string} dbPath - Path to the SQLite database file.
  * @param {number} heroId - The database ID of the hero.
- * @returns {Promise<{dbHeroId: number, heroName: string, heroDisplayName: string, winrate: number} | null>}
+ * @returns {Promise<{dbHeroId: number, heroName: string, heroDisplayName: string, winrate: number, avg_pick_order: number | null, value_percentage: number | null} | null>}
  */
 async function getHeroDetailsById(dbPath, heroId) {
     if (heroId === null || typeof heroId === 'undefined') {
@@ -236,13 +229,15 @@ async function getHeroDetailsById(dbPath, heroId) {
     let db;
     try {
         db = new Database(dbPath, { readonly: true });
-        const row = db.prepare('SELECT hero_id, name, display_name, winrate FROM Heroes WHERE hero_id = ?').get(heroId);
+        const row = db.prepare('SELECT hero_id, name, display_name, winrate, avg_pick_order, value_percentage FROM Heroes WHERE hero_id = ?').get(heroId);
         if (row) {
             return {
                 dbHeroId: row.hero_id,
                 heroName: row.name,
                 heroDisplayName: row.display_name,
-                winrate: (typeof row.winrate === 'number') ? row.winrate : null
+                winrate: (typeof row.winrate === 'number') ? row.winrate : null,
+                avg_pick_order: (typeof row.avg_pick_order === 'number') ? row.avg_pick_order : null,
+                value_percentage: (typeof row.value_percentage === 'number') ? row.value_percentage : null
             };
         }
         return null;
@@ -260,5 +255,5 @@ module.exports = {
     getHighWinrateCombinations,
     getOPCombinationsInPool,
     getHeroDetailsByAbilityName,
-    getHeroDetailsById 
+    getHeroDetailsById
 };
