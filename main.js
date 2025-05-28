@@ -20,7 +20,7 @@ const abilitiesUrl = 'https://windrun.io/abilities';
 const abilitiesHighSkillUrl = 'https://windrun.io/ability-high-skill';
 const abilityPairsUrl = 'https://windrun.io/ability-pairs';
 
-const MIN_PREDICTION_CONFIDENCE = 0.70;
+const MIN_PREDICTION_CONFIDENCE = 0.90;
 const isPackaged = app.isPackaged;
 
 const MIN_PICK_ORDER_FOR_NORMALIZATION = 1.0;
@@ -49,6 +49,8 @@ let mySelectedHeroOrderByDraftingList = null; // hero_order from the original 0-
 
 let mySelectedModelDbHeroId = null; // dbHeroId of the selected model
 let mySelectedModelHeroOrder = null; // hero_order (0-11) of the selected model on screen
+
+let identifiedHeroModelsCache = null; // <<< To cache hero model data from initial scan
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -280,13 +282,13 @@ ipcMain.on('select-my-hero-for-drafting', (event, { heroOrder, dbHeroId }) => {
   }
   if (overlayWindow && !overlayWindow.isDestroyed()) {
     overlayWindow.webContents.send('my-hero-for-drafting-selection-changed', {
-      selectedHeroOrderForDrafting: mySelectedHeroOrderByDraftingList,
+      selectedHeroOrderForDrafting: mySelectedHeroOrderByDraftingList, // Keep sending this if overlay uses it
       selectedHeroDbId: mySelectedHeroDbIdForDrafting
     });
   }
 });
 
-ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, selectedHeroOrderForDraftingFromOverlay) => {
+ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, selectedHeroOrderForDraftingFromOverlay, isInitialScan) => {
   if (isScanInProgress) {
     if (overlayWindow && !overlayWindow.isDestroyed()) {
       overlayWindow.webContents.send('overlay-data', {
@@ -304,63 +306,77 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
   }
 
   isScanInProgress = true;
-  lastScanRawResults = null;
+  lastScanRawResults = null; // Clear previous raw results, especially if it contains old image data
   lastScanTargetResolution = selectedResolution;
   const startTime = performance.now();
 
   try {
-    const rawResults = await processDraftScreen(global.coordinatesPath, selectedResolution, MIN_PREDICTION_CONFIDENCE); //
-    lastScanRawResults = rawResults; // rawResults.selectedAbilities now contains is_ultimate from layout
+    const rawResults = await processDraftScreen(global.coordinatesPath, selectedResolution, MIN_PREDICTION_CONFIDENCE);
+    lastScanRawResults = rawResults; // Store for snapshot functionality
 
-    const layoutConfigData = await fs.readFile(global.coordinatesPath, 'utf-8'); //
-    const layoutConfig = JSON.parse(layoutConfigData); //
+    const layoutConfigData = await fs.readFile(global.coordinatesPath, 'utf-8');
+    const layoutConfig = JSON.parse(layoutConfigData);
     const currentModelsCoords = layoutConfig.resolutions[selectedResolution]?.models_coords || [];
     const currentHeroesCoords = layoutConfig.resolutions[selectedResolution]?.heroes_coords || [];
 
-    const tempIdentifiedHeroesMap = new Map();
-    const heroDefiningAbilities = rawResults.heroDefiningAbilities.filter(r => r.name !== null); //
+    let heroModelHotspotData;
 
-    for (const heroAbility of heroDefiningAbilities) {
-      const heroIdentity = await getHeroDetailsByAbilityName(activeDbPath, heroAbility.name); //
-      if (heroIdentity && heroIdentity.hero_id !== null) {
-        const fullHeroDetails = await getHeroDetailsById(activeDbPath, heroIdentity.hero_id); //
-        if (fullHeroDetails) {
-          tempIdentifiedHeroesMap.set(heroAbility.hero_order, {
-            heroDisplayName: fullHeroDetails.heroDisplayName,
-            dbHeroId: fullHeroDetails.dbHeroId,
-            heroName: fullHeroDetails.heroName,
-            winrate: fullHeroDetails.winrate,
-            avg_pick_order: fullHeroDetails.avg_pick_order,
-            value_percentage: fullHeroDetails.value_percentage,
-            identificationConfidence: heroAbility.confidence
+    if (isInitialScan || !identifiedHeroModelsCache) {
+      console.log("[Main] Performing model identification (Initial Scan or no cache).");
+      mySelectedModelDbHeroId = null; // Reset "My Model" selection as models are re-identified
+      mySelectedModelHeroOrder = null;
+
+      const tempIdentifiedHeroesMap = new Map();
+      const heroDefiningAbilities = rawResults.heroDefiningAbilities.filter(r => r.name !== null);
+
+      for (const heroAbility of heroDefiningAbilities) {
+        const heroIdentity = await getHeroDetailsByAbilityName(activeDbPath, heroAbility.name);
+        if (heroIdentity && heroIdentity.hero_id !== null) {
+          const fullHeroDetails = await getHeroDetailsById(activeDbPath, heroIdentity.hero_id);
+          if (fullHeroDetails) {
+            tempIdentifiedHeroesMap.set(heroAbility.hero_order, {
+              heroDisplayName: fullHeroDetails.heroDisplayName,
+              dbHeroId: fullHeroDetails.dbHeroId,
+              heroName: fullHeroDetails.heroName,
+              winrate: fullHeroDetails.winrate,
+              avg_pick_order: fullHeroDetails.avg_pick_order,
+              value_percentage: fullHeroDetails.value_percentage,
+              identificationConfidence: heroAbility.confidence
+            });
+          }
+        }
+      }
+
+      heroModelHotspotData = []; // Initialize as empty array
+      for (const modelCoord of currentModelsCoords) {
+        const matchedHero = tempIdentifiedHeroesMap.get(modelCoord.hero_order);
+        if (matchedHero) {
+          heroModelHotspotData.push({
+            coord: modelCoord, heroDisplayName: matchedHero.heroDisplayName, heroName: matchedHero.heroName,
+            dbHeroId: matchedHero.dbHeroId, winrate: matchedHero.winrate, avg_pick_order: matchedHero.avg_pick_order,
+            value_percentage: matchedHero.value_percentage, heroOrder: modelCoord.hero_order,
+            identificationConfidence: matchedHero.identificationConfidence
+          });
+        } else {
+          heroModelHotspotData.push({
+            coord: modelCoord, heroDisplayName: "Unknown Hero", heroName: "unknown_hero_" + modelCoord.hero_order, dbHeroId: null,
+            winrate: null, avg_pick_order: null, value_percentage: null,
+            heroOrder: modelCoord.hero_order, identificationConfidence: 0
           });
         }
       }
-    }
-
-    const heroModelHotspotData = [];
-    for (const modelCoord of currentModelsCoords) {
-      const matchedHero = tempIdentifiedHeroesMap.get(modelCoord.hero_order);
-      if (matchedHero) {
-        heroModelHotspotData.push({
-          coord: modelCoord, heroDisplayName: matchedHero.heroDisplayName, heroName: matchedHero.heroName,
-          dbHeroId: matchedHero.dbHeroId, winrate: matchedHero.winrate, avg_pick_order: matchedHero.avg_pick_order,
-          value_percentage: matchedHero.value_percentage, heroOrder: modelCoord.hero_order,
-          identificationConfidence: matchedHero.identificationConfidence
-        });
-      } else {
-        heroModelHotspotData.push({
-          coord: modelCoord, heroDisplayName: "Unknown Hero", heroName: "unknown_hero_" + modelCoord.hero_order, dbHeroId: null,
-          winrate: null, avg_pick_order: null, value_percentage: null,
-          heroOrder: modelCoord.hero_order, identificationConfidence: 0
-        });
-      }
+      identifiedHeroModelsCache = [...heroModelHotspotData]; // Cache the results (deep copy for safety if objects were complex)
+      console.log("[Main] Hero models identified and cached:", identifiedHeroModelsCache.length);
+    } else {
+      console.log("[Main] Using cached model identification data (Rescan).");
+      heroModelHotspotData = [...identifiedHeroModelsCache]; // Use cached data (deep copy)
     }
 
     let heroesForMyHeroSelectionUI = [];
     if (currentHeroesCoords.length > 0) {
       for (const heroCoord of currentHeroesCoords) {
-        const matchedHeroDataFromModels = heroModelHotspotData.find(hm => hm.heroOrder === heroCoord.hero_order);
+        // Ensure heroModelHotspotData is defined before trying to find in it
+        const matchedHeroDataFromModels = heroModelHotspotData ? heroModelHotspotData.find(hm => hm.heroOrder === heroCoord.hero_order) : null;
         if (matchedHeroDataFromModels && matchedHeroDataFromModels.dbHeroId) {
           heroesForMyHeroSelectionUI.push({
             heroOrder: heroCoord.hero_order,
@@ -376,19 +392,18 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
     }
 
     const uniqueAbilityNamesInPool = new Set();
-    rawResults.ultimates.forEach(r => r.name && uniqueAbilityNamesInPool.add(r.name)); //
-    rawResults.standard.forEach(r => r.name && uniqueAbilityNamesInPool.add(r.name)); //
+    rawResults.ultimates.forEach(r => r.name && uniqueAbilityNamesInPool.add(r.name));
+    rawResults.standard.forEach(r => r.name && uniqueAbilityNamesInPool.add(r.name));
 
     const allPickedAbilityNames = new Set();
-    rawResults.selectedAbilities.forEach(r => r.name && allPickedAbilityNames.add(r.name)); //
+    rawResults.selectedAbilities.forEach(r => r.name && allPickedAbilityNames.add(r.name));
 
     const allNamesToFetchDetailsFor = [...new Set([...uniqueAbilityNamesInPool, ...allPickedAbilityNames])];
-    const abilityDetailsMap = getAbilityDetails(activeDbPath, allNamesToFetchDetailsFor); //
+    const abilityDetailsMap = getAbilityDetails(activeDbPath, allNamesToFetchDetailsFor);
 
     const allDraftableEntitiesForScoring = [];
 
-    // 1. Add abilities to the scoring list, determining is_ultimate from coordinate source
-    rawResults.ultimates.forEach(ultResult => { //
+    rawResults.ultimates.forEach(ultResult => {
       if (ultResult.name) {
         const details = abilityDetailsMap.get(ultResult.name);
         if (details) {
@@ -401,7 +416,7 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
         }
       }
     });
-    rawResults.standard.forEach(stdResult => { //
+    rawResults.standard.forEach(stdResult => {
       if (stdResult.name) {
         const details = abilityDetailsMap.get(stdResult.name);
         if (details) {
@@ -421,23 +436,26 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
 
     for (const entity of allDraftableEntitiesForScoring) {
       if (entity.entityType === 'ability') {
-        entity.highWinrateCombinations = await getHighWinrateCombinations(activeDbPath, entity.internalName, currentDraftPoolInternalNamesForSynergy); //
+        entity.highWinrateCombinations = await getHighWinrateCombinations(activeDbPath, entity.internalName, currentDraftPoolInternalNamesForSynergy);
       }
     }
 
     const addedHeroModelDbIds = new Set();
-    for (const heroData of heroModelHotspotData) {
-      if (heroData.dbHeroId !== null && !addedHeroModelDbIds.has(heroData.dbHeroId)) {
-        allDraftableEntitiesForScoring.push({
-          internalName: heroData.heroName, displayName: heroData.heroDisplayName,
-          winrate: heroData.winrate, avgPickOrder: heroData.avg_pick_order,
-          valuePercentage: heroData.value_percentage, entityType: 'hero',
-          dbHeroId: heroData.dbHeroId, heroOrderScreen: heroData.heroOrder,
-          consolidatedScore: 0
-        });
-        addedHeroModelDbIds.add(heroData.dbHeroId);
+    if (heroModelHotspotData) { // Ensure heroModelHotspotData is defined
+      for (const heroData of heroModelHotspotData) {
+        if (heroData.dbHeroId !== null && !addedHeroModelDbIds.has(heroData.dbHeroId)) {
+          allDraftableEntitiesForScoring.push({
+            internalName: heroData.heroName, displayName: heroData.heroDisplayName,
+            winrate: heroData.winrate, avgPickOrder: heroData.avg_pick_order,
+            valuePercentage: heroData.value_percentage, entityType: 'hero',
+            dbHeroId: heroData.dbHeroId, heroOrderScreen: heroData.heroOrder,
+            consolidatedScore: 0
+          });
+          addedHeroModelDbIds.add(heroData.dbHeroId);
+        }
       }
     }
+
 
     allDraftableEntitiesForScoring.forEach(entity => {
       let vRaw = entity.valuePercentage;
@@ -460,8 +478,8 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
       const myDraftingHeroUIInfo = heroesForMyHeroSelectionUI.find(h => h.dbHeroId === mySelectedHeroDbIdForDrafting);
       if (myDraftingHeroUIInfo) {
         const myDraftingHeroSlotOrder = myDraftingHeroUIInfo.heroOrder;
-        for (const pickedAbility of rawResults.selectedAbilities) { //
-          if (pickedAbility.name && pickedAbility.hero_order === myDraftingHeroSlotOrder && pickedAbility.is_ultimate === true) { // is_ultimate from layout
+        for (const pickedAbility of rawResults.selectedAbilities) {
+          if (pickedAbility.name && pickedAbility.hero_order === myDraftingHeroSlotOrder && pickedAbility.is_ultimate === true) {
             myHeroHasPickedUltimate = true;
             console.log(`[Main] "My Hero" (Drafting DB ID: ${mySelectedHeroDbIdForDrafting}, Slot Order: ${myDraftingHeroSlotOrder}) has picked an ultimate: ${pickedAbility.name}`);
             break;
@@ -502,16 +520,19 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
       .filter(e => e.entityType === 'ability')
       .forEach(ab => scoredAbilitiesMap.set(ab.internalName, ab));
 
-    heroModelHotspotData.forEach(hModel => {
-      const identifier = `hero:${hModel.heroName}`;
-      hModel.isTopTier = topTierEntityIdentifiers.has(identifier);
-      const scoredEntity = allDraftableEntitiesForScoring.find(e => e.entityType === 'hero' && e.internalName === hModel.heroName);
-      hModel.consolidatedScore = scoredEntity ? scoredEntity.consolidatedScore : 0;
-    });
+    if (heroModelHotspotData) { // Ensure heroModelHotspotData is defined
+      heroModelHotspotData.forEach(hModel => {
+        const identifier = `hero:${hModel.heroName}`;
+        hModel.isTopTier = topTierEntityIdentifiers.has(identifier);
+        const scoredEntity = allDraftableEntitiesForScoring.find(e => e.entityType === 'hero' && e.internalName === hModel.heroName);
+        hModel.consolidatedScore = scoredEntity ? scoredEntity.consolidatedScore : 0;
+      });
+    }
+
 
     let opCombinationsInPool = [];
     if (currentDraftPoolInternalNamesForSynergy.length >= 2) {
-      opCombinationsInPool = await getOPCombinationsInPool(activeDbPath, currentDraftPoolInternalNamesForSynergy); //
+      opCombinationsInPool = await getOPCombinationsInPool(activeDbPath, currentDraftPoolInternalNamesForSynergy);
     }
 
     const formatResultsForUi = (predictedResultsArray, isSelectedAbilityList = false) => {
@@ -532,7 +553,7 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
           abilityDataSource = abilityDetailsMap.get(internalName);
         } else {
           abilityDataSource = scoredAbilitiesMap.get(internalName);
-          if (abilityDataSource) { // abilityDataSource here is an entry from allDraftableEntitiesForScoring
+          if (abilityDataSource) {
             isUltimateFromCoordSourceForThisAbility = abilityDataSource.is_ultimate_from_coord_source;
           }
           isTopTier = topTierEntityIdentifiers.has(`ability:${internalName}`);
@@ -594,7 +615,8 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
           ultimates: finalFormattedUltimates, standard: formattedStandard,
           selectedAbilities: formattedSelectedAbilities
         },
-        heroModels: heroModelHotspotData, heroesForMyHeroUI: heroesForMyHeroSelectionUI,
+        heroModels: heroModelHotspotData || [], // Ensure it's an array even if cache was null and not populated
+        heroesForMyHeroUI: heroesForMyHeroSelectionUI,
         coordinatesConfig: layoutConfig, targetResolution: selectedResolution,
         durationMs: durationMs, opCombinations: opCombinationsInPool,
         initialSetup: false, scaleFactor: lastScaleFactor,
@@ -605,7 +627,7 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
 
   } catch (error) {
     console.error(`[Main] Error during scan for ${selectedResolution}:`, error);
-    lastScanRawResults = null;
+    lastScanRawResults = null; // Clear on error too
     if (overlayWindow && !overlayWindow.isDestroyed()) {
       overlayWindow.webContents.send('overlay-data', { error: error.message || 'Scan error.', scaleFactor: lastScaleFactor });
     }
@@ -641,31 +663,25 @@ ipcMain.on('take-snapshot', async (event) => {
       ...(coordsConfig.standard_slots_coords || []).map((coord, i) => ({ ...coord, predictedName: lastScanRawResults.standard?.[i]?.name || 'unknown_standard', type: 'std' })),
       ...(lastScanRawResults.selectedAbilities || []).map((abilityResult, i) => {
         const params = coordsConfig.selected_abilities_params;
-        // Correctly find the coordinate for the i-th selected ability OF A SPECIFIC HERO
         const heroOrderForThisAbility = abilityResult.hero_order;
         const abilitiesForThisHero = (lastScanRawResults.selectedAbilities || []).filter(ab => ab.hero_order === heroOrderForThisAbility);
         const coordsForThisHero = (coordsConfig.selected_abilities_coords || []).filter(c => c.hero_order === heroOrderForThisAbility);
 
-        // Find which occurrence this 'abilityResult' is for its hero_order
         let occurrenceIndex = -1;
         for (let k = 0; k < abilitiesForThisHero.length; k++) {
-          // This relies on the order from processDraftScreen being stable and matching iteration here
           if (abilitiesForThisHero[k].name === abilityResult.name && abilitiesForThisHero[k].confidence === abilityResult.confidence) {
             let alreadyCounted = 0;
             for (let l = 0; l < k; l++) {
               if (abilitiesForThisHero[l].name === abilityResult.name && abilitiesForThisHero[l].confidence === abilityResult.confidence) alreadyCounted++;
             }
-            if (alreadyCounted === occurrenceIndex + 1) { // Basic check to find the right one if multiple same abilities
+            if (alreadyCounted === occurrenceIndex + 1) {
               occurrenceIndex = k;
               break;
             }
           }
         }
-        if (occurrenceIndex === -1) occurrenceIndex = i % coordsForThisHero.length; // Fallback, less accurate
-
-
+        if (occurrenceIndex === -1) occurrenceIndex = i % coordsForThisHero.length;
         const specificCoord = coordsForThisHero[occurrenceIndex];
-
         return specificCoord && params ? {
           ...specificCoord,
           width: params.width,
@@ -715,7 +731,7 @@ ipcMain.on('get-available-resolutions', async (event) => {
 
 
 ipcMain.on('close-overlay', () => {
-  if (overlayWindow) overlayWindow.close();
+  if (overlayWindow) overlayWindow.close(); // This will trigger the 'closed' event for overlayWindow
   else if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
     mainWindow.show();
     mainWindow.focus();
@@ -732,6 +748,9 @@ function createOverlayWindow(resolutionKey, allCoordinatesConfig, scaleFactorToU
   isScanInProgress = false;
   lastScanRawResults = null;
   lastScanTargetResolution = null;
+  identifiedHeroModelsCache = null; // Reset cache when overlay is created/re-created
+  mySelectedModelDbHeroId = null;    // Reset "My Model" selection as well
+  mySelectedModelHeroOrder = null;
 
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width: screenWidth, height: screenHeight, x, y } = primaryDisplay.bounds;
@@ -753,11 +772,14 @@ function createOverlayWindow(resolutionKey, allCoordinatesConfig, scaleFactorToU
       heroesForMyHeroUI: [],
       initialSetup: true, scaleFactor: scaleFactorToUse,
       selectedHeroForDraftingDbId: mySelectedHeroDbIdForDrafting,
-      selectedModelHeroOrder: mySelectedModelHeroOrder
+      selectedModelHeroOrder: mySelectedModelHeroOrder // Send current "My Model" state
     });
   });
   overlayWindow.on('closed', () => {
     overlayWindow = null; isScanInProgress = false; lastScanRawResults = null; lastScanTargetResolution = null;
+    identifiedHeroModelsCache = null; // Reset cache when overlay is closed
+    mySelectedModelDbHeroId = null;   // Reset "My Model" selection
+    mySelectedModelHeroOrder = null;
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.show(); mainWindow.focus();
       if (mainWindow.webContents && !mainWindow.webContents.isDestroyed()) mainWindow.webContents.send('overlay-closed-reset-ui');
