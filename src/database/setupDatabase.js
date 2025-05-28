@@ -12,7 +12,9 @@ const setupSql = `
         name TEXT UNIQUE NOT NULL,      -- Internal name, e.g., "antimage"
         display_name TEXT,              -- Display name, e.g., "Anti-Mage"
         winrate REAL,
-        windrun_id INTEGER
+        windrun_id INTEGER,
+        avg_pick_order REAL,            -- Added for heroes
+        value_percentage REAL           -- Added for heroes
     );
 
     CREATE TABLE IF NOT EXISTS Abilities (
@@ -72,7 +74,9 @@ function setupDatabase() {
 
         const heroColumnsToAdd = [
             { table: 'Heroes', column: 'display_name', type: 'TEXT' },
-            { table: 'Heroes', column: 'windrun_id', type: 'INTEGER' }
+            { table: 'Heroes', column: 'windrun_id', type: 'INTEGER' },
+            { table: 'Heroes', column: 'avg_pick_order', type: 'REAL' },
+            { table: 'Heroes', column: 'value_percentage', type: 'REAL' }
         ];
 
         const synergyColumnsToAdd = [

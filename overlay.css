@@ -15,7 +15,9 @@ body {
     box-sizing: border-box;
 }
 
-.ability-hotspot.snapshot-hidden-border {
+.ability-hotspot.snapshot-hidden-border,
+.hero-model-hotspot.snapshot-hidden-border {
+    /* Apply to hero models too */
     border: none !important;
     animation: none !important;
     box-shadow: none !important;
@@ -116,7 +118,10 @@ body {
     opacity: 1;
 }
 
-#scan-now-btn,
+#initial-scan-btn,
+/* Added from overlay.html */
+#rescan-btn,
+/* Added from overlay.html */
 #close-overlay-btn,
 #take-snapshot-btn,
 #show-op-combinations-btn {
@@ -130,19 +135,37 @@ body {
     text-align: center;
 }
 
-#scan-now-btn {
+#initial-scan-btn {
+    /* Style for initial scan button */
     background-color: rgba(0, 128, 255, 0.7);
     border: 1px solid rgba(0, 100, 200, 0.9);
 }
 
-#scan-now-btn:hover {
+#initial-scan-btn:hover {
     background-color: rgba(0, 128, 255, 0.9);
 }
 
-#scan-now-btn:disabled {
+#initial-scan-btn:disabled {
     background-color: rgba(100, 100, 100, 0.5);
     cursor: not-allowed;
 }
+
+#rescan-btn {
+    /* Style for rescan button */
+    background-color: rgba(0, 150, 136, 0.7);
+    /* Teal like color */
+    border: 1px solid rgba(0, 120, 110, 0.9);
+}
+
+#rescan-btn:hover {
+    background-color: rgba(0, 150, 136, 0.9);
+}
+
+#rescan-btn:disabled {
+    background-color: rgba(100, 100, 100, 0.5);
+    cursor: not-allowed;
+}
+
 
 #close-overlay-btn {
     background-color: rgba(255, 0, 0, 0.7);
@@ -156,7 +179,6 @@ body {
 #take-snapshot-btn {
     background-color: rgba(255, 165, 0, 0.7);
     border: 1px solid rgba(200, 130, 0, 0.9);
-    /* margin-top: 5px; /* Removed as gap is handled by flex parent */
 }
 
 #take-snapshot-btn:hover {
@@ -168,7 +190,9 @@ body {
     cursor: not-allowed;
 }
 
-#snapshot-status {
+#snapshot-status,
+/* Combined with scan-status-popup */
+#scan-status-popup {
     position: fixed;
     bottom: 10px;
     right: 10px;
@@ -179,29 +203,21 @@ body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     font-size: 13px;
     z-index: 10001;
-    /* Above tooltip if they overlap by chance */
     display: none;
     border: 1px solid rgba(50, 50, 70, 0.8);
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }
 
+
 /* OP Combinations Window Styling */
 #op-combinations-container {
     display: flex;
-    /* To manage visibility of window vs button */
     flex-direction: column;
     align-items: flex-end;
-    /* Align to the right */
 }
 
 .op-alert-window {
-    /* Removed position: fixed as it's now part of top-right-ui-container */
-    /* left: 20px; */
-    /* Old positioning, no longer needed */
-    /* top: 50%; */
-    /* transform: translateY(-50%); */
     width: 250px;
-    /* Or whatever width you prefer */
     background-color: rgba(30, 10, 10, 0.85);
     color: #f0f0f0;
     padding: 10px 15px;
@@ -209,11 +225,8 @@ body {
     border: 1px solid rgba(180, 50, 50, 0.7);
     box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
     z-index: 9999;
-    /* Below tooltip, but above hotspots */
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     font-size: 14px;
-    /* max-width: 250px; /* Already set by width */
-    /* display: none; /* Control via JS */
     opacity: 0.7;
     transition: opacity 0.2s ease-in-out;
 }
@@ -238,19 +251,16 @@ body {
 }
 
 .op-alert-hide-btn {
+    /* Matches ID from overlay.html */
     background-color: rgba(100, 50, 50, 0.6);
-    /* Slightly more button-like background */
     border: 1px solid rgba(150, 70, 70, 0.8);
     color: #e0e0e0;
     font-size: 11px;
-    /* Adjusted for "Hide" text */
     font-weight: bold;
     cursor: pointer;
     padding: 2px 6px;
-    /* Adjusted padding */
     border-radius: 3px;
     line-height: 1;
-    /* Ensure text is vertically centered if padding causes issues */
 }
 
 #op-combinations-list div {
@@ -261,9 +271,7 @@ body {
 
 #show-op-combinations-btn {
     background-color: rgba(100, 60, 60, 0.7);
-    /* Dark red-ish */
     border: 1px solid rgba(150, 80, 80, 0.9);
-    /* display: none; /* Controlled by JS */
 }
 
 #show-op-combinations-btn:hover {
@@ -272,52 +280,63 @@ body {
 
 .hero-model-hotspot {
     position: absolute;
-    /* */
     box-sizing: border-box;
-    /* */
-    /* Subtle border to indicate interactivity, even if no hero is known yet */
     border: 1px dashed rgba(200, 200, 255, 0.2);
+    /* Default subtle border */
 }
 
 .hero-model-hotspot:hover {
-    /* Feedback when hovering over a hero model */
     border-color: rgba(220, 220, 255, 0.7);
     background-color: rgba(150, 150, 255, 0.05);
 }
 
+/* Style for the selected "My Model" hero model hotspot */
 .hero-model-hotspot.is-my-model {
-    /* Style for the selected "My Model" */
-    border: 2px solid #33FFDD !important;
+    border: 3px solid #33FFDD !important;
     /* Cyan/Teal border */
-    box-shadow: 0 0 10px 2px rgba(51, 255, 221, 0.6) !important;
+    box-shadow: 0 0 10px 3px rgba(51, 255, 221, 0.7) !important;
     /* Cyan/Teal glow */
-    background-color: rgba(51, 255, 221, 0.05);
-    /* Slight tint */
 }
+
+/* Style for "Top Tier" hero models */
+.hero-model-hotspot.top-tier-hero-model {
+    border: 3px solid #FFD700 !important;
+    /* Gold border */
+    animation: shimmerGold 1.5s infinite ease-in-out;
+    /* box-shadow is part of animation */
+}
+
+@keyframes shimmerGold {
+    0% {
+        box-shadow: 0 0 5px 1px rgba(255, 215, 0, 0.6), inset 0 0 3px 0px rgba(255, 215, 0, 0.4);
+        border-color: rgba(255, 223, 30, 0.8);
+    }
+
+    50% {
+        box-shadow: 0 0 12px 4px rgba(255, 215, 0, 1), inset 0 0 7px 2px rgba(255, 215, 0, 0.8);
+        border-color: rgba(255, 230, 50, 1);
+    }
+
+    100% {
+        box-shadow: 0 0 5px 1px rgba(255, 215, 0, 0.6), inset 0 0 3px 0px rgba(255, 215, 0, 0.4);
+        border-color: rgba(255, 223, 30, 0.8);
+    }
+}
+
 
 /* Buttons for "My Model" */
 .my-model-btn,
 .change-my-model-btn {
     position: absolute;
-    /* Positioned by JS */
     padding: 3px 6px;
-    /* */
     font-size: 10px;
-    /* */
     font-weight: bold;
-    /* */
     color: white;
-    /* */
     border-radius: 3px;
-    /* */
     cursor: pointer;
-    /* */
     z-index: 10000;
-    /* */
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-    /* */
     white-space: nowrap;
-    /* */
     opacity: 0.7;
     transition: opacity 0.2s ease-in-out;
 }
@@ -330,101 +349,68 @@ body {
 .my-model-btn {
     background-color: rgba(0, 200, 150, 0.7);
     /* Tealish */
-    /* */
     border: 1px solid rgba(0, 170, 120, 0.9);
-    /* */
 }
 
 .my-model-btn:hover {
     background-color: rgba(0, 200, 150, 0.9);
-    /* */
 }
 
 .change-my-model-btn {
     background-color: rgba(255, 100, 100, 0.7);
     /* Reddish for "unset" */
-    /* */
     border: 1px solid rgba(220, 80, 80, 0.9);
-    /* */
 }
 
 .change-my-model-btn:hover {
     background-color: rgba(255, 100, 100, 0.9);
-    /* */
 }
 
 /* Styles for original "My Hero" (drafting) buttons */
 .my-hero-btn-original,
 .change-my-hero-btn-original {
     position: absolute;
-    /* Positioned by JS */
     padding: 4px 8px;
-    /* */
     font-size: 11px;
-    /* */
     font-weight: bold;
-    /* */
     color: white;
-    /* */
     background-color: rgba(0, 120, 255, 0.75);
     /* Default "My Hero" blue */
-    /* */
     border: 1px solid rgba(0, 100, 200, 0.9);
-    /* */
     border-radius: 4px;
-    /* */
     cursor: pointer;
-    /* */
     z-index: 9999;
+    /* Slightly lower than My Model buttons */
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-    /* */
     white-space: nowrap;
-    /* */
     opacity: 0.7;
     transition: opacity 0.2s ease-in-out;
 }
 
 .my-hero-btn-original:hover,
 .change-my-hero-btn-original:hover {
-    background-color: rgba(0, 120, 255, 0.95);
-    /* */
     opacity: 1;
 }
 
+.my-hero-btn-original:hover {
+    background-color: rgba(0, 120, 255, 0.95);
+}
+
+
 .change-my-hero-btn-original {
-    /* Orange for "Change Hero" */
     background-color: rgba(255, 140, 0, 0.8);
-    /* */
+    /* Orange for "Change Hero" */
     border: 1px solid rgba(220, 120, 0, 0.9);
-    /* */
 }
 
 .change-my-hero-btn-original:hover {
     background-color: rgba(255, 140, 0, 1);
-    /* */
 }
 
+/* Style for abilities picked by "My Hero" (drafting context) */
 .selected-ability-hotspot.my-hero-selected-ability {
-    border: 2px solid #FFD700 !important;
-    /* Gold border */
-    /* */
-    box-shadow: 0 0 8px 2px rgba(255, 215, 0, 0.7) !important;
-    /* Gold glow */
-    /* */
-}
-
-#scan-status-popup {
-    position: fixed;
-    bottom: 10px;
-    right: 10px;
-    background-color: rgba(20, 20, 30, 0.85);
-    color: #e0e0e0;
-    padding: 8px 12px;
-    border-radius: 4px;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    font-size: 13px;
-    z-index: 10001;
-    display: none;
-    border: 1px solid rgba(50, 50, 70, 0.8);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+    border: 3px solid #00CF00 !important;
+    /* Bright Green border */
+    box-shadow: 0 0 10px 4px rgba(0, 220, 0, 0.75) !important;
+    /* Brighter Green glow */
 }

@@ -132,14 +132,6 @@ function updateOPCombinationsDisplay(opCombinations) {
         showOpCombinationsButton.style.display = 'none';
     }
 }
-// function updateMyHeroAbilityHighlights() {
-//     document.querySelectorAll('.ability-hotspot.selected-ability-hotspot').forEach(hotspot => {
-//         hotspot.classList.remove('my-hero-selected-ability');
-//         if (selectedHeroOrder !== null && parseInt(hotspot.dataset.heroOrder) === selectedHeroOrder) {
-//             hotspot.classList.add('my-hero-selected-ability');
-//         }
-//     });
-// }
 
 function manageMyHeroButtons() { // Renamed from manageMyHeroButtons_Original for consistency with your file
     const allOriginalMyHeroButtons = document.querySelectorAll('.my-hero-btn-original, .change-my-hero-btn-original');
@@ -236,7 +228,9 @@ if (window.electronAPI && window.electronAPI.onOverlayData) {
 
         if (data && typeof data.opCombinations !== 'undefined') updateOPCombinationsDisplay(data.opCombinations);
 
-        if (data.heroModels) currentHeroModelData = data.heroModels;
+        if (data && data.heroModels) { // heroModels now contains isTopTier
+            currentHeroModelData = data.heroModels;
+        }
         if (data.heroesForMyHeroUI) currentHeroesForMyHeroUIData = data.heroesForMyHeroUI;
 
         // Update local selection states based on what main process confirms
@@ -349,7 +343,6 @@ if (window.electronAPI && window.electronAPI.onOverlayData) {
 
 
             manageMyHeroButtons();
-            updateMyHeroAbilityHighlights();
 
             if (initialScanButton && initialScanButton.style.display !== 'none') { initialScanButton.style.display = 'none'; }
             if (rescanButton) { rescanButton.style.display = 'inline-block'; rescanButton.disabled = false; }
@@ -598,7 +591,7 @@ function createHotspot(coord, abilityData, indexOrUniqueId, type, isSelectedAbil
     document.body.appendChild(hotspot);
 }
 
-function createHeroModelHotspots(heroModelDataArray) {
+function createHeroModelHotspots(heroModelDataArray) { //
     if (!heroModelDataArray || heroModelDataArray.length === 0) return;
 
     heroModelDataArray.forEach(heroData => {
@@ -616,27 +609,48 @@ function createHeroModelHotspots(heroModelDataArray) {
         hotspot.style.width = `${coord.width / currentScaleFactor}px`;
         hotspot.style.height = `${coord.height / currentScaleFactor}px`;
 
-        hotspot.dataset.heroName = heroData.heroDisplayName;
+        hotspot.dataset.heroName = heroData.heroDisplayName; // For display
+        hotspot.dataset.internalHeroName = heroData.heroName; // Store internal name
         hotspot.dataset.winrate = heroData.winrate !== null ? heroData.winrate : 'N/A';
         hotspot.dataset.heroOrder = heroData.heroOrder;
         hotspot.dataset.dbHeroId = heroData.dbHeroId;
+        hotspot.dataset.isTopTier = String(heroData.isTopTier === true);
+        hotspot.dataset.consolidatedScore = (typeof heroData.consolidatedScore === 'number' ? heroData.consolidatedScore.toFixed(3) : 'N/A');
+
+
+        if (heroData.isTopTier) {
+            hotspot.classList.add('top-tier-hero-model'); //
+        }
+        // Apply 'is-my-model' class if this model is selected
+        if (selectedModelHeroOrder_overlay !== null && parseInt(hotspot.dataset.heroOrder) === selectedModelHeroOrder_overlay) {
+            hotspot.classList.add('is-my-model');
+        }
+
 
         if (heroData.heroDisplayName !== "Unknown Hero") {
             hotspot.addEventListener('mouseenter', (event) => {
                 const nameForDisplay = hotspot.dataset.heroName.replace(/_/g, ' ');
                 let wr = hotspot.dataset.winrate;
                 const winrateFormatted = wr !== 'N/A' ? `${(parseFloat(wr) * 100).toFixed(1)}%` : 'N/A';
+                const topTierIndicator = hotspot.dataset.isTopTier === 'true' ? '<span style="color: #FFD700;">&#9733; Top Model!</span><br>' : ''; // Gold for heroes
+                const scoreDisplay = hotspot.dataset.consolidatedScore !== 'N/A' ? `<span style="font-size: 0.8em; color: #ccc;">Score: ${hotspot.dataset.consolidatedScore}</span><br>` : '';
+
 
                 let tooltipContent = `
-                <div class="tooltip-title">${nameForDisplay}</div>
-                <div class="tooltip-winrate">Win Rate: ${winrateFormatted}</div>
-            `;
+                    ${topTierIndicator}
+                    <div class="tooltip-title">${nameForDisplay} (Hero Model)</div>
+                    <div class="tooltip-winrate">Win Rate: ${winrateFormatted}</div>
+                    ${scoreDisplay}
+                `;
 
                 if (tooltipElement) {
                     tooltipElement.innerHTML = tooltipContent;
                     tooltipElement.style.display = 'block';
                     isTooltipVisible = true;
-                    toggleTopTierBordersVisibility(false); // Hide ability borders
+                    toggleTopTierBordersVisibility(false);
+                    if (hotspot.classList.contains('top-tier-hero-model') || hotspot.classList.contains('is-my-model')) {
+                        hotspot.classList.add('snapshot-hidden-border');
+                    }
                     positionTooltip(hotspot);
                 }
             });
@@ -644,7 +658,10 @@ function createHeroModelHotspots(heroModelDataArray) {
             hotspot.addEventListener('mouseleave', () => {
                 if (tooltipElement) tooltipElement.style.display = 'none';
                 isTooltipVisible = false;
-                toggleTopTierBordersVisibility(true); // Show ability borders
+                toggleTopTierBordersVisibility(true);
+                if ((hotspot.classList.contains('top-tier-hero-model') || hotspot.classList.contains('is-my-model')) && hotspot.classList.contains('snapshot-hidden-border')) {
+                    hotspot.classList.remove('snapshot-hidden-border');
+                }
             });
         }
         document.body.appendChild(hotspot);
@@ -716,15 +733,34 @@ function manageHeroModelButtons() {
 }
 
 function updateVisualHighlights() {
-
+    // Highlight selected abilities for "My Hero" (drafting context)
     document.querySelectorAll('.ability-hotspot.selected-ability-hotspot').forEach(hotspot => {
         hotspot.classList.remove('my-hero-selected-ability');
+        if (selectedHeroOrder !== null && parseInt(hotspot.dataset.heroOrder) === selectedHeroOrder) {
+            hotspot.classList.add('my-hero-selected-ability');
+        }
     });
 
+    // Highlight "My Model" and "Top Tier Hero Models"
     document.querySelectorAll('.hero-model-hotspot').forEach(hotspot => {
-        hotspot.classList.remove('is-my-model');
+        hotspot.classList.remove('is-my-model', 'top-tier-hero-model'); // Clear existing states
         if (selectedModelHeroOrder_overlay !== null && parseInt(hotspot.dataset.heroOrder) === selectedModelHeroOrder_overlay) {
             hotspot.classList.add('is-my-model');
+        }
+        // Re-apply top-tier based on the data attribute set during creation/update
+        if (hotspot.dataset.isTopTier === 'true') {
+            hotspot.classList.add('top-tier-hero-model');
+        }
+    });
+
+    // Ensure Top Tier Ability borders are managed correctly
+    // This might be redundant if toggleTopTierBordersVisibility is called appropriately elsewhere
+    // but good for ensuring state after data updates.
+    document.querySelectorAll('.ability-hotspot.top-tier-ability').forEach(hotspot => {
+        if (!isTooltipVisible) { // Only show if tooltip isn't active over THIS hotspot (or any for simplicity here)
+            hotspot.classList.remove('snapshot-hidden-border');
+        } else {
+            // If tooltip is visible, specific logic in tooltip handlers will hide the border of the hovered item
         }
     });
 }
