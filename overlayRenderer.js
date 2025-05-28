@@ -22,11 +22,22 @@ let scanHasBeenPerformed = false;
 let isTooltipVisible = false;
 let opCombinationsAvailable = false;
 
-let identifiedHeroesCache = [];
-let selectedHeroOrder = null;
+let currentHeroModelData = [];
+let currentHeroesForMyHeroUIData = [];
+
+// State for "My Hero" (selected for drafting purposes, associated with original buttons/hero_coords context)
+let selectedHeroOrder = null; // This is the hero_order for the *drafting context*
+
+// State for "My Model" (selected hero model on screen, associated with models_coords context)
+let selectedModelHeroOrder_overlay = null;    // Tracks heroOrder for "My Model"
+
 const MY_HERO_BUTTON_WIDTH = 70;
 const MY_HERO_BUTTON_HEIGHT = 25;
 const MY_HERO_BUTTON_MARGIN = 5;
+
+const MY_MODEL_BUTTON_WIDTH = 90;
+const MY_MODEL_BUTTON_HEIGHT = 25;
+const MY_MODEL_BUTTON_MARGIN = 3;
 
 console.log('overlayRenderer.js loaded');
 
@@ -64,8 +75,8 @@ function triggerScan(isInitialScan) {
         scanStatusPopup.style.display = 'block';
     }
 
-    const heroOrderForThisScan = isInitialScan ? null : selectedHeroOrder;
-    console.log(`[OVERLAY RENDERER] Triggering scan. Initial: ${isInitialScan}, Hero Order: ${heroOrderForThisScan}`);
+    const heroOrderForThisScan = isInitialScan ? null : selectedHeroOrder; // Use the correct selectedHeroOrder
+    console.log(`[OVERLAY RENDERER] Triggering scan. Initial: ${isInitialScan}, Hero Order for Drafting: ${heroOrderForThisScan}`);
     window.electronAPI.executeScanFromOverlay(currentTargetResolution, heroOrderForThisScan);
 }
 
@@ -121,19 +132,23 @@ function updateOPCombinationsDisplay(opCombinations) {
         showOpCombinationsButton.style.display = 'none';
     }
 }
+// function updateMyHeroAbilityHighlights() {
+//     document.querySelectorAll('.ability-hotspot.selected-ability-hotspot').forEach(hotspot => {
+//         hotspot.classList.remove('my-hero-selected-ability');
+//         if (selectedHeroOrder !== null && parseInt(hotspot.dataset.heroOrder) === selectedHeroOrder) {
+//             hotspot.classList.add('my-hero-selected-ability');
+//         }
+//     });
+// }
 
-function updateMyHeroAbilityHighlights() {
-    document.querySelectorAll('.ability-hotspot.selected-ability-hotspot').forEach(hotspot => {
-        hotspot.classList.remove('my-hero-selected-ability');
-        if (selectedHeroOrder !== null && parseInt(hotspot.dataset.heroOrder) === selectedHeroOrder) {
-            hotspot.classList.add('my-hero-selected-ability');
-        }
-    });
-}
+function manageMyHeroButtons() { // Renamed from manageMyHeroButtons_Original for consistency with your file
+    const allOriginalMyHeroButtons = document.querySelectorAll('.my-hero-btn-original, .change-my-hero-btn-original');
+    allOriginalMyHeroButtons.forEach(btn => btn.remove());
 
-function manageMyHeroButtons() {
-    document.querySelectorAll('.my-hero-btn, .change-my-hero-btn').forEach(btn => btn.remove());
-    if (!scanHasBeenPerformed || !currentCoordinatesConfig || !currentTargetResolution || identifiedHeroesCache.length === 0) {
+    console.log('[ManageMyHeroButtons] Running. SelectedHeroOrder:', selectedHeroOrder, 'UIData Count:', currentHeroesForMyHeroUIData.length);
+
+
+    if (!currentCoordinatesConfig || !currentTargetResolution || !currentHeroesForMyHeroUIData || currentHeroesForMyHeroUIData.length === 0) {
         return;
     }
     const resolutionCoords = currentCoordinatesConfig.resolutions[currentTargetResolution];
@@ -141,49 +156,17 @@ function manageMyHeroButtons() {
         return;
     }
 
-    if (selectedHeroOrder === null) {
-        identifiedHeroesCache.forEach(hero => {
-            const heroCoordData = resolutionCoords.heroes_coords.find(hc => hc.hero_order === hero.heroOrder);
-            if (heroCoordData) {
-                const button = document.createElement('button');
-                button.className = 'my-hero-btn';
-                button.textContent = 'My Hero';
-                button.dataset.heroOrder = hero.heroOrder;
-                const heroBoxX = heroCoordData.x / currentScaleFactor;
-                const heroBoxY = heroCoordData.y / currentScaleFactor;
-                const heroBoxWidth = resolutionCoords.heroes_params.width / currentScaleFactor;
-                if (hero.heroOrder <= 4) {
-                    button.style.left = `${heroBoxX - MY_HERO_BUTTON_WIDTH - MY_HERO_BUTTON_MARGIN}px`;
-                } else {
-                    button.style.left = `${heroBoxX + heroBoxWidth + MY_HERO_BUTTON_MARGIN}px`;
-                }
-                button.style.top = `${heroBoxY + (resolutionCoords.heroes_params.height / currentScaleFactor / 2) - (MY_HERO_BUTTON_HEIGHT / 2)}px`;
-                button.style.width = `${MY_HERO_BUTTON_WIDTH}px`;
-                button.style.height = `${MY_HERO_BUTTON_HEIGHT}px`;
-                button.addEventListener('click', () => {
-                    selectedHeroOrder = parseInt(button.dataset.heroOrder);
-                    const selectedHero = identifiedHeroesCache.find(h => h.heroOrder === selectedHeroOrder);
-                    const heroNameToLog = selectedHero ? selectedHero.heroName : 'Unknown Hero';
-                    console.log(`[OVERLAY RENDERER] Hero ${selectedHeroOrder} (${heroNameToLog}) selected.`);
-
-                    manageMyHeroButtons();
-                    updateMyHeroAbilityHighlights();
-                });
-                document.body.appendChild(button);
-            }
-        });
-    } else {
-        const hero = identifiedHeroesCache.find(h => h.heroOrder === selectedHeroOrder);
-        const heroCoordData = resolutionCoords.heroes_coords.find(hc => hc.hero_order === selectedHeroOrder);
-        if (hero && heroCoordData) {
+    currentHeroesForMyHeroUIData.forEach(heroDataForUI => {
+        const heroCoordInfo = resolutionCoords.heroes_coords.find(hc => hc.hero_order === heroDataForUI.heroOrder);
+        if (heroCoordInfo && heroDataForUI.dbHeroId !== null) {
             const button = document.createElement('button');
-            button.className = 'change-my-hero-btn';
-            button.textContent = 'Change Hero';
-            button.dataset.heroOrder = selectedHeroOrder;
-            const heroBoxX = heroCoordData.x / currentScaleFactor;
-            const heroBoxY = heroCoordData.y / currentScaleFactor;
+            button.dataset.heroOrder = heroDataForUI.heroOrder;
+            button.dataset.dbHeroId = heroDataForUI.dbHeroId;
+
+            const heroBoxX = heroCoordInfo.x / currentScaleFactor;
+            const heroBoxY = heroCoordInfo.y / currentScaleFactor;
             const heroBoxWidth = resolutionCoords.heroes_params.width / currentScaleFactor;
-            if (selectedHeroOrder <= 4) {
+            if (heroDataForUI.heroOrder <= 4) {
                 button.style.left = `${heroBoxX - MY_HERO_BUTTON_WIDTH - MY_HERO_BUTTON_MARGIN}px`;
             } else {
                 button.style.left = `${heroBoxX + heroBoxWidth + MY_HERO_BUTTON_MARGIN}px`;
@@ -191,37 +174,46 @@ function manageMyHeroButtons() {
             button.style.top = `${heroBoxY + (resolutionCoords.heroes_params.height / currentScaleFactor / 2) - (MY_HERO_BUTTON_HEIGHT / 2)}px`;
             button.style.width = `${MY_HERO_BUTTON_WIDTH}px`;
             button.style.height = `${MY_HERO_BUTTON_HEIGHT}px`;
+            button.style.position = 'absolute';
+
+            console.log(`[ManageMyHeroButtons] HeroOrder: ${heroDataForUI.heroOrder}, current selectedHeroOrder: ${selectedHeroOrder}`);
+            if (selectedHeroOrder === heroDataForUI.heroOrder) {
+                button.className = 'change-my-hero-btn-original';
+                button.textContent = 'Change Hero';
+                button.style.display = 'inline-block';
+            } else {
+                button.className = 'my-hero-btn-original';
+                button.textContent = 'My Hero';
+                button.style.display = selectedHeroOrder !== null ? 'none' : 'inline-block';
+            }
+
             button.addEventListener('click', () => {
-                console.log(`[OVERLAY RENDERER] Hero ${selectedHeroOrder} deselected.`);
-                selectedHeroOrder = null;
-                manageMyHeroButtons();
-                updateMyHeroAbilityHighlights();
+                const clickedHeroOrder = parseInt(button.dataset.heroOrder);
+                const clickedDbHeroId = parseInt(button.dataset.dbHeroId);
+                console.log(`[Overlay] "My Hero" (original) button clicked. Order: ${clickedHeroOrder}, DB ID: ${clickedDbHeroId}`);
+                window.electronAPI.selectMyHeroForDrafting({
+                    heroOrder: clickedHeroOrder,
+                    dbHeroId: clickedDbHeroId
+                });
             });
+            button.addEventListener('mouseenter', () => { if (window.electronAPI) window.electronAPI.setOverlayMouseEvents(false); });
+            button.addEventListener('mouseleave', () => { if (window.electronAPI) window.electronAPI.setOverlayMouseEvents(true); });
             document.body.appendChild(button);
         }
-    }
+    });
 }
 
 
 if (window.electronAPI && window.electronAPI.onOverlayData) {
     window.electronAPI.onOverlayData((data) => {
-        console.log('[OVERLAY RENDERER] === New Overlay Data Received ===', JSON.stringify(data, null, 2));
+        console.log('[OVERLAY RENDERER] === New Overlay Data Received ===');
+        // console.log(JSON.stringify(data, null, 2)); // Keep for deep debugging if needed
 
-        if (typeof data.scaleFactor === 'number' && data.scaleFactor > 0) {
-            currentScaleFactor = data.scaleFactor;
-        }
-        if (data.coordinatesConfig) {
-            currentCoordinatesConfig = data.coordinatesConfig;
-            console.log('[OVERLAY RENDERER] Updated currentCoordinatesConfig');
-        }
-        if (data.targetResolution) {
-            currentTargetResolution = data.targetResolution;
-            console.log('[OVERLAY RENDERER] Updated currentTargetResolution:', currentTargetResolution);
-        }
+        if (typeof data.scaleFactor === 'number' && data.scaleFactor > 0) currentScaleFactor = data.scaleFactor;
+        if (data.coordinatesConfig) currentCoordinatesConfig = data.coordinatesConfig;
+        if (data.targetResolution) currentTargetResolution = data.targetResolution;
 
         if (scanStatusPopup) scanStatusPopup.style.display = 'none';
-
-        // Handle errors first
         if (data && data.error) {
             console.error('[OVERLAY RENDERER] Error message received from main:', data.error);
             if (scanStatusPopup) {
@@ -242,36 +234,37 @@ if (window.electronAPI && window.electronAPI.onOverlayData) {
             return;
         }
 
-        if (data && typeof data.opCombinations !== 'undefined') {
-            updateOPCombinationsDisplay(data.opCombinations);
-        }
+        if (data && typeof data.opCombinations !== 'undefined') updateOPCombinationsDisplay(data.opCombinations);
 
-        if (data && data.identifiedHeroes) {
-            identifiedHeroesCache = data.identifiedHeroes;
+        if (data.heroModels) currentHeroModelData = data.heroModels;
+        if (data.heroesForMyHeroUI) currentHeroesForMyHeroUIData = data.heroesForMyHeroUI;
+
+        // Update local selection states based on what main process confirms
+        if (typeof data.selectedHeroForDraftingDbId !== 'undefined') {
+            // Find the heroOrder in currentHeroesForMyHeroUIData that matches this dbId
+            const myHeroEntry = currentHeroesForMyHeroUIData.find(h => h.dbHeroId === data.selectedHeroForDraftingDbId);
+            selectedHeroOrder = myHeroEntry ? myHeroEntry.heroOrder : null;
+        }
+        if (typeof data.selectedModelHeroOrder !== 'undefined') {
+            selectedModelHeroOrder_overlay = data.selectedModelHeroOrder;
         }
 
 
         if (data && data.initialSetup) {
             console.log('[OVERLAY RENDERER] Processing initialSetup...');
-            document.querySelectorAll('.ability-hotspot, .selected-ability-hotspot, .my-hero-btn, .change-my-hero-btn').forEach(el => el.remove());
-            selectedHeroOrder = null;
+            document.querySelectorAll('.ability-hotspot, .selected-ability-hotspot, .hero-model-hotspot, .my-hero-btn-original, .change-my-hero-btn-original, .my-model-btn, .change-my-model-btn').forEach(el => el.remove());
 
-            if (initialScanButton) {
-                initialScanButton.style.display = 'inline-block';
-                initialScanButton.disabled = false;
-            }
+            if (initialScanButton) { initialScanButton.style.display = 'inline-block'; initialScanButton.disabled = false; }
             if (rescanButton) rescanButton.style.display = 'none';
-            if (takeSnapshotButton) {
-                takeSnapshotButton.style.display = 'none';
-                takeSnapshotButton.disabled = true;
-            }
+            if (takeSnapshotButton) { takeSnapshotButton.style.display = 'none'; takeSnapshotButton.disabled = true; }
             if (tooltipElement) tooltipElement.style.display = 'none';
             isTooltipVisible = false;
             toggleTopTierBordersVisibility(false);
             if (snapshotStatusElement) snapshotStatusElement.style.display = 'none';
 
+            manageHeroModelButtons();
             manageMyHeroButtons();
-            updateMyHeroAbilityHighlights();
+            updateVisualHighlights();
             console.log('[OVERLAY RENDERER] Initial setup complete.');
 
         } else if (data && data.scanData) {
@@ -309,67 +302,58 @@ if (window.electronAPI && window.electronAPI.onOverlayData) {
                 return;
             }
 
-            console.log('[OVERLAY RENDERER] All checks passed, proceeding to create hotspots.');
-            try {
-                document.querySelectorAll('.ability-hotspot, .selected-ability-hotspot').forEach(el => el.remove());
-                createHotspotsForType(receivedScanDataObject.ultimates, resolutionCoords.ultimate_slots_coords, 'ultimates');
-                createHotspotsForType(receivedScanDataObject.standard, resolutionCoords.standard_slots_coords, 'standard');
+            document.querySelectorAll('.ability-hotspot, .selected-ability-hotspot, .hero-model-hotspot, .my-hero-btn-original, .change-my-hero-btn-original, .my-model-btn, .change-my-model-btn').forEach(el => el.remove());
 
-                if (receivedScanDataObject.selectedAbilities && resolutionCoords.selected_abilities_coords && resolutionCoords.selected_abilities_params) {
-                    const selectedAbilityHotspotData = [];
-                    resolutionCoords.selected_abilities_coords.forEach((coordEntry, index) => {
-                        const abilitiesForThisHeroOrder = receivedScanDataObject.selectedAbilities.filter(ab => ab.hero_order === coordEntry.hero_order);
-                        let specificAbilityData = null;
-                        let countForHeroOrder = 0;
-                        for (let i = 0; i < index; i++) {
-                            if (resolutionCoords.selected_abilities_coords[i].hero_order === coordEntry.hero_order) {
-                                countForHeroOrder++;
-                            }
+            createHotspotsForType(data.scanData.ultimates, resolutionCoords.ultimate_slots_coords, 'ultimates');
+            createHotspotsForType(data.scanData.standard, resolutionCoords.standard_slots_coords, 'standard');
+            if (receivedScanDataObject.selectedAbilities && resolutionCoords.selected_abilities_coords && resolutionCoords.selected_abilities_params) {
+                const selectedAbilityHotspotData = [];
+                resolutionCoords.selected_abilities_coords.forEach((coordEntry, index) => {
+                    const abilitiesForThisHeroOrder = receivedScanDataObject.selectedAbilities.filter(ab => ab.hero_order === coordEntry.hero_order);
+                    let specificAbilityData = null;
+                    let countForHeroOrder = 0;
+                    for (let i = 0; i < index; i++) {
+                        if (resolutionCoords.selected_abilities_coords[i].hero_order === coordEntry.hero_order) {
+                            countForHeroOrder++;
                         }
-                        specificAbilityData = abilitiesForThisHeroOrder[countForHeroOrder];
+                    }
+                    specificAbilityData = abilitiesForThisHeroOrder[countForHeroOrder];
 
-                        if (specificAbilityData && specificAbilityData.internalName) {
-                            selectedAbilityHotspotData.push({
-                                coord: {
-                                    x: coordEntry.x,
-                                    y: coordEntry.y,
-                                    width: resolutionCoords.selected_abilities_params.width,
-                                    height: resolutionCoords.selected_abilities_params.height,
-                                    hero_order: coordEntry.hero_order
-                                },
-                                abilityData: specificAbilityData,
-                                type: 'selected'
-                            });
-                        }
-                    });
-                    selectedAbilityHotspotData.forEach(item => {
-                        createHotspot(item.coord, item.abilityData, `sel-${item.coord.hero_order}-${item.abilityData.internalName.slice(0, 5)}`, item.type, true);
-                    });
-                }
-                console.log('[OVERLAY RENDERER] Hotspots creation attempted.');
-
-            } catch (hotspotError) {
-                console.error('[OVERLAY RENDERER] Error during hotspot creation:', hotspotError);
+                    if (specificAbilityData && specificAbilityData.internalName) {
+                        selectedAbilityHotspotData.push({
+                            coord: {
+                                x: coordEntry.x,
+                                y: coordEntry.y,
+                                width: resolutionCoords.selected_abilities_params.width,
+                                height: resolutionCoords.selected_abilities_params.height,
+                                hero_order: coordEntry.hero_order
+                            },
+                            abilityData: specificAbilityData,
+                            type: 'selected'
+                        });
+                    }
+                });
+                selectedAbilityHotspotData.forEach(item => {
+                    createHotspot(item.coord, item.abilityData, `sel-${item.coord.hero_order}-${item.abilityData.internalName.slice(0, 5)}`, item.type, true);
+                });
             }
+            console.log('[OVERLAY RENDERER] Hotspots creation attempted.');
+            if (currentHeroModelData && currentHeroModelData.length > 0) {
+                createHeroModelHotspots(currentHeroModelData);
+            }
+
+            manageHeroModelButtons();
+            manageMyHeroButtons();
+            updateVisualHighlights();
+
+
 
             manageMyHeroButtons();
             updateMyHeroAbilityHighlights();
 
-            if (initialScanButton && initialScanButton.style.display !== 'none') {
-                initialScanButton.style.display = 'none';
-                if (rescanButton) {
-                    rescanButton.style.display = 'inline-block';
-                    rescanButton.disabled = false;
-                }
-            } else if (rescanButton) {
-                rescanButton.disabled = false;
-            }
-
-            if (takeSnapshotButton) {
-                takeSnapshotButton.style.display = 'block';
-                takeSnapshotButton.disabled = false;
-            }
-
+            if (initialScanButton && initialScanButton.style.display !== 'none') { initialScanButton.style.display = 'none'; }
+            if (rescanButton) { rescanButton.style.display = 'inline-block'; rescanButton.disabled = false; }
+            if (takeSnapshotButton) { takeSnapshotButton.style.display = 'block'; takeSnapshotButton.disabled = false; }
             if (tooltipElement) tooltipElement.style.display = 'none';
             isTooltipVisible = false;
             toggleTopTierBordersVisibility(true);
@@ -389,6 +373,23 @@ if (window.electronAPI && window.electronAPI.onOverlayData) {
     if (showOpCombinationsButton) showOpCombinationsButton.style.display = 'none';
     document.querySelectorAll('.my-hero-btn, .change-my-hero-btn, .selected-ability-hotspot, .ability-hotspot').forEach(el => el.remove());
     if (scanNowButton) scanNowButton.disabled = true;
+}
+
+if (window.electronAPI.onMyModelSelectionChanged) {
+    window.electronAPI.onMyModelSelectionChanged(({ selectedModelHeroOrder }) => {
+        console.log(`[OVERLAY RENDERER] Event 'my-model-selection-changed', received selectedModelHeroOrder: ${selectedModelHeroOrder}`);
+        selectedModelHeroOrder_overlay = selectedModelHeroOrder;
+        manageHeroModelButtons();
+        updateVisualHighlights();
+    });
+}
+if (window.electronAPI.onMyHeroForDraftingSelectionChanged) {
+    window.electronAPI.onMyHeroForDraftingSelectionChanged(({ selectedHeroOrderForDrafting }) => {
+        console.log(`[OVERLAY RENDERER] Event 'my-hero-for-drafting-selection-changed', received selectedHeroOrderForDrafting: ${selectedHeroOrderForDrafting}`);
+        selectedHeroOrder = selectedHeroOrderForDrafting;
+        manageMyHeroButtons();
+        updateVisualHighlights();
+    });
 }
 
 
@@ -454,56 +455,52 @@ if (window.electronAPI && window.electronAPI.onSnapshotTaken) {
     });
 }
 
-
-function makeControlsInteractive(interactive) {
-    if (window.electronAPI && window.electronAPI.setOverlayMouseEvents) {
-        const isOverControls = controlsContainer ? controlsContainer.matches(':hover') : false;
-        const isOverOpWindow = opCombinationsWindow ? opCombinationsWindow.matches(':hover') : false;
-        const isOverShowOpButton = showOpCombinationsButton ? showOpCombinationsButton.matches(':hover') : false;
-
-        let onHeroButton = false;
-        document.querySelectorAll('.my-hero-btn, .change-my-hero-btn').forEach(btn => {
-            if (btn.matches(':hover')) {
-                onHeroButton = true;
-            }
-        });
-
-        if (interactive || isOverControls || isOverOpWindow || isOverShowOpButton || onHeroButton) {
-            window.electronAPI.setOverlayMouseEvents(false);
-        } else {
-            window.electronAPI.setOverlayMouseEvents(true);
-        }
-    }
-}
-
-
 if (controlsContainer) {
-    controlsContainer.addEventListener('mouseenter', () => makeControlsInteractive(true));
-    controlsContainer.addEventListener('mouseleave', () => makeControlsInteractive(false));
-}
-if (opCombinationsWindow) {
-    opCombinationsWindow.addEventListener('mouseenter', () => makeControlsInteractive(true));
-    opCombinationsWindow.addEventListener('mouseleave', () => makeControlsInteractive(false));
-}
-if (showOpCombinationsButton) {
-    showOpCombinationsButton.addEventListener('mouseenter', () => makeControlsInteractive(true));
-    showOpCombinationsButton.addEventListener('mouseleave', () => makeControlsInteractive(false));
+    controlsContainer.addEventListener('mouseenter', () => {
+        if (window.electronAPI && window.electronAPI.setOverlayMouseEvents) {
+            window.electronAPI.setOverlayMouseEvents(false); // Make overlay interactive
+        }
+    });
+    controlsContainer.addEventListener('mouseleave', () => {
+        if (window.electronAPI && window.electronAPI.setOverlayMouseEvents) {
+            // Check if mouse is still over another interactive element before making it pass-through
+            // This simple version doesn't do that, which is fine if interactive areas are distinct
+            // or if quick transitions are acceptable.
+            window.electronAPI.setOverlayMouseEvents(true); // Make overlay pass-through
+        }
+    });
 }
 
-document.body.addEventListener('mouseenter', (event) => {
-    if (event.target.matches('.my-hero-btn') || event.target.matches('.change-my-hero-btn')) {
-        makeControlsInteractive(true);
+document.addEventListener('DOMContentLoaded', () => {
+    const staticInteractiveElements = [
+        document.getElementById('controls-container'),
+        document.getElementById('op-combinations-window'),
+        document.getElementById('show-op-combinations-btn'),
+        document.getElementById('initial-scan-btn'), // Add all static buttons
+        document.getElementById('rescan-btn'),
+        document.getElementById('close-overlay-btn'),
+        document.getElementById('take-snapshot-btn'),
+        document.getElementById('hide-op-combinations-btn')
+    ];
+
+    staticInteractiveElements.forEach(element => {
+        if (element) {
+            element.addEventListener('mouseenter', () => {
+                if (window.electronAPI && window.electronAPI.setOverlayMouseEvents) {
+                    window.electronAPI.setOverlayMouseEvents(false);
+                }
+            });
+            element.addEventListener('mouseleave', () => {
+                if (window.electronAPI && window.electronAPI.setOverlayMouseEvents) {
+                    window.electronAPI.setOverlayMouseEvents(true);
+                }
+            });
+        }
+    });
+    if (window.electronAPI && window.electronAPI.setOverlayMouseEvents) {
+        window.electronAPI.setOverlayMouseEvents(true);
     }
-}, true);
-
-document.body.addEventListener('mouseleave', (event) => {
-    if (event.target.matches('.my-hero-btn') || event.target.matches('.change-my-hero-btn')) {
-        setTimeout(() => {
-            makeControlsInteractive(false);
-        }, 0);
-    }
-}, true);
-
+});
 
 function createHotspotsForType(abilityResultArray, coordArray, type) {
     if (abilityResultArray && Array.isArray(abilityResultArray) && coordArray && Array.isArray(coordArray)) {
@@ -601,6 +598,138 @@ function createHotspot(coord, abilityData, indexOrUniqueId, type, isSelectedAbil
     document.body.appendChild(hotspot);
 }
 
+function createHeroModelHotspots(heroModelDataArray) {
+    if (!heroModelDataArray || heroModelDataArray.length === 0) return;
+
+    heroModelDataArray.forEach(heroData => {
+        if (!heroData.coord) {
+            return;
+        }
+
+        const coord = heroData.coord;
+        const hotspot = document.createElement('div');
+        hotspot.className = 'hero-model-hotspot';
+        hotspot.id = `hero-model-hotspot-${heroData.heroOrder}`;
+
+        hotspot.style.left = `${coord.x / currentScaleFactor}px`;
+        hotspot.style.top = `${coord.y / currentScaleFactor}px`;
+        hotspot.style.width = `${coord.width / currentScaleFactor}px`;
+        hotspot.style.height = `${coord.height / currentScaleFactor}px`;
+
+        hotspot.dataset.heroName = heroData.heroDisplayName;
+        hotspot.dataset.winrate = heroData.winrate !== null ? heroData.winrate : 'N/A';
+        hotspot.dataset.heroOrder = heroData.heroOrder;
+        hotspot.dataset.dbHeroId = heroData.dbHeroId;
+
+        if (heroData.heroDisplayName !== "Unknown Hero") {
+            hotspot.addEventListener('mouseenter', (event) => {
+                const nameForDisplay = hotspot.dataset.heroName.replace(/_/g, ' ');
+                let wr = hotspot.dataset.winrate;
+                const winrateFormatted = wr !== 'N/A' ? `${(parseFloat(wr) * 100).toFixed(1)}%` : 'N/A';
+
+                let tooltipContent = `
+                <div class="tooltip-title">${nameForDisplay}</div>
+                <div class="tooltip-winrate">Win Rate: ${winrateFormatted}</div>
+            `;
+
+                if (tooltipElement) {
+                    tooltipElement.innerHTML = tooltipContent;
+                    tooltipElement.style.display = 'block';
+                    isTooltipVisible = true;
+                    toggleTopTierBordersVisibility(false); // Hide ability borders
+                    positionTooltip(hotspot);
+                }
+            });
+
+            hotspot.addEventListener('mouseleave', () => {
+                if (tooltipElement) tooltipElement.style.display = 'none';
+                isTooltipVisible = false;
+                toggleTopTierBordersVisibility(true); // Show ability borders
+            });
+        }
+        document.body.appendChild(hotspot);
+    });
+}
+
+function manageHeroModelButtons() {
+    const allMyModelButtons = document.querySelectorAll('.my-model-btn, .change-my-model-btn');
+    allMyModelButtons.forEach(btn => btn.remove());
+
+    console.log('[ManageHeroModelButtons] Running. SelectedModelHeroOrder_overlay:', selectedModelHeroOrder_overlay, 'Data Count:', currentHeroModelData.length);
+
+
+    if (!currentHeroModelData || currentHeroModelData.length === 0) {
+        return;
+    }
+
+    currentHeroModelData.forEach(heroModel => {
+        if (heroModel.dbHeroId === null && heroModel.heroDisplayName === "Unknown Hero") {
+            return;
+        }
+        const modelHotspotElement = document.getElementById(`hero-model-hotspot-${heroModel.heroOrder}`);
+        if (!modelHotspotElement) {
+            return;
+        }
+
+        const rect = modelHotspotElement.getBoundingClientRect();
+        const button = document.createElement('button');
+        button.dataset.heroOrder = heroModel.heroOrder;
+        button.dataset.dbHeroId = heroModel.dbHeroId;
+
+        button.style.position = 'absolute';
+        button.style.top = `${rect.top + (rect.height / 2) - (MY_MODEL_BUTTON_HEIGHT / 2)}px`;
+        button.style.width = `${MY_MODEL_BUTTON_WIDTH}px`;
+        button.style.height = `${MY_MODEL_BUTTON_HEIGHT}px`;
+
+        if ((heroModel.heroOrder >= 0 && heroModel.heroOrder <= 4) || heroModel.heroOrder === 10) {
+            button.style.left = `${rect.left - MY_MODEL_BUTTON_WIDTH - MY_MODEL_BUTTON_MARGIN}px`;
+        } else if ((heroModel.heroOrder >= 5 && heroModel.heroOrder <= 9) || heroModel.heroOrder === 11) {
+            button.style.left = `${rect.right + MY_MODEL_BUTTON_MARGIN}px`;
+        } else {
+            button.style.left = `${rect.right + MY_MODEL_BUTTON_MARGIN}px`;
+        }
+
+        console.log(`[ManageHeroModelButtons] HeroOrder: ${heroModel.heroOrder}, current selectedModelHeroOrder_overlay: ${selectedModelHeroOrder_overlay}`);
+        if (selectedModelHeroOrder_overlay === heroModel.heroOrder) {
+            button.className = 'change-my-model-btn';
+            button.textContent = 'Change Model';
+            button.style.display = 'inline-block';
+        } else {
+            button.className = 'my-model-btn';
+            button.textContent = 'My Model';
+            button.style.display = selectedModelHeroOrder_overlay !== null ? 'none' : 'inline-block';
+        }
+
+        button.addEventListener('click', () => {
+            const clickedHeroOrder = parseInt(button.dataset.heroOrder);
+            const clickedDbHeroId = button.dataset.dbHeroId ? parseInt(button.dataset.dbHeroId) : null;
+            console.log(`[Overlay] "My Model" button clicked. Order: ${clickedHeroOrder}, DB ID: ${clickedDbHeroId}`);
+            window.electronAPI.selectMyModel({
+                heroOrder: clickedHeroOrder,
+                dbHeroId: clickedDbHeroId
+            });
+        });
+        button.addEventListener('mouseenter', () => { if (window.electronAPI) window.electronAPI.setOverlayMouseEvents(false); });
+        button.addEventListener('mouseleave', () => { if (window.electronAPI) window.electronAPI.setOverlayMouseEvents(true); });
+        document.body.appendChild(button);
+    });
+}
+
+function updateVisualHighlights() {
+
+    document.querySelectorAll('.ability-hotspot.selected-ability-hotspot').forEach(hotspot => {
+        hotspot.classList.remove('my-hero-selected-ability');
+    });
+
+    document.querySelectorAll('.hero-model-hotspot').forEach(hotspot => {
+        hotspot.classList.remove('is-my-model');
+        if (selectedModelHeroOrder_overlay !== null && parseInt(hotspot.dataset.heroOrder) === selectedModelHeroOrder_overlay) {
+            hotspot.classList.add('is-my-model');
+        }
+    });
+}
+
+
 function positionTooltip(hotspotElement) {
     if (!tooltipElement || !hotspotElement) return;
 
@@ -646,8 +775,6 @@ function positionTooltip(hotspotElement) {
     tooltipElement.style.bottom = 'auto';
     tooltipElement.style.transform = 'none';
 }
-
-
 if (closeOverlayButton && window.electronAPI && window.electronAPI.closeOverlay) {
     closeOverlayButton.addEventListener('click', () => {
         window.electronAPI.closeOverlay();

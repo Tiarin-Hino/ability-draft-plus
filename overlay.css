@@ -270,44 +270,147 @@ body {
     background-color: rgba(120, 80, 80, 0.9);
 }
 
-.my-hero-btn,
-.change-my-hero-btn {
+.hero-model-hotspot {
     position: absolute;
-    padding: 4px 8px;
-    font-size: 11px;
+    /* */
+    box-sizing: border-box;
+    /* */
+    /* Subtle border to indicate interactivity, even if no hero is known yet */
+    border: 1px dashed rgba(200, 200, 255, 0.2);
+}
+
+.hero-model-hotspot:hover {
+    /* Feedback when hovering over a hero model */
+    border-color: rgba(220, 220, 255, 0.7);
+    background-color: rgba(150, 150, 255, 0.05);
+}
+
+.hero-model-hotspot.is-my-model {
+    /* Style for the selected "My Model" */
+    border: 2px solid #33FFDD !important;
+    /* Cyan/Teal border */
+    box-shadow: 0 0 10px 2px rgba(51, 255, 221, 0.6) !important;
+    /* Cyan/Teal glow */
+    background-color: rgba(51, 255, 221, 0.05);
+    /* Slight tint */
+}
+
+/* Buttons for "My Model" */
+.my-model-btn,
+.change-my-model-btn {
+    position: absolute;
+    /* Positioned by JS */
+    padding: 3px 6px;
+    /* */
+    font-size: 10px;
+    /* */
     font-weight: bold;
+    /* */
     color: white;
-    background-color: rgba(0, 120, 255, 0.75);
-    /* A distinct blue */
-    border: 1px solid rgba(0, 100, 200, 0.9);
-    border-radius: 4px;
+    /* */
+    border-radius: 3px;
+    /* */
     cursor: pointer;
+    /* */
+    z-index: 10000;
+    /* */
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    /* */
+    white-space: nowrap;
+    /* */
+    opacity: 0.7;
+    transition: opacity 0.2s ease-in-out;
+}
+
+.my-model-btn:hover,
+.change-my-model-btn:hover {
+    opacity: 1;
+}
+
+.my-model-btn {
+    background-color: rgba(0, 200, 150, 0.7);
+    /* Tealish */
+    /* */
+    border: 1px solid rgba(0, 170, 120, 0.9);
+    /* */
+}
+
+.my-model-btn:hover {
+    background-color: rgba(0, 200, 150, 0.9);
+    /* */
+}
+
+.change-my-model-btn {
+    background-color: rgba(255, 100, 100, 0.7);
+    /* Reddish for "unset" */
+    /* */
+    border: 1px solid rgba(220, 80, 80, 0.9);
+    /* */
+}
+
+.change-my-model-btn:hover {
+    background-color: rgba(255, 100, 100, 0.9);
+    /* */
+}
+
+/* Styles for original "My Hero" (drafting) buttons */
+.my-hero-btn-original,
+.change-my-hero-btn-original {
+    position: absolute;
+    /* Positioned by JS */
+    padding: 4px 8px;
+    /* */
+    font-size: 11px;
+    /* */
+    font-weight: bold;
+    /* */
+    color: white;
+    /* */
+    background-color: rgba(0, 120, 255, 0.75);
+    /* Default "My Hero" blue */
+    /* */
+    border: 1px solid rgba(0, 100, 200, 0.9);
+    /* */
+    border-radius: 4px;
+    /* */
+    cursor: pointer;
+    /* */
     z-index: 9999;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    /* */
     white-space: nowrap;
+    /* */
+    opacity: 0.7;
+    transition: opacity 0.2s ease-in-out;
 }
 
-.my-hero-btn:hover,
-.change-my-hero-btn:hover {
+.my-hero-btn-original:hover,
+.change-my-hero-btn-original:hover {
     background-color: rgba(0, 120, 255, 0.95);
+    /* */
+    opacity: 1;
 }
 
-.change-my-hero-btn {
+.change-my-hero-btn-original {
+    /* Orange for "Change Hero" */
     background-color: rgba(255, 140, 0, 0.8);
-    /* Orange for change button */
+    /* */
     border: 1px solid rgba(220, 120, 0, 0.9);
+    /* */
 }
 
-.change-my-hero-btn:hover {
+.change-my-hero-btn-original:hover {
     background-color: rgba(255, 140, 0, 1);
+    /* */
 }
 
 .selected-ability-hotspot.my-hero-selected-ability {
     border: 2px solid #FFD700 !important;
-    /* Gold border for emphasis */
+    /* Gold border */
+    /* */
     box-shadow: 0 0 8px 2px rgba(255, 215, 0, 0.7) !important;
     /* Gold glow */
-    /* Ensure it overrides other border/shadow styles if needed */
+    /* */
 }
 
 #scan-status-popup {

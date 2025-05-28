@@ -231,7 +231,7 @@ async function processDraftScreen(coordinatesPath, targetResolution, confidenceT
     } = coords;
 
     const hero_defining_slots_coords = standard_slots_coords.filter(slot =>
-        slot.ability_order === 2 && slot.hero_order !== 10 && slot.hero_order !== 11
+        slot.ability_order === 2
     );
 
     const selected_hero_abilities_coords_full = selected_abilities_params ? selected_abilities_coords.map(sac => ({

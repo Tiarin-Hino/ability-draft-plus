@@ -19,4 +19,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onToggleHotspotBorders: (callback) => ipcRenderer.on('toggle-hotspot-borders', (_event, visible) => callback(visible)),
   exportFailedSamples: () => ipcRenderer.send('export-failed-samples'),
   onExportFailedSamplesStatus: (callback) => ipcRenderer.on('export-failed-samples-status', (_event, status) => callback(status)),
+  selectMyModel: (data) => ipcRenderer.send('select-my-model', data),
+  onMyModelSelectionChanged: (callback) => ipcRenderer.on('my-model-selection-changed', (_event, data) => callback(data)),
+  selectMyHeroForDrafting: (data) => ipcRenderer.send('select-my-hero-for-drafting', data),
+  onMyHeroForDraftingSelectionChanged: (callback) => ipcRenderer.on('my-hero-for-drafting-selection-changed', (_event, data) => callback(data)),
 });

@@ -222,10 +222,43 @@ async function getHeroDetailsByAbilityName(dbPath, abilityName) {
     }
 }
 
+/**
+ * Fetches hero details including winrate by hero_id.
+ * @param {string} dbPath - Path to the SQLite database file.
+ * @param {number} heroId - The database ID of the hero.
+ * @returns {Promise<{dbHeroId: number, heroName: string, heroDisplayName: string, winrate: number} | null>}
+ */
+async function getHeroDetailsById(dbPath, heroId) {
+    if (heroId === null || typeof heroId === 'undefined') {
+        console.warn('[Queries] getHeroDetailsById called with null or undefined heroId.');
+        return null;
+    }
+    let db;
+    try {
+        db = new Database(dbPath, { readonly: true });
+        const row = db.prepare('SELECT hero_id, name, display_name, winrate FROM Heroes WHERE hero_id = ?').get(heroId);
+        if (row) {
+            return {
+                dbHeroId: row.hero_id,
+                heroName: row.name,
+                heroDisplayName: row.display_name,
+                winrate: (typeof row.winrate === 'number') ? row.winrate : null
+            };
+        }
+        return null;
+    } catch (err) {
+        console.error(`Error fetching hero details for hero_id ${heroId}: ${err.message}`);
+        return null;
+    } finally {
+        if (db && db.open) db.close();
+    }
+}
+
 
 module.exports = {
     getAbilityDetails,
     getHighWinrateCombinations,
     getOPCombinationsInPool,
-    getHeroDetailsByAbilityName
+    getHeroDetailsByAbilityName,
+    getHeroDetailsById 
 };
