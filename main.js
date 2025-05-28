@@ -7,11 +7,9 @@ const Database = require('better-sqlite3');
 
 const { dialog } = require('electron');
 const archiver = require('archiver');
-const stream = require('stream');
-const { promisify } = require('util');
 
 const setupDatabase = require('./src/database/setupDatabase');
-const { getAbilityDetails, getHighWinrateCombinations, getOPCombinationsInPool, getHeroDetailsByAbilityName } = require('./src/database/queries');
+const { getAbilityDetails, getHighWinrateCombinations, getOPCombinationsInPool, getHeroDetailsByAbilityName, getHeroDetailsById } = require('./src/database/queries');
 const { scrapeAndStoreHeroes } = require('./src/scraper/heroScraper');
 const { scrapeAndStoreAbilities } = require('./src/scraper/abilityScraper');
 const { scrapeAndStoreAbilityPairs } = require('./src/scraper/abilityPairScraper');
@@ -27,15 +25,13 @@ const abilityPairsUrl = 'https://windrun.io/ability-pairs';
 const MIN_PREDICTION_CONFIDENCE = 0.70;
 const isPackaged = app.isPackaged;
 
-let mySelectedHeroIdForScan = null;
-
 const MIN_PICK_ORDER_FOR_NORMALIZATION = 1.0;
 const MAX_PICK_ORDER_FOR_NORMALIZATION = 40.0;
-const NUM_TOP_TIER_ABILITIES = 10; // Number of abilities to flag as "Top Tier"
+const NUM_TOP_TIER_ABILITIES = 10;
 
-const WEIGHT_VALUE = 0.40;        // Weight for 'value_percentage'
-const WEIGHT_WINRATE = 0.20;      // Weight for 'winrate'
-const WEIGHT_PICK_ORDER = 0.40;   // Weight for 'avg_pick_order'
+const WEIGHT_VALUE = 0.40;
+const WEIGHT_WINRATE = 0.20;
+const WEIGHT_PICK_ORDER = 0.40;
 
 const appRootPathForDev = app.getAppPath();
 const resourcesPath = process.resourcesPath;
@@ -49,6 +45,12 @@ let lastScanRawResults = null;
 let lastScanTargetResolution = null;
 let lastScaleFactor = 1;
 let isFirstRun = false;
+
+let mySelectedHeroDbIdForDrafting = null;
+let mySelectedHeroOrderByDraftingList = null;
+
+let mySelectedModelDbHeroId = null;
+let mySelectedModelHeroOrder = null;
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -187,7 +189,7 @@ app.whenReady().then(async () => {
       await fs.mkdir(userDataPath, { recursive: true });
       await fs.copyFile(bundledDbPathInApp, activeDbPath);
     } catch (copyError) {
-      isFirstRun = false; // Prevent scrape if DB can't be set up
+      isFirstRun = false;
       dialog.showErrorBox('Database Error', `Failed to copy database: ${copyError.message}.`);
     }
   }
@@ -258,16 +260,66 @@ ipcMain.on('export-failed-samples', async (event) => {
   }
 });
 
-ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, selectedHeroOrderFromOverlay) => {
+ipcMain.on('select-my-model', (event, { heroOrder, dbHeroId }) => {
+  if (mySelectedModelHeroOrder === heroOrder && mySelectedModelDbHeroId === dbHeroId) {
+    mySelectedModelDbHeroId = null;
+    mySelectedModelHeroOrder = null;
+    console.log(`[Main] "My Model" deselected.`);
+  } else {
+    mySelectedModelDbHeroId = dbHeroId;
+    mySelectedModelHeroOrder = heroOrder;
+    console.log(`[Main] "My Model" selected: Order ${heroOrder}, DB ID ${dbHeroId}`);
+  }
+  // Notify overlay of the confirmed state. Overlay primarily uses this for sync,
+  // as it will have already updated its UI optimistically.
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    overlayWindow.webContents.send('my-model-selection-changed', {
+      selectedModelHeroOrder: mySelectedModelHeroOrder
+    });
+  }
+});
+
+// IPC Handler for "My Hero" (drafting) selection
+ipcMain.on('select-my-hero-for-drafting', (event, { heroOrder, dbHeroId }) => {
+  if (mySelectedHeroOrderByDraftingList === heroOrder && mySelectedHeroDbIdForDrafting === dbHeroId) {
+    mySelectedHeroDbIdForDrafting = null;
+    mySelectedHeroOrderByDraftingList = null;
+    console.log(`[Main] "My Hero" (for drafting) deselected.`);
+  } else {
+    mySelectedHeroDbIdForDrafting = dbHeroId;
+    mySelectedHeroOrderByDraftingList = heroOrder;
+    console.log(`[Main] "My Hero" (for drafting) selected: Original List Order ${heroOrder}, DB ID ${dbHeroId}`);
+  }
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    overlayWindow.webContents.send('my-hero-for-drafting-selection-changed', {
+      selectedHeroOrderForDrafting: mySelectedHeroOrderByDraftingList,
+      // Sending back the heroOrder related to the original list context
+      selectedHeroDbId: mySelectedHeroDbIdForDrafting // Send the dbId too for completeness
+    });
+    // Optional: Trigger a full rescan if this selection should immediately change suggested abilities
+    // if (lastScanTargetResolution) {
+    //    executeScanFromOverlay(event, lastScanTargetResolution, mySelectedHeroOrderByDraftingList); 
+    // }
+  }
+});
+
+ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, selectedHeroOrderForDraftingFromOverlay) => {
   if (isScanInProgress) {
     if (overlayWindow && !overlayWindow.isDestroyed()) {
-      overlayWindow.webContents.send('overlay-data', { info: 'Scan in progress.', targetResolution: lastScanTargetResolution, initialSetup: false, opCombinations: [], identifiedHeroes: [], selectedAbilities: [], scaleFactor: lastScaleFactor });
+      overlayWindow.webContents.send('overlay-data', {
+        info: 'Scan in progress.',
+        targetResolution: lastScanTargetResolution,
+        initialSetup: false,
+        scaleFactor: lastScaleFactor,
+        selectedHeroForDraftingDbId: mySelectedHeroDbIdForDrafting,
+        selectedModelHeroOrder: mySelectedModelHeroOrder
+      });
     }
     return;
   }
   if (!overlayWindow || overlayWindow.isDestroyed() || !selectedResolution) {
     if (overlayWindow && !overlayWindow.isDestroyed()) {
-      overlayWindow.webContents.send('overlay-data', { error: 'Overlay or resolution missing.', opCombinations: [], identifiedHeroes: [], selectedAbilities: [], scaleFactor: lastScaleFactor });
+      overlayWindow.webContents.send('overlay-data', { error: 'Overlay or resolution missing.', scaleFactor: lastScaleFactor });
     }
     return;
   }
@@ -275,30 +327,70 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
   isScanInProgress = true;
   lastScanRawResults = null;
   lastScanTargetResolution = selectedResolution;
-  mySelectedHeroIdForScan = null;
+
   const startTime = performance.now();
 
   try {
     const rawResults = await processDraftScreen(global.coordinatesPath, selectedResolution, MIN_PREDICTION_CONFIDENCE);
     lastScanRawResults = rawResults;
 
-    if (typeof selectedHeroOrderFromOverlay === 'number' && identifiedHeroesCache && identifiedHeroesCache.length > 0) {
-      const myHeroData = identifiedHeroesCache.find(h => h.heroOrder === selectedHeroOrderFromOverlay);
-      if (myHeroData) {
-        let db;
-        try {
-          db = new Database(activeDbPath, { readonly: true });
-          const heroRow = db.prepare('SELECT hero_id FROM Heroes WHERE display_name = ? OR name = ?').get(myHeroData.heroName, myHeroData.heroName);
-          if (heroRow) {
-            mySelectedHeroIdForScan = heroRow.hero_id;
-            console.log(`[Main] "My Hero" selected: ${myHeroData.heroName} (Order: ${selectedHeroOrderFromOverlay}, DB Hero ID: ${mySelectedHeroIdForScan})`);
-          } else {
-            console.warn(`[Main] Could not find DB hero_id for selected hero: ${myHeroData.heroName}`);
-          }
-        } catch (e) {
-          console.error('[Main] Error fetching selected hero_id:', e);
-        } finally {
-          if (db && db.open) db.close();
+    const layoutConfigData = await fs.readFile(global.coordinatesPath, 'utf-8');
+    const layoutConfig = JSON.parse(layoutConfigData);
+    const currentModelsCoords = layoutConfig.resolutions[selectedResolution]?.models_coords || [];
+    const currentHeroesCoords = layoutConfig.resolutions[selectedResolution]?.heroes_coords || [];
+
+    const tempIdentifiedHeroesMap = new Map();
+    const heroDefiningAbilities = rawResults.heroDefiningAbilities.filter(r => r.name !== null);
+
+    for (const heroAbility of heroDefiningAbilities) {
+      const heroIdentity = await getHeroDetailsByAbilityName(activeDbPath, heroAbility.name);
+      if (heroIdentity && heroIdentity.hero_id !== null) {
+        const fullHeroDetails = await getHeroDetailsById(activeDbPath, heroIdentity.hero_id);
+        if (fullHeroDetails) {
+          tempIdentifiedHeroesMap.set(heroAbility.hero_order, {
+            heroDisplayName: fullHeroDetails.heroDisplayName,
+            dbHeroId: fullHeroDetails.dbHeroId,
+            winrate: fullHeroDetails.winrate,
+            identificationConfidence: heroAbility.confidence
+          });
+        }
+      }
+    }
+
+    const heroModelHotspotData = [];
+    for (const modelCoord of currentModelsCoords) {
+      const matchedHero = tempIdentifiedHeroesMap.get(modelCoord.hero_order);
+      if (matchedHero) {
+        heroModelHotspotData.push({
+          coord: modelCoord,
+          heroDisplayName: matchedHero.heroDisplayName,
+          dbHeroId: matchedHero.dbHeroId,
+          winrate: matchedHero.winrate,
+          heroOrder: modelCoord.hero_order,
+          identificationConfidence: matchedHero.identificationConfidence
+        });
+      } else {
+        heroModelHotspotData.push({
+          coord: modelCoord, heroDisplayName: "Unknown Hero", dbHeroId: null,
+          winrate: null, heroOrder: modelCoord.hero_order, identificationConfidence: 0
+        });
+      }
+    }
+
+    let heroesForMyHeroSelectionUI = [];
+    if (currentHeroesCoords.length > 0) {
+      for (const heroCoord of currentHeroesCoords) {
+        const matchedHero = tempIdentifiedHeroesMap.get(heroCoord.hero_order);
+        if (matchedHero) {
+          heroesForMyHeroSelectionUI.push({
+            heroOrder: heroCoord.hero_order,
+            heroName: matchedHero.heroDisplayName,
+            dbHeroId: matchedHero.dbHeroId,
+          });
+        } else {
+          heroesForMyHeroSelectionUI.push({
+            heroOrder: heroCoord.hero_order, heroName: "Unknown", dbHeroId: null
+          });
         }
       }
     }
@@ -309,32 +401,9 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
         ...rawResults.standard.map(r => r.name).filter(name => name !== null)
       ])
     ];
-    const selectedAbilityNamesByHeroes = rawResults.selectedAbilities.map(r => r.name).filter(name => name !== null);
-    const allNamesToFetchDetailsFor = [...new Set([...draftPoolAbilityNames, ...selectedAbilityNamesByHeroes])];
 
-    let abilityDetailsMap = new Map();
-
-    if (allNamesToFetchDetailsFor.length > 0) {
-      console.log('[Main] Using general Abilities table for scoring.');
-      abilityDetailsMap = getAbilityDetails(activeDbPath, allNamesToFetchDetailsFor);
-    }
-
-    const identifiedHeroes = [];
-    const heroDefiningAbilities = rawResults.heroDefiningAbilities.filter(r => r.name !== null);
-    for (const heroAbility of heroDefiningAbilities) {
-      const heroDetails = await getHeroDetailsByAbilityName(activeDbPath, heroAbility.name); //
-      if (heroDetails) {
-        identifiedHeroes.push({
-          heroOrder: heroAbility.hero_order,
-          heroName: heroDetails.heroDisplayName || heroDetails.heroName,
-          dbHeroId: heroDetails.hero_id, // Make sure this line is present to store the hero_id
-          originalAbilityName: heroAbility.name,
-          confidence: heroAbility.confidence
-        });
-      }
-    }
-    identifiedHeroesCache = identifiedHeroes;
-
+    const allNamesToFetchDetailsFor = [...new Set([...draftPoolAbilityNames, ...rawResults.selectedAbilities.map(r => r.name).filter(Boolean)])];
+    const abilityDetailsMap = getAbilityDetails(activeDbPath, allNamesToFetchDetailsFor);
 
     const draftPoolAbilitiesForScoring = [];
     for (const internalName of draftPoolAbilityNames) {
@@ -342,15 +411,11 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
       if (details) {
         const combinations = await getHighWinrateCombinations(activeDbPath, internalName, draftPoolAbilityNames);
         draftPoolAbilitiesForScoring.push({
-          ...details,
-          highWinrateCombinations: combinations || [],
-          consolidatedScore: 0
+          ...details, highWinrateCombinations: combinations || [], consolidatedScore: 0
         });
-      } else {
       }
     }
 
-    // Calculate consolidated score for each ability in the draft pool
     draftPoolAbilitiesForScoring.forEach(ability => {
       let vRaw = ability.valuePercentage;
       let wRaw = ability.winrate;
@@ -371,16 +436,17 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
         (WEIGHT_PICK_ORDER * pNormalized);
     });
 
-    draftPoolAbilitiesForScoring.sort((a, b) => b.consolidatedScore - a.consolidatedScore);
-    const topTierAbilityNames = new Set(
-      draftPoolAbilitiesForScoring.slice(0, NUM_TOP_TIER_ABILITIES).map(ability => ability.internalName)
-    );
     const scoredDraftAbilitiesMap = new Map();
     draftPoolAbilitiesForScoring.forEach(ab => scoredDraftAbilitiesMap.set(ab.internalName, ab));
+    const topTierAbilityNames = new Set(
+      draftPoolAbilitiesForScoring.sort((a, b) => b.consolidatedScore - a.consolidatedScore)
+        .slice(0, NUM_TOP_TIER_ABILITIES)
+        .map(ability => ability.internalName)
+    );
 
     let opCombinationsInPool = [];
     if (draftPoolAbilityNames.length >= 2) {
-      opCombinationsInPool = await getOPCombinationsInPool(activeDbPath, draftPoolAbilityNames); //
+      opCombinationsInPool = await getOPCombinationsInPool(activeDbPath, draftPoolAbilityNames);
     }
 
     const formatResultsForUi = (predictedResultsArray, isSelectedAbilityList = false) => {
@@ -423,26 +489,43 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
     const formattedStandard = formatResultsForUi(rawResults.standard);
     const formattedSelectedAbilities = formatResultsForUi(rawResults.selectedAbilities, true);
 
+    let finalFormattedUltimates = [...formattedUltimates];
+    if (mySelectedHeroDbIdForDrafting !== null) {
+      const abilitiesPickedByMyDraftingHero = [];
+      for (const selectedAbility of formattedSelectedAbilities) {
+        if (selectedAbility.internalName) {
+          const pickingHeroInfo = heroesForMyHeroSelectionUI.find(h => h.heroOrder === selectedAbility.hero_order);
+          if (pickingHeroInfo && pickingHeroInfo.dbHeroId === mySelectedHeroDbIdForDrafting) {
+            abilitiesPickedByMyDraftingHero.push(selectedAbility.internalName);
+          }
+        }
+      }
+      if (abilitiesPickedByMyDraftingHero.length > 0) {
+        finalFormattedUltimates = formattedUltimates.filter(ult => ult.internalName && !abilitiesPickedByMyDraftingHero.includes(ult.internalName));
+        console.log(`[Main] Ultimates (${abilitiesPickedByMyDraftingHero.join(', ')}) picked by "My Hero" (drafting ID ${mySelectedHeroDbIdForDrafting}) were filtered from suggestions.`);
+      }
+    }
+
     const endTime = performance.now();
     const durationMs = Math.round(endTime - startTime);
-    const configData = await fs.readFile(global.coordinatesPath, 'utf-8');
-    const layoutConfig = JSON.parse(configData);
 
     if (overlayWindow && !overlayWindow.isDestroyed()) {
       overlayWindow.webContents.send('overlay-data', {
         scanData: {
-          ultimates: formattedUltimates,
+          ultimates: finalFormattedUltimates,
           standard: formattedStandard,
           selectedAbilities: formattedSelectedAbilities
         },
+        heroModels: heroModelHotspotData,
+        heroesForMyHeroUI: heroesForMyHeroSelectionUI,
         coordinatesConfig: layoutConfig,
         targetResolution: selectedResolution,
         durationMs: durationMs,
         opCombinations: opCombinationsInPool,
-        identifiedHeroes: identifiedHeroesCache,
         initialSetup: false,
         scaleFactor: lastScaleFactor,
-        myHeroDbIdUsed: mySelectedHeroIdForScan
+        selectedHeroForDraftingDbId: mySelectedHeroDbIdForDrafting,
+        selectedModelHeroOrder: mySelectedModelHeroOrder
       });
     }
 
@@ -450,7 +533,7 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
     console.error(`[Main] Error during scan for ${selectedResolution}:`, error);
     lastScanRawResults = null;
     if (overlayWindow && !overlayWindow.isDestroyed()) {
-      overlayWindow.webContents.send('overlay-data', { error: error.message || 'Scan error.', opCombinations: [], identifiedHeroes: identifiedHeroesCache, selectedAbilities: [], scaleFactor: lastScaleFactor });
+      overlayWindow.webContents.send('overlay-data', { error: error.message || 'Scan error.', scaleFactor: lastScaleFactor });
     }
   } finally {
     isScanInProgress = false;
@@ -482,10 +565,10 @@ ipcMain.on('take-snapshot', async (event) => {
     const allSlotsForSnapshot = [
       ...(coordsConfig.ultimate_slots_coords || []).map((coord, i) => ({ ...coord, predictedName: lastScanRawResults.ultimates?.[i]?.name || 'unknown_ultimate', type: 'ult' })),
       ...(coordsConfig.standard_slots_coords || []).map((coord, i) => ({ ...coord, predictedName: lastScanRawResults.standard?.[i]?.name || 'unknown_standard', type: 'std' })),
-      ...(lastScanRawResults.selectedAbilities || []).map((abilityResult, i) => { // Use actual coords from layout
+      ...(lastScanRawResults.selectedAbilities || []).map((abilityResult, i) => {
         const params = coordsConfig.selected_abilities_params;
-        const baseCoord = coordsConfig.selected_abilities_coords.find(c => c.hero_order === abilityResult.hero_order && i < 4); // simplistic mapping, needs improvement if more than 4 per hero
-        const specificCoord = coordsConfig.selected_abilities_coords.filter(c => c.hero_order === abilityResult.hero_order)[i % 4]; // Get i-th slot for this hero
+        const baseCoord = coordsConfig.selected_abilities_coords.find(c => c.hero_order === abilityResult.hero_order && i < 4);
+        const specificCoord = coordsConfig.selected_abilities_coords.filter(c => c.hero_order === abilityResult.hero_order)[i % 4];
         return specificCoord ? {
           ...specificCoord,
           width: params.width,
@@ -537,8 +620,8 @@ const createGenericScrapeHandler = (scrapeFunction, ...args) => async (event) =>
   const targetWebContents = (mainWindow && !mainWindow.isDestroyed()) ? mainWindow.webContents : event.sender;
   const sendStatusUpdate = (msg) => sendStatusToRenderer(targetWebContents, msg);
   try {
-    sendStatusUpdate(`Starting ${args[0]} data update...`); // e.g. args[0] = 'hero'
-    await scrapeFunction(activeDbPath, ...args.slice(1), sendStatusUpdate); // Pass dbPath, URLs, and callback
+    sendStatusUpdate(`Starting ${args[0]} data update...`);
+    await scrapeFunction(activeDbPath, ...args.slice(1), sendStatusUpdate);
     sendStatusUpdate(`${args[0].charAt(0).toUpperCase() + args[0].slice(1)} data update complete!`);
   } catch (error) {
     console.error(`${args[0]} scraping failed:`, error);
@@ -563,28 +646,33 @@ ipcMain.on('set-overlay-mouse-ignore', (event, ignore) => {
   if (overlayWindow && !overlayWindow.isDestroyed()) overlayWindow.setIgnoreMouseEvents(ignore, { forward: true });
 });
 
-function createOverlayWindow(resolutionKey, allCoordinatesConfig, scaleFactorToUse) {
-  if (overlayWindow) overlayWindow.close();
-  isScanInProgress = false;
-  lastScanRawResults = null;
-  lastScanTargetResolution = null;
+function createOverlayWindow(resolutionKey, allCoordinatesConfig, scaleFactorToUse) { //
+  if (overlayWindow) overlayWindow.close(); //
+  isScanInProgress = false; //
+  lastScanRawResults = null; //
+  lastScanTargetResolution = null; //
 
-  const primaryDisplay = screen.getPrimaryDisplay();
-  const { width: screenWidth, height: screenHeight, x, y } = primaryDisplay.bounds;
-  overlayWindow = new BrowserWindow({
+  const primaryDisplay = screen.getPrimaryDisplay(); //
+  const { width: screenWidth, height: screenHeight, x, y } = primaryDisplay.bounds; //
+  overlayWindow = new BrowserWindow({ //
     width: screenWidth, height: screenHeight, x, y, frame: false, transparent: true,
     skipTaskbar: true, focusable: false,
-    webPreferences: { preload: path.join(__dirname, 'preload.js'), nodeIntegration: false, contextIsolation: true }
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), nodeIntegration: false, contextIsolation: true } //
   });
-  overlayWindow.loadFile(path.join(__dirname, 'overlay.html'));
-  overlayWindow.setAlwaysOnTop(true, 'screen-saver');
-  overlayWindow.setVisibleOnAllWorkspaces(true);
-  overlayWindow.setIgnoreMouseEvents(true, { forward: true });
+  overlayWindow.loadFile(path.join(__dirname, 'overlay.html')); //
+  overlayWindow.setAlwaysOnTop(true, 'screen-saver'); //
+  overlayWindow.setVisibleOnAllWorkspaces(true); //
+  overlayWindow.setIgnoreMouseEvents(true, { forward: true }); //
 
-  overlayWindow.webContents.on('did-finish-load', () => {
-    overlayWindow.webContents.send('overlay-data', {
+  overlayWindow.webContents.on('did-finish-load', () => { //
+    overlayWindow.webContents.send('overlay-data', { //
       scanData: null, coordinatesConfig: allCoordinatesConfig, targetResolution: resolutionKey,
-      opCombinations: [], identifiedHeroes: [], selectedAbilities: [], initialSetup: true, scaleFactor: scaleFactorToUse
+      opCombinations: [],
+      heroModels: [],
+      heroesForMyHeroUI: [],
+      initialSetup: true, scaleFactor: scaleFactorToUse,
+      selectedHeroForDraftingDbId: mySelectedHeroDbIdForDrafting, // Send current state
+      selectedModelHeroOrder: mySelectedModelHeroOrder         // Send current state
     });
   });
   overlayWindow.on('closed', () => {
@@ -594,6 +682,6 @@ function createOverlayWindow(resolutionKey, allCoordinatesConfig, scaleFactorToU
       if (mainWindow.webContents && !mainWindow.webContents.isDestroyed()) mainWindow.webContents.send('overlay-closed-reset-ui');
     }
   });
-  //overlayWindow.webContents.openDevTools({ mode: 'detach' }); // Uncomment for debugging
+
   return overlayWindow;
 }
