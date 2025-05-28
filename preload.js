@@ -12,7 +12,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   closeOverlay: () => ipcRenderer.send('close-overlay'),
   setOverlayMouseEvents: (ignore, forward = true) => ipcRenderer.send('set-overlay-mouse-ignore', ignore, { forward }),
   activateOverlay: (resolution) => ipcRenderer.send('activate-overlay', resolution),
-  executeScanFromOverlay: (resolution, selectedHeroOrder) => ipcRenderer.send('execute-scan-from-overlay', resolution, selectedHeroOrder),
+  executeScanFromOverlay: (resolution, selectedHeroOrder, isInitialScan) => ipcRenderer.send('execute-scan-from-overlay', resolution, selectedHeroOrder, isInitialScan), // Added isInitialScan
   onOverlayClosedResetUI: (callback) => ipcRenderer.on('overlay-closed-reset-ui', () => callback()),
   takeSnapshot: () => ipcRenderer.send('take-snapshot'),
   onSnapshotTaken: (callback) => ipcRenderer.on('snapshot-taken-status', (_event, status) => callback(status)),

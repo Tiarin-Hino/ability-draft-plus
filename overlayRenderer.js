@@ -75,9 +75,9 @@ function triggerScan(isInitialScan) {
         scanStatusPopup.style.display = 'block';
     }
 
-    const heroOrderForThisScan = isInitialScan ? null : selectedHeroOrder; // Use the correct selectedHeroOrder
-    console.log(`[OVERLAY RENDERER] Triggering scan. Initial: ${isInitialScan}, Hero Order for Drafting: ${heroOrderForThisScan}`);
-    window.electronAPI.executeScanFromOverlay(currentTargetResolution, heroOrderForThisScan);
+    // selectedHeroOrder is the hero_order for drafting (player's hero)
+    console.log(`[OVERLAY RENDERER] Triggering scan. Initial: ${isInitialScan}, Hero Order for Drafting: ${selectedHeroOrder}`);
+    window.electronAPI.executeScanFromOverlay(currentTargetResolution, selectedHeroOrder, isInitialScan); // Pass isInitialScan
 }
 
 function toggleTopTierBordersVisibility(visible) {
@@ -133,7 +133,7 @@ function updateOPCombinationsDisplay(opCombinations) {
     }
 }
 
-function manageMyHeroButtons() { // Renamed from manageMyHeroButtons_Original for consistency with your file
+function manageMyHeroButtons() {
     const allOriginalMyHeroButtons = document.querySelectorAll('.my-hero-btn-original, .change-my-hero-btn-original');
     allOriginalMyHeroButtons.forEach(btn => btn.remove());
 
@@ -199,7 +199,7 @@ function manageMyHeroButtons() { // Renamed from manageMyHeroButtons_Original fo
 if (window.electronAPI && window.electronAPI.onOverlayData) {
     window.electronAPI.onOverlayData((data) => {
         console.log('[OVERLAY RENDERER] === New Overlay Data Received ===');
-        // console.log(JSON.stringify(data, null, 2)); // Keep for deep debugging if needed
+        // console.log(JSON.stringify(data, null, 2)); 
 
         if (typeof data.scaleFactor === 'number' && data.scaleFactor > 0) currentScaleFactor = data.scaleFactor;
         if (data.coordinatesConfig) currentCoordinatesConfig = data.coordinatesConfig;
@@ -228,14 +228,12 @@ if (window.electronAPI && window.electronAPI.onOverlayData) {
 
         if (data && typeof data.opCombinations !== 'undefined') updateOPCombinationsDisplay(data.opCombinations);
 
-        if (data && data.heroModels) { // heroModels now contains isTopTier
+        if (data && data.heroModels) {
             currentHeroModelData = data.heroModels;
         }
         if (data.heroesForMyHeroUI) currentHeroesForMyHeroUIData = data.heroesForMyHeroUI;
 
-        // Update local selection states based on what main process confirms
         if (typeof data.selectedHeroForDraftingDbId !== 'undefined') {
-            // Find the heroOrder in currentHeroesForMyHeroUIData that matches this dbId
             const myHeroEntry = currentHeroesForMyHeroUIData.find(h => h.dbHeroId === data.selectedHeroForDraftingDbId);
             selectedHeroOrder = myHeroEntry ? myHeroEntry.heroOrder : null;
         }
@@ -340,10 +338,6 @@ if (window.electronAPI && window.electronAPI.onOverlayData) {
             manageMyHeroButtons();
             updateVisualHighlights();
 
-
-
-            manageMyHeroButtons();
-
             if (initialScanButton && initialScanButton.style.display !== 'none') { initialScanButton.style.display = 'none'; }
             if (rescanButton) { rescanButton.style.display = 'inline-block'; rescanButton.disabled = false; }
             if (takeSnapshotButton) { takeSnapshotButton.style.display = 'block'; takeSnapshotButton.disabled = false; }
@@ -365,7 +359,6 @@ if (window.electronAPI && window.electronAPI.onOverlayData) {
     if (opCombinationsWindow) opCombinationsWindow.style.display = 'none';
     if (showOpCombinationsButton) showOpCombinationsButton.style.display = 'none';
     document.querySelectorAll('.my-hero-btn, .change-my-hero-btn, .selected-ability-hotspot, .ability-hotspot').forEach(el => el.remove());
-    if (scanNowButton) scanNowButton.disabled = true;
 }
 
 if (window.electronAPI.onMyModelSelectionChanged) {
@@ -379,7 +372,7 @@ if (window.electronAPI.onMyModelSelectionChanged) {
 if (window.electronAPI.onMyHeroForDraftingSelectionChanged) {
     window.electronAPI.onMyHeroForDraftingSelectionChanged(({ selectedHeroOrderForDrafting }) => {
         console.log(`[OVERLAY RENDERER] Event 'my-hero-for-drafting-selection-changed', received selectedHeroOrderForDrafting: ${selectedHeroOrderForDrafting}`);
-        selectedHeroOrder = selectedHeroOrderForDrafting;
+        selectedHeroOrder = selectedHeroOrderForDrafting; // This should be the hero_order from the original list context
         manageMyHeroButtons();
         updateVisualHighlights();
     });
@@ -403,14 +396,14 @@ if (showOpCombinationsButton && opCombinationsWindow && hideOpCombinationsButton
 if (initialScanButton && window.electronAPI && window.electronAPI.executeScanFromOverlay) {
     initialScanButton.addEventListener('click', () => {
         console.log('[OVERLAY RENDERER] Initial Scan button clicked.');
-        triggerScan(true);
+        triggerScan(true); // isInitialScan = true
     });
 }
 
 if (rescanButton && window.electronAPI && window.electronAPI.executeScanFromOverlay) {
     rescanButton.addEventListener('click', () => {
         console.log('[OVERLAY RENDERER] Rescan button clicked.');
-        triggerScan(false);
+        triggerScan(false); // isInitialScan = false
     });
 }
 
@@ -451,15 +444,12 @@ if (window.electronAPI && window.electronAPI.onSnapshotTaken) {
 if (controlsContainer) {
     controlsContainer.addEventListener('mouseenter', () => {
         if (window.electronAPI && window.electronAPI.setOverlayMouseEvents) {
-            window.electronAPI.setOverlayMouseEvents(false); // Make overlay interactive
+            window.electronAPI.setOverlayMouseEvents(false);
         }
     });
     controlsContainer.addEventListener('mouseleave', () => {
         if (window.electronAPI && window.electronAPI.setOverlayMouseEvents) {
-            // Check if mouse is still over another interactive element before making it pass-through
-            // This simple version doesn't do that, which is fine if interactive areas are distinct
-            // or if quick transitions are acceptable.
-            window.electronAPI.setOverlayMouseEvents(true); // Make overlay pass-through
+            window.electronAPI.setOverlayMouseEvents(true);
         }
     });
 }
@@ -469,7 +459,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('controls-container'),
         document.getElementById('op-combinations-window'),
         document.getElementById('show-op-combinations-btn'),
-        document.getElementById('initial-scan-btn'), // Add all static buttons
+        document.getElementById('initial-scan-btn'),
         document.getElementById('rescan-btn'),
         document.getElementById('close-overlay-btn'),
         document.getElementById('take-snapshot-btn'),
@@ -591,7 +581,7 @@ function createHotspot(coord, abilityData, indexOrUniqueId, type, isSelectedAbil
     document.body.appendChild(hotspot);
 }
 
-function createHeroModelHotspots(heroModelDataArray) { //
+function createHeroModelHotspots(heroModelDataArray) {
     if (!heroModelDataArray || heroModelDataArray.length === 0) return;
 
     heroModelDataArray.forEach(heroData => {
@@ -609,8 +599,8 @@ function createHeroModelHotspots(heroModelDataArray) { //
         hotspot.style.width = `${coord.width / currentScaleFactor}px`;
         hotspot.style.height = `${coord.height / currentScaleFactor}px`;
 
-        hotspot.dataset.heroName = heroData.heroDisplayName; // For display
-        hotspot.dataset.internalHeroName = heroData.heroName; // Store internal name
+        hotspot.dataset.heroName = heroData.heroDisplayName;
+        hotspot.dataset.internalHeroName = heroData.heroName;
         hotspot.dataset.winrate = heroData.winrate !== null ? heroData.winrate : 'N/A';
         hotspot.dataset.heroOrder = heroData.heroOrder;
         hotspot.dataset.dbHeroId = heroData.dbHeroId;
@@ -619,9 +609,8 @@ function createHeroModelHotspots(heroModelDataArray) { //
 
 
         if (heroData.isTopTier) {
-            hotspot.classList.add('top-tier-hero-model'); //
+            hotspot.classList.add('top-tier-hero-model');
         }
-        // Apply 'is-my-model' class if this model is selected
         if (selectedModelHeroOrder_overlay !== null && parseInt(hotspot.dataset.heroOrder) === selectedModelHeroOrder_overlay) {
             hotspot.classList.add('is-my-model');
         }
@@ -632,7 +621,7 @@ function createHeroModelHotspots(heroModelDataArray) { //
                 const nameForDisplay = hotspot.dataset.heroName.replace(/_/g, ' ');
                 let wr = hotspot.dataset.winrate;
                 const winrateFormatted = wr !== 'N/A' ? `${(parseFloat(wr) * 100).toFixed(1)}%` : 'N/A';
-                const topTierIndicator = hotspot.dataset.isTopTier === 'true' ? '<span style="color: #FFD700;">&#9733; Top Model!</span><br>' : ''; // Gold for heroes
+                const topTierIndicator = hotspot.dataset.isTopTier === 'true' ? '<span style="color: #FFD700;">&#9733; Top Model!</span><br>' : '';
                 const scoreDisplay = hotspot.dataset.consolidatedScore !== 'N/A' ? `<span style="font-size: 0.8em; color: #ccc;">Score: ${hotspot.dataset.consolidatedScore}</span><br>` : '';
 
 
@@ -733,7 +722,6 @@ function manageHeroModelButtons() {
 }
 
 function updateVisualHighlights() {
-    // Highlight selected abilities for "My Hero" (drafting context)
     document.querySelectorAll('.ability-hotspot.selected-ability-hotspot').forEach(hotspot => {
         hotspot.classList.remove('my-hero-selected-ability');
         if (selectedHeroOrder !== null && parseInt(hotspot.dataset.heroOrder) === selectedHeroOrder) {
@@ -741,26 +729,19 @@ function updateVisualHighlights() {
         }
     });
 
-    // Highlight "My Model" and "Top Tier Hero Models"
     document.querySelectorAll('.hero-model-hotspot').forEach(hotspot => {
-        hotspot.classList.remove('is-my-model', 'top-tier-hero-model'); // Clear existing states
+        hotspot.classList.remove('is-my-model', 'top-tier-hero-model');
         if (selectedModelHeroOrder_overlay !== null && parseInt(hotspot.dataset.heroOrder) === selectedModelHeroOrder_overlay) {
             hotspot.classList.add('is-my-model');
         }
-        // Re-apply top-tier based on the data attribute set during creation/update
         if (hotspot.dataset.isTopTier === 'true') {
             hotspot.classList.add('top-tier-hero-model');
         }
     });
-
-    // Ensure Top Tier Ability borders are managed correctly
-    // This might be redundant if toggleTopTierBordersVisibility is called appropriately elsewhere
-    // but good for ensuring state after data updates.
     document.querySelectorAll('.ability-hotspot.top-tier-ability').forEach(hotspot => {
-        if (!isTooltipVisible) { // Only show if tooltip isn't active over THIS hotspot (or any for simplicity here)
+        if (!isTooltipVisible) {
             hotspot.classList.remove('snapshot-hidden-border');
         } else {
-            // If tooltip is visible, specific logic in tooltip handlers will hide the border of the hovered item
         }
     });
 }
