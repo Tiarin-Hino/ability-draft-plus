@@ -4,21 +4,42 @@
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
+        content="default-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline'">
     <title>Dota 2 Ability Draft Plus - Control Panel</title>
     <style>
-        /* Basic styling for better presentation - can be moved to a separate CSS file */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            margin: 20px;
+            margin: 0;
+            /* Changed margin to 0 */
+            padding: 0;
+            /* Changed padding to 0 */
             background-color: #f4f4f4;
             color: #333;
             line-height: 1.6;
+            display: flex;
+            /* For footer positioning */
+            flex-direction: column;
+            /* For footer positioning */
+            min-height: 100vh;
+            /* For footer positioning */
+        }
+
+        header,
+        main {
+            /* Wrap header and main for content flexing */
+            padding: 20px;
+        }
+
+        main {
+            flex-grow: 1;
+            /* Allows main content to take available space */
         }
 
         h1 {
             color: #2c3e50;
             text-align: center;
+            margin-top: 0;
+            /* Adjust if header has its own padding */
         }
 
         section {
@@ -30,22 +51,83 @@
         }
 
         button {
+            /* General button styling */
             padding: 10px 15px;
             background-color: #3498db;
-            color: white;
+            /* Default blue */
+            color: white !important;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             font-size: 1em;
+            text-decoration: none;
+            display: inline-flex;
+            /* Changed to inline-flex for icon alignment */
+            align-items: center;
+            /* Vertically align icon and text */
+            justify-content: center;
+            /* Center content if button has fixed width */
+            gap: 8px;
+            /* Space between icon and text */
         }
 
         button:hover {
             background-color: #2980b9;
+            /* Darker blue on hover */
         }
 
         button:disabled {
-            background-color: #bdc3c7;
+            background-color: #bdc3c7 !important;
+            /* Grey out disabled buttons */
             cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        /* Specific button colors */
+        #update-all-data-btn {
+            background-color: #3498db;
+        }
+
+        #activate-overlay-btn {
+            background-color: #2ecc71;
+        }
+
+        #activate-overlay-btn:hover {
+            background-color: #27ae60;
+        }
+
+        #export-failed-samples-btn {
+            background-color: #f39c12;
+        }
+
+        #export-failed-samples-btn:hover {
+            background-color: #e67e22;
+        }
+
+        #share-feedback-ext-btn {
+            background-color: #9b59b6;
+        }
+
+        #share-feedback-ext-btn:hover {
+            background-color: #8e44ad;
+        }
+
+        .support-button {
+            /* Class for Ko-fi buttons */
+            background-color: #292F3F;
+            /* Ko-fi dark color example */
+            border: 1px solid #1a1e28;
+        }
+
+        .support-button:hover {
+            background-color: #3d4455;
+        }
+
+        .button-icon {
+            width: 20px;
+            /* Adjust size as needed */
+            height: 20px;
+            /* margin-right: 8px; Removed, using gap on button instead */
         }
 
         select {
@@ -84,6 +166,30 @@
             margin-bottom: 5px;
             font-weight: bold;
         }
+
+        .button-group-inline {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        /* Footer styling for support buttons */
+        .app-footer {
+            padding: 20px;
+            text-align: center;
+            background-color: #e9ecef;
+            /* Light background for footer */
+            border-top: 1px solid #ddd;
+            margin-top: auto;
+            /* Pushes footer to the bottom with flexbox */
+        }
+
+        .support-buttons-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            /* Space between support buttons */
+        }
     </style>
 </head>
 
@@ -93,6 +199,7 @@
     </header>
 
     <main>
+
         <section id="overlay-activation-section">
             <h2>Overlay Activation</h2>
             <div>
@@ -112,7 +219,7 @@
         <section id="data-management-section">
             <h2>Data Management</h2>
             <p>Fetch all hero, ability, and pair data from Windrun.io. This may take a few moments.</p>
-            <button id="update-all-data-btn">Update Windrun Data (Full)</button>
+            <button id="update-all-data-btn">Update Windrun Data</button>
             <p class="last-updated">Last updated: <span id="last-updated-date">Checking...</span></p>
         </section>
 
@@ -120,9 +227,12 @@
 
         <section id="feedback-section">
             <h2>Feedback &amp; Diagnostics</h2>
-            <p>If the ML model misidentifies abilities, use the "Take Snapshot" feature in the overlay, then export the
-                saved images here.</p>
-            <button id="export-failed-samples-btn">Export Failed Samples</button>
+            <p>If the ML model misidentifies abilities, use the "Take Snapshot" feature in the overlay. You can then
+                export these or provide general feedback.</p>
+            <div class="button-group-inline">
+                <button id="export-failed-samples-btn">Export Failed Samples</button>
+                <button id="share-feedback-ext-btn">Share Feedback / Samples</button>
+            </div>
         </section>
 
         <hr>
@@ -133,7 +243,17 @@
         </section>
     </main>
 
-    <footer>
+    <footer class="app-footer">
+        <div class="support-buttons-container">
+            <button id="support-dev-btn" class="support-button">
+                <img src="./resources/images/ko-fi.svg" alt="Ko-fi icon" class="button-icon">
+                <span>Support Developer</span>
+            </button>
+            <button id="support-windrun-btn" class="support-button">
+                <img src="./resources/images/ko-fi.svg" alt="Ko-fi icon" class="button-icon">
+                <span>Support Windrun.io</span>
+            </button>
+        </div>
     </footer>
 
     <script src="./renderer.js"></script>

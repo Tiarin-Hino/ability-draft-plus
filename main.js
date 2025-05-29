@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, screen, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, dialog, shell } = require('electron');
 const path = require('path');
 const fs = require('fs').promises;
 const crypto = require('crypto');
@@ -450,6 +450,15 @@ ipcMain.on('select-my-hero-for-drafting', (event, { heroOrder, dbHeroId }) => { 
       selectedHeroOrderForDrafting: mySelectedHeroOriginalOrder, // This is what overlayRenderer uses for its button state
       selectedHeroDbId: mySelectedHeroDbIdForDrafting // Send DB ID for potential logic
     });
+  }
+});
+
+ipcMain.on('open-external-link', (event, url) => {
+  if (url && (url.startsWith('http:') || url.startsWith('https:'))) {
+    shell.openExternal(url)
+      .catch(err => console.error('[MainIPC] Failed to open external link:', url, err));
+  } else {
+    console.warn(`[MainIPC] Attempted to open invalid or non-HTTP(S) external link: ${url}`);
   }
 });
 
