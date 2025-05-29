@@ -2,60 +2,63 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const Database = require('better-sqlite3');
 
-const AXIOS_TIMEOUT = 15000; // 15 seconds timeout for fetching hero page
+const AXIOS_TIMEOUT = 15000; // 15 seconds timeout for fetching the hero page
+const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36';
 
 /**
- * Scrapes hero data from windrun.io and stores it in the database.
+ * Scrapes hero data (name, display name, winrate, Windrun ID) from a specified URL
+ * (typically Windrun.io's heroes page) and stores it in the SQLite database.
+ *
  * @param {string} dbPath - Path to the SQLite database file.
- * @param {string} url - The URL to scrape (e.g., 'https://windrun.io/heroes').
- * @param {function(string): void} statusCallback - Function to send status updates.
+ * @param {string} url - The URL to scrape for hero data (e.g., 'https://windrun.io/heroes').
+ * @param {function(string): void} statusCallback - A function to call with status updates during the scraping process.
+ * @throws {Error} If a critical error occurs during scraping or database update that prevents completion.
  */
 async function scrapeAndStoreHeroes(dbPath, url, statusCallback) {
     let db;
 
     try {
-        statusCallback('Fetching hero data from windrun.io...');
-        console.log(`[HERO_SCRAPER_NETWORK] Attempting to fetch: ${url}`);
+        statusCallback('Fetching hero data from source...');
+        console.log(`[Hero Scraper] Attempting to fetch: ${url}`);
         const { data: html } = await axios.get(url, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            },
+            headers: { 'User-Agent': USER_AGENT },
             timeout: AXIOS_TIMEOUT
         });
-        console.log(`[HERO_SCRAPER_NETWORK] Successfully fetched: ${url}`);
+        console.log(`[Hero Scraper] Successfully fetched: ${url}`);
 
-        statusCallback('Parsing HTML data...');
+        statusCallback('Parsing HTML data for heroes...');
         const $ = cheerio.load(html);
         const heroes = [];
-        const rows = $('tbody tr');
+        const rows = $('tbody tr'); // Select all table rows in the table body
 
         if (rows.length === 0) {
-            throw new Error('No hero data rows found on the page. DOM structure might have changed.');
+            throw new Error('No hero data rows found on the page. The website\'s DOM structure might have changed.');
         }
-
         statusCallback(`Found ${rows.length} hero rows. Extracting data...`);
 
         rows.each((index, element) => {
             const row = $(element);
-            const heroImg = row.find('td.hero-picture img'); // First td for image
+            const heroImgElement = row.find('td.hero-picture img'); // Image element for internal name
 
-            // --- Extract Display Name and Windrun ID from the second td's <a> tag ---
-            const displayNameElement = row.find('td').eq(1).find('a');
-            const displayName = displayNameElement.text().trim() || null;
-            const windrunId = displayNameElement.attr('href').split('/').pop() || null;
-            // --- End Extract Display Name ---
+            // Extract Display Name and Windrun ID from the second td's <a> tag
+            const displayNameAnchor = row.find('td').eq(1).find('a'); // Second <td> contains link with display name
+            const displayName = displayNameAnchor.text().trim() || null;
+            const windrunHref = displayNameAnchor.attr('href');
+            const windrunId = windrunHref ? windrunHref.split('/').pop() : null;
 
-            const winrateCell = row.find('td.color-range').first(); // First td with class color-range for winrate
+            // Winrate is typically in the first td with class 'color-range'
+            const winrateCell = row.find('td.color-range').first();
 
-            // Extract internal hero name from image src
-            const imgSrc = heroImg.attr('src');
+            // Extract internal hero name from the image source URL
+            const imgSrc = heroImgElement.attr('src');
             let internalName = null;
             if (imgSrc) {
                 const filename = imgSrc.split('/').pop();
+                // Remove common image extensions and hero suffixes like '_full.png' or '_vert.jpg'
                 internalName = filename.replace(/_full\.png$|_vert\.jpg$/i, '');
             }
 
-            // Extract winrate text and convert to number
+            // Extract winrate text and convert to a numeric value (0.0 to 1.0)
             const winrateText = winrateCell.text().trim();
             let winrateValue = null;
             if (winrateText) {
@@ -65,62 +68,68 @@ async function scrapeAndStoreHeroes(dbPath, url, statusCallback) {
                 }
             }
 
-            if (internalName && displayName && winrateValue !== null) {
+            // Add hero to list if all critical data points are present
+            if (internalName && displayName && winrateValue !== null && windrunId) {
                 heroes.push({
                     name: internalName,
                     displayName: displayName,
                     winrate: winrateValue,
-                    windrunId: windrunId
+                    windrunId: windrunId // Store the extracted Windrun ID
                 });
             } else {
-                console.warn(`Skipping hero row ${index + 1}: Could not extract all required data (InternalName: ${internalName}, DisplayName: ${displayName}, Winrate Text: ${winrateText})`);
+                console.warn(`[Hero Scraper] Skipping hero row ${index + 1}: Could not extract all required data. (InternalName: ${internalName}, DisplayName: ${displayName}, WinrateText: "${winrateText}", WindrunID: ${windrunId})`);
             }
         });
 
         if (heroes.length === 0) {
-            throw new Error('Extracted 0 valid heroes. Check selectors or page content.');
+            throw new Error('Extracted 0 valid heroes after parsing. Check selectors or page content.');
         }
 
         statusCallback(`Extracted ${heroes.length} heroes. Updating database...`);
-        console.log(`[HERO_SCRAPER_DB] Attempting to update ${heroes.length} heroes in the database.`);
+        console.log(`[Hero Scraper] Attempting to update ${heroes.length} heroes in the database.`);
 
         db = new Database(dbPath);
-        db.pragma('journal_mode = WAL');
+        db.pragma('journal_mode = WAL'); // Recommended for better performance and concurrency
 
+        // Prepared statement for inserting or updating hero data
+        // ON CONFLICT clause handles cases where a hero already exists, updating their details.
         const insertStmt = db.prepare(`
             INSERT INTO Heroes (name, display_name, winrate, windrun_id)
             VALUES (@name, @displayName, @winrate, @windrunId)
             ON CONFLICT(name) DO UPDATE SET
                 display_name = excluded.display_name,
                 winrate = excluded.winrate,
-                windrun_id = excluded.windrun_id
+                windrun_id = excluded.windrun_id;
         `);
 
+        // Use a transaction for batch inserting/updating for better performance.
         const insertTransaction = db.transaction((heroData) => {
+            let processedCount = 0;
             for (const hero of heroData) {
-                insertStmt.run(hero);
+                const info = insertStmt.run(hero);
+                if (info.changes > 0) processedCount++;
             }
-            return heroData.length;
+            return processedCount;
         });
 
         const processedCount = insertTransaction(heroes);
-        console.log(`[HERO_SCRAPER_DB] Database transaction complete. Processed ${processedCount} heroes.`);
+        console.log(`[Hero Scraper] Database transaction complete. Processed ${processedCount} heroes.`);
         statusCallback(`Database update successful. Processed ${processedCount} heroes.`);
 
     } catch (error) {
-        console.error('Error during hero scraping or database update:', error);
-        if (error.code === 'ECONNABORTED' || (error.response && error.response.status === 524)) {
-            statusCallback(`Error fetching hero data: The request to windrun.io timed out or the server was too slow to respond. Please try again later.`);
+        console.error('[Hero Scraper] Error during hero scraping or database update:', error);
+        let userMessage = `Error updating hero data: ${error.message}`;
+        if (error.code === 'ECONNABORTED' || (error.response && error.response.status === 524)) { // Axios timeout or Cloudflare timeout
+            userMessage = 'Error fetching hero data: The request to the data source timed out. Please try again later.';
         } else if (error.message.includes('No hero data rows found') || error.message.includes('Extracted 0 valid heroes')) {
-            statusCallback(`Error fetching hero data: Could not parse data from windrun.io. The website structure might have changed.`);
-        } else {
-            statusCallback(`Error updating hero data: ${error.message}`);
+            userMessage = 'Error fetching hero data: Could not parse data from the source. The website structure might have changed.';
         }
-        throw error; // Rethrow to be caught by the IPC handler in main.js if needed for broader error handling
+        statusCallback(userMessage);
+        throw error; // Rethrow to be caught by the caller (e.g., IPC handler in main.js)
     } finally {
         if (db && db.open) {
             db.close();
-            console.log('[HERO_SCRAPER_DB] Database connection closed.');
+            console.log('[Hero Scraper] Database connection closed.');
         }
     }
 }

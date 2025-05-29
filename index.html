@@ -1,40 +1,140 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="Content-Security-Policy"
         content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
-    <title>Dota 2 Ability Draft Plus Control</title>
+    <title>Dota 2 Ability Draft Plus - Control Panel</title>
+    <style>
+        /* Basic styling for better presentation - can be moved to a separate CSS file */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+        }
+
+        section {
+            background-color: #fff;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        button {
+            padding: 10px 15px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        select {
+            padding: 8px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+
+        hr {
+            border: 0;
+            height: 1px;
+            background: #ddd;
+            margin: 20px 0;
+        }
+
+        p {
+            margin-bottom: 10px;
+        }
+
+        .status {
+            padding: 10px;
+            background-color: #e9ecef;
+            border-left: 4px solid #7f8c8d;
+            margin-top: 15px;
+            border-radius: 4px;
+        }
+
+        .last-updated {
+            font-size: 0.9em;
+            color: #555;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+    </style>
 </head>
 
 <body>
-    <h1>Dota 2 Ability Draft Plus Control</h1>
+    <header>
+        <h1>Dota 2 Ability Draft Plus - Control Panel</h1>
+    </header>
 
-    <div>
-        <p>Fetch all hero, ability, and pair data from windrun.io. This may take a few moments.</p>
-        <button id="update-all-data-btn">Update Windrun Data (Full)</button>
-        <p style="font-size: 0.9em; color: #555;">Last updated: <span id="last-updated-date">Checking...</span></p>
-    </div>
-    <hr>
+    <main>
+        <section id="overlay-activation-section">
+            <h2>Overlay Activation</h2>
+            <div>
+                <label for="resolution-select">Select screen resolution for scanning:</label>
+                <select id="resolution-select" aria-describedby="resolution-help">
+                    <option value="">Loading resolutions...</option>
+                </select>
+                <p id="resolution-help" style="font-size: 0.85em; color: #666;">This resolution must match your Dota 2
+                    game setting.</p>
+            </div>
+            <p>Activate the overlay when Dota 2 is in the Ability Draft phase.</p>
+            <button id="activate-overlay-btn">Activate Overlay</button>
+        </section>
 
-    <div>
-        <p>Select screen resolution for scanning:</p>
-        <select id="resolution-select">
-            <option value="">Loading resolutions...</option>
-        </select>
-        <p>Activate the overlay to prepare for scanning.</p>
-        <button id="activate-overlay-btn">Activate Overlay</button>
-    </div>
-    <hr>
+        <hr>
 
-    <div>
-        <p>Export saved images of incorrectly identified abilities for feedback.</p>
-        <button id="export-failed-samples-btn">Export Failed Samples</button>
-    </div>
-    <hr>
-    <p id="status-message">Ready.</p>
-    <hr>
+        <section id="data-management-section">
+            <h2>Data Management</h2>
+            <p>Fetch all hero, ability, and pair data from Windrun.io. This may take a few moments.</p>
+            <button id="update-all-data-btn">Update Windrun Data (Full)</button>
+            <p class="last-updated">Last updated: <span id="last-updated-date">Checking...</span></p>
+        </section>
+
+        <hr>
+
+        <section id="feedback-section">
+            <h2>Feedback &amp; Diagnostics</h2>
+            <p>If the ML model misidentifies abilities, use the "Take Snapshot" feature in the overlay, then export the
+                saved images here.</p>
+            <button id="export-failed-samples-btn">Export Failed Samples</button>
+        </section>
+
+        <hr>
+
+        <section id="status-section">
+            <h2>Application Status</h2>
+            <p id="status-message" class="status">Ready.</p>
+        </section>
+    </main>
+
+    <footer>
+    </footer>
 
     <script src="./renderer.js"></script>
 </body>

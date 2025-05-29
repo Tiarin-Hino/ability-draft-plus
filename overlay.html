@@ -1,45 +1,84 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="Content-Security-Policy"
         content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'">
-    <title>Dota 2 Ability Draft Plus</title>
+    <title>Dota 2 Ability Draft Plus - Overlay</title>
     <link rel="stylesheet" href="overlay.css">
 </head>
 
 <body>
-    <div id="tooltip" class="tooltip" style="display: none; position: absolute;"></div>
+    <div id="tooltip" class="tooltip" role="tooltip" aria-hidden="true" style="display: none; position: absolute;">
+    </div>
 
-    <div id="top-right-ui-container">
-        <div id="controls-container">
-            <div style="display: flex; gap: 5px;">
-                <button id="initial-scan-btn" title="Perform Initial Scan">Initial Scan</button>
-                <button id="rescan-btn" title="Rescan Draft Screen" style="display: none;">Rescan</button>
-                <button id="reset-overlay-btn" title="Reset Overlay for New Game" style="display: none;">Reset</button>
-                <button id="close-overlay-btn" title="Close Overlay (Esc)">X</button>
+    <aside id="top-right-ui-container" aria-label="Overlay Controls and Information">
+
+        <section id="controls-container" aria-labelledby="controls-heading">
+            <h2 id="controls-heading" class="visually-hidden">Main Controls</h2>
+            <div class="button-group"> <button id="initial-scan-btn" class="overlay-button"
+                    title="Perform Initial Scan of the draft screen">Initial Scan</button>
+                <button id="rescan-btn" class="overlay-button" title="Rescan Draft Screen with current selections"
+                    style="display: none;">Rescan</button>
+                <button id="reset-overlay-btn" class="overlay-button" title="Reset Overlay for New Game/Draft"
+                    style="display: none;">Reset</button>
+                <button id="close-overlay-btn" class="overlay-button" title="Close Overlay (Esc)"
+                    aria-label="Close Overlay">X</button>
             </div>
-            <button id="take-snapshot-btn" title="Save current ability icons for feedback" style="display: none;">Take
+            <button id="take-snapshot-btn" class="overlay-button"
+                title="Save current ability icons for feedback (if misidentified)" style="display: none;">Take
                 Snapshot</button>
-        </div>
+        </section>
 
-        <div id="op-combinations-container">
-            <div id="op-combinations-window" class="op-alert-window" style="display: none;">
-                <div class="op-alert-header">
-                    <span class="op-alert-title">OP Combinations</span>
-                    <button id="hide-op-combinations-btn" class="op-alert-hide-btn">Hide</button>
-                </div>
+        <section id="op-combinations-container" aria-labelledby="op-combinations-heading">
+            <h2 id="op-combinations-heading" class="visually-hidden">Overpowered Combinations</h2>
+            <div id="op-combinations-window" class="op-alert-window" style="display: none;" aria-hidden="true"
+                aria-live="polite">
+                <header class="op-alert-header">
+                    <span class="op-alert-title" id="op-window-title">OP Combinations</span>
+                    <button id="hide-op-combinations-btn" class="overlay-button op-alert-hide-btn"
+                        aria-controls="op-combinations-window"
+                        aria-label="Hide Overpowered Combinations Window">Hide</button>
+                </header>
                 <div id="op-combinations-list">
                 </div>
             </div>
-            <button id="show-op-combinations-btn" style="display: none;">Show OP Combinations</button>
-        </div>
+
+            <button id="show-op-combinations-btn" class="overlay-button" style="display: none;"
+                aria-controls="op-combinations-window" aria-expanded="false" title="Show Overpowered Combinations">Show
+                OP Combinations</button>
+        </section>
+    </aside>
+
+    <div id="status-messages-container" role="status" aria-live="assertive">
+        <p id="snapshot-status" class="status-popup"></p>
+        <p id="scan-status-popup" class="status-popup" style="display: none;"></p>
     </div>
 
-    <p id="snapshot-status"></p>
-    <div id="scan-status-popup" style="display: none;"></div>
     <script src="./overlayRenderer.js"></script>
+    <style>
+        /* Basic style to hide visually-hidden elements, primarily for screen readers */
+        .visually-hidden {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        .button-group {
+            display: flex;
+            /* For horizontal layout of a group of buttons */
+            gap: 5px;
+        }
+
+        /* .status-popup styling is primarily in overlay.css */
+    </style>
 </body>
 
 </html>
