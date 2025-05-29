@@ -549,186 +549,157 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
   isScanInProgress = true;
   lastScanTargetResolution = selectedResolution;
   const startTime = performance.now();
+  console.log(`[MainScan] Scan triggered. Initial: ${isInitialScan}, Overlay's selectedHeroOriginalOrder: ${selectedHeroOriginalOrderFromOverlay}, Main's current mySelectedHeroOriginalOrder: ${mySelectedHeroOriginalOrder}`);
 
-  // Log the received overlay selection state for context
-  console.log(`[MainScan] Scan triggered. Overlay's selectedHeroOriginalOrder: ${selectedHeroOriginalOrderFromOverlay}, Main's current mySelectedHeroOriginalOrder: ${mySelectedHeroOriginalOrder}`);
 
   try {
     const layoutConfig = fullLayoutConfigCache;
-    if (!layoutConfig) {
-      throw new Error("Layout configuration not loaded.");
-    }
+    if (!layoutConfig) throw new Error("Layout configuration not loaded.");
     const coords = layoutConfig.resolutions?.[selectedResolution];
     if (!coords) throw new Error(`Coordinates not found for ${selectedResolution}`);
-
-    const {
-      ultimate_slots_coords = [],
-      standard_slots_coords = [],
-      selected_abilities_coords = [],
-      selected_abilities_params,
-      models_coords = [],
-      heroes_coords = [] // <<< FIX: Define heroes_coords by destructuring
+    const { 
+      ultimate_slots_coords = [], 
+      standard_slots_coords = [], 
+      selected_abilities_coords = [], 
+      selected_abilities_params, 
+      models_coords = [], 
+      heroes_coords = [] 
     } = coords;
-
     const currentClassNames = await loadClassNamesForMain();
-
-    const selected_hero_abilities_coords_full = selected_abilities_params ? selected_abilities_coords.map(sac => ({
-      ...sac,
-      width: selected_abilities_params.width,
+    const selected_hero_abilities_coords_full = selected_abilities_params ? selected_abilities_coords.map(sac => ({ 
+      ...sac, 
+      width: selected_abilities_params.width, 
       height: selected_abilities_params.height,
     })) : [];
     const hero_defining_slots_coords = standard_slots_coords.filter(slot => slot.ability_order === 2);
 
-    let tempRawResults;
 
+    let tempRawResults;
     if (isInitialScan) {
       console.log("[MainScan] Performing Initial Scan.");
       tempRawResults = await performMlScan(layoutCoordinatesPath, selectedResolution, MIN_PREDICTION_CONFIDENCE);
-
-      // Correctly cache initial pool abilities with their full data from identifySlots (which includes .coord)
       initialPoolAbilitiesCache.ultimates = tempRawResults.ultimates
-        .filter(item => item.name && item.coord)
-        .map(res => ({ ...res, type: 'ultimate' })); // Spread all of res, add type
-
+      .filter(item => item.name && item.coord)
+      .map(res => ({ ...res, type: 'ultimate' }));
       initialPoolAbilitiesCache.standard = tempRawResults.standard
-        .filter(item => item.name && item.coord)
-        .map(res => ({ ...res, type: 'standard' })); // Spread all of res, add type
-
+      .filter(item => item.name && item.coord)
+      .map(res => ({ ...res, type: 'standard' }));
       console.log(`[MainScan] Initial Cache: ${initialPoolAbilitiesCache.ultimates.length} ults, ${initialPoolAbilitiesCache.standard.length} standard abilities cached.`);
-      if (initialPoolAbilitiesCache.ultimates.length > 0) {
-        console.log("[MainScan] Example cached ultimates:", JSON.stringify(initialPoolAbilitiesCache.ultimates[0]));
-      }
-      if (initialPoolAbilitiesCache.standard.length > 0) {
-        console.log("[MainScan] Example cached standard abilities:", JSON.stringify(initialPoolAbilitiesCache.standard[0]));
-      }
-
-      mySelectedModelDbHeroId = null;
+      mySelectedModelDbHeroId = null; // Reset model on initial scan
       mySelectedModelScreenOrder = null;
       identifiedHeroModelsCache = await identifyHeroModels(tempRawResults.heroDefiningAbilities, models_coords);
-
     } else { // This is a Rescan
       console.log("[MainScan] Performing Rescan.");
       if (!initialPoolAbilitiesCache.ultimates.length && !initialPoolAbilitiesCache.standard.length) {
         console.warn("[MainScan] Rescan attempted without cached initial pool. Falling back to full scan logic for this rescan.");
         tempRawResults = await performMlScan(layoutCoordinatesPath, selectedResolution, MIN_PREDICTION_CONFIDENCE);
         initialPoolAbilitiesCache.ultimates = tempRawResults.ultimates
-          .filter(item => item.name && item.coord)
-          .map(res => ({ ...res, type: 'ultimate' }));
+        .filter(item => item.name && item.coord)
+        .map(res => ({ ...res, type: 'ultimate' }));
         initialPoolAbilitiesCache.standard = tempRawResults.standard
-          .filter(item => item.name && item.coord)
-          .map(res => ({ ...res, type: 'standard' }));
-        if (!identifiedHeroModelsCache) {
+        .filter(item => item.name && item.coord)
+        .map(res => ({ ...res, type: 'standard' }));
+        if (!identifiedHeroModelsCache) { // Only identify if not already cached from a previous initial scan
           identifiedHeroModelsCache = await identifyHeroModels(tempRawResults.heroDefiningAbilities, models_coords);
         }
       } else {
         const screenshotBuffer = await screenshotDesktop({ format: 'png' });
         await initializeImageProcessorIfNeeded();
+        const { identifySlots } = require('./src/imageProcessor');
 
         const reconfirmedUltimates = await identifySlotsFromCache(initialPoolAbilitiesCache.ultimates, screenshotBuffer, currentClassNames, MIN_PREDICTION_CONFIDENCE);
         const reconfirmedStandard = await identifySlotsFromCache(initialPoolAbilitiesCache.standard, screenshotBuffer, currentClassNames, MIN_PREDICTION_CONFIDENCE);
-
-        const { identifySlots } = require('./src/imageProcessor'); // Ensure this is correctly scoped if not at top
         const identifiedSelectedAbilities = await identifySlots(selected_hero_abilities_coords_full, screenshotBuffer, currentClassNames, MIN_PREDICTION_CONFIDENCE, new Set());
 
         tempRawResults = {
           ultimates: reconfirmedUltimates,
           standard: reconfirmedStandard,
           selectedAbilities: identifiedSelectedAbilities,
-          heroDefiningAbilities: reconfirmedStandard.filter(a => hero_defining_slots_coords.some(hc =>
-            hc.hero_order === a.hero_order && hc.ability_order === a.ability_order
-          ))
+          heroDefiningAbilities: reconfirmedStandard.filter(a => hero_defining_slots_coords.some(hc => hc.hero_order === a.hero_order && hc.ability_order === a.ability_order))
         };
       }
     }
     lastRawScanResults = { ...tempRawResults };
-
     const heroesForMyHeroSelectionUI = prepareHeroesForMyHeroUI(identifiedHeroModelsCache, heroes_coords);
-
-    // --- Collect current ability sets ---
     const { uniqueAbilityNamesInPool, allPickedAbilityNames } = collectAbilityNames(tempRawResults);
     const allCurrentlyRelevantAbilityNames = Array.from(new Set([...uniqueAbilityNamesInPool, ...allPickedAbilityNames]));
-
-    // --- Fetch details for all relevant abilities ---
     const abilityDetailsMap = getAbilityDetails(activeDbPath, allCurrentlyRelevantAbilityNames);
-
-    // --- Synergy Suggestions Logic (Tooltip Content) ---
-    // The context for ALL synergy suggestions will be ONLY the abilities currently in the central draft pool.
     const centralDraftPoolArray = Array.from(uniqueAbilityNamesInPool);
-    console.log(`[MainScan] Fetching tooltip synergies for ${allCurrentlyRelevantAbilityNames.length} abilities against a pool of ${centralDraftPoolArray.length}.`);
+
+    // --- NEW: Calculate Synergies for "My Hero" with the current pool ---
+    let synergisticPartnersInPoolForMyHero = new Set();
+    if (mySelectedHeroDbIdForDrafting !== null && mySelectedHeroOriginalOrder !== null) {
+      const myHeroPickedAbilitiesRaw = tempRawResults.selectedAbilities.filter(
+        ab => ab.name && ab.hero_order === mySelectedHeroOriginalOrder
+      );
+      const myHeroPickedAbilityNames = myHeroPickedAbilitiesRaw.map(ab => ab.name);
+
+      if (myHeroPickedAbilityNames.length > 0) {
+        console.log(`[MainScanLogic] My Hero (Original Order: ${mySelectedHeroOriginalOrder}) picked: ${myHeroPickedAbilityNames.join(', ')}. Checking synergies with pool of ${centralDraftPoolArray.length} abilities.`);
+        for (const pickedAbilityName of myHeroPickedAbilityNames) {
+          const combinations = await getHighWinrateCombinations(
+            activeDbPath,
+            pickedAbilityName,
+            centralDraftPoolArray
+          );
+          combinations.forEach(combo => {
+            if (combo.partnerInternalName) { // Ensured by query.js modification
+              synergisticPartnersInPoolForMyHero.add(combo.partnerInternalName);
+            }
+          });
+        }
+        console.log(`[MainScanLogic] Found ${synergisticPartnersInPoolForMyHero.size} synergistic partners in pool for My Hero's abilities: ${Array.from(synergisticPartnersInPoolForMyHero).join(', ')}`);
+      }
+    }
+    // --- END NEW ---
+
 
     for (const abilityName of allCurrentlyRelevantAbilityNames) {
       const details = abilityDetailsMap.get(abilityName);
       if (details) {
-        const combinations = await getHighWinrateCombinations(
-          activeDbPath,
-          abilityName,              // The ability to find synergies for (can be pool or picked)
-          centralDraftPoolArray     // Context: ONLY abilities currently in the central draft pool
-        );
+        const combinations = await getHighWinrateCombinations(activeDbPath, abilityName, centralDraftPoolArray);
         details.highWinrateCombinations = combinations || [];
         abilityDetailsMap.set(abilityName, details);
       }
     }
-    console.log('[MainScan] Finished fetching tooltip synergies against the current central pool.');
 
-    // --- OP Combinations Logic (OP Window Content) ---
     const allDatabaseOPCombs = await getAllOPCombinations(activeDbPath);
-    console.log(`[MainScan] Filtering ${allDatabaseOPCombs.length} total DB OP combos.`);
     const relevantOPCombinations = allDatabaseOPCombs.filter(combo => {
       const a1InCentralPool = uniqueAbilityNamesInPool.has(combo.ability1InternalName);
       const a2InCentralPool = uniqueAbilityNamesInPool.has(combo.ability2InternalName);
       const a1IsPicked = allPickedAbilityNames.has(combo.ability1InternalName);
       const a2IsPicked = allPickedAbilityNames.has(combo.ability2InternalName);
+      if (a1InCentralPool && a2InCentralPool) return true;
+      if (a1InCentralPool && a2IsPicked) return true;
+      if (a1IsPicked && a2InCentralPool) return true;
+      return false;
+    }).map(combo => ({ ability1DisplayName: combo.ability1DisplayName, ability2DisplayName: combo.ability2DisplayName, synergyWinrate: combo.synergyWinrate }));
 
-      // Valid if: (Pool + Pool) OR (Pool + Picked_By_Anyone)
-      // Note: (Picked + Pool) is covered by the line above due to pair symmetry (a1, a2 vs a2, a1)
-      if (a1InCentralPool && a2InCentralPool) return true; // Both parts are in the current central pool
-      if (a1InCentralPool && a2IsPicked) return true;      // One part in pool, other is picked
-      if (a1IsPicked && a2InCentralPool) return true;      // One part picked, other is in pool
-      return false; // Excludes (Picked + Picked)
-    }).map(combo => ({
-      ability1DisplayName: combo.ability1DisplayName,
-      ability2DisplayName: combo.ability2DisplayName,
-      synergyWinrate: combo.synergyWinrate
-    }));
-    console.log(`[MainScan] Found ${relevantOPCombinations.length} relevant OP combos to display.`);
-
-    // --- Scoring and Top Tier (uses only pool abilities for suggestions) ---
     let allEntitiesForScoring = prepareEntitiesForScoring(tempRawResults, abilityDetailsMap, identifiedHeroModelsCache);
     allEntitiesForScoring = calculateConsolidatedScores(allEntitiesForScoring);
+    const myHeroHasPickedUltimate = checkMyHeroPickedUltimate(mySelectedHeroDbIdForDrafting, heroesForMyHeroSelectionUI, tempRawResults.selectedAbilities);
 
-    const myHeroHasPickedUltimate = checkMyHeroPickedUltimate(
-      mySelectedHeroDbIdForDrafting, heroesForMyHeroSelectionUI, tempRawResults.selectedAbilities
+    // Pass the new Set of synergistic partners to determineTopTierEntities
+    const topTierMarkedEntities = determineTopTierEntities(
+      allEntitiesForScoring, mySelectedModelDbHeroId, myHeroHasPickedUltimate, synergisticPartnersInPoolForMyHero
     );
 
-    const topTierEntities = determineTopTierEntities(
-      allEntitiesForScoring, mySelectedModelDbHeroId, myHeroHasPickedUltimate
-    );
-    const topTierEntityIdentifiers = new Set(
-      topTierEntities.map(entity => `${entity.entityType}:${entity.internalName}`)
-    );
-
-    const enrichedHeroModels = enrichHeroModelData(identifiedHeroModelsCache, topTierEntityIdentifiers, allEntitiesForScoring);
-
-    // --- Format results for UI (will use the abilityDetailsMap with correctly scoped synergies) ---
-    const formattedUltimates = formatResultsForUi(tempRawResults.ultimates, abilityDetailsMap, topTierEntityIdentifiers, mySelectedHeroDbIdForDrafting, heroesForMyHeroSelectionUI, tempRawResults.selectedAbilities, 'ultimates', allEntitiesForScoring);
-    const formattedStandard = formatResultsForUi(tempRawResults.standard, abilityDetailsMap, topTierEntityIdentifiers, mySelectedHeroDbIdForDrafting, heroesForMyHeroSelectionUI, tempRawResults.selectedAbilities, 'standard', allEntitiesForScoring);
-    const formattedSelectedAbilities = formatResultsForUi(tempRawResults.selectedAbilities, abilityDetailsMap, new Set(), mySelectedHeroDbIdForDrafting, heroesForMyHeroSelectionUI, tempRawResults.selectedAbilities, 'selected', allEntitiesForScoring, true);
+    const enrichedHeroModels = enrichHeroModelDataWithFlags(identifiedHeroModelsCache, topTierMarkedEntities, allEntitiesForScoring);
+    const formattedUltimates = formatResultsForUiWithFlags(tempRawResults.ultimates, abilityDetailsMap, topTierMarkedEntities, 'ultimates', allEntitiesForScoring);
+    const formattedStandard = formatResultsForUiWithFlags(tempRawResults.standard, abilityDetailsMap, topTierMarkedEntities, 'standard', allEntitiesForScoring);
+    const formattedSelectedAbilities = formatResultsForUiWithFlags(tempRawResults.selectedAbilities, abilityDetailsMap, [], 'selected', allEntitiesForScoring, true);
 
     const endTime = performance.now();
     const durationMs = Math.round(endTime - startTime);
     console.log(`[MainScan] Scan and processing took ${durationMs}ms.`);
 
     sendStatusUpdate(overlayWindow.webContents, 'overlay-data', {
-      scanData: {
-        ultimates: formattedUltimates,
-        standard: formattedStandard,
-        selectedAbilities: formattedSelectedAbilities
-      },
+      scanData: { ultimates: formattedUltimates, standard: formattedStandard, selectedAbilities: formattedSelectedAbilities },
       heroModels: enrichedHeroModels,
       heroesForMyHeroUI: heroesForMyHeroSelectionUI,
       targetResolution: selectedResolution,
       durationMs: durationMs,
-      opCombinations: relevantOPCombinations, // Filtered OP combos
+      opCombinations: relevantOPCombinations,
       initialSetup: false,
       scaleFactor: lastUsedScaleFactor,
       selectedHeroForDraftingDbId: mySelectedHeroDbIdForDrafting,
@@ -911,151 +882,188 @@ function checkMyHeroPickedUltimate(selectedHeroDbId, heroesForUI, pickedAbilitie
   return false;
 }
 
-/** Determines top-tier entities based on scores and current selections. */
-function determineTopTierEntities(allScoredEntities, selectedModelId, myHeroHasUlt) {
+/**
+ * Determines top-tier entities, prioritizing synergies for "My Hero" if applicable.
+ * @param {Array<object>} allScoredEntities - Array of all abilities and hero models, with their scores.
+ * @param {string | null} selectedModelId - DB ID of the "My Model" hero, if selected.
+ * @param {boolean} myHeroHasUlt - True if "My Hero" has already picked an ultimate.
+ * @param {Set<string>} synergisticPartnersInPoolForMyHeroSet - Set of internal names of abilities in pool that synergize with My Hero's picked abilities.
+ * @returns {Array<object>} An array of entities marked as top tier, with flags for synergy or general top pick.
+ */
+function determineTopTierEntities(allScoredEntities, selectedModelId, myHeroHasUlt, synergisticPartnersInPoolForMyHeroSet = new Set()) {
   let entitiesToConsider = [...allScoredEntities];
+  const finalTopTierEntities = [];
 
-  if (selectedModelId !== null) {
-    // If a model is selected, suggestions should only be abilities (not other hero models)
-    console.log(`[MainScanLogic] "My Model" (ID: ${selectedModelId}) is selected. Filtering Top Tier to abilities only.`);
-    entitiesToConsider = entitiesToConsider.filter(entity => entity.entityType === 'ability');
-  }
-
+  // Filter out ultimates if My Hero already has one (applies to both synergy and general picks)
   if (myHeroHasUlt) {
-    // If "My Hero" has picked an ultimate, don't suggest more ultimates
-    console.log('[MainScanLogic] "My Hero" has an ultimate. Filtering Top Tier to exclude ultimate abilities.');
+    console.log('[MainScanLogic] My Hero has an ultimate. Filtering out ultimates from all suggestions.');
     entitiesToConsider = entitiesToConsider.filter(entity => {
-      if (entity.entityType === 'ability') {
-        // is_ultimate_from_coord_source is true if it came from an ultimate_slot_coord
-        return entity.is_ultimate_from_coord_source !== true;
+      if (entity.entityType === 'ability') return entity.is_ultimate_from_coord_source !== true && entity.is_ultimate_from_db !== true;
+      return true; // Keep hero models
+    });
+    // Also filter the synergisticPartners set if it contains ultimates
+    synergisticPartnersInPoolForMyHeroSet.forEach(partnerName => {
+      const partnerEntity = allScoredEntities.find(e => e.internalName === partnerName);
+      if (partnerEntity && (partnerEntity.is_ultimate_from_coord_source === true || partnerEntity.is_ultimate_from_db === true)) {
+        synergisticPartnersInPoolForMyHeroSet.delete(partnerName);
+        console.log(`[MainScanLogic] Removed ultimate ${partnerName} from synergy suggestions as My Hero has an ult.`);
       }
-      return true; // Keep heroes if they are still being considered
     });
   }
 
-  return entitiesToConsider
-    .sort((a, b) => b.consolidatedScore - a.consolidatedScore)
-    .slice(0, NUM_TOP_TIER_SUGGESTIONS);
+  // If a model is selected, suggestions should only be abilities (not other hero models) for general picks.
+  // Synergy picks are always abilities.
+  if (selectedModelId !== null) {
+    console.log(`[MainScanLogic] "My Model" (ID: ${selectedModelId}) is selected. Filtering general Top Tier to abilities only.`);
+    // This filter will be applied when selecting general candidates
+  }
+
+
+  // 1. Extract and mark synergy suggestions from the (potentially pre-filtered) entitiesToConsider
+  const synergySuggestionsFromPool = [];
+  entitiesToConsider = entitiesToConsider.filter(entity => {
+    if (entity.entityType === 'ability' && synergisticPartnersInPoolForMyHeroSet.has(entity.internalName)) {
+      synergySuggestionsFromPool.push({ ...entity, isSynergySuggestionForMyHero: true, isGeneralTopTier: false });
+      return false; // Remove from entitiesToConsider so it's not picked again as a general pick
+    }
+    return true;
+  });
+
+  // Sort synergy suggestions by their original score (descending) and add to final list
+  synergySuggestionsFromPool.sort((a, b) => b.consolidatedScore - a.consolidatedScore);
+  finalTopTierEntities.push(...synergySuggestionsFromPool);
+  console.log(`[MainScanLogic] Added ${synergySuggestionsFromPool.length} synergy suggestions for My Hero.`);
+
+
+  // 2. Fill remaining slots with general top picks
+  const remainingSlots = NUM_TOP_TIER_SUGGESTIONS - finalTopTierEntities.length;
+  if (remainingSlots > 0) {
+    let generalCandidates = [...entitiesToConsider]; // Use the already filtered entitiesToConsider
+
+    // If a model is selected, general picks should only be abilities
+    if (selectedModelId !== null) {
+      generalCandidates = generalCandidates.filter(entity => entity.entityType === 'ability');
+    }
+
+    const generalTopPicks = generalCandidates
+      .sort((a, b) => b.consolidatedScore - a.consolidatedScore)
+      .slice(0, remainingSlots)
+      .map(entity => ({ ...entity, isSynergySuggestionForMyHero: false, isGeneralTopTier: true }));
+    finalTopTierEntities.push(...generalTopPicks);
+    console.log(`[MainScanLogic] Added ${generalTopPicks.length} general top tier picks.`);
+  }
+
+  console.log(`[MainScanLogic] Total top tier entities determined: ${finalTopTierEntities.length}`);
+  return finalTopTierEntities;
 }
 
-/** Enriches hero model data with top-tier status and scores. */
-function enrichHeroModelData(heroModels, topTierIdentifiers, allScoredEntities) {
+/**
+ * Enriches hero model data with top-tier status and scores, based on flags from determineTopTierEntities.
+ */
+function enrichHeroModelDataWithFlags(heroModels, topTierMarkedEntities, allScoredEntities) {
   if (!heroModels) return [];
   return heroModels.map(hModel => {
-    const identifier = `hero:${hModel.heroName}`;
     const scoredEntity = allScoredEntities.find(e => e.entityType === 'hero' && e.internalName === hModel.heroName);
+    // For hero models, only "isGeneralTopTier" is relevant from topTierMarkedEntities
+    const topTierEntry = topTierMarkedEntities.find(tte => tte.entityType === 'hero' && tte.internalName === hModel.heroName && tte.isGeneralTopTier);
+
     return {
       ...hModel,
-      isTopTier: topTierIdentifiers.has(identifier),
+      isGeneralTopTier: !!topTierEntry, // True if found and marked as general top tier
+      isSynergySuggestionForMyHero: false, // Heroes are not ability synergies in this context
       consolidatedScore: scoredEntity ? scoredEntity.consolidatedScore : 0,
     };
   });
 }
 
-/** Formats raw scan results for the UI, enriching with DB data and scores. */
-function formatResultsForUi(
-  predictedResultsArray, // Items here will have .coord if identifySlots or identifySlotsFromCache provides it
+/**
+ * Formats raw scan results for the UI, enriching with DB data, scores, and top-tier flags.
+ */
+function formatResultsForUiWithFlags(
+  predictedResultsArray,
   abilityDetailsMap,
-  topTierEntityIdentifiers,
-  mySelectedHeroDbIdForDrafting,
-  heroesForMyHeroSelectionUI,
-  rawSelectedAbilities,
-  slotType,
-  allScoredEntities,
+  topTierMarkedEntitiesArray, // Direct output from determineTopTierEntities
+  // mySelectedHeroDbIdForDrafting, // These might not be needed here if decisions are in determineTopTier
+  // heroesForMyHeroSelectionUI,
+  // rawSelectedAbilitiesForContext, // For checking if 'my hero' picked it
+  slotType, // 'ultimates', 'standard', 'selected'
+  allScoredEntities, // For fallback scoring if needed
   isForSelectedAbilityList = false
 ) {
   if (!Array.isArray(predictedResultsArray)) return [];
 
   return predictedResultsArray.map(result => {
     const internalName = result.name;
-    const originalCoord = result.coord; // <<< Get the coord from the input result
-    const isUltimateFromSlot = result.is_ultimate; // is_ultimate flag from the specific slot data
-
-    if (!originalCoord && !isForSelectedAbilityList) {
-      console.warn(`[MainFormat] Missing originalCoord for pool ability:`, result);
-      // For pool abilities, coord is essential. For selected, it might be derived differently if not directly on result.
-    }
-    if (!originalCoord && isForSelectedAbilityList) {
-      // This case should now be covered because identifySlots adds `coord`
-      console.warn(`[MainFormat] Missing originalCoord for selected ability result:`, result);
-    }
-
+    const originalCoord = result.coord;
+    const isUltimateFromLayoutSlot = result.is_ultimate; // is_ultimate flag from the specific slot data in layout.json
 
     if (internalName === null) {
       return {
         internalName: null, displayName: 'Unknown Ability', winrate: null, highSkillWinrate: null,
-        avgPickOrder: null, valuePercentage: null, highWinrateCombinations: [], isTopTier: false,
+        avgPickOrder: null, valuePercentage: null, highWinrateCombinations: [],
+        isGeneralTopTier: false, isSynergySuggestionForMyHero: false,
         confidence: result.confidence,
-        hero_order: result.hero_order,
-        ability_order: result.ability_order,
-        is_ultimate_from_layout: isUltimateFromSlot,
+        hero_order: result.hero_order, ability_order: result.ability_order,
+        is_ultimate_from_layout: isUltimateFromLayoutSlot,
         is_ultimate_from_db: null,
-        is_ultimate_from_coord_source: slotType === 'ultimates',
-        consolidatedScore: 0,
-        coord: originalCoord // <<< Pass it
+        consolidatedScore: 0, coord: originalCoord
       };
     }
 
-    let abilityDataSource;
-    let isTopTier = false;
-    let isUltimateFromCoordSourceForThis = (slotType === 'ultimates');
-    let consolidatedScore = 0;
-    let highWinrateCombinations = []; // Initialize
+    const dbDetails = abilityDetailsMap.get(internalName);
+    // Find this ability in the topTierMarkedEntitiesArray (if it's a pool ability)
+    const topTierEntry = !isForSelectedAbilityList
+      ? topTierMarkedEntitiesArray.find(tte => tte.entityType === 'ability' && tte.internalName === internalName)
+      : null;
 
-    if (!isForSelectedAbilityList) { // For abilities in draft pool
-      abilityDataSource = allScoredEntities.find(e => e.entityType === 'ability' && e.internalName === internalName);
-      if (abilityDataSource) {
-        isTopTier = topTierEntityIdentifiers.has(`ability:${internalName}`);
-        consolidatedScore = abilityDataSource.consolidatedScore || 0;
-        highWinrateCombinations = abilityDataSource.highWinrateCombinations || []; // From allScoredEntities
-      }
-    } else { // For abilities in the "selectedAbilities" list by heroes
-      abilityDataSource = abilityDetailsMap.get(internalName);
-      if (abilityDataSource) {
-        // <<< THIS WILL NOW WORK >>>
-        highWinrateCombinations = abilityDataSource.highWinrateCombinations || [];
-      }
+    const scoredPoolEntity = !isForSelectedAbilityList
+      ? allScoredEntities.find(e => e.entityType === 'ability' && e.internalName === internalName)
+      : null;
+
+    const isSynergySuggestion = topTierEntry ? (topTierEntry.isSynergySuggestionForMyHero || false) : false;
+    const isGeneralTopTier = topTierEntry ? (topTierEntry.isGeneralTopTier || false) : false;
+
+    let baseWinrate = null, baseHighSkillWinrate = null, baseAvgPickOrder = null, baseValuePercentage = null;
+    let dbIsUltimateFlag = null, dbAbilityOrderVal = null;
+    let combinationsForTooltip = [];
+    let score = 0;
+
+    if (dbDetails) {
+      baseWinrate = dbDetails.winrate;
+      baseHighSkillWinrate = dbDetails.highSkillWinrate;
+      baseAvgPickOrder = dbDetails.avgPickOrder;
+      baseValuePercentage = dbDetails.valuePercentage;
+      dbIsUltimateFlag = dbDetails.is_ultimate;
+      dbAbilityOrderVal = dbDetails.ability_order;
+      combinationsForTooltip = dbDetails.highWinrateCombinations || [];
     }
 
-    if (abilityDataSource) {
-      return {
-        internalName: abilityDataSource.internalName,
-        displayName: abilityDataSource.displayName || abilityDataSource.internalName,
-        winrate: abilityDataSource.winrate,
-        highSkillWinrate: abilityDataSource.highSkillWinrate,
-        avgPickOrder: abilityDataSource.avgPickOrder,
-        valuePercentage: abilityDataSource.valuePercentage,
-        is_ultimate_from_db: abilityDataSource.is_ultimate,
-        is_ultimate_from_coord_source: isUltimateFromCoordSourceForThis,
-        ability_order_from_db: abilityDataSource.ability_order,
-        highWinrateCombinations,
-        isTopTier,
-        confidence: result.confidence,
-        hero_order: result.hero_order,
-        ability_order: result.ability_order,
-        is_ultimate_from_layout: isUltimateFromSlot,
-        consolidatedScore,
-        coord: originalCoord // <<< Pass it
-      };
+    if (scoredPoolEntity) {
+      score = scoredPoolEntity.consolidatedScore || 0;
+    } else if (dbDetails && isForSelectedAbilityList) {
+      // For selected abilities, score might not be relevant for "Top Tier Pool" display,
+      // but having their base stats is good.
+      // If we needed to score them for some reason, we could do it here.
     }
-    // Fallback
+
     return {
-      internalName,
-      displayName: internalName,
-      winrate: null,
-      highSkillWinrate: null,
-      avgPickOrder: null,
-      valuePercentage: null,
-      highWinrateCombinations: [],
-      isTopTier: false,
+      internalName: internalName,
+      displayName: dbDetails ? (dbDetails.displayName || internalName) : internalName,
+      winrate: baseWinrate,
+      highSkillWinrate: baseHighSkillWinrate,
+      avgPickOrder: baseAvgPickOrder,
+      valuePercentage: baseValuePercentage,
+      is_ultimate_from_db: dbIsUltimateFlag, // From Abilities table
+      is_ultimate_from_layout: isUltimateFromLayoutSlot, // From layout_coordinates.json for the slot
+      ability_order_from_db: dbAbilityOrderVal,
+      highWinrateCombinations: combinationsForTooltip, // Synergies with current pool
+      isGeneralTopTier: isGeneralTopTier,
+      isSynergySuggestionForMyHero: isSynergySuggestion,
       confidence: result.confidence,
       hero_order: result.hero_order,
       ability_order: result.ability_order,
-      is_ultimate_from_layout: isUltimateFromSlot,
-      is_ultimate_from_db: null,
-      is_ultimate_from_coord_source: isUltimateFromCoordSourceForThis,
-      consolidatedScore: 0,
-      coord: originalCoord // <<< Pass it
+      consolidatedScore: score,
+      coord: originalCoord
     };
   });
 }

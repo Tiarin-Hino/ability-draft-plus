@@ -70,8 +70,8 @@ function getAbilityDetails(dbPath, abilityNames) {
  * @param {string} dbPath - Path to the SQLite database file.
  * @param {string} baseAbilityInternalName - The internal name of the ability to find synergies for.
  * @param {string[]} draftPoolInternalNames - An array of internal names of other abilities in the draft pool.
- * @returns {Promise<Array<{partnerAbilityDisplayName: string, synergyWinrate: number}>>}
- * An array of objects, each representing a synergistic partner ability with its display name and synergy winrate.
+ * @returns {Promise<Array<{partnerAbilityDisplayName: string, partnerInternalName: string, synergyWinrate: number}>>}
+ * An array of objects, each representing a synergistic partner ability with its display name, internal name, and synergy winrate.
  * Returns an empty array if no valid combinations are found or in case of an error.
  */
 async function getHighWinrateCombinations(dbPath, baseAbilityInternalName, draftPoolInternalNames) {
@@ -91,7 +91,6 @@ async function getHighWinrateCombinations(dbPath, baseAbilityInternalName, draft
         }
         const baseAbilityHeroId = baseAbilityInfo.hero_id;
 
-        // Filter out the base ability itself from the draft pool for synergy checking
         const otherPoolAbilities = draftPoolInternalNames.filter(name => name !== baseAbilityInternalName);
         if (otherPoolAbilities.length === 0) {
             return combinations;
@@ -104,7 +103,7 @@ async function getHighWinrateCombinations(dbPath, baseAbilityInternalName, draft
             SELECT
                 s.synergy_winrate,
                 ab_other.display_name AS partner_display_name,
-                ab_other.name AS partner_internal_name
+                ab_other.name AS partner_internal_name 
             FROM AbilitySynergies s
             JOIN Abilities ab_base ON (s.base_ability_id = ab_base.ability_id OR s.synergy_ability_id = ab_base.ability_id)
             JOIN Abilities ab_other ON ((s.synergy_ability_id = ab_other.ability_id AND s.base_ability_id = ab_base.ability_id) OR (s.base_ability_id = ab_other.ability_id AND s.synergy_ability_id = ab_base.ability_id))
@@ -126,6 +125,7 @@ async function getHighWinrateCombinations(dbPath, baseAbilityInternalName, draft
         synergyRows.forEach(row => {
             combinations.push({
                 partnerAbilityDisplayName: row.partner_display_name || row.partner_internal_name,
+                partnerInternalName: row.partner_internal_name, // Added this
                 synergyWinrate: row.synergy_winrate
             });
         });

@@ -26,42 +26,86 @@ body {
 
 /* === Hotspot Base Styles (Keep as is or adjust borders if needed) === */
 .ability-hotspot,
-.hero-model-hotspot {
+.hero-model-hotspot,
+.synergy-suggestion-hotspot {
     position: absolute;
     box-sizing: border-box;
-    border: 1px solid rgba(255, 255, 255, 0.1);
     /* Softer default border */
 }
 
 .ability-hotspot.snapshot-hidden-border,
-.hero-model-hotspot.snapshot-hidden-border {
+.hero-model-hotspot.snapshot-hidden-border,
+.synergy-suggestion-hotspot.snapshot-hidden-border {
     border: none !important;
     animation: none !important;
     box-shadow: none !important;
 }
 
-/* --- Animations (Keep as is) --- */
+/* --- Animations --- */
 @keyframes shimmerGreen {
-    /* ... */
+    0% {
+        box-shadow: 0 0 3px 0px rgba(50, 255, 50, 0.7), inset 0 0 2px 0px rgba(50, 255, 50, 0.5);
+        border-color: rgba(80, 255, 80, 0.8);
+    }
+
+    50% {
+        box-shadow: 0 0 6px 2px rgba(100, 255, 100, 1), inset 0 0 4px 1px rgba(100, 255, 100, 0.8);
+        border-color: rgba(120, 255, 120, 1);
+    }
+
+    100% {
+        box-shadow: 0 0 3px 0px rgba(50, 255, 50, 0.7), inset 0 0 2px 0px rgba(50, 255, 50, 0.5);
+        border-color: rgba(80, 255, 80, 0.8);
+    }
 }
 
 @keyframes shimmerGold {
-    /* ... */
+    0% {
+        box-shadow: 0 0 5px 1px rgba(255, 215, 0, 0.6), inset 0 0 3px 0px rgba(255, 215, 0, 0.4);
+        border-color: rgba(255, 223, 30, 0.8);
+    }
+
+    50% {
+        box-shadow: 0 0 12px 4px rgba(255, 215, 0, 1), inset 0 0 7px 2px rgba(255, 215, 0, 0.8);
+        border-color: rgba(255, 230, 50, 1);
+    }
+
+    100% {
+        box-shadow: 0 0 5px 1px rgba(255, 215, 0, 0.6), inset 0 0 3px 0px rgba(255, 215, 0, 0.4);
+        border-color: rgba(255, 223, 30, 0.8);
+    }
+}
+
+@keyframes shimmerTeal {
+    0% {
+        box-shadow: 0 0 3px 0px rgba(0, 191, 255, 0.65), inset 0 0 2px 0px rgba(0, 191, 255, 0.45);
+        border-color: rgba(0, 207, 255, 0.8);
+    }
+
+    50% {
+        box-shadow: 0 0 6px 2px rgba(30, 220, 255, 1), inset 0 0 4px 1px rgba(30, 220, 255, 0.8);
+        border-color: rgba(60, 230, 255, 1);
+    }
+
+    100% {
+        box-shadow: 0 0 3px 0px rgba(0, 191, 255, 0.65), inset 0 0 2px 0px rgba(0, 191, 255, 0.45);
+        border-color: rgba(0, 207, 255, 0.8);
+    }
 }
 
 .top-tier-ability {
-    border: 2px solid #4CAF50;
-    /* A slightly more muted, modern green */
+    border-color: 3px solid rgba(80, 255, 80, 0.8) !important;
     animation: shimmerGreen 1.5s infinite ease-in-out;
-    box-shadow: 0 0 8px 2px rgba(76, 175, 80, 0.5);
-    /* Softer glow */
+}
+
+.synergy-suggestion-hotspot {
+    border: 3px solid rgba(0, 207, 255, 0.8) !important;
+    animation: shimmerTeal 1.5s infinite ease-in-out;
 }
 
 .hero-model-hotspot.top-tier-hero-model {
-    border: 3px solid #FFC107 !important;
-    /* A rich amber/gold */
+    border-color: 3px solid rgba(255, 223, 30, 0.8) !important;
     animation: shimmerGold 1.5s infinite ease-in-out;
-    box-shadow: 0 0 10px 3px rgba(255, 193, 7, 0.6) !important;
 }
 
 .hero-model-hotspot.is-my-model {
@@ -98,6 +142,20 @@ body {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7);
     /* More pronounced shadow for depth */
     max-width: 280px;
+}
+
+.tooltip .synergy-pick-indicator {
+    /* If you add a specific span class in tooltip content */
+    color: #00BCD4;
+    /* Teal */
+    font-weight: bold;
+}
+
+.tooltip .top-pick-indicator {
+    /* If you add a specific span class in tooltip content */
+    color: #66ff66;
+    /* Green */
+    font-weight: bold;
 }
 
 .tooltip-title {

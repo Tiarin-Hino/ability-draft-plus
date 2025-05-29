@@ -49,7 +49,7 @@ function resetOverlayUI() {
     console.log('[OverlayRenderer] Resetting Overlay UI to initial state.');
 
     // Remove dynamically generated elements
-    document.querySelectorAll('.ability-hotspot, .selected-ability-hotspot, .hero-model-hotspot, .my-hero-btn-original, .change-my-hero-btn-original, .my-model-btn, .change-my-model-btn').forEach(el => el.remove());
+    document.querySelectorAll('.ability-hotspot, .selected-ability-hotspot, .synergy-suggestion-hotspot, .hero-model-hotspot, .my-hero-btn-original, .change-my-hero-btn-original, .my-model-btn, .change-my-model-btn').forEach(el => el.remove());
 
     // Reset state variables
     scanHasBeenPerformed = false;
@@ -102,7 +102,7 @@ function triggerScan(isInitialScan) {
 
 
     // Clear previous visual elements
-    document.querySelectorAll('.ability-hotspot, .selected-ability-hotspot').forEach(el => el.remove());
+    document.querySelectorAll('.ability-hotspot, .selected-ability-hotspot, .synergy-suggestion-hotspot').forEach(el => el.remove());
     // OP combinations window is hidden, list cleared
     if (opCombinationsWindow) { opCombinationsWindow.style.display = 'none'; opCombinationsWindow.setAttribute('aria-hidden', 'true'); }
     if (showOpCombinationsButton) { showOpCombinationsButton.style.display = 'none'; showOpCombinationsButton.setAttribute('aria-expanded', 'false'); }
@@ -147,6 +147,14 @@ function toggleTopTierBordersVisibility(visible) {
     hotspots.forEach(hotspot => {
         hotspot.classList.toggle('snapshot-hidden-border', !visible);
     });
+    const synergyHotspots = document.querySelectorAll('.synergy-suggestion-hotspot');
+    synergyHotspots.forEach(synergyHotspot => {
+        synergyHotspot.classList.toggle('snapshot-hidden-border', !visible);
+    });
+    const topTierModelHotspots = document.querySelectorAll('.hero-model-hotspot');
+    topTierModelHotspots.forEach(topTierModelHotspot => {
+        topTierModelHotspot.classList.toggle('snapshot-hidden-border', !visible);
+    });
 }
 
 // --- Tooltip Management ---
@@ -158,10 +166,11 @@ function showTooltip(hotspotElement, content) {
         tooltipElement.style.display = 'block';
         tooltipElement.setAttribute('aria-hidden', 'false');
         isTooltipVisible = true;
-        toggleTopTierBordersVisibility(false); // Hide all top-tier borders when any tooltip is active
-        if (hotspotElement.classList.contains('top-tier-ability') || hotspotElement.classList.contains('top-tier-hero-model') || hotspotElement.classList.contains('is-my-model')) {
-            hotspotElement.classList.add('snapshot-hidden-border'); // Specifically hide border of the hovered top-tier item
-        }
+
+        // Temporarily disable all animated borders when any tooltip is active
+        document.querySelectorAll('.top-tier-ability, .top-tier-hero-model, .synergy-suggestion-hotspot, .is-my-model').forEach(el => {
+            el.classList.add('snapshot-hidden-border');
+        });
         positionTooltip(hotspotElement);
     }
 }
@@ -173,7 +182,10 @@ function hideTooltip() {
         tooltipElement.setAttribute('aria-hidden', 'true');
     }
     isTooltipVisible = false;
-    toggleTopTierBordersVisibility(true); // Restore top-tier borders when no tooltip is active
+    // Restore all animated borders when no tooltip is active
+    document.querySelectorAll('.top-tier-ability, .top-tier-hero-model, .synergy-suggestion-hotspot, .is-my-model').forEach(el => {
+        el.classList.remove('snapshot-hidden-border');
+    });
 }
 
 /**
@@ -275,31 +287,38 @@ function createHotspotsForType(abilityResultArray, type, isSelectedAbilityHotspo
 function createHotspotElement(coord, abilityData, uniqueIdPart, isSelectedAbilityHotspot) {
     const hotspot = document.createElement('div');
     hotspot.className = isSelectedAbilityHotspot ? 'ability-hotspot selected-ability-hotspot' : 'ability-hotspot';
-    hotspot.id = `hotspot-${uniqueIdPart}`; // More specific ID
+    hotspot.id = `hotspot-${uniqueIdPart}`;
 
-    // Apply scaling to coordinates
     hotspot.style.left = `${coord.x / currentScaleFactor}px`;
     hotspot.style.top = `${coord.y / currentScaleFactor}px`;
     hotspot.style.width = `${coord.width / currentScaleFactor}px`;
     hotspot.style.height = `${coord.height / currentScaleFactor}px`;
 
-    // Store data attributes for tooltip and other logic
     hotspot.dataset.heroOrder = coord.hero_order ?? abilityData.hero_order ?? 'unknown';
     hotspot.dataset.abilityName = abilityData.displayName || abilityData.internalName;
     hotspot.dataset.internalName = abilityData.internalName;
     hotspot.dataset.winrate = abilityData.winrate !== null ? abilityData.winrate.toFixed(3) : 'N/A';
     hotspot.dataset.highSkillWinrate = abilityData.highSkillWinrate !== null ? abilityData.highSkillWinrate.toFixed(3) : 'N/A';
     hotspot.dataset.combinations = JSON.stringify(abilityData.highWinrateCombinations || []);
-    hotspot.dataset.isTopTier = String(abilityData.isTopTier === true && !isSelectedAbilityHotspot);
     hotspot.dataset.confidence = abilityData.confidence !== null ? abilityData.confidence.toFixed(2) : 'N/A';
 
-    // Add classes for styling based on data
-    if (abilityData.isTopTier && !isSelectedAbilityHotspot) {
+    // NEW: Add data attributes for new suggestion types
+    hotspot.dataset.isSynergySuggestion = String(abilityData.isSynergySuggestionForMyHero === true && !isSelectedAbilityHotspot);
+    hotspot.dataset.isGeneralTopTier = String(abilityData.isGeneralTopTier === true && !isSelectedAbilityHotspot);
+
+
+    // Apply CSS classes based on new data attributes
+    if (abilityData.isSynergySuggestionForMyHero && !isSelectedAbilityHotspot) {
+        hotspot.classList.add('synergy-suggestion-hotspot');
+    } else if (abilityData.isGeneralTopTier && !isSelectedAbilityHotspot) {
+        // Only add 'top-tier-ability' if it's a general top tier and NOT a synergy suggestion
         hotspot.classList.add('top-tier-ability');
     }
+
     if (isSelectedAbilityHotspot && selectedHeroOriginalOrder !== null && parseInt(hotspot.dataset.heroOrder) === selectedHeroOriginalOrder) {
         hotspot.classList.add('my-hero-selected-ability');
     }
+
 
     hotspot.addEventListener('mouseenter', () => {
         const nameForDisplay = hotspot.dataset.abilityName.replace(/_/g, ' ');
@@ -308,13 +327,17 @@ function createHotspotElement(coord, abilityData, uniqueIdPart, isSelectedAbilit
         const hsWr = hotspot.dataset.highSkillWinrate;
         const highSkillWinrateFormatted = hsWr !== 'N/A' ? `${(parseFloat(hsWr) * 100).toFixed(1)}%` : 'N/A';
 
-        const topTierIndicator = hotspot.dataset.isTopTier === 'true' ? '<span style="color: #66ff66;">&#9733; Top Pick!</span><br>' : '';
+        // Updated indicators
+        const synergyIndicator = hotspot.dataset.isSynergySuggestion === 'true' ? '<span style="color: #00BCD4; font-weight: bold;">&#10022; SYNERGY PICK!</span><br>' : '';
+        const generalTopTierIndicator = hotspot.dataset.isGeneralTopTier === 'true' ? '<span style="color: #66ff66; font-weight: bold;">&#9733; TOP PICK!</span><br>' : '';
+
         const confidenceIndicator = hotspot.dataset.confidence !== 'N/A' ? `<span style="font-size: 0.8em; color: #aaa;">Confidence: ${hotspot.dataset.confidence}</span><br>` : '';
         const myHeroAbilityIndicator = hotspot.classList.contains('my-hero-selected-ability') ? '<span style="color: #FFD700;">(Your Hero Pick)</span><br>' : '';
 
         let tooltipContent = `
             ${myHeroAbilityIndicator}
-            ${topTierIndicator}
+            ${synergyIndicator} 
+            ${generalTopTierIndicator}
             <div class="tooltip-title">${nameForDisplay}</div>
             <div class="tooltip-winrate">Winrate: ${winrateFormatted}</div>
             <div class="tooltip-winrate">High Skill WR: ${highSkillWinrateFormatted}</div>
@@ -323,7 +346,6 @@ function createHotspotElement(coord, abilityData, uniqueIdPart, isSelectedAbilit
 
         const combinations = JSON.parse(hotspot.dataset.combinations);
         if (combinations && combinations.length > 0) {
-            // General title, as suggestions are always with remaining pool abilities
             tooltipContent += `<div class="tooltip-section-title">Strong Synergies (with Pool):</div>`;
             combinations.slice(0, 5).forEach(combo => {
                 const comboPartnerName = (combo.partnerAbilityDisplayName || 'Unknown Partner').replace(/_/g, ' ');
@@ -334,7 +356,6 @@ function createHotspotElement(coord, abilityData, uniqueIdPart, isSelectedAbilit
         showTooltip(hotspot, tooltipContent);
     });
     hotspot.addEventListener('mouseleave', hideTooltip);
-
     document.body.appendChild(hotspot);
 }
 
@@ -347,7 +368,7 @@ function createHeroModelHotspots(heroModelDataArray) {
     if (!heroModelDataArray || heroModelDataArray.length === 0) return;
 
     heroModelDataArray.forEach(heroData => {
-        if (!heroData.coord || heroData.heroDisplayName === "Unknown Hero") return; // Skip if no coords or unknown
+        if (!heroData.coord || heroData.heroDisplayName === "Unknown Hero") return;
 
         const hotspot = document.createElement('div');
         hotspot.className = 'hero-model-hotspot';
@@ -361,12 +382,16 @@ function createHeroModelHotspots(heroModelDataArray) {
         hotspot.dataset.heroName = heroData.heroDisplayName;
         hotspot.dataset.internalHeroName = heroData.heroName;
         hotspot.dataset.winrate = heroData.winrate !== null ? heroData.winrate.toFixed(3) : 'N/A';
-        hotspot.dataset.heroOrder = heroData.heroOrder; // Screen order (0-11)
+        hotspot.dataset.heroOrder = heroData.heroOrder;
         hotspot.dataset.dbHeroId = heroData.dbHeroId;
-        hotspot.dataset.isTopTier = String(heroData.isTopTier === true);
+        // Ensure we use the correct property from heroData and set the dataset attribute consistently
+        hotspot.dataset.isGeneralTopTier = String(heroData.isGeneralTopTier === true);
         hotspot.dataset.consolidatedScore = (typeof heroData.consolidatedScore === 'number' ? heroData.consolidatedScore.toFixed(3) : 'N/A');
 
-        if (heroData.isTopTier) hotspot.classList.add('top-tier-hero-model');
+        // Apply class based on the correct property from heroData
+        if (heroData.isGeneralTopTier) {
+            hotspot.classList.add('top-tier-hero-model');
+        }
         if (selectedModelScreenOrder !== null && parseInt(hotspot.dataset.heroOrder) === selectedModelScreenOrder) {
             hotspot.classList.add('is-my-model');
         }
@@ -375,7 +400,8 @@ function createHeroModelHotspots(heroModelDataArray) {
             const nameForDisplay = hotspot.dataset.heroName.replace(/_/g, ' ');
             const wr = hotspot.dataset.winrate;
             const winrateFormatted = wr !== 'N/A' ? `${(parseFloat(wr) * 100).toFixed(1)}%` : 'N/A';
-            const topTierIndicator = hotspot.dataset.isTopTier === 'true' ? '<span style="color: #FFD700;">&#9733; Top Model!</span><br>' : '';
+            // Check the correct dataset attribute for the tooltip
+            const topTierIndicator = hotspot.dataset.isGeneralTopTier === 'true' ? '<span style="color: #FFD700; font-weight: bold;">&#9733; TOP MODEL!</span><br>' : '';
             const scoreDisplay = hotspot.dataset.consolidatedScore !== 'N/A' ? `<span style="font-size: 0.8em; color: #ccc;">Score: ${hotspot.dataset.consolidatedScore}</span><br>` : '';
 
             const tooltipContent = `
@@ -547,11 +573,23 @@ function updateVisualHighlights() {
 
     // Highlight "My Model" and "Top Tier" hero models
     document.querySelectorAll('.hero-model-hotspot').forEach(hotspot => {
-        hotspot.classList.remove('is-my-model', 'top-tier-hero-model'); // Reset classes
+        // Manage 'is-my-model' dynamically
         if (selectedModelScreenOrder !== null && parseInt(hotspot.dataset.heroOrder) === selectedModelScreenOrder) {
             hotspot.classList.add('is-my-model');
+        } else {
+            hotspot.classList.remove('is-my-model');
         }
-        if (hotspot.dataset.isTopTier === 'true') {
+
+        // Manage 'top-tier-hero-model' dynamically based on the consistent dataset attribute
+        // No need to remove first if createHeroModelHotspots always sets it correctly initially.
+        // However, if its top-tier status COULD change without a full recreation, then remove/re-add is safer.
+        // For now, let's assume its top-tier status is set upon creation from fresh data.
+        // The classList.remove was in your provided code, let's ensure re-addition logic is correct.
+
+        // Reset top-tier-hero-model class first
+        hotspot.classList.remove('top-tier-hero-model');
+        // Re-apply based on the correct dataset attribute
+        if (hotspot.dataset.isGeneralTopTier === 'true') {
             hotspot.classList.add('top-tier-hero-model');
         }
     });
@@ -559,6 +597,8 @@ function updateVisualHighlights() {
     // Ensure top-tier ability borders are visible if no tooltip is active
     if (!isTooltipVisible) {
         toggleTopTierBordersVisibility(true);
+        // This also ensures that hideTooltip's more comprehensive class removal for snapshot-hidden-border
+        // has allowed other borders to become visible again.
     }
 }
 
@@ -663,7 +703,7 @@ if (window.electronAPI) {
                 console.warn(`[OverlayRenderer] resolutionCoords not available for ${currentTargetResolution}, some UI elements might be affected.`);
             }
 
-            document.querySelectorAll('.ability-hotspot, .selected-ability-hotspot, .hero-model-hotspot, .my-hero-btn-original, .change-my-hero-btn-original, .my-model-btn, .change-my-model-btn').forEach(el => el.remove());
+            document.querySelectorAll('.ability-hotspot, .selected-ability-hotspot, .synergy-suggestion-hotspot, .hero-model-hotspot, .my-hero-btn-original, .change-my-hero-btn-original, .my-model-btn, .change-my-model-btn').forEach(el => el.remove());
 
             // Create hotspots for abilities in draft pool using their own embedded coords
             createHotspotsForType(data.scanData.ultimates, 'ultimates'); // No longer pass resolutionCoords.ultimate_slots_coords
@@ -674,71 +714,6 @@ if (window.electronAPI) {
             if (data.scanData.selectedAbilities) {
                 createHotspotsForType(data.scanData.selectedAbilities, 'selected', true);
             }
-
-            // Create hotspots for abilities already selected by heroes
-            if (data.scanData.selectedAbilities && resolutionCoords.selected_abilities_coords && resolutionCoords.selected_abilities_params) {
-                const selectedAbilityHotspotData = [];
-                // This logic matches identified abilities with their specific coordinate slot
-                data.scanData.selectedAbilities.forEach((abilityResult) => {
-                    if (!abilityResult.internalName) return;
-
-                    // Find the Nth occurrence of this hero_order in the coordinate list
-                    let countForHeroOrder = 0;
-                    let specificCoordEntry = null;
-
-                    for (let i = 0; i < resolutionCoords.selected_abilities_coords.length; i++) {
-                        const coordEntry = resolutionCoords.selected_abilities_coords[i];
-                        if (coordEntry.hero_order === abilityResult.hero_order) {
-                            // abilityResult.ability_order from ML might not be reliable for picked slots.
-                            // Instead, we rely on the order of results for a given hero_order.
-                            // Find the (countForHeroOrder)-th slot for this hero.
-                            // This assumes results for a hero come in a fixed order matching layout.
-                            if (countForHeroOrder === ((abilityResult.slot_index_within_hero || 0))) { // Assuming main.js could add slot_index_within_hero
-                                specificCoordEntry = coordEntry;
-                                break;
-                            }
-                            countForHeroOrder++;
-                        }
-                    }
-                    // Fallback if slot_index_within_hero is not provided or robustly determined.
-                    // This part is tricky if abilities are not returned in a perfectly predictable order from ML per hero.
-                    // For now, let's assume a simpler direct mapping if the above is too complex or `slot_index_within_hero` is missing.
-                    // The original code iterated through resolutionCoords.selected_abilities_coords and matched;
-                    // this requires scanData.selectedAbilities to be in the same order as those coords, or a more robust mapping.
-                    // A simpler approach for now, assuming the ML output for selectedAbilities for a hero_order
-                    // comes in the order Q, W, E, R.
-
-                    if (!specificCoordEntry) { // Fallback or primary logic if simpler
-                        let NthAbilityForHero = 0;
-                        for (let sa of data.scanData.selectedAbilities) {
-                            if (sa.hero_order === abilityResult.hero_order) {
-                                if (sa.internalName === abilityResult.internalName && sa.confidence === abilityResult.confidence) { // imperfect unique key
-                                    specificCoordEntry = resolutionCoords.selected_abilities_coords.filter(c => c.hero_order === abilityResult.hero_order)[NthAbilityForHero];
-                                    break;
-                                }
-                                NthAbilityForHero++;
-                            }
-                        }
-                    }
-
-
-                    if (specificCoordEntry) {
-                        selectedAbilityHotspotData.push({
-                            coord: { // Construct full coord data for the hotspot function
-                                ...specificCoordEntry, // x, y, hero_order, is_ultimate (from layout.json)
-                                width: resolutionCoords.selected_abilities_params.width,
-                                height: resolutionCoords.selected_abilities_params.height,
-                            },
-                            abilityData: abilityResult, // The identified ability data from ML
-                        });
-                    }
-                });
-
-                selectedAbilityHotspotData.forEach(item => {
-                    createHotspotElement(item.coord, item.abilityData, `sel-${item.coord.hero_order}-${item.abilityData.internalName.slice(0, 5)}`, true);
-                });
-            }
-
 
             // Create hotspots for hero models
             if (currentHeroModelData && currentHeroModelData.length > 0) {
