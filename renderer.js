@@ -1,13 +1,14 @@
-// renderer.js - Manages the main control panel UI and interactions
-
 // --- DOM Element References ---
 const updateAllDataButton = document.getElementById('update-all-data-btn');
 const activateOverlayButton = document.getElementById('activate-overlay-btn');
 const resolutionSelect = document.getElementById('resolution-select');
-const statusMessageElement = document.getElementById('status-message'); // Renamed for clarity
-const scanResultsArea = document.getElementById('scan-results'); // Note: This element seems to be for errors in this context
+const statusMessageElement = document.getElementById('status-message');
+const scanResultsArea = document.getElementById('scan-results');
 const lastUpdatedDateElement = document.getElementById('last-updated-date');
 const exportFailedSamplesButton = document.getElementById('export-failed-samples-btn');
+const shareFeedbackExtButton = document.getElementById('share-feedback-ext-btn');
+const supportDevButton = document.getElementById('support-dev-btn');
+const supportWindrunButton = document.getElementById('support-windrun-btn');
 
 // --- Module State ---
 let selectedResolution = ''; // Stores the currently selected screen resolution
@@ -18,13 +19,13 @@ let selectedResolution = ''; // Stores the currently selected screen resolution
  * @param {HTMLElement | null} [initiatingButton=null] - The button that triggered the state change, to update its text.
  */
 function setButtonsState(disabled, initiatingButton = null) {
-    const buttonsToManage = [updateAllDataButton, activateOverlayButton, exportFailedSamplesButton];
+    // Added shareFeedbackExtButton to the list of managed buttons
+    const buttonsToManage = [updateAllDataButton, activateOverlayButton, exportFailedSamplesButton, shareFeedbackExtButton];
     buttonsToManage.forEach(btn => {
         if (btn) btn.disabled = disabled;
     });
     if (resolutionSelect) resolutionSelect.disabled = disabled;
 
-    // Update text of the initiating button if provided
     if (disabled && initiatingButton) {
         if (initiatingButton === updateAllDataButton) {
             updateAllDataButton.textContent = 'Updating All Data...';
@@ -33,7 +34,7 @@ function setButtonsState(disabled, initiatingButton = null) {
         } else if (initiatingButton === exportFailedSamplesButton) {
             exportFailedSamplesButton.textContent = 'Exporting Samples...';
         }
-    } else { // Reset button texts when enabling
+    } else {
         if (updateAllDataButton) updateAllDataButton.textContent = 'Update Windrun Data (Full)';
         if (activateOverlayButton) activateOverlayButton.textContent = 'Activate Overlay';
         if (exportFailedSamplesButton) exportFailedSamplesButton.textContent = 'Export Failed Samples';
@@ -85,7 +86,7 @@ if (window.electronAPI) {
 
     window.electronAPI.onAvailableResolutions((resolutions) => {
         if (!resolutionSelect) return;
-        resolutionSelect.innerHTML = ''; // Clear existing options
+        resolutionSelect.innerHTML = '';
 
         if (resolutions && resolutions.length > 0) {
             resolutions.forEach(res => {
@@ -94,21 +95,23 @@ if (window.electronAPI) {
                 option.textContent = res;
                 resolutionSelect.appendChild(option);
             });
-            // Default to the first resolution in the list
             resolutionSelect.value = resolutions[0];
             selectedResolution = resolutions[0];
             console.log(`[Renderer] Resolutions loaded. Defaulted to: ${selectedResolution}`);
-            if (activateOverlayButton) activateOverlayButton.disabled = false; // Enable activate button
+            if (activateOverlayButton) activateOverlayButton.disabled = false;
         } else {
             const option = document.createElement('option');
             option.value = "";
             option.textContent = "No resolutions found";
             resolutionSelect.appendChild(option);
             console.warn('[Renderer] No resolutions found or provided.');
-            if (activateOverlayButton) activateOverlayButton.disabled = true; // Disable if no resolutions
+            if (activateOverlayButton) activateOverlayButton.disabled = true;
         }
-        // Enable export button regardless of resolutions, as it doesn't depend on it
+        // Enable buttons that don't depend on resolution selection here
         if (exportFailedSamplesButton) exportFailedSamplesButton.disabled = false;
+        if (shareFeedbackExtButton) shareFeedbackExtButton.disabled = false;
+        if (supportDevButton) supportDevButton.disabled = false;
+        if (supportWindrunButton) supportWindrunButton.disabled = false;
     });
 
     window.electronAPI.onUpdateStatus((message) => {
@@ -194,7 +197,7 @@ if (window.electronAPI) {
             }
             console.log(`[Renderer] "Activate Overlay" button clicked for resolution: ${selectedResolution}`);
             updateStatusMessage(`Activating overlay for ${selectedResolution}...`);
-            if (scanResultsArea) scanResultsArea.textContent = 'Waiting for overlay activation...'; // Reset
+            if (scanResultsArea) scanResultsArea.textContent = 'Waiting for overlay activation...';
             setButtonsState(true, activateOverlayButton);
             window.electronAPI.activateOverlay(selectedResolution);
         });
@@ -209,6 +212,27 @@ if (window.electronAPI) {
         });
     }
 
+    if (shareFeedbackExtButton) {
+        shareFeedbackExtButton.addEventListener('click', () => {
+            console.log('[Renderer] "Share Feedback / Samples" button clicked.');
+            window.electronAPI.openExternalLink('https://forms.gle/9hwyTkMNDubMppW1A');
+        });
+    }
+
+    if (supportDevButton) {
+        supportDevButton.addEventListener('click', () => {
+            console.log('[Renderer] "Support Developer" button clicked.');
+            window.electronAPI.openExternalLink('https://ko-fi.com/tiarinhino');
+        });
+    }
+
+    if (supportWindrunButton) {
+        supportWindrunButton.addEventListener('click', () => {
+            console.log('[Renderer] "Support Windrun.io" button clicked.');
+            window.electronAPI.openExternalLink('https://ko-fi.com/datdota');
+        });
+    }
+
 } else {
     // Critical error: Electron API not exposed
     console.error('[Renderer] FATAL: Electron API not found. Preload script might not be configured or failed.');
@@ -217,4 +241,7 @@ if (window.electronAPI) {
     if (lastUpdatedDateElement) lastUpdatedDateElement.textContent = 'Error';
     if (activateOverlayButton) activateOverlayButton.disabled = true;
     if (exportFailedSamplesButton) exportFailedSamplesButton.disabled = true;
+    if (shareFeedbackExtButton) shareFeedbackExtButton.disabled = true;
+    if (supportDevButton) supportDevButton.disabled = true;
+    if (supportWindrunButton) supportWindrunButton.disabled = true;
 }

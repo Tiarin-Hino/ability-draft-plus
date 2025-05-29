@@ -175,4 +175,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
    * @param {(data: { selectedHeroOrderForDrafting: number | null, selectedHeroDbId: number | null }) => void} callback - The function to call with the updated selection.
    */
   onMyHeroForDraftingSelectionChanged: (callback) => ipcRenderer.on('my-hero-for-drafting-selection-changed', (_event, data) => callback(data)),
+
+  /**
+  * Sends a request to the main process to open the given URL in the default external browser.
+  * @param {string} url - The URL to open.
+  */
+  openExternalLink: (url) => ipcRenderer.send('open-external-link', url),
 });

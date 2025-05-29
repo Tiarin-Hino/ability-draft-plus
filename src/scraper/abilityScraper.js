@@ -46,18 +46,15 @@ function extractEntityNameFromImg(imgElement) {
     let name = null;
     let isHero = false;
 
-    // Determine if hero or ability based on image URL path
     if (imgSrc.includes('/heroes/')) {
-        name = filename?.replace(/_full\.png$|_vert\.jpg$/i, ''); // Typical hero image suffixes
+        name = filename?.replace(/_full\.png$|_vert\.jpg$/i, '');
         isHero = true;
     } else if (imgSrc.includes('/abilities/')) {
-        name = filename?.replace(/\.png$/i, ''); // Typical ability image suffix
-        isHero = false;
-    } else {
-        // Fallback: if path unknown, assume ability and try to clean .png
         name = filename?.replace(/\.png$/i, '');
         isHero = false;
-        // console.warn(`[Entity Scraper] Unknown image path structure for ${imgSrc}. Assuming ability.`);
+    } else {
+        name = filename?.replace(/\.png$/i, '');
+        isHero = false;
     }
     return { name: name || null, isHero };
 }
@@ -74,31 +71,22 @@ function findHeroIdForAbility(abilityName, heroNameToIdMap) {
     if (!abilityName || !heroNameToIdMap) return null;
 
     const parts = abilityName.split('_');
-    if (parts.length < 2) return null; // Needs at least hero_ability
+    if (parts.length < 2) return null;
 
-    // Attempt to match hero name from longest possible prefix to shortest
-    // e.g., for "ancient_apparition_ice_blast", try "ancient_apparition_ice", then "ancient_apparition", then "ancient"
     for (let i = parts.length - 1; i >= 1; i--) {
         const potentialHeroName = parts.slice(0, i).join('_');
         if (heroNameToIdMap.has(potentialHeroName)) {
             return heroNameToIdMap.get(potentialHeroName);
         }
     }
-
-    // Special case handling for names like 'sand_king' which might be part of 'sandking_burrowstrike'
     if (abilityName.toLowerCase().startsWith("sandking_") && heroNameToIdMap.has('sand_king')) {
         return heroNameToIdMap.get('sand_king');
     }
-    // Add other special cases if known, e.g. Io (wisp)
     if (abilityName.toLowerCase().startsWith("wisp_") && heroNameToIdMap.has('wisp')) {
         return heroNameToIdMap.get('wisp');
     }
-
-
-    // console.warn(`[Entity Scraper] Could not automatically determine hero_id for ability: ${abilityName}`);
     return null;
 }
-
 
 /**
  * Processes rows from a Cheerio-loaded HTML table to extract entity data.
@@ -107,85 +95,78 @@ function findHeroIdForAbility(abilityName, heroNameToIdMap) {
  * @param {Map<string, any>} entityDataMap - Map to populate/update with extracted entity data.
  * @param {Map<string, number>} heroNameToIdMap - Map of hero names to IDs.
  * @param {function} heroInsertTransaction - DB transaction function to insert/update heroes and get their ID.
- * @param {boolean} isHighSkillPage - Flag indicating if parsing high-skill specific data (impacts which winrate field is set).
+ * @param {boolean} isHighSkillPage - Flag indicating if parsing high-skill specific data.
  * @param {function(string): void} statusCallback - Function for status updates.
  */
 function parseEntityRows($, rows, entityDataMap, heroNameToIdMap, heroInsertTransaction, isHighSkillPage, statusCallback) {
     rows.each((index, element) => {
         const row = $(element);
-        const imgElement = row.find('td.abil-picture img'); // Standard selector for entity image
+        const imgElement = row.find('td.abil-picture img');
         const { name: entityName, isHero } = extractEntityNameFromImg(imgElement);
 
         if (!entityName) {
             console.warn(`[Entity Scraper] Skipping row ${index + 1} on ${isHighSkillPage ? 'high-skill' : 'regular'} page: Could not extract valid entity name.`);
-            return; // continue to next .each iteration
+            return;
         }
 
-        const displayNameElement = row.find('td').eq(1).find('a'); // Second <td> usually contains name link
-        const displayName = displayNameElement.text().trim() || null;
+        const displayNameElement = row.find('td').eq(1).find('a');
+        const displayNameFromPage = displayNameElement.text().trim() || null; // Use a distinct variable name
         const windrunHref = displayNameElement.attr('href');
-        const windrunId = windrunHref ? windrunHref.split('/').pop() : null;
+        const windrunIdFromPage = windrunHref ? windrunHref.split('/').pop() : null; // Use a distinct variable name
 
-        // Windrun.io ability/hero pages: Winrate (index 1), Avg Pick (index 2), Value (index 3)
-        // Note: Indices are 0-based for .eq()
         const winrateCell = row.find('td.color-range').eq(1);
         const avgPickOrderCell = row.find('td.color-range').eq(2);
         const valueCell = row.find('td.color-range').eq(3);
 
-        const winrate = parsePercentageValue(winrateCell.text());
-        const avgPickOrder = parseNumericValue(avgPickOrderCell.text());
-        const valuePercentage = parsePercentageValue(valueCell.text());
-
+        const winrateFromPage = parsePercentageValue(winrateCell.text());
+        const avgPickOrderFromPage = parseNumericValue(avgPickOrderCell.text());
+        const valuePercentageFromPage = parsePercentageValue(valueCell.text());
 
         let existingData = entityDataMap.get(entityName);
 
         if (isHighSkillPage) {
             if (existingData) {
-                existingData.high_skill_winrate = winrate; // 'winrate' here is from high-skill page
-                if (!existingData.display_name && displayName) existingData.display_name = displayName; // Fill if missing
+                existingData.high_skill_winrate = winrateFromPage;
+                if (!existingData.displayName && displayNameFromPage) existingData.displayName = displayNameFromPage; // Match key
             } else {
-                // Entity found only in high-skill data. Less likely for heroes but possible for new/obscure abilities.
                 const heroIdForNewEntity = isHero ? null : findHeroIdForAbility(entityName, heroNameToIdMap);
-                entityDataMap.set(entityName, {
+                const newEntity = { // Construct with keys matching SQL params for heroes
                     name: entityName,
-                    display_name: displayName,
+                    displayName: displayNameFromPage, // Correct key for SQL param @displayName
                     isHero: isHero,
-                    hero_id: heroIdForNewEntity,
-                    winrate: null, // No regular winrate known
-                    high_skill_winrate: winrate,
-                    avg_pick_order: avgPickOrder, // High-skill page might also have these
-                    value_percentage: valuePercentage,
-                    windrunId: isHero ? windrunId : null,
-                    is_ultimate: null, // Cannot determine from this page
-                    ability_order: null // Cannot determine from this page
-                });
-                if (isHero) { // If it's a new hero found only on high-skill page
-                    const newHeroEntry = entityDataMap.get(entityName);
-                    const heroId = heroInsertTransaction(newHeroEntry);
+                    hero_id: heroIdForNewEntity, // This is for abilities table, not Heroes insert
+                    winrate: null,
+                    high_skill_winrate: winrateFromPage,
+                    avg_pick_order: avgPickOrderFromPage, // Correct key for SQL param @avg_pick_order
+                    value_percentage: valuePercentageFromPage, // Correct key for SQL param @value_percentage
+                    windrunId: isHero ? windrunIdFromPage : null, // Correct key for SQL param @windrunId
+                    is_ultimate: null,
+                    ability_order: null
+                };
+                entityDataMap.set(entityName, newEntity);
+                if (isHero) {
+                    const heroId = heroInsertTransaction(newEntity); // newEntity directly passed
                     if (heroId) heroNameToIdMap.set(entityName, heroId);
                 }
             }
         } else { // Regular page processing
-            if (existingData) { // Should not happen if entityName is unique key and map is fresh
-                statusCallback(`Warning: Duplicate entity '${entityName}' found on regular page. Overwriting.`);
-            }
-            const entry = {
+            const entry = { // Construct with keys matching SQL params for heroes
                 name: entityName,
-                display_name: displayName,
+                displayName: displayNameFromPage, // Correct key for SQL param @displayName
                 isHero: isHero,
-                hero_id: isHero ? null : findHeroIdForAbility(entityName, heroNameToIdMap),
-                winrate: winrate,
-                high_skill_winrate: null, // Initialize, will be filled by high-skill parse
-                avg_pick_order: avgPickOrder,
-                value_percentage: valuePercentage,
-                windrunId: isHero ? windrunId : null,
-                is_ultimate: null, // Cannot determine from this page
-                ability_order: null // Cannot determine from this page
+                hero_id: isHero ? null : findHeroIdForAbility(entityName, heroNameToIdMap), // For abilities table
+                winrate: winrateFromPage, // Correct key for SQL param @winrate
+                high_skill_winrate: null,
+                avg_pick_order: avgPickOrderFromPage, // Correct key for SQL param @avg_pick_order
+                value_percentage: valuePercentageFromPage, // Correct key for SQL param @value_percentage
+                windrunId: isHero ? windrunIdFromPage : null, // Correct key for SQL param @windrunId
+                is_ultimate: null,
+                ability_order: null
             };
             entityDataMap.set(entityName, entry);
 
-            if (isHero) { // Insert/update hero into DB immediately and update heroNameToIdMap
-                const heroId = heroInsertTransaction(entry);
+            if (isHero) {
+                const heroId = heroInsertTransaction(entry); // entry directly passed
                 if (heroId) heroNameToIdMap.set(entityName, heroId);
             }
         }
@@ -205,8 +186,8 @@ function parseEntityRows($, rows, entityDataMap, heroNameToIdMap, heroInsertTran
  */
 async function scrapeAndStoreAbilitiesAndHeroes(dbPath, urlRegular, urlHighSkill, statusCallback) {
     let db;
-    const entityDataMap = new Map(); // Stores { entityName: {data} }
-    let heroNameToIdMap = new Map();   // Stores { heroInternalName: hero_id }
+    const entityDataMap = new Map();
+    let heroNameToIdMap = new Map();
 
     try {
         statusCallback('Initializing database connection and loading existing hero IDs...');
@@ -221,8 +202,7 @@ async function scrapeAndStoreAbilitiesAndHeroes(dbPath, urlRegular, urlHighSkill
             statusCallback(`Warning: Failed to load existing heroes from DB - ${err.message}. Proceeding with scrape.`);
         }
 
-        // SQL for inserting/updating heroes. RETURNING hero_id is specific to some DBs;
-        // better-sqlite3 handles this by returning info object with lastInsertRowid.
+        // SQL for inserting/updating heroes. Named parameters should match JS object keys.
         const insertHeroStmt = db.prepare(`
             INSERT INTO Heroes (name, display_name, winrate, windrun_id, avg_pick_order, value_percentage)
             VALUES (@name, @displayName, @winrate, @windrunId, @avg_pick_order, @value_percentage)
@@ -234,14 +214,12 @@ async function scrapeAndStoreAbilitiesAndHeroes(dbPath, urlRegular, urlHighSkill
                 value_percentage = excluded.value_percentage
             RETURNING hero_id;
         `);
-        // Transaction function to insert/update a single hero and return its ID
         const heroInsertTransaction = db.transaction((heroToInsert) => {
-            const result = insertHeroStmt.get(heroToInsert); // .get() for RETURNING
+            // Ensure heroToInsert has properties: name, displayName, winrate, windrunId, avg_pick_order, value_percentage
+            const result = insertHeroStmt.get(heroToInsert);
             return result ? result.hero_id : null;
         });
 
-
-        // --- Scrape Regular Entities Page ---
         statusCallback(`Fetching regular entity data from ${urlRegular}...`);
         const { data: htmlRegular } = await axios.get(urlRegular, { headers: { 'User-Agent': USER_AGENT }, timeout: AXIOS_TIMEOUT });
         statusCallback('Parsing regular entity HTML...');
@@ -252,8 +230,6 @@ async function scrapeAndStoreAbilitiesAndHeroes(dbPath, urlRegular, urlHighSkill
         parseEntityRows($regular, rowsRegular, entityDataMap, heroNameToIdMap, heroInsertTransaction, false, statusCallback);
         statusCallback(`Processed ${entityDataMap.size} unique entities from regular data.`);
 
-
-        // --- Scrape High-Skill Entities Page ---
         statusCallback(`Fetching high-skill entity data from ${urlHighSkill}...`);
         const { data: htmlHighSkill } = await axios.get(urlHighSkill, { headers: { 'User-Agent': USER_AGENT }, timeout: AXIOS_TIMEOUT });
         statusCallback('Parsing high-skill entity HTML...');
@@ -264,17 +240,12 @@ async function scrapeAndStoreAbilitiesAndHeroes(dbPath, urlRegular, urlHighSkill
         parseEntityRows($highSkill, rowsHighSkill, entityDataMap, heroNameToIdMap, heroInsertTransaction, true, statusCallback);
         statusCallback(`Data merging complete. Total unique entities processed: ${entityDataMap.size}.`);
 
-
-        // --- Prepare and Insert Abilities ---
         const finalAbilityList = [];
         entityDataMap.forEach(entity => {
             if (!entity.isHero) {
-                // Ensure hero_id is current for abilities, especially if a hero was just added from high-skill page
-                if (!entity.hero_id && entity.name) {
+                if (!entity.hero_id && entity.name) { // Ensure hero_id is current for abilities
                     entity.hero_id = findHeroIdForAbility(entity.name, heroNameToIdMap);
                 }
-                // is_ultimate and ability_order are not determined by this scraper from Windrun.io
-                // They remain null unless populated by another source/process.
                 finalAbilityList.push(entity);
             }
         });
@@ -306,17 +277,19 @@ async function scrapeAndStoreAbilitiesAndHeroes(dbPath, urlRegular, urlHighSkill
                     continue;
                 }
                 try {
-                    const info = insertAbilityStmt.run({
+                    // Ensure keys in 'ability' object match SQL parameters for Abilities table
+                    const params = {
                         name: ability.name,
-                        display_name: ability.display_name,
+                        display_name: ability.displayName || ability.display_name, // Prefer camelCase if exists, fallback to snake_case
                         hero_id: ability.hero_id,
                         winrate: ability.winrate,
                         high_skill_winrate: ability.high_skill_winrate,
                         avg_pick_order: ability.avg_pick_order,
                         value_percentage: ability.value_percentage,
-                        is_ultimate: ability.is_ultimate, // Remains null if not determinable
-                        ability_order: ability.ability_order  // Remains null if not determinable
-                    });
+                        is_ultimate: ability.is_ultimate,
+                        ability_order: ability.ability_order
+                    };
+                    const info = insertAbilityStmt.run(params);
                     if (info.changes > 0) count++;
                 } catch (dbError) {
                     console.error(`[Entity Scraper] Error inserting/updating ability "${ability.name}": ${dbError.message}`);
@@ -331,7 +304,7 @@ async function scrapeAndStoreAbilitiesAndHeroes(dbPath, urlRegular, urlHighSkill
     } catch (error) {
         console.error('[Entity Scraper] Error during entity scraping or database update:', error);
         statusCallback(`Hero/Ability scraping failed: ${error.message}. Check console for details.`);
-        throw error; // Rethrow for main process to handle
+        throw error;
     } finally {
         if (db && db.open) {
             db.close();
