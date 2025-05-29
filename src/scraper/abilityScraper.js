@@ -53,6 +53,7 @@ function extractEntityNameFromImg(imgElement) {
         name = filename?.replace(/\.png$/i, '');
         isHero = false;
     } else {
+        // Fallback if path doesn't clearly indicate hero/ability, assume ability or generic entity
         name = filename?.replace(/\.png$/i, '');
         isHero = false;
     }
@@ -71,18 +72,20 @@ function findHeroIdForAbility(abilityName, heroNameToIdMap) {
     if (!abilityName || !heroNameToIdMap) return null;
 
     const parts = abilityName.split('_');
-    if (parts.length < 2) return null;
+    if (parts.length < 2) return null; // Needs at least "hero_ability"
 
+    // Iterate from longest potential hero name to shortest
     for (let i = parts.length - 1; i >= 1; i--) {
         const potentialHeroName = parts.slice(0, i).join('_');
         if (heroNameToIdMap.has(potentialHeroName)) {
             return heroNameToIdMap.get(potentialHeroName);
         }
     }
+    // Handle specific known exceptions or alternative mappings
     if (abilityName.toLowerCase().startsWith("sandking_") && heroNameToIdMap.has('sand_king')) {
         return heroNameToIdMap.get('sand_king');
     }
-    if (abilityName.toLowerCase().startsWith("wisp_") && heroNameToIdMap.has('wisp')) {
+    if (abilityName.toLowerCase().startsWith("wisp_") && heroNameToIdMap.has('wisp')) { // Assuming 'wisp' is the internal name for Io in your DB
         return heroNameToIdMap.get('wisp');
     }
     return null;
@@ -110,38 +113,38 @@ function parseEntityRows($, rows, entityDataMap, heroNameToIdMap, heroInsertTran
         }
 
         const displayNameElement = row.find('td').eq(1).find('a');
-        const displayNameFromPage = displayNameElement.text().trim() || null; // Use a distinct variable name
+        const displayName = displayNameElement.text().trim() || null;
         const windrunHref = displayNameElement.attr('href');
-        const windrunIdFromPage = windrunHref ? windrunHref.split('/').pop() : null; // Use a distinct variable name
+        const windrunId = windrunHref ? windrunHref.split('/').pop() : null;
 
         const winrateCell = row.find('td.color-range').eq(1);
         const avgPickOrderCell = row.find('td.color-range').eq(2);
         const valueCell = row.find('td.color-range').eq(3);
 
-        const winrateFromPage = parsePercentageValue(winrateCell.text());
-        const avgPickOrderFromPage = parseNumericValue(avgPickOrderCell.text());
-        const valuePercentageFromPage = parsePercentageValue(valueCell.text());
+        const winrate = parsePercentageValue(winrateCell.text());
+        const avgPickOrder = parseNumericValue(avgPickOrderCell.text());
+        const valuePercentage = parsePercentageValue(valueCell.text());
 
         let existingData = entityDataMap.get(entityName);
 
         if (isHighSkillPage) {
             if (existingData) {
-                existingData.high_skill_winrate = winrateFromPage;
-                if (!existingData.displayName && displayNameFromPage) existingData.displayName = displayNameFromPage; // Match key
+                existingData.high_skill_winrate = winrate;
+                if (!existingData.displayName && displayName) existingData.displayName = displayName;
             } else {
                 const heroIdForNewEntity = isHero ? null : findHeroIdForAbility(entityName, heroNameToIdMap);
-                const newEntity = { // Construct with keys matching SQL params for heroes
+                const newEntity = {
                     name: entityName,
-                    displayName: displayNameFromPage, // Correct key for SQL param @displayName
+                    displayName: displayName,               // Correct key for SQL param @displayName
                     isHero: isHero,
-                    hero_id: heroIdForNewEntity, // This is for abilities table, not Heroes insert
+                    hero_id: heroIdForNewEntity,            // This is for abilities table, not Heroes insert
                     winrate: null,
-                    high_skill_winrate: winrateFromPage,
-                    avg_pick_order: avgPickOrderFromPage, // Correct key for SQL param @avg_pick_order
-                    value_percentage: valuePercentageFromPage, // Correct key for SQL param @value_percentage
-                    windrunId: isHero ? windrunIdFromPage : null, // Correct key for SQL param @windrunId
-                    is_ultimate: null,
-                    ability_order: null
+                    high_skill_winrate: winrate,
+                    avg_pick_order: avgPickOrder,           // Correct key for SQL param @avg_pick_order
+                    value_percentage: valuePercentage,      // Correct key for SQL param @value_percentage
+                    windrunId: isHero ? windrunId : null,   // Correct key for SQL param @windrunId
+                    is_ultimate: null,                      // To be populated later if applicable
+                    ability_order: null                     // To be populated later if applicable
                 };
                 entityDataMap.set(entityName, newEntity);
                 if (isHero) {
@@ -150,16 +153,16 @@ function parseEntityRows($, rows, entityDataMap, heroNameToIdMap, heroInsertTran
                 }
             }
         } else { // Regular page processing
-            const entry = { // Construct with keys matching SQL params for heroes
+            const entry = {
                 name: entityName,
-                displayName: displayNameFromPage, // Correct key for SQL param @displayName
+                displayName: displayName,               // Correct key for SQL param @displayName
                 isHero: isHero,
                 hero_id: isHero ? null : findHeroIdForAbility(entityName, heroNameToIdMap), // For abilities table
-                winrate: winrateFromPage, // Correct key for SQL param @winrate
+                winrate: winrate,                       // Correct key for SQL param @winrate
                 high_skill_winrate: null,
-                avg_pick_order: avgPickOrderFromPage, // Correct key for SQL param @avg_pick_order
-                value_percentage: valuePercentageFromPage, // Correct key for SQL param @value_percentage
-                windrunId: isHero ? windrunIdFromPage : null, // Correct key for SQL param @windrunId
+                avg_pick_order: avgPickOrder,           // Correct key for SQL param @avg_pick_order
+                value_percentage: valuePercentage,      // Correct key for SQL param @value_percentage
+                windrunId: isHero ? windrunId : null,   // Correct key for SQL param @windrunId
                 is_ultimate: null,
                 ability_order: null
             };
@@ -187,7 +190,7 @@ function parseEntityRows($, rows, entityDataMap, heroNameToIdMap, heroInsertTran
 async function scrapeAndStoreAbilitiesAndHeroes(dbPath, urlRegular, urlHighSkill, statusCallback) {
     let db;
     const entityDataMap = new Map();
-    let heroNameToIdMap = new Map();
+    let heroNameToIdMap = new Map(); // Stores hero_internal_name -> hero_id
 
     try {
         statusCallback('Initializing database connection and loading existing hero IDs...');
@@ -200,6 +203,7 @@ async function scrapeAndStoreAbilitiesAndHeroes(dbPath, urlRegular, urlHighSkill
             statusCallback(heroNameToIdMap.size > 0 ? `Loaded ${heroNameToIdMap.size} existing hero IDs from DB.` : 'No existing heroes found in DB to pre-load.');
         } catch (err) {
             statusCallback(`Warning: Failed to load existing heroes from DB - ${err.message}. Proceeding with scrape.`);
+            // Not a fatal error, map will be populated during scrape if empty.
         }
 
         // SQL for inserting/updating heroes. Named parameters should match JS object keys.
@@ -243,7 +247,9 @@ async function scrapeAndStoreAbilitiesAndHeroes(dbPath, urlRegular, urlHighSkill
         const finalAbilityList = [];
         entityDataMap.forEach(entity => {
             if (!entity.isHero) {
-                if (!entity.hero_id && entity.name) { // Ensure hero_id is current for abilities
+                // Ensure hero_id is current for abilities, especially if it wasn't found initially
+                // or if a hero was added during this scrape run.
+                if (!entity.hero_id && entity.name) {
                     entity.hero_id = findHeroIdForAbility(entity.name, heroNameToIdMap);
                 }
                 finalAbilityList.push(entity);
@@ -280,7 +286,7 @@ async function scrapeAndStoreAbilitiesAndHeroes(dbPath, urlRegular, urlHighSkill
                     // Ensure keys in 'ability' object match SQL parameters for Abilities table
                     const params = {
                         name: ability.name,
-                        display_name: ability.displayName || ability.display_name, // Prefer camelCase if exists, fallback to snake_case
+                        display_name: ability.displayName || ability.display_name, // Prefer camelCase if exists, fallback to snake_case for safety
                         hero_id: ability.hero_id,
                         winrate: ability.winrate,
                         high_skill_winrate: ability.high_skill_winrate,
@@ -304,7 +310,7 @@ async function scrapeAndStoreAbilitiesAndHeroes(dbPath, urlRegular, urlHighSkill
     } catch (error) {
         console.error('[Entity Scraper] Error during entity scraping or database update:', error);
         statusCallback(`Hero/Ability scraping failed: ${error.message}. Check console for details.`);
-        throw error;
+        throw error; // Rethrow to be caught by the main process if necessary
     } finally {
         if (db && db.open) {
             db.close();

@@ -27,7 +27,6 @@ const { contextBridge, ipcRenderer } = require('electron');
  * @property {number | null} selectedHeroDbId - The database ID of the hero selected for drafting.
  */
 
-
 contextBridge.exposeInMainWorld('electronAPI', {
   /**
    * Sends a request to the main process to scrape all data from Windrun.io.
@@ -181,4 +180,24 @@ contextBridge.exposeInMainWorld('electronAPI', {
   * @param {string} url - The URL to open.
   */
   openExternalLink: (url) => ipcRenderer.send('open-external-link', url),
+
+  /**
+   * Registers a callback to receive the initial system theme setting when the window loads.
+   * This is pushed by the main process.
+   * @param {(settings: {shouldUseDarkColors: boolean}) => void} callback
+   */
+  onInitialSystemTheme: (callback) => ipcRenderer.on('initial-system-theme', (_event, settings) => callback(settings)),
+
+  /**
+   * Registers a callback function to be invoked when the system's theme preference
+   * is updated by the operating system.
+   * @param {(settings: {shouldUseDarkColors: boolean}) => void} callback
+   */
+  onSystemThemeUpdated: (callback) => ipcRenderer.on('system-theme-updated', (_event, settings) => callback(settings)),
+
+  /**
+   * Gets the current system theme settings on demand.
+   * @returns {Promise<{shouldUseDarkColors: boolean}>}
+   */
+  getCurrentSystemTheme: () => ipcRenderer.invoke('get-current-system-theme'),
 });

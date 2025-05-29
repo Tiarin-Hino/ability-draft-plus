@@ -7,140 +7,234 @@
         content="default-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline'">
     <title>Dota 2 Ability Draft Plus - Control Panel</title>
     <style>
+        /* CSS Variables for Theming */
+        :root {
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+            /* Light Theme (Default) */
+            --bg-color: #f4f4f4;
+            --text-color: #333;
+            --text-color-muted: #555;
+            --header-color: #2c3e50;
+            --section-bg: #fff;
+            --section-shadow: rgba(0, 0, 0, 0.1);
+            --hr-bg: #ddd;
+            --status-bg: #e9ecef;
+            --status-border: #7f8c8d;
+            --footer-bg: #e9ecef;
+            --footer-border-top: #ddd;
+
+            --button-default-bg: #3498db;
+            --button-default-hover-bg: #2980b9;
+            --button-default-text: white;
+            --button-disabled-bg: #bdc3c7;
+            --button-disabled-opacity: 0.7;
+
+            --button-activate-bg: #2ecc71;
+            --button-activate-hover-bg: #27ae60;
+            --button-export-bg: #f39c12;
+            --button-export-hover-bg: #e67e22;
+            --button-feedback-bg: #9b59b6;
+            --button-feedback-hover-bg: #8e44ad;
+
+            --button-support-bg: #292F3F;
+            --button-support-hover-bg: #3d4455;
+            --button-support-border: #1a1e28;
+            --button-support-text: white;
+
+
+            --select-bg: white;
+            --select-border: #ccc;
+            --select-text: #333;
+
+            --theme-option-text: #444;
+            --toggle-bg-inactive: #ccc;
+            --toggle-bg-active: var(--button-activate-bg);
+            /* Or a specific theme color */
+            --toggle-slider-bg: white;
+            --toggle-disabled-opacity: 0.5;
+        }
+
+        body.dark-mode {
+            /* Dark Theme Overrides */
+            --bg-color: #23272a;
+            --text-color: #dcddde;
+            --text-color-muted: #b9bbbe;
+            --header-color: #ffffff;
+            --section-bg: #2c2f33;
+            --section-shadow: rgba(0, 0, 0, 0.4);
+            /* Darker shadow */
+            --hr-bg: #4f545c;
+            --status-bg: #2c2f33;
+            --status-border: #4f545c;
+            --footer-bg: #23272a;
+            --footer-border-top: #2c2f33;
+
+            --button-default-bg: #5865f2;
+            /* Discord Blurple */
+            --button-default-hover-bg: #4f5bda;
+            --button-disabled-bg: #4f545c;
+
+            --button-activate-bg: #43b581;
+            /* Discord Green */
+            --button-activate-hover-bg: #3aa570;
+            --button-export-bg: #faa61a;
+            --button-export-hover-bg: #f0960a;
+            --button-feedback-bg: #5865f2;
+            --button-feedback-hover-bg: #4f5bda;
+
+            --button-support-bg: #4f545c;
+            --button-support-hover-bg: #5a6066;
+            --button-support-border: #40444b;
+
+            --select-bg: #40444b;
+            --select-border: #2d2f33;
+            --select-text: #dcddde;
+
+            --theme-option-text: #b9bbbe;
+            --toggle-bg-inactive: #72767d;
+            /* Darker inactive toggle */
+            --toggle-bg-active: var(--button-activate-bg);
+            --toggle-slider-bg: #b9bbbe;
+            /* Lighter slider for dark bg */
+        }
+
+        /* Apply variables to existing styles */
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: var(--font-family);
             margin: 0;
-            /* Changed margin to 0 */
             padding: 0;
-            /* Changed padding to 0 */
-            background-color: #f4f4f4;
-            color: #333;
+            background-color: var(--bg-color);
+            color: var(--text-color);
             line-height: 1.6;
             display: flex;
-            /* For footer positioning */
             flex-direction: column;
-            /* For footer positioning */
             min-height: 100vh;
-            /* For footer positioning */
+            transition: background-color 0.2s ease-out, color 0.2s ease-out;
         }
 
-        header,
+        header {
+            padding: 15px 20px;
+            /* Adjusted padding */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--footer-border-top);
+            /* Consistent separator */
+            transition: border-bottom-color 0.2s ease-out;
+        }
+
         main {
-            /* Wrap header and main for content flexing */
             padding: 20px;
-        }
-
-        main {
             flex-grow: 1;
-            /* Allows main content to take available space */
         }
 
         h1 {
-            color: #2c3e50;
-            text-align: center;
-            margin-top: 0;
-            /* Adjust if header has its own padding */
+            color: var(--header-color);
+            text-align: left;
+            margin: 0;
+            font-size: 1.8em;
+            /* Slightly larger */
+            flex-grow: 1;
         }
 
         section {
-            background-color: #fff;
+            background-color: var(--section-bg);
             padding: 15px;
             margin-bottom: 20px;
             border-radius: 5px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 4px var(--section-shadow);
+            transition: background-color 0.2s ease-out, box-shadow 0.2s ease-out;
         }
 
         button {
-            /* General button styling */
             padding: 10px 15px;
-            background-color: #3498db;
-            /* Default blue */
-            color: white !important;
+            background-color: var(--button-default-bg);
+            color: var(--button-default-text) !important;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             font-size: 1em;
             text-decoration: none;
             display: inline-flex;
-            /* Changed to inline-flex for icon alignment */
             align-items: center;
-            /* Vertically align icon and text */
             justify-content: center;
-            /* Center content if button has fixed width */
             gap: 8px;
-            /* Space between icon and text */
+            transition: background-color 0.15s ease-out;
         }
 
         button:hover {
-            background-color: #2980b9;
-            /* Darker blue on hover */
+            background-color: var(--button-default-hover-bg);
         }
 
         button:disabled {
-            background-color: #bdc3c7 !important;
-            /* Grey out disabled buttons */
+            background-color: var(--button-disabled-bg) !important;
             cursor: not-allowed;
-            opacity: 0.7;
+            opacity: var(--button-disabled-opacity);
         }
 
-        /* Specific button colors */
+        /* Specific button background colors using variables */
         #update-all-data-btn {
-            background-color: #3498db;
+            background-color: var(--button-default-bg);
+        }
+
+        #update-all-data-btn:hover {
+            background-color: var(--button-default-hover-bg);
         }
 
         #activate-overlay-btn {
-            background-color: #2ecc71;
+            background-color: var(--button-activate-bg);
         }
 
         #activate-overlay-btn:hover {
-            background-color: #27ae60;
+            background-color: var(--button-activate-hover-bg);
         }
 
         #export-failed-samples-btn {
-            background-color: #f39c12;
+            background-color: var(--button-export-bg);
         }
 
         #export-failed-samples-btn:hover {
-            background-color: #e67e22;
+            background-color: var(--button-export-hover-bg);
         }
 
         #share-feedback-ext-btn {
-            background-color: #9b59b6;
+            background-color: var(--button-feedback-bg);
         }
 
         #share-feedback-ext-btn:hover {
-            background-color: #8e44ad;
+            background-color: var(--button-feedback-hover-bg);
         }
 
         .support-button {
-            /* Class for Ko-fi buttons */
-            background-color: #292F3F;
-            /* Ko-fi dark color example */
-            border: 1px solid #1a1e28;
+            background-color: var(--button-support-bg);
+            border: 1px solid var(--button-support-border);
+            color: var(--button-support-text) !important;
         }
 
         .support-button:hover {
-            background-color: #3d4455;
+            background-color: var(--button-support-hover-bg);
         }
 
         .button-icon {
             width: 20px;
-            /* Adjust size as needed */
             height: 20px;
-            /* margin-right: 8px; Removed, using gap on button instead */
         }
 
         select {
             padding: 8px;
             margin-bottom: 10px;
             border-radius: 4px;
-            border: 1px solid #ccc;
+            border: 1px solid var(--select-border);
+            background-color: var(--select-bg);
+            color: var(--select-text);
+            transition: background-color 0.2s ease-out, color 0.2s ease-out, border-color 0.2s ease-out;
         }
 
         hr {
             border: 0;
             height: 1px;
-            background: #ddd;
+            background: var(--hr-bg);
             margin: 20px 0;
         }
 
@@ -150,15 +244,16 @@
 
         .status {
             padding: 10px;
-            background-color: #e9ecef;
-            border-left: 4px solid #7f8c8d;
+            background-color: var(--status-bg);
+            border-left: 4px solid var(--status-border);
             margin-top: 15px;
             border-radius: 4px;
+            transition: background-color 0.2s ease-out, border-left-color 0.2s ease-out;
         }
 
         .last-updated {
             font-size: 0.9em;
-            color: #555;
+            color: var(--text-color-muted);
         }
 
         label {
@@ -173,33 +268,135 @@
             align-items: center;
         }
 
-        /* Footer styling for support buttons */
         .app-footer {
             padding: 20px;
             text-align: center;
-            background-color: #e9ecef;
-            /* Light background for footer */
-            border-top: 1px solid #ddd;
+            background-color: var(--footer-bg);
+            border-top: 1px solid var(--footer-border-top);
             margin-top: auto;
-            /* Pushes footer to the bottom with flexbox */
+            transition: background-color 0.2s ease-out, border-top-color 0.2s ease-out;
         }
 
         .support-buttons-container {
             display: flex;
             justify-content: center;
             gap: 15px;
-            /* Space between support buttons */
+        }
+
+        /* Theme Switcher Styles */
+        .theme-switcher {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 5px;
+        }
+
+        .theme-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9em;
+            color: var(--theme-option-text);
+        }
+
+        .theme-option label {
+            margin-bottom: 0;
+            font-weight: normal;
+        }
+
+        /* Adjust label style within theme option */
+        .manual-theme-controls .theme-label {
+            font-size: 0.9em;
+            color: var(--text-color-muted);
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            /* Slightly smaller */
+            height: 22px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--toggle-bg-inactive);
+            transition: .3s;
+            border-radius: 22px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: var(--toggle-slider-bg);
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: var(--toggle-bg-active);
+        }
+
+        input:focus+.slider {
+            box-shadow: 0 0 1px var(--toggle-bg-active);
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(22px);
+        }
+
+        .manual-theme-controls.disabled .switch,
+        .manual-theme-controls.disabled .theme-label {
+            opacity: var(--toggle-disabled-opacity);
+        }
+
+        .manual-theme-controls.disabled .switch input {
+            pointer-events: none;
+            /* Disable clicks on the input itself */
+            cursor: not-allowed;
+        }
+
+        .manual-theme-controls.disabled .slider {
+            cursor: not-allowed;
         }
     </style>
 </head>
 
 <body>
     <header>
-        <h1>Dota 2 Ability Draft Plus - Control Panel</h1>
+        <h1>Dota 2 Ability Draft Plus</h1>
+        <div class="theme-switcher">
+            <div class="theme-option">
+                <input type="checkbox" id="system-theme-checkbox" title="Follow operating system theme setting">
+                <label for="system-theme-checkbox">Use System Preference</label>
+            </div>
+            <div class="theme-option manual-theme-controls">
+                <span class="theme-label">Light</span>
+                <label class="switch" title="Toggle between Light and Dark mode">
+                    <input type="checkbox" id="light-dark-toggle">
+                    <span class="slider round"></span>
+                </label>
+                <span class="theme-label">Dark</span>
+            </div>
+        </div>
     </header>
 
     <main>
-
         <section id="overlay-activation-section">
             <h2>Overlay Activation</h2>
             <div>
@@ -207,7 +404,8 @@
                 <select id="resolution-select" aria-describedby="resolution-help">
                     <option value="">Loading resolutions...</option>
                 </select>
-                <p id="resolution-help" style="font-size: 0.85em; color: #666;">This resolution must match your Dota 2
+                <p id="resolution-help" style="font-size: 0.85em; color: var(--text-color-muted);">This resolution must
+                    match your Dota 2
                     game setting.</p>
             </div>
             <p>Activate the overlay when Dota 2 is in the Ability Draft phase.</p>

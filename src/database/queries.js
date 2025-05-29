@@ -53,7 +53,7 @@ function getAbilityDetails(dbPath, abilityNames) {
 
     } catch (err) {
         console.error(`[DB Queries] Error fetching ability details: ${err.message}`);
-        // Return an empty map on error to avoid downstream issues, or rethrow if critical
+        // Return an empty map on error to avoid downstream issues
         return new Map();
     } finally {
         if (db && db.open) {
@@ -97,20 +97,21 @@ async function getHighWinrateCombinations(dbPath, baseAbilityInternalName, draft
         }
 
         const otherPoolPlaceholders = otherPoolAbilities.map(() => '?').join(', ');
+        // If baseAbilityHeroId is null, don't filter by hero_id; otherwise, ensure partner is from a different, non-null hero_id.
         const heroIdFilterClause = baseAbilityHeroId === null ? '1=1' : 'ab_other.hero_id IS NOT NULL AND ab_other.hero_id != ?';
 
         const synergyQuery = `
             SELECT
                 s.synergy_winrate,
                 ab_other.display_name AS partner_display_name,
-                ab_other.name AS partner_internal_name 
+                ab_other.name AS partner_internal_name
             FROM AbilitySynergies s
             JOIN Abilities ab_base ON (s.base_ability_id = ab_base.ability_id OR s.synergy_ability_id = ab_base.ability_id)
             JOIN Abilities ab_other ON ((s.synergy_ability_id = ab_other.ability_id AND s.base_ability_id = ab_base.ability_id) OR (s.base_ability_id = ab_other.ability_id AND s.synergy_ability_id = ab_base.ability_id))
             WHERE ab_base.name = ?                            -- Base ability
               AND ab_other.name IN (${otherPoolPlaceholders}) -- Partner is in the draft pool
               AND ab_other.name != ?                          -- Partner is not the base ability itself
-              AND (${heroIdFilterClause})                     -- Partner is from a different hero (if base hero is known)
+              AND (${heroIdFilterClause})                     -- Partner is from a different hero
             ORDER BY s.synergy_winrate DESC;
         `;
 
@@ -125,7 +126,7 @@ async function getHighWinrateCombinations(dbPath, baseAbilityInternalName, draft
         synergyRows.forEach(row => {
             combinations.push({
                 partnerAbilityDisplayName: row.partner_display_name || row.partner_internal_name,
-                partnerInternalName: row.partner_internal_name, // Added this
+                partnerInternalName: row.partner_internal_name,
                 synergyWinrate: row.synergy_winrate
             });
         });
@@ -177,7 +178,7 @@ async function getOPCombinationsInPool(dbPath, draftPoolInternalNames) {
             WHERE s.is_op = 1
               AND a1.name IN (${poolPlaceholders})
               AND a2.name IN (${poolPlaceholders})
-              AND a1.name < a2.name;
+              AND a1.name < a2.name; -- Ensures each pair is unique and ordered
         `;
 
         const queryParams = [...draftPoolInternalNames, ...draftPoolInternalNames];
@@ -185,8 +186,7 @@ async function getOPCombinationsInPool(dbPath, draftPoolInternalNames) {
         const opRows = opStmt.all(...queryParams);
 
         opRows.forEach(row => {
-            // Double-check if both abilities are indeed in the draftPoolInternalNames,
-            // although the IN clause should handle this. This is more of a sanity check.
+            // Sanity check if both abilities are indeed in the draftPoolInternalNames
             if (draftPoolInternalNames.includes(row.ability1_internal_name) && draftPoolInternalNames.includes(row.ability2_internal_name)) {
                 opCombinations.push({
                     ability1DisplayName: row.ability1_display_name || row.ability1_internal_name,
@@ -218,6 +218,7 @@ async function getHeroDetailsByAbilityName(dbPath, abilityName) {
     if (!abilityName) {
         return null;
     }
+
     let db;
     try {
         db = new Database(dbPath, { readonly: true });
@@ -256,6 +257,7 @@ async function getHeroDetailsById(dbPath, heroId) {
         console.warn('[DB Queries] getHeroDetailsById called with null or undefined heroId.');
         return null;
     }
+
     let db;
     try {
         db = new Database(dbPath, { readonly: true });
@@ -302,9 +304,11 @@ async function getHeroDetailsById(dbPath, heroId) {
 async function getAllOPCombinations(dbPath) {
     let db;
     const opCombinations = [];
+
     try {
         db = new Database(dbPath, { readonly: true });
-        // "a1.name < a2.name" ensures each pair is reported only once (e.g., (A, B) not (B, A)).
+        // "a1.name < a2.name" ensures each pair is reported only once (e.g., (A, B) not (B, A))
+        // to avoid duplicates and provide a canonical representation.
         const opQuery = `
             SELECT
                 a1.name AS ability1_internal_name,
@@ -317,7 +321,7 @@ async function getAllOPCombinations(dbPath) {
             JOIN Abilities a2 ON s.synergy_ability_id = a2.ability_id
             WHERE s.is_op = 1
               AND a1.name < a2.name; 
-        `; //
+        `;
         const opStmt = db.prepare(opQuery);
         const opRows = opStmt.all(); // No parameters needed to fetch all
 
