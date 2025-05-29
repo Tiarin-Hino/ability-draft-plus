@@ -14,12 +14,13 @@ const {
   getAbilityDetails,
   getHighWinrateCombinations,
   getOPCombinationsInPool,
+  getAllOPCombinations,
   getHeroDetailsByAbilityName,
   getHeroDetailsById
 } = require('./src/database/queries');
 const { scrapeAndStoreAbilitiesAndHeroes } = require('./src/scraper/abilityScraper');
 const { scrapeAndStoreAbilityPairs } = require('./src/scraper/abilityPairScraper');
-const { processDraftScreen: performMlScan, initializeImageProcessor } = require('./src/imageProcessor'); // Renamed for clarity
+const { processDraftScreen: performMlScan, initializeImageProcessor, identifySlotsFromCache, initializeImageProcessorIfNeeded } = require('./src/imageProcessor'); // Renamed for clarity
 
 // --- Constants ---
 const IS_PACKAGED = app.isPackaged;
@@ -57,6 +58,10 @@ let overlayWindow = null;
 let activeDbPath = '';
 let layoutCoordinatesPath = '';
 
+let initialPoolAbilitiesCache = { ultimates: [], standard: [] };
+let fullLayoutConfigCache = null;
+let classNamesCache = null;
+
 let isScanInProgress = false;
 let lastRawScanResults = null; // Stores raw results from processDraftScreen for snapshotting
 let lastScanTargetResolution = null;
@@ -84,6 +89,31 @@ function sendStatusUpdate(targetWebContents, channel, message) {
   if (targetWebContents && !targetWebContents.isDestroyed()) {
     targetWebContents.send(channel, message);
   }
+}
+
+/**
+ * Loads class names from the JSON file if not already cached.
+ * This is used to map ML model output indices to ability internal names.
+ * @async
+ * @throws {Error} If class names cannot be loaded or parsed, or if the array is empty.
+ * @returns {Promise<string[]>} A promise that resolves to an array of class names.
+ */
+async function loadClassNamesForMain() {
+  if (!classNamesCache) {
+    const classNamesJsonPath = path.join(BASE_RESOURCES_PATH, 'model', MODEL_DIR_NAME, CLASS_NAMES_FILENAME);
+    try {
+      const data = await fs.readFile(classNamesJsonPath, 'utf8');
+      classNamesCache = JSON.parse(data);
+      if (!classNamesCache || classNamesCache.length === 0) {
+        console.error('[MainScan] Failed to load or parse class names from:', classNamesJsonPath);
+        throw new Error('Class names are empty or invalid.');
+      }
+    } catch (err) {
+      console.error('[MainScan] Error loading class_names.json:', err);
+      throw err; // Rethrow to be caught by scan logic
+    }
+  }
+  return classNamesCache;
 }
 
 // --- Database Date Management ---
@@ -374,7 +404,7 @@ ipcMain.on('get-available-resolutions', async (event) => {
   }
 });
 
-ipcMain.on('activate-overlay', async (event, selectedResolution) => { //
+ipcMain.on('activate-overlay', async (event, selectedResolution) => {
   if (!selectedResolution) {
     sendStatusUpdate(event.sender, 'scrape-status', 'Error: No resolution selected for overlay.');
     return;
@@ -382,12 +412,44 @@ ipcMain.on('activate-overlay', async (event, selectedResolution) => { //
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.hide();
   }
+
+  initialPoolAbilitiesCache = { ultimates: [], standard: [] }; // Reset on new overlay
+  identifiedHeroModelsCache = null; // Also reset identified models
+
+  // Load layout config once if not already cached
+  if (!fullLayoutConfigCache) {
+    try {
+      const layoutData = await fs.readFile(layoutCoordinatesPath, 'utf-8'); //
+      fullLayoutConfigCache = JSON.parse(layoutData);
+    } catch (err) {
+      console.error("[MainIPC] Failed to load layout_coordinates.json for activate-overlay:", err);
+      sendStatusUpdate(event.sender, 'scan-results', { error: `Failed to load layout configuration: ${err.message}`, resolution: selectedResolution });
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.show();
+      return;
+    }
+  }
+
   try {
-    const configData = await fs.readFile(layoutCoordinatesPath, 'utf-8'); //
-    const layoutConfig = JSON.parse(configData);
+    await loadClassNamesForMain(); // Pre-load class names
+    await initializeImageProcessorIfNeeded(); // Ensure imageProcessor is ready
+  } catch (e) {
+    console.error("[MainIPC] Failed to initialize for activate-overlay:", e);
+    sendStatusUpdate(event.sender, 'scan-results', { error: `Failed to initialize for overlay: ${e.message}`, resolution: selectedResolution });
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.show();
+    return;
+  }
+
+  try {
+    // Use the cached layoutConfig directly
+    const layoutConfigToUse = fullLayoutConfigCache;
+    if (!layoutConfigToUse) {
+      throw new Error("Layout configuration cache is unexpectedly empty.");
+    }
+
     const primaryDisplay = screen.getPrimaryDisplay();
     lastUsedScaleFactor = primaryDisplay.scaleFactor || 1.0; // Store for use in overlay
-    createOverlayWindow(selectedResolution, layoutConfig, lastUsedScaleFactor);
+
+    createOverlayWindow(selectedResolution, layoutConfigToUse, lastUsedScaleFactor);
     sendStatusUpdate(event.sender, 'scrape-status', `Overlay activated for ${selectedResolution}. Main window hidden.`);
   } catch (error) {
     console.error('[MainIPC] Overlay Activation Error:', error);
@@ -485,49 +547,159 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
   }
 
   isScanInProgress = true;
-  lastRawScanResults = null; // Clear previous raw results to avoid stale snapshot data
-  lastScanTargetResolution = selectedResolution; // Store for snapshotting
+  lastScanTargetResolution = selectedResolution;
   const startTime = performance.now();
 
+  // Log the received overlay selection state for context
+  console.log(`[MainScan] Scan triggered. Overlay's selectedHeroOriginalOrder: ${selectedHeroOriginalOrderFromOverlay}, Main's current mySelectedHeroOriginalOrder: ${mySelectedHeroOriginalOrder}`);
+
   try {
-    const rawResults = await performMlScan(layoutCoordinatesPath, selectedResolution, MIN_PREDICTION_CONFIDENCE); //
-    lastRawScanResults = rawResults; // Cache raw results for snapshot feature
+    const layoutConfig = fullLayoutConfigCache;
+    if (!layoutConfig) {
+      throw new Error("Layout configuration not loaded.");
+    }
+    const coords = layoutConfig.resolutions?.[selectedResolution];
+    if (!coords) throw new Error(`Coordinates not found for ${selectedResolution}`);
 
-    const layoutConfig = JSON.parse(await fs.readFile(layoutCoordinatesPath, 'utf-8')); //
-    const currentModelsCoords = layoutConfig.resolutions[selectedResolution]?.models_coords || [];
-    const currentHeroesCoords = layoutConfig.resolutions[selectedResolution]?.heroes_coords || [];
+    const {
+      ultimate_slots_coords = [],
+      standard_slots_coords = [],
+      selected_abilities_coords = [],
+      selected_abilities_params,
+      models_coords = [],
+      heroes_coords = [] // <<< FIX: Define heroes_coords by destructuring
+    } = coords;
 
-    // Identify Hero Models (cached after first scan)
-    if (isInitialScan || !identifiedHeroModelsCache) {
-      console.log("[MainScan] Identifying hero models (initial scan or no cache).");
-      // Reset "My Model" selection as models are re-identified
+    const currentClassNames = await loadClassNamesForMain();
+
+    const selected_hero_abilities_coords_full = selected_abilities_params ? selected_abilities_coords.map(sac => ({
+      ...sac,
+      width: selected_abilities_params.width,
+      height: selected_abilities_params.height,
+    })) : [];
+    const hero_defining_slots_coords = standard_slots_coords.filter(slot => slot.ability_order === 2);
+
+    let tempRawResults;
+
+    if (isInitialScan) {
+      console.log("[MainScan] Performing Initial Scan.");
+      tempRawResults = await performMlScan(layoutCoordinatesPath, selectedResolution, MIN_PREDICTION_CONFIDENCE);
+
+      // Correctly cache initial pool abilities with their full data from identifySlots (which includes .coord)
+      initialPoolAbilitiesCache.ultimates = tempRawResults.ultimates
+        .filter(item => item.name && item.coord)
+        .map(res => ({ ...res, type: 'ultimate' })); // Spread all of res, add type
+
+      initialPoolAbilitiesCache.standard = tempRawResults.standard
+        .filter(item => item.name && item.coord)
+        .map(res => ({ ...res, type: 'standard' })); // Spread all of res, add type
+
+      console.log(`[MainScan] Initial Cache: ${initialPoolAbilitiesCache.ultimates.length} ults, ${initialPoolAbilitiesCache.standard.length} standard abilities cached.`);
+      if (initialPoolAbilitiesCache.ultimates.length > 0) {
+        console.log("[MainScan] Example cached ultimates:", JSON.stringify(initialPoolAbilitiesCache.ultimates[0]));
+      }
+      if (initialPoolAbilitiesCache.standard.length > 0) {
+        console.log("[MainScan] Example cached standard abilities:", JSON.stringify(initialPoolAbilitiesCache.standard[0]));
+      }
+
       mySelectedModelDbHeroId = null;
       mySelectedModelScreenOrder = null;
-      identifiedHeroModelsCache = await identifyHeroModels(rawResults.heroDefiningAbilities, currentModelsCoords);
-    } else {
-      console.log("[MainScan] Using cached hero model identification data.");
+      identifiedHeroModelsCache = await identifyHeroModels(tempRawResults.heroDefiningAbilities, models_coords);
+
+    } else { // This is a Rescan
+      console.log("[MainScan] Performing Rescan.");
+      if (!initialPoolAbilitiesCache.ultimates.length && !initialPoolAbilitiesCache.standard.length) {
+        console.warn("[MainScan] Rescan attempted without cached initial pool. Falling back to full scan logic for this rescan.");
+        tempRawResults = await performMlScan(layoutCoordinatesPath, selectedResolution, MIN_PREDICTION_CONFIDENCE);
+        initialPoolAbilitiesCache.ultimates = tempRawResults.ultimates
+          .filter(item => item.name && item.coord)
+          .map(res => ({ ...res, type: 'ultimate' }));
+        initialPoolAbilitiesCache.standard = tempRawResults.standard
+          .filter(item => item.name && item.coord)
+          .map(res => ({ ...res, type: 'standard' }));
+        if (!identifiedHeroModelsCache) {
+          identifiedHeroModelsCache = await identifyHeroModels(tempRawResults.heroDefiningAbilities, models_coords);
+        }
+      } else {
+        const screenshotBuffer = await screenshotDesktop({ format: 'png' });
+        await initializeImageProcessorIfNeeded();
+
+        const reconfirmedUltimates = await identifySlotsFromCache(initialPoolAbilitiesCache.ultimates, screenshotBuffer, currentClassNames, MIN_PREDICTION_CONFIDENCE);
+        const reconfirmedStandard = await identifySlotsFromCache(initialPoolAbilitiesCache.standard, screenshotBuffer, currentClassNames, MIN_PREDICTION_CONFIDENCE);
+
+        const { identifySlots } = require('./src/imageProcessor'); // Ensure this is correctly scoped if not at top
+        const identifiedSelectedAbilities = await identifySlots(selected_hero_abilities_coords_full, screenshotBuffer, currentClassNames, MIN_PREDICTION_CONFIDENCE, new Set());
+
+        tempRawResults = {
+          ultimates: reconfirmedUltimates,
+          standard: reconfirmedStandard,
+          selectedAbilities: identifiedSelectedAbilities,
+          heroDefiningAbilities: reconfirmedStandard.filter(a => hero_defining_slots_coords.some(hc =>
+            hc.hero_order === a.hero_order && hc.ability_order === a.ability_order
+          ))
+        };
+      }
     }
+    lastRawScanResults = { ...tempRawResults };
 
-    // Prepare UI data for "My Hero" selection buttons
-    const heroesForMyHeroSelectionUI = prepareHeroesForMyHeroUI(identifiedHeroModelsCache, currentHeroesCoords);
+    const heroesForMyHeroSelectionUI = prepareHeroesForMyHeroUI(identifiedHeroModelsCache, heroes_coords);
 
-    // Gather all unique abilities from draft pool and picked abilities
-    const { uniqueAbilityNamesInPool, allPickedAbilityNames } = collectAbilityNames(rawResults);
-    const allNamesToFetchDetailsFor = [...new Set([...uniqueAbilityNamesInPool, ...allPickedAbilityNames])];
-    const abilityDetailsMap = getAbilityDetails(activeDbPath, allNamesToFetchDetailsFor); //
+    // --- Collect current ability sets ---
+    const { uniqueAbilityNamesInPool, allPickedAbilityNames } = collectAbilityNames(tempRawResults);
+    const allCurrentlyRelevantAbilityNames = Array.from(new Set([...uniqueAbilityNamesInPool, ...allPickedAbilityNames]));
 
-    // Prepare entities for scoring
-    let allEntitiesForScoring = prepareEntitiesForScoring(rawResults, abilityDetailsMap, identifiedHeroModelsCache);
+    // --- Fetch details for all relevant abilities ---
+    const abilityDetailsMap = getAbilityDetails(activeDbPath, allCurrentlyRelevantAbilityNames);
 
-    // Calculate consolidated scores
+    // --- Synergy Suggestions Logic (Tooltip Content) ---
+    // The context for ALL synergy suggestions will be ONLY the abilities currently in the central draft pool.
+    const centralDraftPoolArray = Array.from(uniqueAbilityNamesInPool);
+    console.log(`[MainScan] Fetching tooltip synergies for ${allCurrentlyRelevantAbilityNames.length} abilities against a pool of ${centralDraftPoolArray.length}.`);
+
+    for (const abilityName of allCurrentlyRelevantAbilityNames) {
+      const details = abilityDetailsMap.get(abilityName);
+      if (details) {
+        const combinations = await getHighWinrateCombinations(
+          activeDbPath,
+          abilityName,              // The ability to find synergies for (can be pool or picked)
+          centralDraftPoolArray     // Context: ONLY abilities currently in the central draft pool
+        );
+        details.highWinrateCombinations = combinations || [];
+        abilityDetailsMap.set(abilityName, details);
+      }
+    }
+    console.log('[MainScan] Finished fetching tooltip synergies against the current central pool.');
+
+    // --- OP Combinations Logic (OP Window Content) ---
+    const allDatabaseOPCombs = await getAllOPCombinations(activeDbPath);
+    console.log(`[MainScan] Filtering ${allDatabaseOPCombs.length} total DB OP combos.`);
+    const relevantOPCombinations = allDatabaseOPCombs.filter(combo => {
+      const a1InCentralPool = uniqueAbilityNamesInPool.has(combo.ability1InternalName);
+      const a2InCentralPool = uniqueAbilityNamesInPool.has(combo.ability2InternalName);
+      const a1IsPicked = allPickedAbilityNames.has(combo.ability1InternalName);
+      const a2IsPicked = allPickedAbilityNames.has(combo.ability2InternalName);
+
+      // Valid if: (Pool + Pool) OR (Pool + Picked_By_Anyone)
+      // Note: (Picked + Pool) is covered by the line above due to pair symmetry (a1, a2 vs a2, a1)
+      if (a1InCentralPool && a2InCentralPool) return true; // Both parts are in the current central pool
+      if (a1InCentralPool && a2IsPicked) return true;      // One part in pool, other is picked
+      if (a1IsPicked && a2InCentralPool) return true;      // One part picked, other is in pool
+      return false; // Excludes (Picked + Picked)
+    }).map(combo => ({
+      ability1DisplayName: combo.ability1DisplayName,
+      ability2DisplayName: combo.ability2DisplayName,
+      synergyWinrate: combo.synergyWinrate
+    }));
+    console.log(`[MainScan] Found ${relevantOPCombinations.length} relevant OP combos to display.`);
+
+    // --- Scoring and Top Tier (uses only pool abilities for suggestions) ---
+    let allEntitiesForScoring = prepareEntitiesForScoring(tempRawResults, abilityDetailsMap, identifiedHeroModelsCache);
     allEntitiesForScoring = calculateConsolidatedScores(allEntitiesForScoring);
 
-    // Determine if "My Hero" (drafting) has picked an ultimate
     const myHeroHasPickedUltimate = checkMyHeroPickedUltimate(
-      mySelectedHeroDbIdForDrafting, heroesForMyHeroSelectionUI, rawResults.selectedAbilities
+      mySelectedHeroDbIdForDrafting, heroesForMyHeroSelectionUI, tempRawResults.selectedAbilities
     );
 
-    // Determine top-tier entities based on selections and scores
     const topTierEntities = determineTopTierEntities(
       allEntitiesForScoring, mySelectedModelDbHeroId, myHeroHasPickedUltimate
     );
@@ -535,17 +707,12 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
       topTierEntities.map(entity => `${entity.entityType}:${entity.internalName}`)
     );
 
-    // Enrich hero model data with top-tier status and scores
     const enrichedHeroModels = enrichHeroModelData(identifiedHeroModelsCache, topTierEntityIdentifiers, allEntitiesForScoring);
 
-    // Get OP Combinations
-    const opCombinationsInPool = await getOPCombinationsInPool(activeDbPath, [...uniqueAbilityNamesInPool]); //
-
-    // Format final results for UI
-    const formattedUltimates = formatResultsForUi(rawResults.ultimates, abilityDetailsMap, topTierEntityIdentifiers, mySelectedHeroDbIdForDrafting, heroesForMyHeroSelectionUI, rawResults.selectedAbilities, 'ultimates', allEntitiesForScoring);
-    const formattedStandard = formatResultsForUi(rawResults.standard, abilityDetailsMap, topTierEntityIdentifiers, mySelectedHeroDbIdForDrafting, heroesForMyHeroSelectionUI, rawResults.selectedAbilities, 'standard', allEntitiesForScoring);
-    const formattedSelectedAbilities = formatResultsForUi(rawResults.selectedAbilities, abilityDetailsMap, new Set(), null, [], [], 'selected', allEntitiesForScoring, true);
-
+    // --- Format results for UI (will use the abilityDetailsMap with correctly scoped synergies) ---
+    const formattedUltimates = formatResultsForUi(tempRawResults.ultimates, abilityDetailsMap, topTierEntityIdentifiers, mySelectedHeroDbIdForDrafting, heroesForMyHeroSelectionUI, tempRawResults.selectedAbilities, 'ultimates', allEntitiesForScoring);
+    const formattedStandard = formatResultsForUi(tempRawResults.standard, abilityDetailsMap, topTierEntityIdentifiers, mySelectedHeroDbIdForDrafting, heroesForMyHeroSelectionUI, tempRawResults.selectedAbilities, 'standard', allEntitiesForScoring);
+    const formattedSelectedAbilities = formatResultsForUi(tempRawResults.selectedAbilities, abilityDetailsMap, new Set(), mySelectedHeroDbIdForDrafting, heroesForMyHeroSelectionUI, tempRawResults.selectedAbilities, 'selected', allEntitiesForScoring, true);
 
     const endTime = performance.now();
     const durationMs = Math.round(endTime - startTime);
@@ -559,11 +726,10 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
       },
       heroModels: enrichedHeroModels,
       heroesForMyHeroUI: heroesForMyHeroSelectionUI,
-      coordinatesConfig: layoutConfig, // Send full config for overlay to use
       targetResolution: selectedResolution,
       durationMs: durationMs,
-      opCombinations: opCombinationsInPool,
-      initialSetup: false, // This is a scan result, not initial setup
+      opCombinations: relevantOPCombinations, // Filtered OP combos
+      initialSetup: false,
       scaleFactor: lastUsedScaleFactor,
       selectedHeroForDraftingDbId: mySelectedHeroDbIdForDrafting,
       selectedModelHeroOrder: mySelectedModelScreenOrder
@@ -571,7 +737,6 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
 
   } catch (error) {
     console.error(`[MainScan] Error during scan for ${selectedResolution}:`, error);
-    lastRawScanResults = null; // Clear on error to prevent stale snapshot
     sendStatusUpdate(overlayWindow.webContents, 'overlay-data', { error: error.message || 'Scan execution failed.', scaleFactor: lastUsedScaleFactor });
   } finally {
     isScanInProgress = false;
@@ -789,53 +954,67 @@ function enrichHeroModelData(heroModels, topTierIdentifiers, allScoredEntities) 
 
 /** Formats raw scan results for the UI, enriching with DB data and scores. */
 function formatResultsForUi(
-  predictedResultsArray,
+  predictedResultsArray, // Items here will have .coord if identifySlots or identifySlotsFromCache provides it
   abilityDetailsMap,
   topTierEntityIdentifiers,
-  mySelectedHeroDbIdForDrafting, // Used to determine if an ability is "my hero's selected ability"
-  heroesForMyHeroSelectionUI,   // Used to map mySelectedHeroDbIdForDrafting to a screen hero_order
-  rawSelectedAbilities,         // Full list of abilities selected by heroes on screen
-  slotType, // 'ultimates', 'standard', 'selected'
-  allScoredEntities, // Array of all entities with their scores
-  isForSelectedAbilityList = false // Flag if formatting the "selectedAbilities" list
+  mySelectedHeroDbIdForDrafting,
+  heroesForMyHeroSelectionUI,
+  rawSelectedAbilities,
+  slotType,
+  allScoredEntities,
+  isForSelectedAbilityList = false
 ) {
   if (!Array.isArray(predictedResultsArray)) return [];
 
   return predictedResultsArray.map(result => {
     const internalName = result.name;
-    // is_ultimate from layout_coordinates.json for this specific slot
-    const isUltimateFromLayout = result.is_ultimate;
+    const originalCoord = result.coord; // <<< Get the coord from the input result
+    const isUltimateFromSlot = result.is_ultimate; // is_ultimate flag from the specific slot data
+
+    if (!originalCoord && !isForSelectedAbilityList) {
+      console.warn(`[MainFormat] Missing originalCoord for pool ability:`, result);
+      // For pool abilities, coord is essential. For selected, it might be derived differently if not directly on result.
+    }
+    if (!originalCoord && isForSelectedAbilityList) {
+      // This case should now be covered because identifySlots adds `coord`
+      console.warn(`[MainFormat] Missing originalCoord for selected ability result:`, result);
+    }
+
 
     if (internalName === null) {
       return {
         internalName: null, displayName: 'Unknown Ability', winrate: null, highSkillWinrate: null,
         avgPickOrder: null, valuePercentage: null, highWinrateCombinations: [], isTopTier: false,
-        confidence: result.confidence, hero_order: result.hero_order, // Screen order
-        ability_order: result.ability_order, is_ultimate_from_layout: isUltimateFromLayout,
-        is_ultimate_from_db: null, is_ultimate_from_coord_source: null, consolidatedScore: 0
+        confidence: result.confidence,
+        hero_order: result.hero_order,
+        ability_order: result.ability_order,
+        is_ultimate_from_layout: isUltimateFromSlot,
+        is_ultimate_from_db: null,
+        is_ultimate_from_coord_source: slotType === 'ultimates',
+        consolidatedScore: 0,
+        coord: originalCoord // <<< Pass it
       };
     }
 
     let abilityDataSource;
     let isTopTier = false;
-    let isUltimateFromCoordSource = null; // Was this ability from an ultimate slot in the pool?
+    let isUltimateFromCoordSourceForThis = (slotType === 'ultimates');
     let consolidatedScore = 0;
-    let highWinrateCombinations = [];
+    let highWinrateCombinations = []; // Initialize
 
-    // For abilities in the draft pool (ultimates, standard)
-    if (!isForSelectedAbilityList) {
+    if (!isForSelectedAbilityList) { // For abilities in draft pool
       abilityDataSource = allScoredEntities.find(e => e.entityType === 'ability' && e.internalName === internalName);
       if (abilityDataSource) {
-        isUltimateFromCoordSource = abilityDataSource.is_ultimate_from_coord_source;
         isTopTier = topTierEntityIdentifiers.has(`ability:${internalName}`);
         consolidatedScore = abilityDataSource.consolidatedScore || 0;
-        // Synergy combinations are already on abilityDataSource if pre-calculated
-        highWinrateCombinations = abilityDataSource.highWinrateCombinations || [];
+        highWinrateCombinations = abilityDataSource.highWinrateCombinations || []; // From allScoredEntities
       }
     } else { // For abilities in the "selectedAbilities" list by heroes
       abilityDataSource = abilityDetailsMap.get(internalName);
-      // No top-tier status or combinations needed for already selected abilities list in the same way.
-      // Score is also less relevant here as it's already picked.
+      if (abilityDataSource) {
+        // <<< THIS WILL NOW WORK >>>
+        highWinrateCombinations = abilityDataSource.highWinrateCombinations || [];
+      }
     }
 
     if (abilityDataSource) {
@@ -846,25 +1025,37 @@ function formatResultsForUi(
         highSkillWinrate: abilityDataSource.highSkillWinrate,
         avgPickOrder: abilityDataSource.avgPickOrder,
         valuePercentage: abilityDataSource.valuePercentage,
-        is_ultimate_from_db: abilityDataSource.is_ultimate, // From Abilities table
-        is_ultimate_from_coord_source: isUltimateFromCoordSource, // From the coordinate slot type
-        ability_order_from_db: abilityDataSource.ability_order, // From Abilities table
+        is_ultimate_from_db: abilityDataSource.is_ultimate,
+        is_ultimate_from_coord_source: isUltimateFromCoordSourceForThis,
+        ability_order_from_db: abilityDataSource.ability_order,
         highWinrateCombinations,
         isTopTier,
         confidence: result.confidence,
-        hero_order: result.hero_order, // Screen hero_order (0-9 for selected, 0-11 for pool)
-        ability_order: result.ability_order, // Screen ability_order (1-3 for pool)
-        is_ultimate_from_layout: isUltimateFromLayout, // From layout_coordinates for this specific slot
-        consolidatedScore
+        hero_order: result.hero_order,
+        ability_order: result.ability_order,
+        is_ultimate_from_layout: isUltimateFromSlot,
+        consolidatedScore,
+        coord: originalCoord // <<< Pass it
       };
     }
-    // Fallback if details not found (should be rare if allNamesToFetchDetailsFor is comprehensive)
+    // Fallback
     return {
-      internalName, displayName: internalName, winrate: null, highSkillWinrate: null, avgPickOrder: null,
-      valuePercentage: null, highWinrateCombinations: [], isTopTier: false, confidence: result.confidence,
-      hero_order: result.hero_order, ability_order: result.ability_order,
-      is_ultimate_from_layout: isUltimateFromLayout, is_ultimate_from_db: null,
-      is_ultimate_from_coord_source: null, consolidatedScore: 0
+      internalName,
+      displayName: internalName,
+      winrate: null,
+      highSkillWinrate: null,
+      avgPickOrder: null,
+      valuePercentage: null,
+      highWinrateCombinations: [],
+      isTopTier: false,
+      confidence: result.confidence,
+      hero_order: result.hero_order,
+      ability_order: result.ability_order,
+      is_ultimate_from_layout: isUltimateFromSlot,
+      is_ultimate_from_db: null,
+      is_ultimate_from_coord_source: isUltimateFromCoordSourceForThis,
+      consolidatedScore: 0,
+      coord: originalCoord // <<< Pass it
     };
   });
 }

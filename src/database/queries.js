@@ -292,10 +292,59 @@ async function getHeroDetailsById(dbPath, heroId) {
     }
 }
 
+/**
+ * Fetches all "OP" (overpowered) ability combinations from the database.
+ * An OP combination is one where the 'is_op' flag is true.
+ * @param {string} dbPath - Path to the SQLite database file.
+ * @returns {Promise<Array<{ability1InternalName: string, ability1DisplayName: string, ability2InternalName: string, ability2DisplayName: string, synergyWinrate: number}>>}
+ * An array of objects, each representing an OP combination.
+ */
+async function getAllOPCombinations(dbPath) {
+    let db;
+    const opCombinations = [];
+    try {
+        db = new Database(dbPath, { readonly: true });
+        // "a1.name < a2.name" ensures each pair is reported only once (e.g., (A, B) not (B, A)).
+        const opQuery = `
+            SELECT
+                a1.name AS ability1_internal_name,
+                a1.display_name AS ability1_display_name,
+                a2.name AS ability2_internal_name,
+                a2.display_name AS ability2_display_name,
+                s.synergy_winrate
+            FROM AbilitySynergies s
+            JOIN Abilities a1 ON s.base_ability_id = a1.ability_id
+            JOIN Abilities a2 ON s.synergy_ability_id = a2.ability_id
+            WHERE s.is_op = 1
+              AND a1.name < a2.name; 
+        `; //
+        const opStmt = db.prepare(opQuery);
+        const opRows = opStmt.all(); // No parameters needed to fetch all
+
+        opRows.forEach(row => {
+            opCombinations.push({
+                ability1InternalName: row.ability1_internal_name,
+                ability1DisplayName: row.ability1_display_name || row.ability1_internal_name,
+                ability2InternalName: row.ability2_internal_name,
+                ability2DisplayName: row.ability2_display_name || row.ability2_internal_name,
+                synergyWinrate: row.synergy_winrate
+            });
+        });
+    } catch (err) {
+        console.error(`[DB Queries] Error fetching ALL OP combinations: ${err.message}`);
+    } finally {
+        if (db && db.open) {
+            db.close();
+        }
+    }
+    return opCombinations;
+}
+
 module.exports = {
     getAbilityDetails,
     getHighWinrateCombinations,
     getOPCombinationsInPool,
+    getAllOPCombinations,
     getHeroDetailsByAbilityName,
     getHeroDetailsById
 };
