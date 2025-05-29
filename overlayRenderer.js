@@ -238,21 +238,29 @@ function positionTooltip(hotspotElement) {
 
 /**
  * Creates and manages ability hotspots based on scan data.
- * @param {Array<object>} abilityResultArray - Array of ability data objects.
- * @param {Array<object>} coordArray - Array of coordinate objects for these abilities.
+ * Each abilityInfo in abilityResultArray is expected to have a 'coord' property.
+ * @param {Array<object>} abilityResultArray - Array of ability data objects, each with own .coord.
  * @param {string} type - The type of ability (e.g., 'ultimates', 'standard').
  * @param {boolean} [isSelectedAbilityHotspot=false] - True if these are for abilities already picked by heroes.
  */
-function createHotspotsForType(abilityResultArray, coordArray, type, isSelectedAbilityHotspot = false) {
-    if (!abilityResultArray || !Array.isArray(abilityResultArray) || !coordArray || !Array.isArray(coordArray)) {
-        console.warn(`[OverlayRenderer] Cannot create hotspots for type "${type}": invalid data provided.`);
+function createHotspotsForType(abilityResultArray, type, isSelectedAbilityHotspot = false) { // Removed coordArray
+    if (!abilityResultArray || !Array.isArray(abilityResultArray)) {
+        console.warn(`[OverlayRenderer] Cannot create hotspots for type "${type}": invalid abilityResultArray provided.`);
         return;
     }
 
     abilityResultArray.forEach((abilityInfo, index) => {
-        // Ensure there's a corresponding coordinate entry and the ability was identified
-        if (abilityInfo && abilityInfo.internalName && abilityInfo.displayName !== 'Unknown Ability' && coordArray[index]) {
-            createHotspotElement(coordArray[index], abilityInfo, `${type}-${index}`, isSelectedAbilityHotspot);
+        // Ensure the ability was identified and has its coordinate data
+        if (abilityInfo && abilityInfo.internalName && abilityInfo.displayName !== 'Unknown Ability' && abilityInfo.coord) {
+            // Create a uniqueIdPart that is less prone to issues if internalName is very long or has special chars
+            const safeInternalNamePart = (abilityInfo.internalName || 'unknown').replace(/[^a-zA-Z0-9_]/g, '').substring(0, 10);
+            createHotspotElement(abilityInfo.coord, abilityInfo, `${type}-${safeInternalNamePart}-${index}`, isSelectedAbilityHotspot);
+        } else if (abilityInfo && abilityInfo.coord && !abilityInfo.internalName) {
+            // This slot was likely cached but not reconfirmed (empty/changed), no hotspot needed.
+            // console.log(`[OverlayRenderer] Slot of type ${type} at index ${index} has coords but no name, skipping hotspot.`);
+        } else if (abilityInfo && !abilityInfo.coord) {
+            // This is a more critical issue if an ability is expected to have coords.
+            console.warn(`[OverlayRenderer] Skipping hotspot for ${abilityInfo.internalName || 'unknown ability'} in ${type} list because it's missing coordinate data.`);
         }
     });
 }
@@ -315,11 +323,12 @@ function createHotspotElement(coord, abilityData, uniqueIdPart, isSelectedAbilit
 
         const combinations = JSON.parse(hotspot.dataset.combinations);
         if (combinations && combinations.length > 0) {
-            tooltipContent += `<div class="tooltip-section-title">Strong Combinations in Pool:</div>`;
-            combinations.slice(0, 5).forEach(combo => { // Show top 5
+            // General title, as suggestions are always with remaining pool abilities
+            tooltipContent += `<div class="tooltip-section-title">Strong Synergies (with Pool):</div>`;
+            combinations.slice(0, 5).forEach(combo => {
                 const comboPartnerName = (combo.partnerAbilityDisplayName || 'Unknown Partner').replace(/_/g, ' ');
                 const comboWrFormatted = combo.synergyWinrate !== null ? `${(parseFloat(combo.synergyWinrate) * 100).toFixed(1)}%` : 'N/A';
-                tooltipContent += `<div class="tooltip-combo">- ${comboPartnerName} (${comboWrFormatted} WR)</div>`;
+                tooltipContent += `<div class="tooltip-combo">- <span class="math-inline">${comboPartnerName} (</span>${comboWrFormatted} WR)</div>`;
             });
         }
         showTooltip(hotspot, tooltipContent);
@@ -647,21 +656,24 @@ if (window.electronAPI) {
                 else if (rescanButton && rescanButton.disabled) rescanButton.disabled = false;
                 return;
             }
-            const resolutionCoords = currentCoordinatesConfig.resolutions[currentTargetResolution];
-            if (!resolutionCoords) {
-                console.error(`[OverlayRenderer] Coordinate data for resolution "${currentTargetResolution}" not found.`);
-                showScanStatusPopup(`Error: Coordinates for ${currentTargetResolution} missing.`, true);
-                if (initialScanButton && initialScanButton.disabled) initialScanButton.disabled = false;
-                else if (rescanButton && rescanButton.disabled) rescanButton.disabled = false;
-                return;
+            const resolutionCoords = currentCoordinatesConfig && currentCoordinatesConfig.resolutions[currentTargetResolution]
+                ? currentCoordinatesConfig.resolutions[currentTargetResolution]
+                : null;
+            if (!resolutionCoords && !isSelectedAbilityHotspot) { // Only critical if we still needed them for pool, but now less so. Good for other elements.
+                console.warn(`[OverlayRenderer] resolutionCoords not available for ${currentTargetResolution}, some UI elements might be affected.`);
             }
 
-            // Clear previous dynamic elements before redrawing
             document.querySelectorAll('.ability-hotspot, .selected-ability-hotspot, .hero-model-hotspot, .my-hero-btn-original, .change-my-hero-btn-original, .my-model-btn, .change-my-model-btn').forEach(el => el.remove());
 
-            // Create hotspots for abilities in draft pool
-            createHotspotsForType(data.scanData.ultimates, resolutionCoords.ultimate_slots_coords, 'ultimates');
-            createHotspotsForType(data.scanData.standard, resolutionCoords.standard_slots_coords, 'standard');
+            // Create hotspots for abilities in draft pool using their own embedded coords
+            createHotspotsForType(data.scanData.ultimates, 'ultimates'); // No longer pass resolutionCoords.ultimate_slots_coords
+            createHotspotsForType(data.scanData.standard, 'standard'); // No longer pass resolutionCoords.standard_slots_coords
+
+            // Create hotspots for abilities already selected by heroes
+            // These also now get their .coord from formatResultsForUi via identifySlots in imageProcessor
+            if (data.scanData.selectedAbilities) {
+                createHotspotsForType(data.scanData.selectedAbilities, 'selected', true);
+            }
 
             // Create hotspots for abilities already selected by heroes
             if (data.scanData.selectedAbilities && resolutionCoords.selected_abilities_coords && resolutionCoords.selected_abilities_params) {
