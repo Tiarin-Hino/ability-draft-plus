@@ -1,10 +1,15 @@
 # Dota 2 Ability Draft Plus Overlay
 
+
+![Initial Scan](/images/Initial_Scan.png "Initial Scan")
+
 **Dota 2 Ability Draft Plus** is a desktop overlay tool designed to provide players with valuable statistical insights during the Ability Draft phase of a Dota 2 game. It leverages real-time Machine Learning (ML) based image recognition and a locally stored database to display win rates for heroes and abilities, and suggests powerful ability combinations.
 
 **This project is currently focused on Windows.** macOS/Linux support may be considered in the future.
 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/tiarinhino) ## Features
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/tiarinhino) 
+
+## Features
 
 * **Real-time Data Insights During Draft:**
     * Displays hero and ability win rates upon hover.
@@ -92,18 +97,28 @@ The overlay provides in-game assistance once activated.
 ## Screenshots
 
 **Control Panel**
+
 ![Control Panel](/images/Control_Panel.png "Control Panel")
 
 **Overlay - Idle Mode**
+
 ![Idle Mode](/images/Idle_Mode.png "Idle Mode")
 
-**Overlay - Initial Scan Done, Tooltip Example**
+**Overlay - Initial Scan Done**
+
 ![Initial Scan](/images/Initial_Scan.png "Initial Scan")
 
 **Overlay - Ability Winrates & Suggestions**
+
 ![Ability Winrates](/images/Ability_Winrates.png "Ability Winrates")
 
-*(More screenshots showing different states like "My Hero" selected, "My Model" selected, OP Combinations window can be added here.)*
+**Overlay - OP Combinations Warning Example**
+
+![OP Combinations](/images/OP_Combinations.png "OP Combinations")
+
+**Overlay - Rescan with Selected Model and abilities, synergy suggestions**
+
+![Rescan](images/Filter_Picked_Abilities.png "Rescan")
 
 ---
 

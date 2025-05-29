@@ -3,15 +3,78 @@ const updateAllDataButton = document.getElementById('update-all-data-btn');
 const activateOverlayButton = document.getElementById('activate-overlay-btn');
 const resolutionSelect = document.getElementById('resolution-select');
 const statusMessageElement = document.getElementById('status-message');
-const scanResultsArea = document.getElementById('scan-results');
 const lastUpdatedDateElement = document.getElementById('last-updated-date');
 const exportFailedSamplesButton = document.getElementById('export-failed-samples-btn');
 const shareFeedbackExtButton = document.getElementById('share-feedback-ext-btn');
 const supportDevButton = document.getElementById('support-dev-btn');
 const supportWindrunButton = document.getElementById('support-windrun-btn');
+const themeToggleButton = document.getElementById('theme-toggle-btn');
+const systemThemeCheckbox = document.getElementById('system-theme-checkbox');
+const lightDarkToggle = document.getElementById('light-dark-toggle');
+const manualThemeControlsDiv = document.querySelector('.manual-theme-controls');
+
 
 // --- Module State ---
 let selectedResolution = ''; // Stores the currently selected screen resolution
+const THEMES = { SYSTEM: 'system', LIGHT: 'light', DARK: 'dark' };
+let currentUserPreference = THEMES.SYSTEM; // User's explicit choice: 'system', 'light', or 'dark'
+let currentSystemPrefersDark = false;    // Tracks the OS's preference
+
+/**
+ * Loads the user's theme choice from localStorage.
+ */
+function loadUserPreference() {
+    const storedPreference = localStorage.getItem('themeUserChoice');
+    if (storedPreference && Object.values(THEMES).includes(storedPreference)) {
+        currentUserPreference = storedPreference;
+    } else {
+        currentUserPreference = THEMES.SYSTEM; // Default to system if nothing valid is stored
+    }
+    console.log(`[Theme] Loaded user preference: ${currentUserPreference}`);
+}
+
+/**
+ * Saves the user's theme choice to localStorage.
+ * @param {string} preference - The theme preference to save (THEMES.SYSTEM, THEMES.LIGHT, THEMES.DARK).
+ */
+function saveUserPreference(preference) {
+    currentUserPreference = preference;
+    localStorage.setItem('themeUserChoice', preference);
+    console.log(`[Theme] Saved user preference: ${currentUserPreference}`);
+}
+
+/**
+ * Applies the effective theme to the UI based on user choice and system preference.
+ * Updates the state of the toggle switches.
+ */
+function applyEffectiveTheme() {
+    let useDarkMode;
+
+    if (currentUserPreference === THEMES.SYSTEM) {
+        useDarkMode = currentSystemPrefersDark;
+        if (systemThemeCheckbox) systemThemeCheckbox.checked = true;
+        if (lightDarkToggle) {
+            lightDarkToggle.checked = currentSystemPrefersDark;
+            lightDarkToggle.disabled = true;
+        }
+        if (manualThemeControlsDiv) manualThemeControlsDiv.classList.add('disabled');
+    } else { // Manual override (Light or Dark)
+        useDarkMode = (currentUserPreference === THEMES.DARK);
+        if (systemThemeCheckbox) systemThemeCheckbox.checked = false;
+        if (lightDarkToggle) {
+            lightDarkToggle.checked = useDarkMode;
+            lightDarkToggle.disabled = false;
+        }
+        if (manualThemeControlsDiv) manualThemeControlsDiv.classList.remove('disabled');
+    }
+
+    if (useDarkMode) {
+        document.body.classList.add('dark-mode');
+    } else {
+        document.body.classList.remove('dark-mode');
+    }
+    console.log(`[Theme] Effective theme applied: ${useDarkMode ? 'Dark' : 'Light'}. User Pref: ${currentUserPreference}, System Dark: ${currentSystemPrefersDark}`);
+}
 
 /**
  * Sets the enabled/disabled state of UI controls and updates button text.
@@ -19,7 +82,6 @@ let selectedResolution = ''; // Stores the currently selected screen resolution
  * @param {HTMLElement | null} [initiatingButton=null] - The button that triggered the state change, to update its text.
  */
 function setButtonsState(disabled, initiatingButton = null) {
-    // Added shareFeedbackExtButton to the list of managed buttons
     const buttonsToManage = [updateAllDataButton, activateOverlayButton, exportFailedSamplesButton, shareFeedbackExtButton];
     buttonsToManage.forEach(btn => {
         if (btn) btn.disabled = disabled;
@@ -49,8 +111,7 @@ function setButtonsState(disabled, initiatingButton = null) {
 function updateStatusMessage(message, isError = false) {
     if (statusMessageElement) {
         statusMessageElement.textContent = message;
-        // TODO: Add CSS class for error styling if desired:
-        // statusMessageElement.classList.toggle('error-message', isError);
+        statusMessageElement.classList.toggle('error-message', isError);
     }
     console.log(`[RendererStatus] ${isError ? 'Error: ' : ''}${message}`);
 }
@@ -79,6 +140,26 @@ function isOperationFinishedMessage(message) {
 if (window.electronAPI) {
     console.log('[Renderer] Electron API available. Setting up listeners.');
 
+    loadUserPreference();
+
+    // Get initial system theme and apply
+    window.electronAPI.onInitialSystemTheme(settings => {
+        console.log('[Theme] Received initial system theme settings:', settings);
+        currentSystemPrefersDark = settings.shouldUseDarkColors;
+        applyEffectiveTheme(); // Apply theme based on loaded user pref and initial system pref
+    });
+
+    // Listen for live system theme changes from main process
+    window.electronAPI.onSystemThemeUpdated(settings => {
+        console.log('[Theme] System theme updated by OS:', settings);
+        const oldSystemPrefersDark = currentSystemPrefersDark;
+        currentSystemPrefersDark = settings.shouldUseDarkColors;
+        // Only re-apply if user preference is 'system' and the system preference actually changed
+        if (currentUserPreference === THEMES.SYSTEM && oldSystemPrefersDark !== currentSystemPrefersDark) {
+            applyEffectiveTheme();
+        }
+    });
+
     // Request available resolutions on load
     window.electronAPI.getAvailableResolutions();
 
@@ -86,7 +167,7 @@ if (window.electronAPI) {
 
     window.electronAPI.onAvailableResolutions((resolutions) => {
         if (!resolutionSelect) return;
-        resolutionSelect.innerHTML = '';
+        resolutionSelect.innerHTML = ''; // Clear existing options
 
         if (resolutions && resolutions.length > 0) {
             resolutions.forEach(res => {
@@ -95,6 +176,7 @@ if (window.electronAPI) {
                 option.textContent = res;
                 resolutionSelect.appendChild(option);
             });
+            // Default to the first resolution if available
             resolutionSelect.value = resolutions[0];
             selectedResolution = resolutions[0];
             console.log(`[Renderer] Resolutions loaded. Defaulted to: ${selectedResolution}`);
@@ -107,7 +189,7 @@ if (window.electronAPI) {
             console.warn('[Renderer] No resolutions found or provided.');
             if (activateOverlayButton) activateOverlayButton.disabled = true;
         }
-        // Enable buttons that don't depend on resolution selection here
+        // Enable buttons that don't depend on resolution selection
         if (exportFailedSamplesButton) exportFailedSamplesButton.disabled = false;
         if (shareFeedbackExtButton) shareFeedbackExtButton.disabled = false;
         if (supportDevButton) supportDevButton.disabled = false;
@@ -147,16 +229,13 @@ if (window.electronAPI) {
     });
 
     window.electronAPI.onScanResults((results) => {
-        // This primarily handles errors during overlay activation or if main process sends error status for a scan
+        // This primarily handles errors during overlay activation or if main process sends error status for a scan.
         // Most detailed scan results are for the overlay window itself.
         console.log('[Renderer] Scan-related message from main:', results);
         if (results && results.error) {
             setButtonsState(false); // Re-enable UI on error
             const errorMessage = `Overlay/Scan Error: ${results.error}\nTarget Resolution: ${results.resolution || selectedResolution || 'N/A'}`;
             updateStatusMessage(errorMessage, true);
-            if (scanResultsArea) { // Display in a dedicated area if it exists
-                scanResultsArea.textContent = errorMessage;
-            }
         }
         // Non-error scan results are typically handled by overlayRenderer.js
     });
@@ -165,9 +244,6 @@ if (window.electronAPI) {
         console.log('[Renderer] Overlay closed signal received. Re-enabling main window UI.');
         setButtonsState(false);
         updateStatusMessage('Ready. Overlay closed.');
-        if (scanResultsArea) {
-            scanResultsArea.textContent = 'Scan results (or errors) will appear here...'; // Reset area
-        }
     });
 
     // --- DOM Event Listeners (User Interactions) ---
@@ -197,7 +273,6 @@ if (window.electronAPI) {
             }
             console.log(`[Renderer] "Activate Overlay" button clicked for resolution: ${selectedResolution}`);
             updateStatusMessage(`Activating overlay for ${selectedResolution}...`);
-            if (scanResultsArea) scanResultsArea.textContent = 'Waiting for overlay activation...';
             setButtonsState(true, activateOverlayButton);
             window.electronAPI.activateOverlay(selectedResolution);
         });
@@ -215,6 +290,7 @@ if (window.electronAPI) {
     if (shareFeedbackExtButton) {
         shareFeedbackExtButton.addEventListener('click', () => {
             console.log('[Renderer] "Share Feedback / Samples" button clicked.');
+            // The URL is hardcoded here as per the original design, main process handles opening.
             window.electronAPI.openExternalLink('https://forms.gle/9hwyTkMNDubMppW1A');
         });
     }
@@ -233,6 +309,31 @@ if (window.electronAPI) {
         });
     }
 
+    if (systemThemeCheckbox) {
+        systemThemeCheckbox.addEventListener('change', () => {
+            if (systemThemeCheckbox.checked) {
+                saveUserPreference(THEMES.SYSTEM);
+            } else {
+                // When unchecking "Use System", switch to manual mode based on current light/dark toggle state
+                saveUserPreference(lightDarkToggle.checked ? THEMES.DARK : THEMES.LIGHT);
+            }
+            applyEffectiveTheme();
+        });
+    }
+
+    if (lightDarkToggle) {
+        lightDarkToggle.addEventListener('click', () => { // Listen to click for immediate visual feedback before change fires
+            if (lightDarkToggle.disabled) return; // Should not happen if UI state is correct but good safeguard
+
+            // If system preference was active, clicking this means user wants manual control
+            if (currentUserPreference === THEMES.SYSTEM) {
+                if (systemThemeCheckbox) systemThemeCheckbox.checked = false; // Uncheck system pref
+            }
+            saveUserPreference(lightDarkToggle.checked ? THEMES.DARK : THEMES.LIGHT);
+            applyEffectiveTheme();
+        });
+    }
+
 } else {
     // Critical error: Electron API not exposed
     console.error('[Renderer] FATAL: Electron API not found. Preload script might not be configured or failed.');
@@ -244,4 +345,8 @@ if (window.electronAPI) {
     if (shareFeedbackExtButton) shareFeedbackExtButton.disabled = true;
     if (supportDevButton) supportDevButton.disabled = true;
     if (supportWindrunButton) supportWindrunButton.disabled = true;
+    document.body.classList.remove('dark-mode'); // Default to light
+    if (systemThemeCheckbox) systemThemeCheckbox.disabled = true;
+    if (lightDarkToggle) lightDarkToggle.disabled = true;
+    if (manualThemeControlsDiv) manualThemeControlsDiv.classList.add('disabled');
 }
