@@ -4,7 +4,8 @@
 
 **This project is currently focused on Windows.** macOS/Linux support may be considered in the future.
 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/tiarinhino) ## Features
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/tiarinhino) 
+## Features
 
 * **Real-time Data Insights During Draft:**
     * Displays hero and ability win rates upon hover.
