@@ -137,3 +137,6 @@ dist
 
 # js
 package-lock.json
+
+# configuration files
+**/app-config.js

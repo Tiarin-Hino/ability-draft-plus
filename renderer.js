@@ -12,6 +12,9 @@ const themeToggleButton = document.getElementById('theme-toggle-btn');
 const systemThemeCheckbox = document.getElementById('system-theme-checkbox');
 const lightDarkToggle = document.getElementById('light-dark-toggle');
 const manualThemeControlsDiv = document.querySelector('.manual-theme-controls');
+const submitNewResolutionButton = document.getElementById('submit-new-resolution-btn');
+const newResolutionSection = document.getElementById('new-resolution-request-section');
+const newResolutionStatusElement = document.getElementById('new-resolution-status');
 
 
 // --- Module State ---
@@ -135,10 +138,36 @@ function isOperationFinishedMessage(message) {
     return keywords.some(keyword => lowerMessage.includes(keyword));
 }
 
+// Function to set visibility of the "New Resolution Request" section
+const configureResolutionRequestUI = async () => {
+    if (newResolutionSection) { // Check if the section element exists
+        try {
+            const isPackaged = await window.electronAPI.isAppPackaged();
+            if (isPackaged) {
+                // In a packaged app, the section should be visible
+                console.log('[Renderer] App is packaged. "Submit New Resolution Layout" section will be visible.');
+                newResolutionSection.style.display = 'block'; // Or remove this line if 'block' is the CSS default
+            } else {
+                // In development (not packaged), hide the entire section
+                console.log('[Renderer] App is not packaged. Hiding "Submit New Resolution Layout" section.');
+                newResolutionSection.style.display = 'none';
+            }
+        } catch (error) {
+            console.error('[Renderer] Error determining if app is packaged:', error);
+            // Fallback: hide the section if there's an error, to be safe in dev
+            newResolutionSection.style.display = 'none';
+        }
+    } else {
+        console.warn('[Renderer] "new-resolution-request-section" element not found.');
+    }
+};
+
 
 // --- Initialization and Electron API Setup ---
 if (window.electronAPI) {
     console.log('[Renderer] Electron API available. Setting up listeners.');
+
+    configureResolutionRequestUI();
 
     loadUserPreference();
 
@@ -333,6 +362,50 @@ if (window.electronAPI) {
             applyEffectiveTheme();
         });
     }
+
+    if (submitNewResolutionButton) {
+        submitNewResolutionButton.addEventListener('click', () => {
+            console.log('[Renderer] "Submit New Resolution Layout" button clicked.');
+
+            const confirmed = confirm(
+                "This will take a full-screen snapshot of your primary display to submit your current screen layout for a new resolution.\n\n" +
+                "Please ensure:\n" +
+                "1. Dota 2 is running.\n" +
+                "2. You are in the Ability Draft phase.\n" +
+                "3. The game is at the resolution you want to request.\n\n" +
+                "In order to get clean screenshot please remove mouse to the side of the screen after pressing OK\n\n" +
+                "Proceed with snapshot and submission?"
+            );
+
+            if (confirmed) {
+                if (newResolutionStatusElement) {
+                    newResolutionStatusElement.textContent = 'Capturing screen and preparing submission...';
+                    newResolutionStatusElement.style.display = 'block';
+                    newResolutionStatusElement.classList.remove('error-message');
+                }
+                setButtonsState(true, submitNewResolutionButton);
+                window.electronAPI.submitNewResolutionSnapshot();
+            } else {
+                if (newResolutionStatusElement) {
+                    newResolutionStatusElement.textContent = 'Resolution submission cancelled.';
+                    newResolutionStatusElement.style.display = 'block';
+                    newResolutionStatusElement.classList.remove('error-message');
+                }
+            }
+        });
+    }
+
+    window.electronAPI.onSubmitNewResolutionStatus((status) => {
+        console.log('[Renderer] New Resolution Submission Status:', status);
+        if (newResolutionStatusElement) {
+            newResolutionStatusElement.textContent = status.message;
+            newResolutionStatusElement.style.display = 'block';
+            newResolutionStatusElement.classList.toggle('error-message', status.error);
+        }
+        if (status.error || !status.inProgress) {
+            setButtonsState(false);
+        }
+    });
 
 } else {
     // Critical error: Electron API not exposed

@@ -1,15 +1,16 @@
 {
   "name": "ability-draft-plus",
-  "version": "1.0.1",
+  "version": "1.1.1",
   "description": "Dota 2 Ability Draft Overlay with ML-powered ability recognition",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "prepare-config": "node scripts/prepare-app-config.js",
     "rebuild-sqlite3": "electron-rebuild -f -w better-sqlite3",
     "rebuild-sharp": "electron-rebuild -f -w sharp",
     "rebuild-tensorflow": "electron-rebuild -f -w @tensorflow/tfjs-node -v 31.7.7",
     "rebuild-all": "npm run rebuild-sqlite3 && npm run rebuild-sharp && npm run rebuild-tensorflow",
-    "dist": "npm run rebuild-all && electron-builder",
+    "dist": "npm run prepare-config && npm run rebuild-all && electron-builder",
     "postinstall": "patch-package"
   },
   "keywords": [
