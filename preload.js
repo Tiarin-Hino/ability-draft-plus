@@ -200,4 +200,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
    * @returns {Promise<{shouldUseDarkColors: boolean}>}
    */
   getCurrentSystemTheme: () => ipcRenderer.invoke('get-current-system-theme'),
+
+  /**
+   * Sends a request to the main process to capture the current screen
+   * and (eventually) submit it as a new resolution layout.
+   */
+  submitNewResolutionSnapshot: () => ipcRenderer.send('submit-new-resolution-snapshot'),
+
+  /**
+   * Registers a callback function to be invoked when the main process sends status updates
+   * about the "Submit New Resolution Snapshot" operation.
+   * @param {(status: {message: string, error: boolean, inProgress: boolean}) => void} callback
+   */
+  onSubmitNewResolutionStatus: (callback) => ipcRenderer.on('submit-new-resolution-status', (_event, status) => callback(status)),
+
+  /**
+   * Checks if the application is currently running in a packaged state.
+   * @returns {Promise<boolean>} True if packaged, false otherwise.
+   */
+  isAppPackaged: () => ipcRenderer.invoke('is-app-packaged'),
 });

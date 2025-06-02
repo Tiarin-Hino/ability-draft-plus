@@ -7,6 +7,7 @@ const Database = require('better-sqlite3');
 const archiver = require('archiver');
 const screenshotDesktop = require('screenshot-desktop');
 const sharp = require('sharp');
+const axios = require('axios');
 
 // --- Local Modules ---
 const setupDatabase = require('./src/database/setupDatabase');
@@ -82,6 +83,46 @@ let identifiedHeroModelsCache = null; // Caches identified hero models from the 
 
 // --- Utility Functions ---
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+let PROD_API_URL, PROD_CLIENT_KEY, PROD_SHARED_SECRET;
+
+if (app.isPackaged) {
+  try {
+    const appConfig = require('./src/app-config.js');
+    PROD_API_URL = appConfig.API_ENDPOINT_URL;
+    PROD_CLIENT_KEY = appConfig.CLIENT_API_KEY;
+    PROD_SHARED_SECRET = appConfig.CLIENT_SHARED_SECRET;
+    console.log('[Main] Loaded production config from app-config.js');
+  } catch (e) {
+    console.error('[Main] FATAL: Could not load app-config.js in packaged app!', e);
+  }
+}
+
+if (!app.isPackaged) {
+  try {
+    require('dotenv').config();
+    console.log('[Main] Loaded .env file for development.');
+  } catch (e) {
+    console.warn('[Main] Could not load .env file for development:', e.message);
+  }
+}
+
+const API_ENDPOINT_URL = app.isPackaged ? PROD_API_URL : (process.env.API_ENDPOINT_URL || PROD_API_URL);
+const CLIENT_API_KEY = app.isPackaged ? PROD_CLIENT_KEY : (process.env.CLIENT_API_KEY || PROD_CLIENT_KEY);
+const CLIENT_SHARED_SECRET = app.isPackaged ? PROD_SHARED_SECRET : (process.env.CLIENT_SHARED_SECRET || PROD_SHARED_SECRET);
+
+if (!API_ENDPOINT_URL || !CLIENT_API_KEY || !CLIENT_SHARED_SECRET) {
+  console.error("CRITICAL ERROR: API Configuration is missing. Please check .env for dev or app-config.js generation for prod.");
+}
+
+// Function to generate HMAC (place it somewhere accessible)
+function generateHmacSignature(sharedSecret, httpMethod, requestPath, timestamp, nonce, apiKey) {
+  const stringToSign = `${httpMethod}\n${requestPath}\n${timestamp}\n${nonce}\n${apiKey}`;
+  return crypto.createHmac('sha256', sharedSecret)
+    .update(stringToSign)
+    .digest('hex');
+}
+
 
 /**
  * Sends status updates to a specific webContents target.
@@ -395,6 +436,10 @@ app.on('will-quit', () => {
 });
 
 // --- IPC Handlers ---
+
+ipcMain.handle('is-app-packaged', () => {
+  return app.isPackaged;
+});
 
 ipcMain.handle('get-current-system-theme', async () => {
   return { shouldUseDarkColors: nativeTheme.shouldUseDarkColors };
@@ -1120,6 +1165,106 @@ ipcMain.on('export-failed-samples', async (event) => {
     } else {
       console.error('[MainExport] Error exporting failed samples:', error);
       sendStatus(`Export Error: ${error.message}`, true, false);
+    }
+  }
+});
+
+ipcMain.on('submit-new-resolution-snapshot', async (event) => {
+  const sendStatus = (message, error = false, inProgress = true) => {
+    if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
+      mainWindow.webContents.send('submit-new-resolution-status', { message, error, inProgress });
+    } else if (!inProgress) {
+      console.log(`[Main] submit-new-resolution-status (mainWindow gone): ${message}`);
+    }
+  };
+
+  console.log('[Main] Received request to submit new resolution snapshot.');
+  let wasMainWindowVisible = false;
+
+  try {
+    // 1. Determine current primary screen resolution
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const { width, height } = primaryDisplay.size;
+    const scaleFactor = primaryDisplay.scaleFactor;
+    const resolutionString = `${width}x${height}`;
+    console.log(`[Main] Current primary display resolution: ${resolutionString}, Scale Factor: ${scaleFactor}`);
+
+    // 2. Hide Control Panel if visible and add delay
+    if (mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible()) {
+      wasMainWindowVisible = true;
+      sendStatus('Hiding control panel for screenshot...', false, true);
+      mainWindow.hide();
+      await delay(2000); // 2-second delay for the window to hide
+    } else {
+      await delay(100);
+    }
+
+    // 3. Take a full-screen screenshot
+    sendStatus('Capturing screen...', false, true);
+    const screenshotBuffer = await screenshotDesktop({ format: 'png' }); //
+    console.log(`[Main] Screenshot taken, buffer size: ${screenshotBuffer.length} bytes.`);
+
+    // 4. API Call (existing logic)
+    const timestamp = new Date().toISOString();
+    const nonce = crypto.randomBytes(16).toString('hex');
+    const httpMethod = 'POST';
+    const requestPath = '/resolution-request';
+
+    const signature = generateHmacSignature(
+      CLIENT_SHARED_SECRET,
+      httpMethod,
+      requestPath,
+      timestamp,
+      nonce,
+      CLIENT_API_KEY
+    );
+
+    const headers = {
+      'Content-Type': 'image/png',
+      'x-resolution-string': resolutionString,
+      'x-scale-factor': scaleFactor.toString(),
+      'x-api-key': CLIENT_API_KEY,
+      'x-request-timestamp': timestamp,
+      'x-nonce': nonce,
+      'x-signature': signature
+    };
+
+    sendStatus('Submitting screenshot to API with security headers...', false, true);
+    console.log(`[Main] Sending screenshot for ${resolutionString} with signature.`);
+    console.log(`[Main] Headers being sent:`, JSON.stringify(headers, null, 2));
+
+
+    const response = await axios.post(API_ENDPOINT_URL, screenshotBuffer, {
+      headers: headers,
+      responseType: 'json',
+    });
+
+    console.log('[Main] API Response:', response.data);
+    if (response.status === 200 && response.data.message) {
+      sendStatus(response.data.message, false, false);
+    } else {
+      throw new Error(response.data.error || `API returned status ${response.status}`);
+    }
+
+  } catch (error) {
+    console.error('[Main] Error processing new resolution snapshot:', error);
+    let errorMessage = 'Failed to process/submit snapshot.';
+    if (error.response && error.response.data && (error.response.data.error || error.response.data.message)) {
+      errorMessage = `API Error: ${error.response.data.error || error.response.data.message}`;
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    sendStatus(errorMessage, true, false);
+  } finally {
+    // 5. Show Control Panel again if it was hidden by this process
+    if (wasMainWindowVisible && mainWindow && !mainWindow.isDestroyed()) {
+      if (!mainWindow.isVisible()) {
+        mainWindow.show();
+      }
+      if (!mainWindow.isFocused()) {
+        mainWindow.focus();
+      }
+      console.log('[Main] Control panel should be visible and focused if it was hidden.');
     }
   }
 });
