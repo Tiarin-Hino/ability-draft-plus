@@ -219,4 +219,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
    * @returns {Promise<boolean>} True if packaged, false otherwise.
    */
   isAppPackaged: () => ipcRenderer.invoke('is-app-packaged'),
+
+  /**
+   * Sends a request to the main process to zip and upload failed samples.
+   */
+  uploadFailedSamples: () => ipcRenderer.send('upload-failed-samples'),
+
+  /**
+   * Registers a callback for status updates during failed samples upload.
+   * @param {(status: {message: string, error: boolean, inProgress: boolean}) => void} callback
+   */
+  onUploadFailedSamplesStatus: (callback) => ipcRenderer.on('upload-failed-samples-status', (_event, status) => callback(status)),
+
 });
