@@ -437,6 +437,102 @@ app.on('will-quit', () => {
 
 // --- IPC Handlers ---
 
+ipcMain.on('upload-failed-samples', async (event) => {
+  const sendStatus = (message, error = false, inProgress = true) => {
+    if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
+      mainWindow.webContents.send('upload-failed-samples-status', { message, error, inProgress });
+    }
+  };
+
+  const userDataPath = app.getPath('userData');
+  const failedSamplesDir = path.join(userDataPath, 'failed-samples');
+
+  sendStatus('Starting failed samples upload process...', false, true);
+  console.log('[Main] Received request to upload failed samples.');
+
+  try {
+    await fs.access(failedSamplesDir);
+    const imageFiles = (await fs.readdir(failedSamplesDir)).filter(f => f.toLowerCase().endsWith('.png'));
+
+    if (imageFiles.length === 0) {
+      sendStatus('No image files found in failed-samples directory to upload.', false, false);
+      return;
+    }
+
+    sendStatus(`Found ${imageFiles.length} samples. Zipping...`, false, true);
+
+    const archive = archiver('zip', { zlib: { level: 9 } });
+    const buffers = [];
+
+    // Create a promise to handle the archiver stream completion
+    const archivePromise = new Promise((resolve, reject) => {
+      archive.on('data', (buffer) => buffers.push(buffer));
+      archive.on('end', () => resolve(Buffer.concat(buffers)));
+      archive.on('error', (err) => reject(err));
+    });
+
+    for (const fileName of imageFiles) {
+      const filePath = path.join(failedSamplesDir, fileName);
+      archive.file(filePath, { name: fileName });
+    }
+    archive.finalize();
+
+    const zipBuffer = await archivePromise;
+    console.log(`[Main] Zipping complete. Zip size: ${zipBuffer.length} bytes.`);
+    sendStatus('Zip complete. Preparing to upload...', false, true);
+
+    const timestamp = new Date().toISOString();
+    const nonce = crypto.randomBytes(16).toString('hex');
+    const httpMethod = 'POST';
+    const requestPath = '/failed-samples-upload';
+
+    const signature = generateHmacSignature(
+      CLIENT_SHARED_SECRET,
+      httpMethod,
+      requestPath,
+      timestamp,
+      nonce,
+      CLIENT_API_KEY
+    );
+
+    const headers = {
+      'Content-Type': 'application/zip',
+      'x-api-key': CLIENT_API_KEY,
+      'x-request-timestamp': timestamp,
+      'x-nonce': nonce,
+      'x-signature': signature,
+    };
+
+    console.log(`[Main] Uploading failed samples to ${API_ENDPOINT_URL}/failed-samples-upload`);
+    console.log(`[Main] Headers for failed samples:`, JSON.stringify(headers, null, 2));
+
+
+    const response = await axios.post(API_ENDPOINT_URL + '/failed-samples-upload', zipBuffer, {
+      headers: headers,
+      responseType: 'json',
+    });
+
+    console.log('[Main] Failed Samples API Response:', response.data);
+    if (response.status === 200 && response.data.message) {
+      sendStatus(response.data.message, false, false);
+    } else {
+      throw new Error(response.data.error || `API returned status ${response.status}`);
+    }
+
+  } catch (error) {
+    let errorMessage = 'Failed to upload failed samples.';
+    if (error.code === 'ENOENT' && error.path === failedSamplesDir) {
+      errorMessage = 'Failed samples directory not found. No samples to upload.';
+    } else if (error.response && error.response.data && (error.response.data.error || error.response.data.message)) {
+      errorMessage = `API Error: ${error.response.data.error || error.response.data.message}`;
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    console.error('[Main] Error uploading failed samples:', error);
+    sendStatus(errorMessage, true, false);
+  }
+});
+
 ipcMain.handle('is-app-packaged', () => {
   return app.isPackaged;
 });
@@ -1234,7 +1330,7 @@ ipcMain.on('submit-new-resolution-snapshot', async (event) => {
     console.log(`[Main] Headers being sent:`, JSON.stringify(headers, null, 2));
 
 
-    const response = await axios.post(API_ENDPOINT_URL, screenshotBuffer, {
+    const response = await axios.post(API_ENDPOINT_URL + '/failed-samples-upload', screenshotBuffer, {
       headers: headers,
       responseType: 'json',
     });

@@ -5,6 +5,8 @@ const resolutionSelect = document.getElementById('resolution-select');
 const statusMessageElement = document.getElementById('status-message');
 const lastUpdatedDateElement = document.getElementById('last-updated-date');
 const exportFailedSamplesButton = document.getElementById('export-failed-samples-btn');
+const uploadFailedSamplesButton = document.getElementById('upload-failed-samples-btn');
+const failedSamplesUploadStatusElement = document.getElementById('failed-samples-upload-status');
 const shareFeedbackExtButton = document.getElementById('share-feedback-ext-btn');
 const supportDevButton = document.getElementById('support-dev-btn');
 const supportWindrunButton = document.getElementById('support-windrun-btn');
@@ -139,7 +141,7 @@ function isOperationFinishedMessage(message) {
 }
 
 // Function to set visibility of the "New Resolution Request" section
-const configureResolutionRequestUI = async () => {
+const initConditionalUI = async () => {
     if (newResolutionSection) { // Check if the section element exists
         try {
             const isPackaged = await window.electronAPI.isAppPackaged();
@@ -160,6 +162,40 @@ const configureResolutionRequestUI = async () => {
     } else {
         console.warn('[Renderer] "new-resolution-request-section" element not found.');
     }
+
+    if (uploadFailedSamplesButton) {
+        try {
+            const isPackaged = await window.electronAPI.isAppPackaged();
+            if (isPackaged) {
+                uploadFailedSamplesButton.style.display = 'inline-flex';
+            } else {
+                console.log('[Renderer] App is not packaged. Hiding "Upload Failed Samples" button.');
+                uploadFailedSamplesButton.style.display = 'none';
+            }
+        } catch (error) {
+            console.error("[Renderer] Error checking if app is packaged for upload button:", error);
+            uploadFailedSamplesButton.style.display = 'none';
+        }
+    } else {
+        console.warn('[Renderer] "upload-failed-samples-btn" element not found.');
+    }
+
+    if (exportFailedSamplesButton) {
+        try {
+            const isPackaged = await window.electronAPI.isAppPackaged();
+            if (!isPackaged) {
+                exportFailedSamplesButton.style.display = 'inline-flex';
+            } else {
+                console.log('[Renderer] App is not packaged. Hiding "Export Failed Samples" button.');
+                exportFailedSamplesButton.style.display = 'none';
+            }
+        } catch (error) {
+            console.error("[Renderer] Error checking if app is packaged for export button:", error);
+            exportFailedSamplesButton.style.display = 'none';
+        }
+    } else {
+        console.warn('[Renderer] "upload-failed-samples-btn" element not found.');
+    }
 };
 
 
@@ -167,9 +203,48 @@ const configureResolutionRequestUI = async () => {
 if (window.electronAPI) {
     console.log('[Renderer] Electron API available. Setting up listeners.');
 
-    configureResolutionRequestUI();
+    initConditionalUI();
 
     loadUserPreference();
+
+    if (uploadFailedSamplesButton) {
+        uploadFailedSamplesButton.addEventListener('click', () => {
+            console.log('[Renderer] "Upload Failed Samples" button clicked.');
+            const confirmed = confirm(
+                "This will zip all images in your 'failed-samples' directory and upload them for model improvement analysis.\n\n" +
+                "Proceed with zipping and uploading?"
+            );
+
+            if (confirmed) {
+                if (failedSamplesUploadStatusElement) {
+                    failedSamplesUploadStatusElement.textContent = 'Zipping and preparing upload...';
+                    failedSamplesUploadStatusElement.style.display = 'block';
+                    failedSamplesUploadStatusElement.classList.remove('error-message');
+                }
+                setButtonsState(true, uploadFailedSamplesButton);
+                window.electronAPI.uploadFailedSamples();
+            } else {
+                if (failedSamplesUploadStatusElement) {
+                    failedSamplesUploadStatusElement.textContent = 'Upload cancelled.';
+                    failedSamplesUploadStatusElement.style.display = 'block';
+                    failedSamplesUploadStatusElement.classList.remove('error-message');
+                }
+            }
+        });
+    }
+
+    // Listener for status updates from the failed samples upload process
+    window.electronAPI.onUploadFailedSamplesStatus((status) => {
+        console.log('[Renderer] Failed Samples Upload Status:', status);
+        if (failedSamplesUploadStatusElement) {
+            failedSamplesUploadStatusElement.textContent = status.message;
+            failedSamplesUploadStatusElement.style.display = 'block';
+            failedSamplesUploadStatusElement.classList.toggle('error-message', status.error);
+        }
+        if (status.error || !status.inProgress) {
+            setButtonsState(false);
+        }
+    });
 
     // Get initial system theme and apply
     window.electronAPI.onInitialSystemTheme(settings => {
