@@ -1,6 +1,6 @@
 {
   "name": "ability-draft-plus",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Dota 2 Ability Draft Overlay with ML-powered ability recognition",
   "main": "main.js",
   "scripts": {
