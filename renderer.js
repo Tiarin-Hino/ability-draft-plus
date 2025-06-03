@@ -14,16 +14,76 @@ const themeToggleButton = document.getElementById('theme-toggle-btn');
 const systemThemeCheckbox = document.getElementById('system-theme-checkbox');
 const lightDarkToggle = document.getElementById('light-dark-toggle');
 const manualThemeControlsDiv = document.querySelector('.manual-theme-controls');
-const submitNewResolutionButton = document.getElementById('submit-new-resolution-btn');
 const newResolutionSection = document.getElementById('new-resolution-request-section');
+const submitNewResolutionButton = document.getElementById('submit-new-resolution-btn');
 const newResolutionStatusElement = document.getElementById('new-resolution-status');
-
+const customResolutionPopup = document.getElementById('custom-resolution-popup');
+const customPopupMessage = document.getElementById('custom-popup-message');
+const customPopupSubmitLayoutBtn = document.getElementById('custom-popup-submit-layout-btn');
+const customPopupChangeResBtn = document.getElementById('custom-popup-change-res-btn');
 
 // --- Module State ---
 let selectedResolution = ''; // Stores the currently selected screen resolution
 const THEMES = { SYSTEM: 'system', LIGHT: 'light', DARK: 'dark' };
 let currentUserPreference = THEMES.SYSTEM; // User's explicit choice: 'system', 'light', or 'dark'
-let currentSystemPrefersDark = false;    // Tracks the OS's preference
+let currentSystemPrefersDark = false; // Tracks the OS's preference
+let systemDisplayInfo = null; // To store system display info
+
+/**
+ * Overrides setButtonsState to temporarily also consider other controls for a modal state.
+ * This makes the resolution mismatch popup modal.
+ * @param {boolean} disabled - True to disable controls, false to enable.
+ */
+function setGlobalControlsDisabledForModal(disabled) {
+    const commonButtons = [
+        updateAllDataButton, activateOverlayButton, exportFailedSamplesButton,
+        shareFeedbackExtButton, uploadFailedSamplesButton
+    ];
+    const otherControls = [
+        resolutionSelect, systemThemeCheckbox, lightDarkToggle,
+        supportDevButton, supportWindrunButton,
+        submitNewResolutionButton
+    ];
+
+    commonButtons.forEach(btn => {
+        if (btn) btn.disabled = disabled;
+    });
+    otherControls.forEach(control => {
+        if (control) control.disabled = disabled;
+    });
+
+    if (manualThemeControlsDiv) {
+        const isSystemTheme = systemThemeCheckbox ? systemThemeCheckbox.checked : true;
+        const shouldDisableManualTheme = disabled || isSystemTheme;
+        manualThemeControlsDiv.classList.toggle('disabled', shouldDisableManualTheme);
+        if (lightDarkToggle) {
+            lightDarkToggle.disabled = shouldDisableManualTheme;
+        }
+    }
+}
+
+/**
+ * Shows the custom resolution mismatch pop-up.
+ * @param {string} systemRes - The user's detected system resolution string.
+ * @param {string} defaultSelectedRes - The resolution string that was defaulted to in the dropdown.
+ */
+function showResolutionMismatchPopup(systemRes, defaultSelectedRes) {
+    if (customResolutionPopup && customPopupMessage) {
+        customPopupMessage.textContent = `Your resolution ${systemRes} is not supported yet. Please change resolution to a supported one, or submit your resolution to be added.`;
+        customResolutionPopup.classList.add('visible');
+        setGlobalControlsDisabledForModal(true);
+    }
+}
+
+/**
+ * Hides the custom resolution mismatch pop-up.
+ */
+function hideResolutionMismatchPopup() {
+    if (customResolutionPopup) {
+        customResolutionPopup.classList.remove('visible');
+        setGlobalControlsDisabledForModal(false);
+    }
+}
 
 /**
  * Loads the user's theme choice from localStorage.
@@ -204,34 +264,19 @@ if (window.electronAPI) {
     console.log('[Renderer] Electron API available. Setting up listeners.');
 
     initConditionalUI();
-
     loadUserPreference();
 
-    if (uploadFailedSamplesButton) {
-        uploadFailedSamplesButton.addEventListener('click', () => {
-            console.log('[Renderer] "Upload Failed Samples" button clicked.');
-            const confirmed = confirm(
-                "This will zip all images in your 'failed-samples' directory and upload them for model improvement analysis.\n\n" +
-                "Proceed with zipping and uploading?"
-            );
-
-            if (confirmed) {
-                if (failedSamplesUploadStatusElement) {
-                    failedSamplesUploadStatusElement.textContent = 'Zipping and preparing upload...';
-                    failedSamplesUploadStatusElement.style.display = 'block';
-                    failedSamplesUploadStatusElement.classList.remove('error-message');
-                }
-                setButtonsState(true, uploadFailedSamplesButton);
-                window.electronAPI.uploadFailedSamples();
-            } else {
-                if (failedSamplesUploadStatusElement) {
-                    failedSamplesUploadStatusElement.textContent = 'Upload cancelled.';
-                    failedSamplesUploadStatusElement.style.display = 'block';
-                    failedSamplesUploadStatusElement.classList.remove('error-message');
-                }
-            }
+    window.electronAPI.getSystemDisplayInfo()
+        .then(info => {
+            systemDisplayInfo = info;
+            console.log('[Renderer] System Display Info received:', systemDisplayInfo);
+            window.electronAPI.getAvailableResolutions();
+        })
+        .catch(error => {
+            console.error('[Renderer] Error getting system display info:', error);
+            updateStatusMessage('Could not retrieve system display info. Please select resolution manually.', true);
+            window.electronAPI.getAvailableResolutions();
         });
-    }
 
     // Listener for status updates from the failed samples upload process
     window.electronAPI.onUploadFailedSamplesStatus((status) => {
@@ -271,7 +316,8 @@ if (window.electronAPI) {
 
     window.electronAPI.onAvailableResolutions((resolutions) => {
         if (!resolutionSelect) return;
-        resolutionSelect.innerHTML = ''; // Clear existing options
+        resolutionSelect.innerHTML = '';
+        let resolutionEffectivelySelected = false;
 
         if (resolutions && resolutions.length > 0) {
             resolutions.forEach(res => {
@@ -280,24 +326,51 @@ if (window.electronAPI) {
                 option.textContent = res;
                 resolutionSelect.appendChild(option);
             });
-            // Default to the first resolution if available
-            resolutionSelect.value = resolutions[0];
-            selectedResolution = resolutions[0];
-            console.log(`[Renderer] Resolutions loaded. Defaulted to: ${selectedResolution}`);
-            if (activateOverlayButton) activateOverlayButton.disabled = false;
+
+            if (systemDisplayInfo && systemDisplayInfo.resolutionString) {
+                const systemResString = systemDisplayInfo.resolutionString;
+                if (resolutions.includes(systemResString)) {
+                    resolutionSelect.value = systemResString;
+                    selectedResolution = systemResString;
+                    updateStatusMessage(`System resolution ${systemResString} automatically selected.`);
+                    resolutionEffectivelySelected = true;
+                } else {
+                    resolutionSelect.value = resolutions[0];
+                    selectedResolution = resolutions[0];
+                    showResolutionMismatchPopup(systemResString, selectedResolution);
+                }
+            } else {
+                resolutionSelect.value = resolutions[0];
+                selectedResolution = resolutions[0];
+                updateStatusMessage(`Defaulted to ${selectedResolution}. Please verify or select your Dota 2 resolution.`);
+                resolutionEffectivelySelected = true;
+            }
         } else {
             const option = document.createElement('option');
             option.value = "";
-            option.textContent = "No resolutions found";
+            option.textContent = "No resolutions configured";
             resolutionSelect.appendChild(option);
-            console.warn('[Renderer] No resolutions found or provided.');
-            if (activateOverlayButton) activateOverlayButton.disabled = true;
+            selectedResolution = "";
+
+            let errorMsg = "No supported resolutions found. ";
+            if (systemDisplayInfo && systemDisplayInfo.resolutionString) {
+                errorMsg += `Your system resolution ${systemDisplayInfo.resolutionString} is also not supported. `;
+            }
+            errorMsg += "Please use 'Submit Current Screen Layout'.";
+            updateStatusMessage(errorMsg, true);
+            resolutionEffectivelySelected = false;
         }
-        // Enable buttons that don't depend on resolution selection
-        if (exportFailedSamplesButton) exportFailedSamplesButton.disabled = false;
+
+        if (activateOverlayButton) {
+            activateOverlayButton.disabled = !selectedResolution || (customResolutionPopup && customResolutionPopup.classList.contains('visible'));
+        }
+
+        if (exportFailedSamplesButton && exportFailedSamplesButton.style.display !== 'none') exportFailedSamplesButton.disabled = false;
+        if (uploadFailedSamplesButton && uploadFailedSamplesButton.style.display !== 'none') uploadFailedSamplesButton.disabled = false;
         if (shareFeedbackExtButton) shareFeedbackExtButton.disabled = false;
         if (supportDevButton) supportDevButton.disabled = false;
         if (supportWindrunButton) supportWindrunButton.disabled = false;
+        if (submitNewResolutionButton && newResolutionSection && newResolutionSection.style.display !== 'none') submitNewResolutionButton.disabled = false;
     });
 
     window.electronAPI.onUpdateStatus((message) => {
@@ -352,11 +425,79 @@ if (window.electronAPI) {
 
     // --- DOM Event Listeners (User Interactions) ---
 
+    if (customPopupChangeResBtn) {
+        customPopupChangeResBtn.addEventListener('click', () => {
+            hideResolutionMismatchPopup();
+            if (resolutionSelect) {
+                resolutionSelect.focus();
+                updateStatusMessage('Please select a supported resolution from the dropdown.');
+            }
+            if (activateOverlayButton) {
+                activateOverlayButton.disabled = !selectedResolution;
+            }
+        });
+    }
+
+    if (uploadFailedSamplesButton) {
+        uploadFailedSamplesButton.addEventListener('click', () => {
+            console.log('[Renderer] "Upload Failed Samples" button clicked.');
+            const confirmed = confirm(
+                "This will zip all images in your 'failed-samples' directory and upload them for model improvement analysis.\n\n" +
+                "Proceed with zipping and uploading?"
+            );
+
+            if (confirmed) {
+                if (failedSamplesUploadStatusElement) {
+                    failedSamplesUploadStatusElement.textContent = 'Zipping and preparing upload...';
+                    failedSamplesUploadStatusElement.style.display = 'block';
+                    failedSamplesUploadStatusElement.classList.remove('error-message');
+                }
+                setButtonsState(true, uploadFailedSamplesButton);
+                window.electronAPI.uploadFailedSamples();
+            } else {
+                if (failedSamplesUploadStatusElement) {
+                    failedSamplesUploadStatusElement.textContent = 'Upload cancelled.';
+                    failedSamplesUploadStatusElement.style.display = 'block';
+                    failedSamplesUploadStatusElement.classList.remove('error-message');
+                }
+            }
+        });
+    }
+
+    if (customPopupSubmitLayoutBtn) {
+        customPopupSubmitLayoutBtn.addEventListener('click', () => {
+            hideResolutionMismatchPopup();
+
+            if (newResolutionSection && newResolutionSection.style.display !== 'none' && submitNewResolutionButton) {
+                console.log('[Renderer] Mismatch popup "Submit Resolution" delegating to main submit button.');
+                submitNewResolutionButton.click();
+            } else {
+                console.warn('[Renderer] Mismatch popup "Submit Resolution": Main submit section not visible. User will be prompted directly.');
+                const directConfirmMessage = `Your resolution is not supported. ` +
+                    `Do you want to submit this resolution - ${systemDisplayInfo?.width || 'auto'}x${systemDisplayInfo?.height || 'auto'}?` +
+                    "\n\nPlease ensure Dota 2 is open and all abilities are loaded and not picked at the draft screen. Easiest way is to start empty Ability Draft lobby." +
+                    "\n\nMove mouse aside after clicking OK for a clean snapshot.\n\n" +
+                    "Proceed with snapshot and submission?";
+
+                const confirmed = confirm(directConfirmMessage);
+                if (confirmed) {
+                    updateStatusMessage('Capturing screen and preparing submission for new layout...', false);
+                    setButtonsState(true, null);
+                    window.electronAPI.submitNewResolutionSnapshot();
+                } else {
+                    updateStatusMessage('Layout submission cancelled by user.', false);
+                }
+            }
+        });
+    }
+
     if (resolutionSelect) {
         resolutionSelect.addEventListener('change', (event) => {
             selectedResolution = event.target.value;
             console.log(`[Renderer] Selected resolution: ${selectedResolution}`);
-            if (activateOverlayButton) activateOverlayButton.disabled = !selectedResolution;
+            if (activateOverlayButton) {
+                activateOverlayButton.disabled = !selectedResolution;
+            }
         });
     }
 
@@ -439,16 +580,23 @@ if (window.electronAPI) {
     }
 
     if (submitNewResolutionButton) {
-        submitNewResolutionButton.addEventListener('click', () => {
-            console.log('[Renderer] "Submit New Resolution Layout" button clicked.');
+        submitNewResolutionButton.addEventListener('click', async () => {
+            console.log('[Renderer] Section "Submit Current Screen Layout" button clicked.');
+
+            let currentResInfo = systemDisplayInfo;
+            if (!currentResInfo) {
+                try { currentResInfo = await window.electronAPI.getSystemDisplayInfo(); systemDisplayInfo = currentResInfo; }
+                catch (e) { console.error("Failed to get system info for confirmation", e); }
+            }
+            const resolutionString = currentResInfo ? `${currentResInfo.width}x${currentResInfo.height}` : "your current resolution";
+            const scaleFactorString = currentResInfo ? `(Display Scale: ${Math.round(currentResInfo.scaleFactor * 100)}%)` : "";
 
             const confirmed = confirm(
-                "This will take a full-screen snapshot of your primary display to submit your current screen layout for a new resolution.\n\n" +
+                `This will take a full-screen snapshot for ${resolutionString} ${scaleFactorString} to submit your current screen layout.\n\n` +
                 "Please ensure:\n" +
-                "1. Dota 2 is running.\n" +
-                "2. You are in the Ability Draft phase.\n" +
-                "3. The game is at the resolution you want to request.\n\n" +
-                "In order to get clean screenshot please remove mouse to the side of the screen after pressing OK\n\n" +
+                "1. Dota 2 is running in the Ability Draft phase.\n" +
+                `2. The game is at the resolution you want to add (${resolutionString}).\n\n` +
+                "Move mouse aside after clicking OK for a clean snapshot.\n\n" +
                 "Proceed with snapshot and submission?"
             );
 
@@ -458,7 +606,7 @@ if (window.electronAPI) {
                     newResolutionStatusElement.style.display = 'block';
                     newResolutionStatusElement.classList.remove('error-message');
                 }
-                setButtonsState(true, submitNewResolutionButton);
+                setButtonsState(true, submitNewResolutionButton); // Pass the button itself for text change
                 window.electronAPI.submitNewResolutionSnapshot();
             } else {
                 if (newResolutionStatusElement) {
@@ -472,13 +620,31 @@ if (window.electronAPI) {
 
     window.electronAPI.onSubmitNewResolutionStatus((status) => {
         console.log('[Renderer] New Resolution Submission Status:', status);
-        if (newResolutionStatusElement) {
-            newResolutionStatusElement.textContent = status.message;
-            newResolutionStatusElement.style.display = 'block';
-            newResolutionStatusElement.classList.toggle('error-message', status.error);
+        // This status can come from either the modal's submit or the section's submit
+        // Update the visible status element. If the section is visible, update its status.
+        // Otherwise, update the main status message.
+        let statusElemToUse = null;
+        if (newResolutionSection && newResolutionSection.style.display !== 'none' && newResolutionStatusElement) {
+            statusElemToUse = newResolutionStatusElement;
+        } else if (statusMessageElement) { // Fallback to main status if section is hidden
+            // Prepend context to main status message
+            // statusMessageElement.textContent = `Layout Submission: ${status.message}`;
+            // statusMessageElement.classList.toggle('error-message', status.error);
+            // updateStatusMessage handles this better.
         }
-        if (status.error || !status.inProgress) {
-            setButtonsState(false);
+
+        if (statusElemToUse) {
+            statusElemToUse.textContent = status.message;
+            statusElemToUse.style.display = 'block';
+            statusElemToUse.classList.toggle('error-message', status.error);
+        } else {
+            // If no specific status element is visible (e.g. section is hidden and mismatch popup initiated this)
+            // use the general updateStatusMessage
+            updateStatusMessage(`Layout Submission: ${status.message}`, status.error);
+        }
+
+        if (!status.inProgress) { // Operation finished
+            setButtonsState(false); // Re-enable all relevant buttons
         }
     });
 

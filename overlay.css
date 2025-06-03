@@ -383,6 +383,72 @@ body {
 }
 
 
+/* === Custom Popups === */
+.custom-popup {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1050;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
+}
+
+.custom-popup.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.custom-popup-content {
+    background-color: var(--section-bg);
+    padding: 25px 30px;
+    border-radius: 8px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.35);
+    text-align: center;
+    max-width: 420px;
+    color: var(--text-color);
+    border: 1px solid var(--hr-bg);
+}
+
+.custom-popup-message-text {
+    margin-bottom: 25px;
+    line-height: 1.7;
+    font-size: 1.05em;
+}
+
+.custom-popup-buttons {
+    display: flex;
+    justify-content: space-evenly;
+    gap: 15px;
+}
+
+.custom-popup-buttons button {
+    padding: 10px 18px;
+    font-weight: 500;
+}
+
+#custom-popup-submit-layout-btn {
+    background-color: var(--button-activate-bg);
+}
+
+#custom-popup-submit-layout-btn:hover {
+    background-color: var(--button-activate-hover-bg);
+}
+
+#custom-popup-change-res-btn {
+    background-color: var(--button-default-bg);
+}
+
+#custom-popup-change-res-btn:hover {
+    background-color: var(--button-default-hover-bg);
+}
+
 /* === Status Popups (Bottom-Right) === */
 .status-popup {
     position: fixed;
