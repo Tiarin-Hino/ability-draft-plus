@@ -231,4 +231,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
    */
   onUploadFailedSamplesStatus: (callback) => ipcRenderer.on('upload-failed-samples-status', (_event, status) => callback(status)),
 
+  /**
+   * Gets the primary display's current resolution and scale factor.
+   * @returns {Promise<{width: number, height: number, scaleFactor: number, resolutionString: string}>}
+   */
+  getSystemDisplayInfo: () => ipcRenderer.invoke('get-system-display-info'),
 });

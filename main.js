@@ -261,7 +261,7 @@ async function performFullScrape(statusCallbackWebContents) {
 function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 1000,
-    height: 800,
+    height: 1000,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
@@ -436,6 +436,18 @@ app.on('will-quit', () => {
 });
 
 // --- IPC Handlers ---
+
+ipcMain.handle('get-system-display-info', async () => {
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width, height } = primaryDisplay.size;
+  const scaleFactor = primaryDisplay.scaleFactor;
+  return {
+    width,
+    height,
+    scaleFactor,
+    resolutionString: `${width}x${height}`
+  };
+});
 
 ipcMain.on('upload-failed-samples', async (event) => {
   const sendStatus = (message, error = false, inProgress = true) => {
