@@ -10,8 +10,9 @@
     "rebuild-sharp": "electron-rebuild -f -w sharp",
     "rebuild-tensorflow": "electron-rebuild -f -w @tensorflow/tfjs-node -v 31.7.7",
     "rebuild-all": "npm run rebuild-sqlite3 && npm run rebuild-sharp && npm run rebuild-tensorflow",
-    "dist": "npm run prepare-config && npm run rebuild-all && electron-builder",
-    "postinstall": "patch-package"
+    "fix-tfjs": "node scripts/fix-tfjs-node-build.js",
+    "build:native": "npm run rebuild-all && npm run fix-tfjs",
+    "dist": "npm run prepare-config && npm run build:native && electron-builder"
   },
   "keywords": [
     "dota2",
