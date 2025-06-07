@@ -160,16 +160,23 @@ These instructions are primarily for **Windows**.
     ```
     This installs dependencies and should trigger `patch-package` if configured in `postinstall`.
 
-4.  **Rebuild Native Modules for Electron:**
+4.  **Build Native Modules & Apply Fix (Windows)**
     Native modules must be compiled against Electron's Node.js version.
-    * Ensure your Electron version is correctly referenced in the `rebuild-tensorflow` script in `package.json` (e.g., `-v 31.7.7` if your Electron version in `devDependencies` is `^31.0.0`).
-    * Run the rebuild script (ensure `PYTHON` environment variable is set):
-        ```bash
-        npm run rebuild-all 
-        ```
-        This script should handle rebuilding `better-sqlite3`, `sharp`, and `@tensorflow/tfjs-node`.
 
-    * **Troubleshooting `@tensorflow/tfjs-node`:** Refer to `TFJS_PATCH.md` for detailed steps on resolving native module issues with `@tensorflow/tfjs-node`, including manual verification of `.node` file placement and the role of `patch-package`.
+    * Run the combined build script (ensure `PYTHON` environment variable is set):
+    ```bash
+    npm run build:native
+    ```
+    * This command first runs `rebuild-all` and then executes `fix-tfjs` to correct the file layout for TensorFlow.
+
+    #### **Special Note on @tensorflow/tfjs-node**
+    * **The Problem:** The build process for `@tensorflow/tfjs-node` sometimes incorrectly separates its two critical native files: `tfjs_binding.node` and its dependency, `tensorflow.dll`. They can end up in different `napi-v...` subdirectories inside    `node_modules/@tensorflow/tfjs-node/lib/`. For the module to load, both files **must** be in the same directory.
+    * **The Automated Fix (Recommended):** The `npm run build:native` command automates the solution. After rebuilding the modules, it runs the `scripts/fix-tfjs-node-build.js` script, which locates both separated files and copies `tensorflow.dll` into the same   directory as `tfjs_binding.node`. This is the recommended way to set up the project.
+    * **The Manual Fix:** If you prefer to handle this manually instead of using the `build:native` script, follow these steps after running `npm run rebuild-all`:
+        1.  Navigate to the `node_modules/@tensorflow/tfjs-node/lib/` directory.
+        2.  You will see one or more `napi-v...` folders. Find the folder that contains **`tfjs_binding.node`**.
+        3.  Find the folder that contains **`tensorflow.dll`**.
+        4.  Manually **copy** `tensorflow.dll` from its folder into the folder containing `tfjs_binding.node`.
 
 ### Running the Application (Developer Mode)
 
@@ -194,12 +201,14 @@ These instructions are primarily for **Windows**.
     * `database/`: SQLite database setup (`setupDatabase.js`) and queries (`queries.js`).
     * `scraper/`: Scripts for scraping data from Windrun.io (`heroScraper.js`, `abilityScraper.js`, `abilityPairScraper.js`).
     * `imageProcessor.js`: Handles screen capture, icon cropping, and ML-based ability recognition.
+* `scripts/`:
+    * `fix-tfjs-node-build.js`: Post-build script to correct the file layout of the TensorFlow native module.
+    * `prepare-app-config.js`: Script to inject environment variables into the app at build time.
 * `model/tfjs_model/`: Contains the TensorFlow.js graph model (`model.json`, `.bin` files) and `class_names.json`.
 * `config/layout_coordinates.json`: Defines screen coordinates for UI elements at different resolutions.
 * `dota_ad_data.db` (root): The bundled SQLite database, copied to user data on first run.
 * `patches/`: Contains patches applied via `patch-package` (e.g., for `@tensorflow/tfjs-node`).
 * `package.json`: Project dependencies, scripts, and build configuration.
-* `TFJS_PATCH.md`: Detailed guide for troubleshooting `@tensorflow/tfjs-node` native module issues.
 
 ## Development Notes
 
