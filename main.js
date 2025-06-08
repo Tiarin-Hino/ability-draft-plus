@@ -20,6 +20,7 @@ const {
 } = require('./src/database/queries');
 const { scrapeAndStoreAbilitiesAndHeroes } = require('./src/scraper/abilityScraper');
 const { scrapeAndStoreAbilityPairs } = require('./src/scraper/abilityPairScraper');
+const { scrapeAndStoreLiquipediaData } = require('./src/scraper/liquipediaScraper'); // Import Liquipedia scraper
 const {
   processDraftScreen: performMlScan, // Renamed for clarity within main.js
   initializeImageProcessor,
@@ -233,20 +234,37 @@ function sendLastUpdatedDateToRenderer(webContents, dateStringYYYYMMDD) {
 async function performFullScrape(statusCallbackWebContents) {
   const sendStatus = (msg) => sendStatusUpdate(statusCallbackWebContents, 'scrape-status', msg);
   try {
-    sendStatus('Starting all Windrun.io data updates...');
+    sendStatus('Starting all data updates...');
     await delay(100); // Brief delay for UI update
 
-    sendStatus('Phase 1/2: Updating heroes and abilities data...');
+    sendStatus('Phase 1/3: Updating heroes and abilities data from Windrun.io...');
     await scrapeAndStoreAbilitiesAndHeroes(activeDbPath, ABILITIES_URL, ABILITIES_HIGH_SKILL_URL, sendStatus);
     await delay(100);
 
-    sendStatus('Phase 2/2: Updating ability pair data...');
+    sendStatus('Phase 2/3: Updating ability pair data from Windrun.io...');
     await scrapeAndStoreAbilityPairs(activeDbPath, ABILITY_PAIRS_URL, sendStatus);
     await delay(100);
 
+    // Phase 3: Enriching ability data with order and ultimate status from Liquipedia.
+    // This runs ONLY in development mode.
+    if (!IS_PACKAGED) {
+      // The liquipediaScraper is conditionally required here to prevent it from being bundled
+      // in production builds if it's not strictly necessary for end-user functionality.
+      // However, for the purpose of this exercise, it's already at the top.
+      // Re-requiring here to ensure it's loaded if not at the top (defensive programming).
+      // For this current setup, it's fine as it's already imported at the top.
+      // const { scrapeAndStoreLiquipediaData } = require('./src/scraper/liquipediaScraper');
+      sendStatus('Phase 3/3: Enriching ability data with order and ultimate status from Liquipedia (Dev Mode)...');
+      await scrapeAndStoreLiquipediaData(activeDbPath, sendStatus, false); // Pass false for full run in dev
+      await delay(100);
+    } else {
+      sendStatus('Phase 3/3: Skipping Liquipedia data enrichment (Production Mode).');
+      await delay(100);
+    }
+
     const newDate = await updateLastSuccessfulScrapeDate(activeDbPath);
     sendLastUpdatedDateToRenderer(statusCallbackWebContents, newDate);
-    sendStatus('All Windrun.io data updates finished successfully!');
+    sendStatus('All data updates finished successfully!');
     return true;
   } catch (error) {
     console.error('[MainScrape] Consolidated scraping failed:', error.message);
@@ -1309,7 +1327,7 @@ ipcMain.on('submit-new-resolution-snapshot', async (event) => {
 
     // 3. Take a full-screen screenshot
     sendStatus('Capturing screen...', false, true);
-    const screenshotBuffer = await screenshotDesktop({ format: 'png' }); //
+    const screenshotBuffer = await screenshotDesktop({ format: 'png' });
     console.log(`[Main] Screenshot taken, buffer size: ${screenshotBuffer.length} bytes.`);
 
     // 4. API Call (existing logic)

@@ -1,6 +1,36 @@
 const Database = require('better-sqlite3');
 
 /**
+ * Fetches all heroes (hero_id, name, display_name) from the database.
+ * @param {string} dbPath - Path to the SQLite database file.
+ * @returns {Promise<Array<{hero_id: number, name: string, display_name: string}>>}
+ * An array of hero objects, or an empty array if none found/error.
+ */
+async function getAllHeroes(dbPath) {
+    let db;
+    try {
+        db = new Database(dbPath, { readonly: true });
+        const query = `
+            SELECT
+                hero_id,
+                name,
+                display_name
+            FROM Heroes;
+        `;
+        const stmt = db.prepare(query);
+        const heroes = stmt.all();
+        return heroes;
+    } catch (err) {
+        console.error(`[DB Queries] Error fetching all heroes: ${err.message}`);
+        return [];
+    } finally {
+        if (db && db.open) {
+            db.close();
+        }
+    }
+}
+
+/**
  * Fetches details for a list of ability names from the database.
  *
  * @param {string} dbPath - Path to the SQLite database file.
@@ -344,11 +374,51 @@ async function getAllOPCombinations(dbPath) {
     return opCombinations;
 }
 
+/**
+ * Fetches all abilities associated with a specific hero_id, ordered by ability_order.
+ * @param {string} dbPath - Path to the SQLite database file.
+ * @param {number} heroId - The database ID of the hero.
+ * @returns {Promise<Array<{name: string, display_name: string, is_ultimate: boolean, ability_order: number}>>}
+ * An array of ability objects, or empty array if none found/error.
+ */
+async function getAbilitiesByHeroId(dbPath, heroId) {
+    if (heroId === null || typeof heroId === 'undefined') {
+        return [];
+    }
+
+    let db;
+    try {
+        db = new Database(dbPath, { readonly: true });
+        const query = `
+            SELECT
+                name,
+                display_name,
+                is_ultimate,
+                ability_order
+            FROM Abilities
+            WHERE hero_id = ?
+            ORDER BY ability_order ASC;
+        `;
+        const stmt = db.prepare(query);
+        const abilities = stmt.all(heroId);
+        return abilities;
+    } catch (err) {
+        console.error(`[DB Queries] Error fetching abilities for hero_id ${heroId}: ${err.message}`);
+        return [];
+    } finally {
+        if (db && db.open) {
+            db.close();
+        }
+    }
+}
+
 module.exports = {
     getAbilityDetails,
     getHighWinrateCombinations,
     getOPCombinationsInPool,
     getAllOPCombinations,
     getHeroDetailsByAbilityName,
-    getHeroDetailsById
+    getHeroDetailsById,
+    getAllHeroes,
+    getAbilitiesByHeroId
 };
