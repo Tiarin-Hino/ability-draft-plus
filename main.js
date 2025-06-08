@@ -18,7 +18,7 @@ const {
   getHeroDetailsByAbilityName,
   getHeroDetailsById,
   getAllHeroes,
-  getAbilitiesByHeroId // This function is crucial for populating 1st, 3rd, and ultimate abilities
+  getAbilitiesByHeroId
 } = require('./src/database/queries');
 const { scrapeAndStoreAbilitiesAndHeroes } = require('./src/scraper/abilityScraper');
 const { scrapeAndStoreAbilityPairs } = require('./src/scraper/abilityPairScraper');
@@ -27,7 +27,8 @@ const {
   processDraftScreen: performMlScan,
   initializeImageProcessor,
   identifySlotsFromCache,
-  initializeImageProcessorIfNeeded
+  initializeImageProcessorIfNeeded,
+  identifySlots
 } = require('./src/imageProcessor');
 
 
@@ -96,7 +97,6 @@ if (app.isPackaged) {
     PROD_API_URL = appConfig.API_ENDPOINT_URL;
     PROD_CLIENT_KEY = appConfig.CLIENT_API_KEY;
     PROD_SHARED_SECRET = appConfig.CLIENT_SHARED_SECRET;
-    console.log('[Main] Loaded production config from app-config.js');
   } catch (e) {
     console.error('[Main] FATAL: Could not load app-config.js in packaged app!', e);
   }
@@ -105,7 +105,6 @@ if (app.isPackaged) {
 if (!app.isPackaged) {
   try {
     require('dotenv').config();
-    console.log('[Main] Loaded .env file for development.');
   } catch (e) {
     console.warn('[Main] Could not load .env file for development:', e.message);
   }
@@ -452,7 +451,6 @@ ipcMain.on('upload-failed-samples', async (event) => {
     archive.finalize();
 
     const zipBuffer = await archivePromise;
-    console.log(`[Main] Zipping complete. Zip size: ${zipBuffer.length} bytes.`);
     sendStatus('Zip complete. Preparing to upload...', false, true);
 
     const timestamp = new Date().toISOString();
@@ -477,16 +475,11 @@ ipcMain.on('upload-failed-samples', async (event) => {
       'x-signature': signature,
     };
 
-    console.log(`[Main] Uploading failed samples to ${API_ENDPOINT_URL}/failed-samples-upload`);
-    console.log(`[Main] Headers for failed samples:`, JSON.stringify(headers, null, 2));
-
-
     const response = await axios.post(API_ENDPOINT_URL + '/failed-samples-upload', zipBuffer, {
       headers: headers,
       responseType: 'json',
     });
 
-    console.log('[Main] Failed Samples API Response:', response.data);
     if (response.status === 200 && response.data.message) {
       sendStatus(response.data.message, false, false);
     } else {
@@ -603,11 +596,9 @@ ipcMain.on('select-my-model', (event, { heroOrder, dbHeroId }) => {
   if (mySelectedModelScreenOrder === heroOrder && mySelectedModelDbHeroId === dbHeroId) {
     mySelectedModelDbHeroId = null;
     mySelectedModelScreenOrder = null;
-    console.log(`[MainState] "My Model" deselected.`);
   } else {
     mySelectedModelDbHeroId = dbHeroId;
     mySelectedModelScreenOrder = heroOrder;
-    console.log(`[MainState] "My Model" selected: Screen Order ${heroOrder}, DB ID ${dbHeroId}`);
   }
   if (overlayWindow && !overlayWindow.isDestroyed()) {
     sendStatusUpdate(overlayWindow.webContents, 'my-model-selection-changed', {
@@ -620,11 +611,9 @@ ipcMain.on('select-my-hero-for-drafting', (event, { heroOrder, dbHeroId }) => {
   if (mySelectedHeroOriginalOrder === heroOrder && mySelectedHeroDbIdForDrafting === dbHeroId) {
     mySelectedHeroDbIdForDrafting = null;
     mySelectedHeroOriginalOrder = null;
-    console.log(`[MainState] "My Hero" (for drafting) deselected.`);
   } else {
     mySelectedHeroDbIdForDrafting = dbHeroId;
     mySelectedHeroOriginalOrder = heroOrder;
-    console.log(`[MainState] "My Hero" (for drafting) selected: Original List Order ${heroOrder}, DB ID ${dbHeroId}`);
   }
   if (overlayWindow && !overlayWindow.isDestroyed()) {
     sendStatusUpdate(overlayWindow.webContents, 'my-hero-for-drafting-selection-changed', {
@@ -645,7 +634,6 @@ ipcMain.on('open-external-link', (event, url) => {
 
 ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, selectedHeroOriginalOrderFromOverlay, isInitialScan) => {
   const overallScanStart = performance.now();
-  console.log(`[MainScan] Scan triggered for ${selectedResolution}. Initial: ${isInitialScan}, Overlay's selectedHeroOriginalOrder: ${selectedHeroOriginalOrderFromOverlay}, Main's current mySelectedHeroOriginalOrder: ${mySelectedHeroOriginalOrder}`);
 
   if (isScanInProgress) {
     sendStatusUpdate(overlayWindow.webContents, 'overlay-data', {
@@ -672,7 +660,6 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
     if (!layoutConfig) {
       const layoutData = await fs.readFile(layoutCoordinatesPath, 'utf-8');
       fullLayoutConfigCache = JSON.parse(layoutData);
-      console.warn('[MainScan] fullLayoutConfigCache was empty, re-read from file.');
     }
     console.log(`[MainScan] Layout config check/load in ${performance.now() - stepStartTime}ms.`);
 
@@ -694,17 +681,18 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
     } = coords;
 
     let tempRawResults;
+    let screenshotBuffer;
+
     if (isInitialScan) {
-      console.log("[MainScan] Performing Initial Scan (ML for 2nd slots only).");
       stepStartTime = performance.now();
       tempRawResults = await performMlScan(layoutCoordinatesPath, selectedResolution, MIN_PREDICTION_CONFIDENCE);
-      console.log(`[MainScan] Initial ML scan (focused) in ${performance.now() - stepStartTime}ms.`);
+      screenshotBuffer = await screenshotDesktop({ format: 'png' });
+      console.log(`[MainScan] Initial ML scan (focused) and screenshot in ${performance.now() - stepStartTime}ms.`);
 
       initialPoolAbilitiesCache.ultimates = [];
       initialPoolAbilitiesCache.standard = tempRawResults.standard
         .filter(item => item.name && item.coord)
         .map(res => ({ ...res, type: 'standard' }));
-      console.log(`[MainScan] Initial Cache: ${initialPoolAbilitiesCache.standard.length} 2nd abilities cached.`);
       mySelectedModelDbHeroId = null;
       mySelectedModelScreenOrder = null;
 
@@ -713,29 +701,20 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
       console.log(`[MainScan] Hero model identification from 2nd abilities in ${performance.now() - stepStartTime}ms.`);
 
     } else { // Rescan
-      console.log("[MainScan] Performing Rescan (ML for 2nd slots only).");
-      if (!initialPoolAbilitiesCache.standard.length) {
-        console.warn("[MainScan] Rescan with empty 2nd ability cache. Performing full focused scan.");
-        stepStartTime = performance.now();
-        tempRawResults = await performMlScan(layoutCoordinatesPath, selectedResolution, MIN_PREDICTION_CONFIDENCE);
-        console.log(`[MainScan] Rescan (focused due to empty cache) ML scan in ${performance.now() - stepStartTime}ms.`);
+      stepStartTime = performance.now();
+      screenshotBuffer = await screenshotDesktop({ format: 'png' });
+      console.log(`[MainScan] Screenshot captured for rescan in ${performance.now() - stepStartTime}ms.`);
 
+      if (!initialPoolAbilitiesCache.standard.length) {
+        tempRawResults = await performMlScan(layoutCoordinatesPath, selectedResolution, MIN_PREDICTION_CONFIDENCE);
         initialPoolAbilitiesCache.standard = tempRawResults.standard.filter(item => item.name && item.coord).map(res => ({ ...res, type: 'standard' }));
 
         if (!identifiedHeroModelsCache) {
-          stepStartTime = performance.now();
           identifiedHeroModelsCache = await identifyHeroModels(tempRawResults.heroDefiningAbilities, models_coords);
-          console.log(`[MainScan] Hero model identification on rescan in ${performance.now() - stepStartTime}ms.`);
         }
       } else {
-        stepStartTime = performance.now();
-        const screenshotBuffer = await screenshotDesktop({ format: 'png' });
-        console.log(`[MainScan] Screenshot captured in ${performance.now() - stepStartTime}ms.`);
-
-        stepStartTime = performance.now();
         const currentClassNames = await loadClassNamesForMain();
         const reconfirmedStandard = await identifySlotsFromCache(initialPoolAbilitiesCache.standard, screenshotBuffer, currentClassNames, MIN_PREDICTION_CONFIDENCE);
-        console.log(`[MainScan] Reconfirmed cached 2nd abilities in ${performance.now() - stepStartTime}ms.`);
 
         tempRawResults = {
           ultimates: [],
@@ -747,9 +726,7 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
     }
     lastRawScanResults = { ...tempRawResults };
 
-    stepStartTime = performance.now();
     let heroesForMyHeroSelectionUI = prepareHeroesForMyHeroUI(identifiedHeroModelsCache, heroes_coords);
-    console.log(`[MainScan] Prepare heroes for UI in ${performance.now() - stepStartTime}ms.`);
 
     // Determine the selected hero ID for database lookups and populating other slots
     // This logic relies on global state for user selected 'my model' or 'my hero'
@@ -772,64 +749,45 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
     mySelectedHeroOriginalOrder = currentIdentifiedHeroScreenOrder;
 
 
-    // --- NEW LOGIC START: POPULATE OTHER ABILITIES FOR ALL IDENTIFIED HEROES ---
-    let finalUltimatesForDisplay = [];
-    let finalStandardAbilitiesForDisplay = [];
+    // --- NEW LOGIC START: POPULATE OTHER ABILITIES FOR ALL IDENTIFIED HEROES AND FALLBACK ML SCAN ---
+    const abilitiesToDisplayMap = new Map();
+    const slotsForAdditionalScan = [];
 
-    // Use a Map to hold all abilities that will be displayed, keyed by unique slot identifier
-    const abilitiesToDisplayMap = new Map(); // Key: `${hero_order}-${ability_order_or_type}`
-
-    // 1. Add all ML-identified 2nd abilities to the map first
     tempRawResults.standard.forEach(ab => {
       if (ab.name && ab.hero_order !== undefined && ab.ability_order !== undefined) {
         const key = `${ab.hero_order}-${ab.ability_order}`;
         abilitiesToDisplayMap.set(key, ab);
       }
     });
-    console.log(`[MainScan] Initial abilities in display map (from ML 2nd slot): ${abilitiesToDisplayMap.size}`);
 
-    // 2. Iterate through all identified hero models (from ML-identified 2nd slot abilities)
-    //    and fetch their full ability sets to populate 1st, 3rd, and Ultimate slots.
     for (const heroModel of identifiedHeroModelsCache) {
       if (heroModel.dbHeroId !== null && heroModel.heroOrder !== undefined) {
-        console.log(`[MainScan] Fetching full abilities for Hero ID: ${heroModel.dbHeroId} (Screen Order: ${heroModel.heroOrder})`);
-        stepStartTime = performance.now();
         const heroAbilitiesFromDb = await getAbilitiesByHeroId(activeDbPath, heroModel.dbHeroId);
-        console.log(`[MainScan] Fetched ${heroAbilitiesFromDb.length} abilities for hero ID ${heroModel.dbHeroId} in ${performance.now() - stepStartTime}ms.`);
 
-        // Get relevant coordinate slots for this specific hero's screen position
         const firstSlotCoord = standard_slots_coords.find(s => s.hero_order === heroModel.heroOrder && s.ability_order === 1);
         const thirdSlotCoord = standard_slots_coords.find(s => s.hero_order === heroModel.heroOrder && s.ability_order === 3);
-        // Note: ultimateSlotCoord.is_ultimate === true is from layout_coordinates.json, not DB
         const ultimateSlotCoord = ultimate_slots_coords.find(s => s.hero_order === heroModel.heroOrder);
 
-
-        // Filter database abilities for exact matches (1st, 3rd, Ultimate)
         const abilitiesFor1stSlot = heroAbilitiesFromDb.filter(ab => ab.ability_order === 1 && !ab.is_ultimate);
         const abilitiesFor3rdSlot = heroAbilitiesFromDb.filter(ab => ab.ability_order === 3 && !ab.is_ultimate);
         const abilitiesForUltimateSlot = heroAbilitiesFromDb.filter(ab => ab.is_ultimate);
 
-        // Populate 1st ability if exactly one found and coord exists
         if (abilitiesFor1stSlot.length === 1 && firstSlotCoord) {
           const ab = abilitiesFor1stSlot[0];
           const key = `${heroModel.heroOrder}-1`;
           abilitiesToDisplayMap.set(key, {
             name: ab.name,
             displayName: ab.display_name,
-            confidence: 1.0, // Synthetic confidence from DB lookup
+            confidence: 1.0,
             hero_order: firstSlotCoord.hero_order,
             ability_order: firstSlotCoord.ability_order,
             is_ultimate: false,
             coord: { x: firstSlotCoord.x, y: firstSlotCoord.y, width: firstSlotCoord.width, height: firstSlotCoord.height }
           });
-          console.log(`[MainScan] Added synthetic 1st ability for HO ${heroModel.heroOrder}: ${ab.name}`);
-        } else if (firstSlotCoord) { // Add empty entry with coords if not found or multiple
-          const key = `${heroModel.heroOrder}-1`;
-          abilitiesToDisplayMap.set(key, { name: null, confidence: 0, hero_order: firstSlotCoord.hero_order, ability_order: firstSlotCoord.ability_order, is_ultimate: false, coord: { x: firstSlotCoord.x, y: firstSlotCoord.y, width: firstSlotCoord.width, height: firstSlotCoord.height } });
-          if (abilitiesFor1stSlot.length > 1) console.warn(`[MainScan] Multiple 1st abilities found for hero ID ${heroModel.dbHeroId}, skipping auto-fill for HO ${heroModel.heroOrder}.`);
+        } else if (firstSlotCoord) {
+          slotsForAdditionalScan.push({ ...firstSlotCoord, scannedType: '1st', is_ultimate: false });
         }
 
-        // Populate 3rd ability if exactly one found and coord exists
         if (abilitiesFor3rdSlot.length === 1 && thirdSlotCoord) {
           const ab = abilitiesFor3rdSlot[0];
           const key = `${heroModel.heroOrder}-3`;
@@ -842,14 +800,10 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
             is_ultimate: false,
             coord: { x: thirdSlotCoord.x, y: thirdSlotCoord.y, width: thirdSlotCoord.width, height: thirdSlotCoord.height }
           });
-          console.log(`[MainScan] Added synthetic 3rd ability for HO ${heroModel.heroOrder}: ${ab.name}`);
-        } else if (thirdSlotCoord) { // Add empty entry with coords if not found or multiple
-          const key = `${heroModel.heroOrder}-3`;
-          abilitiesToDisplayMap.set(key, { name: null, confidence: 0, hero_order: thirdSlotCoord.hero_order, ability_order: thirdSlotCoord.ability_order, is_ultimate: false, coord: { x: thirdSlotCoord.x, y: thirdSlotCoord.y, width: thirdSlotCoord.width, height: thirdSlotCoord.height } });
-          if (abilitiesFor3rdSlot.length > 1) console.warn(`[MainScan] Multiple 3rd abilities found for hero ID ${heroModel.dbHeroId}, skipping auto-fill for HO ${heroModel.heroOrder}.`);
+        } else if (thirdSlotCoord) {
+          slotsForAdditionalScan.push({ ...thirdSlotCoord, scannedType: '3rd', is_ultimate: false });
         }
 
-        // Populate Ultimate ability if exactly one found and coord exists
         if (abilitiesForUltimateSlot.length === 1 && ultimateSlotCoord) {
           const ab = abilitiesForUltimateSlot[0];
           const key = `${heroModel.heroOrder}-ultimate`;
@@ -858,61 +812,65 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
             displayName: ab.display_name,
             confidence: 1.0,
             hero_order: ultimateSlotCoord.hero_order,
-            ability_order: ab.ability_order, // Use DB's ability_order for ultimate (e.g., 0 or 4)
+            ability_order: ab.ability_order,
             is_ultimate: true,
             coord: { x: ultimateSlotCoord.x, y: ultimateSlotCoord.y, width: ultimateSlotCoord.width, height: ultimateSlotCoord.height }
           });
-          console.log(`[MainScan] Added synthetic ultimate ability for HO ${heroModel.heroOrder}: ${ab.name}`);
-        } else if (ultimateSlotCoord) { // Add empty entry with coords if not found or multiple
-          const key = `${heroModel.heroOrder}-ultimate`;
-          abilitiesToDisplayMap.set(key, { name: null, confidence: 0, hero_order: ultimateSlotCoord.hero_order, ability_order: ultimateSlotCoord.ability_order, is_ultimate: true, coord: { x: ultimateSlotCoord.x, y: ultimateSlotCoord.y, width: ultimateSlotCoord.width, height: ultimateSlotCoord.height } });
-          if (abilitiesForUltimateSlot.length > 1) console.warn(`[MainScan] Multiple ultimate abilities found for hero ID ${heroModel.dbHeroId}, skipping auto-fill for HO ${heroModel.heroOrder}.`);
+        } else if (ultimateSlotCoord) {
+          slotsForAdditionalScan.push({ ...ultimateSlotCoord, scannedType: 'ultimate', is_ultimate: true });
         }
       }
     }
-    console.log(`[MainScan] Total abilities prepared for display (including inferred): ${abilitiesToDisplayMap.size}`);
 
-    // Reconstruct tempRawResults arrays from the map for subsequent processing and UI rendering.
-    finalUltimatesForDisplay = [];
-    finalStandardAbilitiesForDisplay = [];
-    let finalHeroDefiningAbilities = []; // Keep track of the 2nd slot abilities for hero model identification
+    if (slotsForAdditionalScan.length > 0) {
+      const currentClassNames = await loadClassNamesForMain();
+      const additionalScanResults = await identifySlots(slotsForAdditionalScan, screenshotBuffer, currentClassNames, MIN_PREDICTION_CONFIDENCE);
+
+      additionalScanResults.forEach(ab => {
+        // Condition simplified: only check for ab.name and ab.hero_order, as ability_order might not be defined for ultimates
+        if (ab.name && ab.hero_order !== undefined) {
+          const key = ab.is_ultimate ? `${ab.hero_order}-ultimate` : `${ab.hero_order}-${ab.ability_order}`;
+          const existing = abilitiesToDisplayMap.get(key);
+          if (!existing || existing.name === null || ab.confidence > existing.confidence) {
+            abilitiesToDisplayMap.set(key, ab);
+          }
+        }
+      });
+    }
+
+    let finalUltimatesForDisplay = [];
+    let finalStandardAbilitiesForDisplay = [];
+    let finalHeroDefiningAbilities = [];
 
     abilitiesToDisplayMap.forEach(ab => {
       if (ab.is_ultimate) {
         finalUltimatesForDisplay.push(ab);
-      } else { // All non-ultimates go to standard.
+      } else {
         finalStandardAbilitiesForDisplay.push(ab);
-        if (ab.ability_order === 2) { // Also keep the 2nd slot abilities separate for hero model identification
+        if (ab.ability_order === 2) {
           finalHeroDefiningAbilities.push(ab);
         }
       }
     });
 
-    // Ensure all standard slots (1st, 2nd, 3rd) and ultimate slots that were *not* filled by ML/DB inference
-    // still get placeholder objects with their coordinates so the UI knows where to draw empty boxes.
-    // This handles cases where a hero model is present, but no ability could be determined for a slot.
-    // This is important because `createHotspotsForType` iterates over the list of coordinates.
-    // First, create a map of all *potential* standard slots (1, 2, 3) from layout_coordinates.json
-    const allPotentialStandardSlotCoords = new Map(); // Key: `${hero_order}-${ability_order}`
+    const allPotentialStandardSlotCoords = new Map();
     standard_slots_coords.forEach(coord => {
       const key = `${coord.hero_order}-${coord.ability_order}`;
       allPotentialStandardSlotCoords.set(key, {
-        name: null, confidence: 0, hero_order: coord.hero_order, ability_order: coord.ability_order, is_ultimate: coord.is_ultimate, coord: { x: coord.x, y: coord.y, width: coord.width, height: coord.height }
+        name: null, confidence: 0, hero_order: coord.hero_order, ability_order: coord.ability_order, is_ultimate: false, coord: { x: coord.x, y: coord.y, width: coord.width, height: coord.height }
       });
     });
-    // Overlay with actual identified/inferred standard abilities
     finalStandardAbilitiesForDisplay.forEach(ab => {
       const key = `${ab.hero_order}-${ab.ability_order}`;
       allPotentialStandardSlotCoords.set(key, ab);
     });
     finalStandardAbilitiesForDisplay = Array.from(allPotentialStandardSlotCoords.values());
 
-    // Do the same for all potential ultimate slots
-    const allPotentialUltimateSlotCoords = new Map(); // Key: hero_order
+    const allPotentialUltimateSlotCoords = new Map();
     ultimate_slots_coords.forEach(coord => {
       const key = `${coord.hero_order}-ultimate`;
       allPotentialUltimateSlotCoords.set(key, {
-        name: null, confidence: 0, hero_order: coord.hero_order, ability_order: coord.ability_order, is_ultimate: coord.is_ultimate, coord: { x: coord.x, y: coord.y, width: coord.width, height: coord.height }
+        name: null, confidence: 0, hero_order: coord.hero_order, ability_order: coord.ability_order, is_ultimate: true, coord: { x: coord.x, y: coord.y, width: coord.width, height: coord.height }
       });
     });
     finalUltimatesForDisplay.forEach(ab => {
@@ -921,7 +879,6 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
     });
     finalUltimatesForDisplay = Array.from(allPotentialUltimateSlotCoords.values());
 
-    // Selected abilities remain empty for this test, but with correct coordinate structure
     const placeholderSelectedAbilities = selected_abilities_coords.map(sac => ({
       name: null, confidence: 0,
       hero_order: sac.hero_order, ability_order: sac.ability_order, is_ultimate: sac.is_ultimate,
@@ -936,24 +893,16 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
       selectedAbilities: placeholderSelectedAbilities,
       heroDefiningAbilities: finalHeroDefiningAbilities
     };
-    // --- END NEW LOGIC ---
 
-    stepStartTime = performance.now();
     heroesForMyHeroSelectionUI = prepareHeroesForMyHeroUI(identifiedHeroModelsCache, heroes_coords);
-    console.log(`[MainScan] Prepare heroes for UI in ${performance.now() - stepStartTime}ms.`);
 
-    stepStartTime = performance.now();
     const { uniqueAbilityNamesInPool, allPickedAbilityNames } = collectAbilityNames(tempRawResults);
-    console.log(`[MainScan] Collect ability names for pool & picked in ${performance.now() - stepStartTime}ms.`);
 
-    stepStartTime = performance.now();
     const allCurrentlyRelevantAbilityNames = Array.from(new Set([...uniqueAbilityNamesInPool, ...allPickedAbilityNames]));
     const abilityDetailsMap = getAbilityDetails(activeDbPath, allCurrentlyRelevantAbilityNames);
-    console.log(`[MainScan] Get ability details from DB for all relevant abilities in ${performance.now() - stepStartTime}ms.`);
 
     const centralDraftPoolArray = Array.from(uniqueAbilityNamesInPool);
 
-    stepStartTime = performance.now();
     let synergisticPartnersInPoolForMyHero = new Set();
     if (mySelectedHeroDbIdForDrafting !== null && mySelectedHeroOriginalOrder !== null) {
       const myHeroPickedAbilitiesRaw = tempRawResults.selectedAbilities.filter(
@@ -962,7 +911,6 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
       const myHeroPickedAbilityNames = myHeroPickedAbilitiesRaw.map(ab => ab.name);
 
       if (myHeroPickedAbilityNames.length > 0) {
-        console.log(`[MainScanLogic] My Hero (Original Order: ${mySelectedHeroOriginalOrder}) picked: ${myHeroPickedAbilityNames.join(', ')}. Checking synergies with pool of ${centralDraftPoolArray.length} abilities.`);
         for (const pickedAbilityName of myHeroPickedAbilityNames) {
           const combinations = await getHighWinrateCombinations(activeDbPath, pickedAbilityName, centralDraftPoolArray);
           combinations.forEach(combo => {
@@ -971,7 +919,6 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
             }
           });
         }
-        console.log(`[MainScanLogic] Found ${synergisticPartnersInPoolForMyHero.size} synergistic partners in pool for My Hero's abilities: ${Array.from(synergisticPartnersInPoolForMyHero).join(', ')}`);
       }
     }
 
@@ -983,9 +930,7 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
         abilityDetailsMap.set(abilityName, details);
       }
     }
-    console.log(`[MainScan] High winrate combinations calculation in ${performance.now() - stepStartTime}ms.`);
 
-    stepStartTime = performance.now();
     const allDatabaseOPCombs = await getAllOPCombinations(activeDbPath);
     const relevantOPCombinations = allDatabaseOPCombs.filter(combo => {
       const a1InPool = uniqueAbilityNamesInPool.has(combo.ability1InternalName);
@@ -998,22 +943,17 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
       ability2DisplayName: combo.ability2DisplayName,
       synergyWinrate: combo.synergyWinrate
     }));
-    console.log(`[MainScan] OP combinations lookup in ${performance.now() - stepStartTime}ms.`);
 
 
-    stepStartTime = performance.now();
     let allEntitiesForScoring = prepareEntitiesForScoring(tempRawResults, abilityDetailsMap, identifiedHeroModelsCache);
     allEntitiesForScoring = calculateConsolidatedScores(allEntitiesForScoring);
     const myHeroHasPickedUltimate = checkMyHeroPickedUltimate(mySelectedHeroDbIdForDrafting, heroesForMyHeroSelectionUI, tempRawResults.selectedAbilities);
     const topTierMarkedEntities = determineTopTierEntities(allEntitiesForScoring, mySelectedModelDbHeroId, myHeroHasPickedUltimate, synergisticPartnersInPoolForMyHero);
-    console.log(`[MainScan] Scoring and top tier determination in ${performance.now() - stepStartTime}ms.`);
 
-    stepStartTime = performance.now();
     const enrichedHeroModels = enrichHeroModelDataWithFlags(identifiedHeroModelsCache, topTierMarkedEntities, allEntitiesForScoring);
     const formattedUltimates = formatResultsForUiWithFlags(tempRawResults.ultimates, abilityDetailsMap, topTierMarkedEntities, 'ultimates', allEntitiesForScoring);
     const formattedStandard = formatResultsForUiWithFlags(tempRawResults.standard, abilityDetailsMap, topTierMarkedEntities, 'standard', allEntitiesForScoring);
     const formattedSelectedAbilities = formatResultsForUiWithFlags(tempRawResults.selectedAbilities, abilityDetailsMap, [], 'selected', allEntitiesForScoring, true);
-    console.log(`[MainScan] Final formatting in ${performance.now() - stepStartTime}ms.`);
 
     const overallScanEnd = performance.now();
     const durationMs = Math.round(overallScanEnd - overallScanStart);
@@ -1083,12 +1023,11 @@ async function identifyHeroModels(heroDefiningAbilities, modelCoords) {
 function prepareHeroesForMyHeroUI(cachedHeroModels, heroScreenCoords) {
   if (!cachedHeroModels || cachedHeroModels.length === 0 || !heroScreenCoords || heroScreenCoords.length === 0) return [];
   const uiData = [];
-  for (const heroScreenCoord of heroScreenCoords) { // heroScreenCoord.hero_order is 0-9
-    // Assumes model.heroOrder (screen order 0-11) directly maps to hero list order (0-9) for the first 10.
+  for (const heroScreenCoord of heroScreenCoords) {
     const matchedModel = cachedHeroModels.find(model => model.heroOrder === heroScreenCoord.hero_order);
     if (matchedModel && matchedModel.dbHeroId) {
       uiData.push({
-        heroOrder: heroScreenCoord.hero_order, // This is the 0-9 drafting list order
+        heroOrder: heroScreenCoord.hero_order,
         heroName: matchedModel.heroDisplayName,
         dbHeroId: matchedModel.dbHeroId,
       });
@@ -1167,7 +1106,7 @@ function calculateConsolidatedScores(entities) {
       const clampedPRaw = Math.max(MIN_PICK_ORDER_FOR_NORMALIZATION, Math.min(MAX_PICK_ORDER_FOR_NORMALIZATION, pRaw));
       const range = MAX_PICK_ORDER_FOR_NORMALIZATION - MIN_PICK_ORDER_FOR_NORMALIZATION;
       if (range > 0) {
-        pNormalized = (MAX_PICK_ORDER_FOR_NORMALIZATION - clampedPRaw) / range; // Lower pick order number is better
+        pNormalized = (MAX_PICK_ORDER_FOR_NORMALIZATION - clampedPRaw) / range;
       }
     }
     entity.consolidatedScore = (WEIGHT_VALUE_PERCENTAGE * vScaled) +
@@ -1185,7 +1124,6 @@ function checkMyHeroPickedUltimate(selectedHeroDbId, heroesForUI, pickedAbilitie
   const myDraftingHeroSlotOrder = myDraftingHeroUIInfo.heroOrder;
   for (const pickedAbility of pickedAbilities) {
     if (pickedAbility.name && pickedAbility.hero_order === myDraftingHeroSlotOrder && pickedAbility.is_ultimate === true) {
-      console.log(`[MainScanLogic] "My Hero" (DB ID: ${selectedHeroDbId}) picked an ultimate: ${pickedAbility.name}`);
       return true;
     }
   }
@@ -1197,10 +1135,9 @@ function determineTopTierEntities(allScoredEntities, selectedModelId, myHeroHasU
   const finalTopTierEntities = [];
 
   if (myHeroHasUlt) {
-    console.log('[MainScanLogic] My Hero has an ultimate. Filtering out ultimates from suggestions.');
     entitiesToConsider = entitiesToConsider.filter(entity => {
       if (entity.entityType === 'ability') return entity.is_ultimate_from_coord_source !== true && entity.is_ultimate_from_db !== true;
-      return true; // Keep hero models
+      return true;
     });
     synergisticPartnersInPoolForMyHeroSet.forEach(partnerName => {
       const partnerEntity = allScoredEntities.find(e => e.internalName === partnerName);
@@ -1211,7 +1148,6 @@ function determineTopTierEntities(allScoredEntities, selectedModelId, myHeroHasU
   }
 
   if (selectedModelId !== null) {
-    console.log(`[MainScanLogic] "My Model" (ID: ${selectedModelId}) is selected. Filtering general Top Tier to abilities only.`);
   }
 
   const synergySuggestionsFromPool = [];
@@ -1224,12 +1160,11 @@ function determineTopTierEntities(allScoredEntities, selectedModelId, myHeroHasU
   });
   synergySuggestionsFromPool.sort((a, b) => b.consolidatedScore - a.consolidatedScore);
   finalTopTierEntities.push(...synergySuggestionsFromPool);
-  console.log(`[MainScanLogic] Added ${synergySuggestionsFromPool.length} synergy suggestions for My Hero.`);
 
   const remainingSlots = NUM_TOP_TIER_SUGGESTIONS - finalTopTierEntities.length;
   if (remainingSlots > 0) {
     let generalCandidates = [...entitiesToConsider];
-    if (selectedModelId !== null) { // If a model is selected, general picks should only be abilities
+    if (selectedModelId !== null) {
       generalCandidates = generalCandidates.filter(entity => entity.entityType === 'ability');
     }
     const generalTopPicks = generalCandidates
@@ -1237,9 +1172,7 @@ function determineTopTierEntities(allScoredEntities, selectedModelId, myHeroHasU
       .slice(0, remainingSlots)
       .map(entity => ({ ...entity, isSynergySuggestionForMyHero: false, isGeneralTopTier: true }));
     finalTopTierEntities.push(...generalTopPicks);
-    console.log(`[MainScanLogic] Added ${generalTopPicks.length} general top tier picks.`);
   }
-  console.log(`[MainScanLogic] Total top tier entities determined: ${finalTopTierEntities.length}`);
   return finalTopTierEntities;
 }
 
@@ -1298,7 +1231,7 @@ function formatResultsForUiWithFlags(
       confidence: result.confidence,
       hero_order: result.hero_order,
       ability_order: result.ability_order,
-      consolidatedScore: scoredPoolEntity ? (scoredPoolEntity.consolidatedScore || 0) : (dbDetails ? 0 : 0), // Fallback score if not in pool
+      consolidatedScore: scoredPoolEntity ? (scoredPoolEntity.consolidatedScore || 0) : (dbDetails ? 0 : 0),
       coord: originalCoord
     };
   });
@@ -1353,8 +1286,6 @@ ipcMain.on('take-snapshot', async (event) => {
         const heroOrderForThisAbility = abilityResult.hero_order;
         const coordsForThisHeroInLayout = coordsConfig.selected_abilities_coords.filter(c => c.hero_order === heroOrderForThisAbility);
 
-        // Determine the 0-based index of this ability among those picked by the same hero,
-        // to map to the correct layout coordinate.
         let NthAbilityForThisHero = 0;
         for (let k = 0; k < i; k++) {
           if (lastRawScanResults.selectedAbilities[k].hero_order === heroOrderForThisAbility) {
@@ -1438,7 +1369,7 @@ ipcMain.on('export-failed-samples', async (event) => {
     }
 
     sendStatus(`Zipping ${imageFiles.length} samples...`, false, true);
-    const output = require('fs').createWriteStream(filePath); // Node's fs for stream
+    const output = require('fs').createWriteStream(filePath);
     const archive = archiver('zip', { zlib: { level: 9 } });
 
     await new Promise((resolve, reject) => {
@@ -1482,12 +1413,10 @@ ipcMain.on('submit-new-resolution-snapshot', async (event) => {
     const { width, height } = primaryDisplay.size;
     const scaleFactor = primaryDisplay.scaleFactor;
     const resolutionString = `${width}x${height}`;
-    console.log(`[Main] Current primary display resolution: ${resolutionString}, Scale Factor: ${scaleFactor}`);
 
     if (mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible()) {
       wasMainWindowVisible = true;
       sendStatus('Hiding control panel for screenshot...', false, true);
-      mainWindow.hide();
       await delay(2000);
     } else {
       await delay(100);
@@ -1495,7 +1424,6 @@ ipcMain.on('submit-new-resolution-snapshot', async (event) => {
 
     sendStatus('Capturing screen...', false, true);
     const screenshotBuffer = await screenshotDesktop({ format: 'png' });
-    console.log(`[Main] Screenshot taken, buffer size: ${screenshotBuffer.length} bytes.`);
 
     const timestamp = new Date().toISOString();
     const nonce = crypto.randomBytes(16).toString('hex');
@@ -1522,16 +1450,12 @@ ipcMain.on('submit-new-resolution-snapshot', async (event) => {
     };
 
     sendStatus('Submitting screenshot to API with security headers...', false, true);
-    console.log(`[Main] Sending screenshot for ${resolutionString} with signature.`);
-    console.log(`[Main] Headers being sent:`, JSON.stringify(headers, null, 2));
-
 
     const response = await axios.post(API_ENDPOINT_URL + '/failed-samples-upload', screenshotBuffer, {
       headers: headers,
       responseType: 'json',
     });
 
-    console.log('[Main] API Response:', response.data);
     if (response.status === 200 && response.data.message) {
       sendStatus(response.data.message, false, false);
     } else {
@@ -1555,7 +1479,6 @@ ipcMain.on('submit-new-resolution-snapshot', async (event) => {
       if (!mainWindow.isFocused()) {
         mainWindow.focus();
       }
-      console.log('[Main] Control panel should be visible and focused if it was hidden.');
     }
   }
 });
