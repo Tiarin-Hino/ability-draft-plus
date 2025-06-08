@@ -171,7 +171,6 @@ async function identifySlots(slotDataArray, screenBuffer, currentClassNames, con
             console.error(`[ImageProcessor] Error cropping image for slot ${i}: ${err.message}`);
         }
     }
-    console.log(`[ImageProcessor] Cropped ${croppedBuffers.length} images in ${performance.now() - cropStartTime}ms.`);
 
     if (croppedBuffers.length === 0) {
         console.log("[ImageProcessor] No valid images to process after cropping.");
@@ -189,7 +188,6 @@ async function identifySlots(slotDataArray, screenBuffer, currentClassNames, con
 
     const batchTensor = tf.stack(imageTensors);
     tf.dispose(imageTensors);
-    console.log(`[ImageProcessor] Preprocessed (decode/resize/stack) ${batchTensor.shape[0]} images in ${performance.now() - preprocessingStartTime}ms.`);
 
     let predictionStartTime = performance.now();
     let predictionTensor;
@@ -202,7 +200,6 @@ async function identifySlots(slotDataArray, screenBuffer, currentClassNames, con
     }
     const probabilities = await predictionTensor.array();
     tf.dispose([batchTensor, predictionTensor]);
-    console.log(`[ImageProcessor] Performed batch prediction for ${probabilities.length} images in ${performance.now() - predictionStartTime}ms.`);
 
     const identifiedResults = Array(slotDataArray.length).fill(null);
 
@@ -381,6 +378,80 @@ async function identifySlotsFromCache(cachedPoolAbilities, screenBuffer, current
     return confirmedAbilities;
 }
 
+/**
+ * Processes a screenshot buffer to identify abilities.
+ * This is the version used by the ML worker thread.
+ *
+ * @param {object} params - The parameters for the scan.
+ * @param {Buffer} params.screenshotBuffer - The PNG buffer of the screen.
+ * @param {string} params.coordinatesPath - Path to the layout coordinates JSON.
+ * @param {string} params.targetResolution - The resolution key (e.g., "1920x1080").
+ * @param {number} params.confidenceThreshold - Minimum confidence for prediction.
+ * @returns {Promise<object>} A promise that resolves to the raw scan results.
+ */
+async function performScanWithBuffer({ screenshotBuffer, coordinatesPath, targetResolution, confidenceThreshold }) {
+    const processScanStart = performance.now();
+    console.log(`[ImageProcessor/Worker] Starting scan with buffer for ${targetResolution}`);
+
+    if (!initialized || !modelPromise || !classNamesPromise) {
+        throw new Error("[ImageProcessor] Not initialized. Cannot process screen buffer.");
+    }
+    const model = await modelPromise;
+    const resolvedClassNames = await classNamesPromise;
+
+    const createResultsWithCoords = (coordsArray = []) => coordsArray.map(slotData => ({
+        name: null, confidence: 0,
+        hero_order: slotData.hero_order, ability_order: slotData.ability_order, is_ultimate: slotData.is_ultimate,
+        coord: { x: slotData.x, y: slotData.y, width: slotData.width, height: slotData.height }
+    }));
+
+    if (!model || !resolvedClassNames || resolvedClassNames.length === 0) {
+        // This logic remains important for handling initialization failures.
+        console.error("[ImageProcessor/Worker] Model or Class Names not loaded. Aborting scan.");
+        // We can still try to return the basic structure for consistency.
+        let emptyCoords = {};
+        try {
+            const configData = await fs.readFile(coordinatesPath, 'utf-8');
+            const layoutConfig = JSON.parse(configData);
+            emptyCoords = layoutConfig.resolutions?.[targetResolution] || {};
+        } catch (e) { /* ignore */ }
+        return {
+            ultimates: createResultsWithCoords(emptyCoords.ultimate_slots_coords),
+            standard: createResultsWithCoords((emptyCoords.standard_slots_coords || []).filter(slot => slot.ability_order === 2)),
+            heroDefiningAbilities: createResultsWithCoords((emptyCoords.standard_slots_coords || []).filter(slot => slot.ability_order === 2)),
+            selectedAbilities: createResultsWithCoords(emptyCoords.selected_abilities_coords ? emptyCoords.selected_abilities_coords.map(sac => ({ ...sac, width: emptyCoords.selected_abilities_params.width, height: emptyCoords.selected_abilities_params.height })) : [])
+        };
+    }
+
+    const layoutConfig = JSON.parse(await fs.readFile(coordinatesPath, 'utf-8'));
+    const coords = layoutConfig.resolutions?.[targetResolution];
+    if (!coords) {
+        throw new Error(`Coordinates not found for resolution: ${targetResolution}`);
+    }
+
+    const { standard_slots_coords = [] } = coords;
+    const hero_defining_slots_coords = standard_slots_coords.filter(slot => slot.ability_order === 2);
+
+    // Identify hero-defining abilities from the provided buffer
+    const identifiedHeroDefiningAbilities = await identifySlots(hero_defining_slots_coords, screenshotBuffer, resolvedClassNames, confidenceThreshold);
+
+    console.log(`[ImageProcessor/Worker] Scan with buffer finished in ${performance.now() - processScanStart}ms.`);
+
+    // Return the same structure as the original processDraftScreen
+    return {
+        ultimates: createResultsWithCoords(coords.ultimate_slots_coords),
+        standard: identifiedHeroDefiningAbilities,
+        heroDefiningAbilities: identifiedHeroDefiningAbilities,
+        selectedAbilities: createResultsWithCoords(
+            coords.selected_abilities_params ? coords.selected_abilities_coords.map(sac => ({
+                ...sac,
+                width: coords.selected_abilities_params.width,
+                height: coords.selected_abilities_params.height,
+            })) : []
+        )
+    };
+}
+
 
 /**
  * Processes the entire draft screen: takes a screenshot, identifies abilities in various slots,
@@ -503,10 +574,85 @@ async function processDraftScreen(coordinatesPath, targetResolution, confidenceT
     };
 }
 
+/**
+ * Performs a comprehensive initial scan of the main ability pool.
+ * This scans all 36 standard slots and 12 ultimate slots.
+ * @param {Buffer} screenshotBuffer - The PNG buffer of the screen.
+ * @param {object} layoutConfig - The full layout configuration object.
+ * @param {string} targetResolution - The resolution key.
+ * @param {number} confidenceThreshold - Minimum confidence for prediction.
+ * @returns {Promise<object>} A promise resolving to the raw scan results for the ability pool.
+ */
+async function performInitialScan(screenshotBuffer, layoutConfig, targetResolution, confidenceThreshold) {
+    console.log('[ImageProcessor/Worker] Performing comprehensive initial scan of all 48 pool abilities...');
+    const model = await modelPromise;
+    const classNames = await classNamesPromise;
+    if (!model || !classNames) throw new Error('Model or ClassNames not ready for initial scan.');
+
+    const coords = layoutConfig.resolutions?.[targetResolution];
+    if (!coords) throw new Error(`Coordinates for ${targetResolution} not found.`);
+
+    const {
+        ultimate_slots_coords = [],
+        standard_slots_coords = []
+    } = coords;
+
+    // Run scans for the entire pool in parallel
+    const ultimatePromise = identifySlots(ultimate_slots_coords, screenshotBuffer, classNames, confidenceThreshold);
+    const standardPromise = identifySlots(standard_slots_coords, screenshotBuffer, classNames, confidenceThreshold);
+
+    const [ultimates, standard] = await Promise.all([ultimatePromise, standardPromise]);
+
+    // Extract the hero-defining abilities from the full standard scan results
+    const heroDefiningAbilities = standard.filter(slot => slot.ability_order === 2);
+
+    return {
+        ultimates,
+        standard,
+        selectedAbilities: [], // Initial scan assumes no abilities are selected
+        heroDefiningAbilities
+    };
+}
+
+
+/**
+ * Scans only the slots where selected abilities appear. Used for rescans.
+ * @param {Buffer} screenshotBuffer - The PNG buffer of the screen.
+ * @param {object} layoutConfig - The full layout configuration object.
+ * @param {string} targetResolution - The resolution key (e.g., "1920x1080").
+ * @param {number} confidenceThreshold - Minimum confidence for prediction.
+ * @returns {Promise<Array<object>>} A promise resolving to an array of identified selected abilities.
+ */
+async function performSelectedAbilitiesScan(screenshotBuffer, layoutConfig, targetResolution, confidenceThreshold) {
+    console.log('[ImageProcessor/Worker] Performing selected abilities only scan (rescan)...');
+    const model = await modelPromise;
+    const classNames = await classNamesPromise;
+    if (!model || !classNames) throw new Error('Model or ClassNames not ready for rescan.');
+
+    const coords = layoutConfig.resolutions?.[targetResolution];
+    if (!coords) throw new Error(`Coordinates for ${targetResolution} not found.`);
+
+    const { selected_abilities_coords = [], selected_abilities_params } = coords;
+
+    if (selected_abilities_coords.length === 0 || !selected_abilities_params) {
+        console.warn(`[ImageProcessor/Worker] No selected ability coordinates defined for ${targetResolution}.`);
+        return [];
+    }
+
+    const selectedSlotsToScan = selected_abilities_coords.map(c => ({
+        ...c,
+        width: selected_abilities_params.width,
+        height: selected_abilities_params.height,
+    }));
+
+    return identifySlots(selectedSlotsToScan, screenshotBuffer, classNames, confidenceThreshold);
+}
+
 module.exports = {
     initializeImageProcessor,
-    processDraftScreen,
+    initializeImageProcessorIfNeeded,
+    performInitialScan, // New export
+    performSelectedAbilitiesScan, // New export
     identifySlots,
-    identifySlotsFromCache,
-    initializeImageProcessorIfNeeded
+    identifySlotsFromCache
 };
