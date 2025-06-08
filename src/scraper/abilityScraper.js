@@ -3,7 +3,7 @@ const cheerio = require('cheerio');
 const Database = require('better-sqlite3');
 
 const AXIOS_TIMEOUT = 30000; // 30 seconds
-const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36';
+const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'; 
 
 /**
  * Parses a generic numeric value from text.
@@ -15,7 +15,7 @@ function parseNumericValue(text) {
     const cleanedText = text.trim().replace(/[^0-9.-]+/g, ''); // Keep digits, dot, and minus
     const parsedValue = parseFloat(cleanedText);
     return !isNaN(parsedValue) ? parsedValue : null;
-}
+} 
 
 /**
  * Parses a percentage value from text and converts it to a decimal.
@@ -27,7 +27,7 @@ function parsePercentageValue(text) {
     const cleanedText = text.trim().replace('%', '');
     const parsedRate = parseFloat(cleanedText);
     return !isNaN(parsedRate) ? parsedRate / 100.0 : null;
-}
+} 
 
 /**
  * Extracts an entity's internal name and type (hero/ability) from an image source URL.
@@ -58,7 +58,7 @@ function extractEntityNameFromImg(imgElement) {
         isHero = false;
     }
     return { name: name || null, isHero };
-}
+} 
 
 /**
  * Attempts to find the hero_id for a given ability name by matching parts of the
@@ -89,7 +89,7 @@ function findHeroIdForAbility(abilityName, heroNameToIdMap) {
         return heroNameToIdMap.get('wisp');
     }
     return null;
-}
+} 
 
 /**
  * Processes rows from a Cheerio-loaded HTML table to extract entity data.
@@ -143,8 +143,6 @@ function parseEntityRows($, rows, entityDataMap, heroNameToIdMap, heroInsertTran
                     avg_pick_order: avgPickOrder,           // Correct key for SQL param @avg_pick_order
                     value_percentage: valuePercentage,      // Correct key for SQL param @value_percentage
                     windrunId: isHero ? windrunId : null,   // Correct key for SQL param @windrunId
-                    is_ultimate: null,                      // To be populated later if applicable
-                    ability_order: null                     // To be populated later if applicable
                 };
                 entityDataMap.set(entityName, newEntity);
                 if (isHero) {
@@ -163,8 +161,6 @@ function parseEntityRows($, rows, entityDataMap, heroNameToIdMap, heroInsertTran
                 avg_pick_order: avgPickOrder,           // Correct key for SQL param @avg_pick_order
                 value_percentage: valuePercentage,      // Correct key for SQL param @value_percentage
                 windrunId: isHero ? windrunId : null,   // Correct key for SQL param @windrunId
-                is_ultimate: null,
-                ability_order: null
             };
             entityDataMap.set(entityName, entry);
 
@@ -174,7 +170,7 @@ function parseEntityRows($, rows, entityDataMap, heroNameToIdMap, heroInsertTran
             }
         }
     });
-}
+} 
 
 
 /**
@@ -262,17 +258,15 @@ async function scrapeAndStoreAbilitiesAndHeroes(dbPath, urlRegular, urlHighSkill
         statusCallback(`Updating/Inserting ${finalAbilityList.length} abilities into the database...`);
 
         const insertAbilityStmt = db.prepare(`
-            INSERT INTO Abilities (name, display_name, hero_id, winrate, high_skill_winrate, avg_pick_order, value_percentage, is_ultimate, ability_order)
-            VALUES (@name, @display_name, @hero_id, @winrate, @high_skill_winrate, @avg_pick_order, @value_percentage, @is_ultimate, @ability_order)
+            INSERT INTO Abilities (name, display_name, hero_id, winrate, high_skill_winrate, avg_pick_order, value_percentage)
+            VALUES (@name, @display_name, @hero_id, @winrate, @high_skill_winrate, @avg_pick_order, @value_percentage)
             ON CONFLICT(name) DO UPDATE SET
                 display_name = excluded.display_name,
                 hero_id = excluded.hero_id,
                 winrate = excluded.winrate,
                 high_skill_winrate = excluded.high_skill_winrate,
                 avg_pick_order = excluded.avg_pick_order,
-                value_percentage = excluded.value_percentage,
-                is_ultimate = excluded.is_ultimate,
-                ability_order = excluded.ability_order;
+                value_percentage = excluded.value_percentage;
         `);
 
         const abilityInsertTransaction = db.transaction((abilitiesToInsert) => {
@@ -283,17 +277,14 @@ async function scrapeAndStoreAbilitiesAndHeroes(dbPath, urlRegular, urlHighSkill
                     continue;
                 }
                 try {
-                    // Ensure keys in 'ability' object match SQL parameters for Abilities table
                     const params = {
                         name: ability.name,
-                        display_name: ability.displayName || ability.display_name, // Prefer camelCase if exists, fallback to snake_case for safety
+                        display_name: ability.displayName || ability.display_name,
                         hero_id: ability.hero_id,
                         winrate: ability.winrate,
                         high_skill_winrate: ability.high_skill_winrate,
                         avg_pick_order: ability.avg_pick_order,
                         value_percentage: ability.value_percentage,
-                        is_ultimate: ability.is_ultimate,
-                        ability_order: ability.ability_order
                     };
                     const info = insertAbilityStmt.run(params);
                     if (info.changes > 0) count++;
