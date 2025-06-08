@@ -302,6 +302,12 @@ function createOverlayWindow(resolutionKey, allCoordinatesConfig, scaleFactorToU
   });
 
   overlayWindow.loadFile(path.join(__dirname, 'overlay.html'));
+
+  // Open DevTools for the overlay window if not in a packaged app
+  if (!IS_PACKAGED) {
+    overlayWindow.webContents.openDevTools({ mode: 'detach' });
+  }
+
   overlayWindow.setAlwaysOnTop(true, 'screen-saver');
   overlayWindow.setVisibleOnAllWorkspaces(true);
   overlayWindow.setIgnoreMouseEvents(true, { forward: true });
@@ -685,51 +691,136 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
 
     if (isInitialScan) {
       stepStartTime = performance.now();
-      tempRawResults = await performMlScan(layoutCoordinatesPath, selectedResolution, MIN_PREDICTION_CONFIDENCE);
+      let initialScanRawResults = await performMlScan(layoutCoordinatesPath, selectedResolution, MIN_PREDICTION_CONFIDENCE);
       screenshotBuffer = await screenshotDesktop({ format: 'png' });
       console.log(`[MainScan] Initial ML scan (focused) and screenshot in ${performance.now() - stepStartTime}ms.`);
 
       initialPoolAbilitiesCache.ultimates = [];
-      initialPoolAbilitiesCache.standard = tempRawResults.standard
+      initialPoolAbilitiesCache.standard = initialScanRawResults.standard
         .filter(item => item.name && item.coord)
         .map(res => ({ ...res, type: 'standard' }));
       mySelectedModelDbHeroId = null;
       mySelectedModelScreenOrder = null;
 
       stepStartTime = performance.now();
-      identifiedHeroModelsCache = await identifyHeroModels(tempRawResults.heroDefiningAbilities, models_coords);
+      identifiedHeroModelsCache = await identifyHeroModels(initialScanRawResults.heroDefiningAbilities, models_coords);
       console.log(`[MainScan] Hero model identification from 2nd abilities in ${performance.now() - stepStartTime}ms.`);
 
+      const abilitiesToDisplayMap = new Map();
+      const slotsForAdditionalScan = [];
+
+      initialScanRawResults.standard.forEach(ab => {
+        if (ab.name && ab.hero_order !== undefined && ab.ability_order !== undefined) {
+          const key = `${ab.hero_order}-${ab.ability_order}`;
+          abilitiesToDisplayMap.set(key, ab);
+        }
+      });
+
+      for (const heroModel of identifiedHeroModelsCache) {
+        if (heroModel.dbHeroId !== null && heroModel.heroOrder !== undefined) {
+          const heroAbilitiesFromDb = await getAbilitiesByHeroId(activeDbPath, heroModel.dbHeroId);
+          const firstSlotCoord = standard_slots_coords.find(s => s.hero_order === heroModel.heroOrder && s.ability_order === 1);
+          const thirdSlotCoord = standard_slots_coords.find(s => s.hero_order === heroModel.heroOrder && s.ability_order === 3);
+          const ultimateSlotCoord = ultimate_slots_coords.find(s => s.hero_order === heroModel.heroOrder);
+          const abilitiesFor1stSlot = heroAbilitiesFromDb.filter(ab => ab.ability_order === 1 && !ab.is_ultimate);
+          const abilitiesFor3rdSlot = heroAbilitiesFromDb.filter(ab => ab.ability_order === 3 && !ab.is_ultimate);
+          const abilitiesForUltimateSlot = heroAbilitiesFromDb.filter(ab => ab.is_ultimate);
+
+          if (abilitiesFor1stSlot.length === 1 && firstSlotCoord) {
+            const ab = abilitiesFor1stSlot[0];
+            const key = `${heroModel.heroOrder}-1`;
+            abilitiesToDisplayMap.set(key, { name: ab.name, displayName: ab.display_name, confidence: 1.0, hero_order: firstSlotCoord.hero_order, ability_order: firstSlotCoord.ability_order, is_ultimate: false, coord: { x: firstSlotCoord.x, y: firstSlotCoord.y, width: firstSlotCoord.width, height: firstSlotCoord.height } });
+          } else if (firstSlotCoord) {
+            slotsForAdditionalScan.push({ ...firstSlotCoord, is_ultimate: false });
+          }
+
+          if (abilitiesFor3rdSlot.length === 1 && thirdSlotCoord) {
+            const ab = abilitiesFor3rdSlot[0];
+            const key = `${heroModel.heroOrder}-3`;
+            abilitiesToDisplayMap.set(key, { name: ab.name, displayName: ab.display_name, confidence: 1.0, hero_order: thirdSlotCoord.hero_order, ability_order: thirdSlotCoord.ability_order, is_ultimate: false, coord: { x: thirdSlotCoord.x, y: thirdSlotCoord.y, width: thirdSlotCoord.width, height: thirdSlotCoord.height } });
+          } else if (thirdSlotCoord) {
+            slotsForAdditionalScan.push({ ...thirdSlotCoord, is_ultimate: false });
+          }
+
+          if (abilitiesForUltimateSlot.length === 1 && ultimateSlotCoord) {
+            const ab = abilitiesForUltimateSlot[0];
+            const key = `${heroModel.heroOrder}-ultimate`;
+            abilitiesToDisplayMap.set(key, { name: ab.name, displayName: ab.display_name, confidence: 1.0, hero_order: ultimateSlotCoord.hero_order, ability_order: ab.ability_order, is_ultimate: true, coord: { x: ultimateSlotCoord.x, y: ultimateSlotCoord.y, width: ultimateSlotCoord.width, height: ultimateSlotCoord.height } });
+          } else if (ultimateSlotCoord) {
+            slotsForAdditionalScan.push({ ...ultimateSlotCoord, is_ultimate: true });
+          }
+        }
+      }
+
+      if (slotsForAdditionalScan.length > 0) {
+        const currentClassNames = await loadClassNamesForMain();
+        const additionalScanResults = await identifySlots(slotsForAdditionalScan, screenshotBuffer, currentClassNames, MIN_PREDICTION_CONFIDENCE);
+        additionalScanResults.forEach(ab => {
+          if (ab.name && ab.hero_order !== undefined) {
+            const key = ab.is_ultimate ? `${ab.hero_order}-ultimate` : `${ab.hero_order}-${ab.ability_order}`;
+            const existing = abilitiesToDisplayMap.get(key);
+            if (!existing || existing.name === null || ab.confidence > existing.confidence) {
+              abilitiesToDisplayMap.set(key, ab);
+            }
+          }
+        });
+      }
+
+      const finalUltimates = ultimate_slots_coords.map(coord => {
+        const key = `${coord.hero_order}-ultimate`;
+        return abilitiesToDisplayMap.get(key) || { name: null, confidence: 0, hero_order: coord.hero_order, is_ultimate: true, coord };
+      });
+
+      const finalStandard = standard_slots_coords.map(coord => {
+        const key = `${coord.hero_order}-${coord.ability_order}`;
+        return abilitiesToDisplayMap.get(key) || { name: null, confidence: 0, hero_order: coord.hero_order, ability_order: coord.ability_order, is_ultimate: false, coord };
+      });
+
+      initialPoolAbilitiesCache.ultimates = finalUltimates.filter(item => item.name && item.coord).map(res => ({ ...res, type: 'ultimate' }));
+      initialPoolAbilitiesCache.standard = finalStandard.filter(item => item.name && item.coord).map(res => ({ ...res, type: 'standard' }));
+
+      tempRawResults = {
+        ultimates: finalUltimates,
+        standard: finalStandard,
+        selectedAbilities: initialScanRawResults.selectedAbilities,
+        heroDefiningAbilities: initialScanRawResults.heroDefiningAbilities
+      };
+
     } else { // Rescan
-      stepStartTime = performance.now();
       screenshotBuffer = await screenshotDesktop({ format: 'png' });
       console.log(`[MainScan] Screenshot captured for rescan in ${performance.now() - stepStartTime}ms.`);
 
-      if (!initialPoolAbilitiesCache.standard.length) {
-        tempRawResults = await performMlScan(layoutCoordinatesPath, selectedResolution, MIN_PREDICTION_CONFIDENCE);
-        initialPoolAbilitiesCache.standard = tempRawResults.standard.filter(item => item.name && item.coord).map(res => ({ ...res, type: 'standard' }));
-
-        if (!identifiedHeroModelsCache) {
-          identifiedHeroModelsCache = await identifyHeroModels(tempRawResults.heroDefiningAbilities, models_coords);
-        }
-      } else {
-        const currentClassNames = await loadClassNamesForMain();
-        const reconfirmedStandard = await identifySlotsFromCache(initialPoolAbilitiesCache.standard, screenshotBuffer, currentClassNames, MIN_PREDICTION_CONFIDENCE);
-
-        tempRawResults = {
-          ultimates: [],
-          standard: reconfirmedStandard,
-          selectedAbilities: [],
-          heroDefiningAbilities: reconfirmedStandard
-        };
+      if (!selected_abilities_params || selected_abilities_coords.length === 0) {
+        throw new Error('Selected abilities coordinates are not defined for this resolution.');
       }
+
+      const selectedAbilitySlotsToScan = selected_abilities_coords.map(coord => ({
+        ...coord,
+        width: selected_abilities_params.width,
+        height: selected_abilities_params.height,
+      }));
+
+      const currentClassNames = await loadClassNamesForMain();
+      stepStartTime = performance.now();
+      const identifiedPickedAbilities = await identifySlots(selectedAbilitySlotsToScan, screenshotBuffer, currentClassNames, MIN_PREDICTION_CONFIDENCE);
+      console.log(`[MainScan] Identified ${identifiedPickedAbilities.filter(a => a.name).length} picked abilities in ${performance.now() - stepStartTime}ms.`);
+
+      const pickedAbilityNames = new Set(identifiedPickedAbilities.map(a => a.name).filter(Boolean));
+
+      initialPoolAbilitiesCache.standard = initialPoolAbilitiesCache.standard.filter(ability => !pickedAbilityNames.has(ability.name));
+      initialPoolAbilitiesCache.ultimates = initialPoolAbilitiesCache.ultimates.filter(ability => !pickedAbilityNames.has(ability.name));
+
+      tempRawResults = {
+        ultimates: initialPoolAbilitiesCache.ultimates,
+        standard: initialPoolAbilitiesCache.standard,
+        selectedAbilities: identifiedPickedAbilities,
+        heroDefiningAbilities: []
+      };
     }
     lastRawScanResults = { ...tempRawResults };
 
     let heroesForMyHeroSelectionUI = prepareHeroesForMyHeroUI(identifiedHeroModelsCache, heroes_coords);
 
-    // Determine the selected hero ID for database lookups and populating other slots
-    // This logic relies on global state for user selected 'my model' or 'my hero'
     let currentIdentifiedHeroId = null;
     let currentIdentifiedHeroScreenOrder = null;
     if (mySelectedModelScreenOrder !== null && identifiedHeroModelsCache) {
@@ -748,153 +839,6 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
     mySelectedHeroDbIdForDrafting = currentIdentifiedHeroId;
     mySelectedHeroOriginalOrder = currentIdentifiedHeroScreenOrder;
 
-
-    // --- NEW LOGIC START: POPULATE OTHER ABILITIES FOR ALL IDENTIFIED HEROES AND FALLBACK ML SCAN ---
-    const abilitiesToDisplayMap = new Map();
-    const slotsForAdditionalScan = [];
-
-    tempRawResults.standard.forEach(ab => {
-      if (ab.name && ab.hero_order !== undefined && ab.ability_order !== undefined) {
-        const key = `${ab.hero_order}-${ab.ability_order}`;
-        abilitiesToDisplayMap.set(key, ab);
-      }
-    });
-
-    for (const heroModel of identifiedHeroModelsCache) {
-      if (heroModel.dbHeroId !== null && heroModel.heroOrder !== undefined) {
-        const heroAbilitiesFromDb = await getAbilitiesByHeroId(activeDbPath, heroModel.dbHeroId);
-
-        const firstSlotCoord = standard_slots_coords.find(s => s.hero_order === heroModel.heroOrder && s.ability_order === 1);
-        const thirdSlotCoord = standard_slots_coords.find(s => s.hero_order === heroModel.heroOrder && s.ability_order === 3);
-        const ultimateSlotCoord = ultimate_slots_coords.find(s => s.hero_order === heroModel.heroOrder);
-
-        const abilitiesFor1stSlot = heroAbilitiesFromDb.filter(ab => ab.ability_order === 1 && !ab.is_ultimate);
-        const abilitiesFor3rdSlot = heroAbilitiesFromDb.filter(ab => ab.ability_order === 3 && !ab.is_ultimate);
-        const abilitiesForUltimateSlot = heroAbilitiesFromDb.filter(ab => ab.is_ultimate);
-
-        if (abilitiesFor1stSlot.length === 1 && firstSlotCoord) {
-          const ab = abilitiesFor1stSlot[0];
-          const key = `${heroModel.heroOrder}-1`;
-          abilitiesToDisplayMap.set(key, {
-            name: ab.name,
-            displayName: ab.display_name,
-            confidence: 1.0,
-            hero_order: firstSlotCoord.hero_order,
-            ability_order: firstSlotCoord.ability_order,
-            is_ultimate: false,
-            coord: { x: firstSlotCoord.x, y: firstSlotCoord.y, width: firstSlotCoord.width, height: firstSlotCoord.height }
-          });
-        } else if (firstSlotCoord) {
-          slotsForAdditionalScan.push({ ...firstSlotCoord, scannedType: '1st', is_ultimate: false });
-        }
-
-        if (abilitiesFor3rdSlot.length === 1 && thirdSlotCoord) {
-          const ab = abilitiesFor3rdSlot[0];
-          const key = `${heroModel.heroOrder}-3`;
-          abilitiesToDisplayMap.set(key, {
-            name: ab.name,
-            displayName: ab.display_name,
-            confidence: 1.0,
-            hero_order: thirdSlotCoord.hero_order,
-            ability_order: thirdSlotCoord.ability_order,
-            is_ultimate: false,
-            coord: { x: thirdSlotCoord.x, y: thirdSlotCoord.y, width: thirdSlotCoord.width, height: thirdSlotCoord.height }
-          });
-        } else if (thirdSlotCoord) {
-          slotsForAdditionalScan.push({ ...thirdSlotCoord, scannedType: '3rd', is_ultimate: false });
-        }
-
-        if (abilitiesForUltimateSlot.length === 1 && ultimateSlotCoord) {
-          const ab = abilitiesForUltimateSlot[0];
-          const key = `${heroModel.heroOrder}-ultimate`;
-          abilitiesToDisplayMap.set(key, {
-            name: ab.name,
-            displayName: ab.display_name,
-            confidence: 1.0,
-            hero_order: ultimateSlotCoord.hero_order,
-            ability_order: ab.ability_order,
-            is_ultimate: true,
-            coord: { x: ultimateSlotCoord.x, y: ultimateSlotCoord.y, width: ultimateSlotCoord.width, height: ultimateSlotCoord.height }
-          });
-        } else if (ultimateSlotCoord) {
-          slotsForAdditionalScan.push({ ...ultimateSlotCoord, scannedType: 'ultimate', is_ultimate: true });
-        }
-      }
-    }
-
-    if (slotsForAdditionalScan.length > 0) {
-      const currentClassNames = await loadClassNamesForMain();
-      const additionalScanResults = await identifySlots(slotsForAdditionalScan, screenshotBuffer, currentClassNames, MIN_PREDICTION_CONFIDENCE);
-
-      additionalScanResults.forEach(ab => {
-        // Condition simplified: only check for ab.name and ab.hero_order, as ability_order might not be defined for ultimates
-        if (ab.name && ab.hero_order !== undefined) {
-          const key = ab.is_ultimate ? `${ab.hero_order}-ultimate` : `${ab.hero_order}-${ab.ability_order}`;
-          const existing = abilitiesToDisplayMap.get(key);
-          if (!existing || existing.name === null || ab.confidence > existing.confidence) {
-            abilitiesToDisplayMap.set(key, ab);
-          }
-        }
-      });
-    }
-
-    let finalUltimatesForDisplay = [];
-    let finalStandardAbilitiesForDisplay = [];
-    let finalHeroDefiningAbilities = [];
-
-    abilitiesToDisplayMap.forEach(ab => {
-      if (ab.is_ultimate) {
-        finalUltimatesForDisplay.push(ab);
-      } else {
-        finalStandardAbilitiesForDisplay.push(ab);
-        if (ab.ability_order === 2) {
-          finalHeroDefiningAbilities.push(ab);
-        }
-      }
-    });
-
-    const allPotentialStandardSlotCoords = new Map();
-    standard_slots_coords.forEach(coord => {
-      const key = `${coord.hero_order}-${coord.ability_order}`;
-      allPotentialStandardSlotCoords.set(key, {
-        name: null, confidence: 0, hero_order: coord.hero_order, ability_order: coord.ability_order, is_ultimate: false, coord: { x: coord.x, y: coord.y, width: coord.width, height: coord.height }
-      });
-    });
-    finalStandardAbilitiesForDisplay.forEach(ab => {
-      const key = `${ab.hero_order}-${ab.ability_order}`;
-      allPotentialStandardSlotCoords.set(key, ab);
-    });
-    finalStandardAbilitiesForDisplay = Array.from(allPotentialStandardSlotCoords.values());
-
-    const allPotentialUltimateSlotCoords = new Map();
-    ultimate_slots_coords.forEach(coord => {
-      const key = `${coord.hero_order}-ultimate`;
-      allPotentialUltimateSlotCoords.set(key, {
-        name: null, confidence: 0, hero_order: coord.hero_order, ability_order: coord.ability_order, is_ultimate: true, coord: { x: coord.x, y: coord.y, width: coord.width, height: coord.height }
-      });
-    });
-    finalUltimatesForDisplay.forEach(ab => {
-      const key = `${ab.hero_order}-ultimate`;
-      allPotentialUltimateSlotCoords.set(key, ab);
-    });
-    finalUltimatesForDisplay = Array.from(allPotentialUltimateSlotCoords.values());
-
-    const placeholderSelectedAbilities = selected_abilities_coords.map(sac => ({
-      name: null, confidence: 0,
-      hero_order: sac.hero_order, ability_order: sac.ability_order, is_ultimate: sac.is_ultimate,
-      width: selected_abilities_params.width, height: selected_abilities_params.height,
-      coord: { x: sac.x, y: sac.y, width: selected_abilities_params.width, height: selected_abilities_params.height }
-    }));
-
-
-    tempRawResults = {
-      ultimates: finalUltimatesForDisplay,
-      standard: finalStandardAbilitiesForDisplay,
-      selectedAbilities: placeholderSelectedAbilities,
-      heroDefiningAbilities: finalHeroDefiningAbilities
-    };
-
-    heroesForMyHeroSelectionUI = prepareHeroesForMyHeroUI(identifiedHeroModelsCache, heroes_coords);
 
     const { uniqueAbilityNamesInPool, allPickedAbilityNames } = collectAbilityNames(tempRawResults);
 

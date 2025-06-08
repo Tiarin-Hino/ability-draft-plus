@@ -260,7 +260,7 @@ function createHotspotsForType(abilityResultArray, type, isSelectedAbilityHotspo
 }
 
 /**
- * Creates a single hotspot element for an ability.
+ * Creates a single hotspot element for an ability, with identical tooltip logic for all.
  * @param {object} coord - Coordinate data { x, y, width, height, hero_order }.
  * @param {object} abilityData - Detailed data for the ability.
  * @param {string | number} uniqueIdPart - A unique part for the hotspot's ID.
@@ -276,6 +276,7 @@ function createHotspotElement(coord, abilityData, uniqueIdPart, isSelectedAbilit
     hotspot.style.width = `${coord.width / currentScaleFactor}px`;
     hotspot.style.height = `${coord.height / currentScaleFactor}px`;
 
+    // --- Set Data Attributes ---
     hotspot.dataset.heroOrder = coord.hero_order ?? abilityData.hero_order ?? 'unknown';
     hotspot.dataset.abilityName = abilityData.displayName || abilityData.internalName;
     hotspot.dataset.internalName = abilityData.internalName;
@@ -283,44 +284,60 @@ function createHotspotElement(coord, abilityData, uniqueIdPart, isSelectedAbilit
     hotspot.dataset.highSkillWinrate = abilityData.highSkillWinrate !== null ? abilityData.highSkillWinrate.toFixed(3) : 'N/A';
     hotspot.dataset.combinations = JSON.stringify(abilityData.highWinrateCombinations || []);
     hotspot.dataset.confidence = abilityData.confidence !== null ? abilityData.confidence.toFixed(2) : 'N/A';
+    // Suggestions only apply to abilities in the pool (not yet selected)
     hotspot.dataset.isSynergySuggestion = String(abilityData.isSynergySuggestionForMyHero === true && !isSelectedAbilityHotspot);
     hotspot.dataset.isGeneralTopTier = String(abilityData.isGeneralTopTier === true && !isSelectedAbilityHotspot);
 
-    // Apply CSS classes based on suggestion type
-    if (abilityData.isSynergySuggestionForMyHero && !isSelectedAbilityHotspot) {
-        hotspot.classList.add('synergy-suggestion-hotspot');
-    } else if (abilityData.isGeneralTopTier && !isSelectedAbilityHotspot) {
-        hotspot.classList.add('top-tier-ability');
+    // --- Apply CSS Classes ---
+    if (isSelectedAbilityHotspot) {
+        if (selectedHeroOriginalOrder !== null && parseInt(hotspot.dataset.heroOrder) === selectedHeroOriginalOrder) {
+            hotspot.classList.add('my-hero-selected-ability');
+        }
+    } else {
+        // Suggestions only apply to abilities in the pool
+        if (abilityData.isSynergySuggestionForMyHero) {
+            hotspot.classList.add('synergy-suggestion-hotspot');
+        } else if (abilityData.isGeneralTopTier) {
+            hotspot.classList.add('top-tier-ability');
+        }
     }
 
-    if (isSelectedAbilityHotspot && selectedHeroOriginalOrder !== null && parseInt(hotspot.dataset.heroOrder) === selectedHeroOriginalOrder) {
-        hotspot.classList.add('my-hero-selected-ability');
-    }
-
+    // --- Tooltip Logic (Identical for ALL hotspots) ---
     hotspot.addEventListener('mouseenter', () => {
-        const nameForDisplay = hotspot.dataset.abilityName.replace(/_/g, ' ');
+        const nameForDisplay = (hotspot.dataset.abilityName || 'Unknown').replace(/_/g, ' ');
         const wr = hotspot.dataset.winrate;
         const winrateFormatted = wr !== 'N/A' ? `${(parseFloat(wr) * 100).toFixed(1)}%` : 'N/A';
         const hsWr = hotspot.dataset.highSkillWinrate;
         const highSkillWinrateFormatted = hsWr !== 'N/A' ? `${(parseFloat(hsWr) * 100).toFixed(1)}%` : 'N/A';
 
-        const synergyIndicator = hotspot.dataset.isSynergySuggestion === 'true' ? '<span style="color: #00BCD4; font-weight: bold;">&#10022; SYNERGY PICK!</span><br>' : '';
-        const generalTopTierIndicator = hotspot.dataset.isGeneralTopTier === 'true' ? '<span style="color: #66ff66; font-weight: bold;">&#9733; TOP PICK!</span><br>' : '';
-        const confidenceIndicator = hotspot.dataset.confidence !== 'N/A' ? `<span style="font-size: 0.8em; color: #aaa;">Confidence: ${hotspot.dataset.confidence}</span><br>` : '';
-        const myHeroAbilityIndicator = hotspot.classList.contains('my-hero-selected-ability') ? '<span style="color: #FFD700;">(Your Hero Pick)</span><br>' : '';
+        let tooltipContent = '';
 
-        let tooltipContent = `
-            ${myHeroAbilityIndicator}
-            ${synergyIndicator} 
-            ${generalTopTierIndicator}
+        // Add indicators first. A picked ability can be one of "My Hero's" picks.
+        if (hotspot.classList.contains('my-hero-selected-ability')) {
+            tooltipContent += '<span style="color: #FFD700;">(Your Hero Pick)</span><br>';
+        }
+        // Suggestion indicators only apply to abilities in the pool.
+        if (hotspot.dataset.isSynergySuggestion === 'true') {
+            tooltipContent += '<span style="color: #00BCD4; font-weight: bold;">&#10022; SYNERGY PICK!</span><br>';
+        }
+        if (hotspot.dataset.isGeneralTopTier === 'true') {
+            tooltipContent += '<span style="color: #66ff66; font-weight: bold;">&#9733; TOP PICK!</span><br>';
+        }
+
+        // Add core ability info for all hotspots.
+        tooltipContent += `
             <div class="tooltip-title">${nameForDisplay}</div>
             <div class="tooltip-winrate">Winrate: ${winrateFormatted}</div>
             <div class="tooltip-winrate">High Skill WR: ${highSkillWinrateFormatted}</div>
-            ${confidenceIndicator}
         `;
 
-        const combinations = JSON.parse(hotspot.dataset.combinations);
-        if (combinations && combinations.length > 0) {
+        if (hotspot.dataset.confidence !== 'N/A') {
+            tooltipContent += `<span style="font-size: 0.8em; color: #aaa;">Confidence: ${hotspot.dataset.confidence}</span><br>`;
+        }
+
+        // Combinations are only relevant for abilities still in the pool.
+        const combinations = JSON.parse(hotspot.dataset.combinations || '[]');
+        if (combinations.length > 0) {
             tooltipContent += `<div class="tooltip-section-title">Strong Synergies (with Pool):</div>`;
             combinations.slice(0, 5).forEach(combo => {
                 const comboPartnerName = (combo.partnerAbilityDisplayName || 'Unknown Partner').replace(/_/g, ' ');
@@ -328,11 +345,14 @@ function createHotspotElement(coord, abilityData, uniqueIdPart, isSelectedAbilit
                 tooltipContent += `<div class="tooltip-combo">- ${comboPartnerName} (${comboWrFormatted} WR)</div>`;
             });
         }
+
         showTooltip(hotspot, tooltipContent);
     });
+
     hotspot.addEventListener('mouseleave', hideTooltip);
     document.body.appendChild(hotspot);
 }
+
 
 /**
  * Creates hotspots for identified hero models.
