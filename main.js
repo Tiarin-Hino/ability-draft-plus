@@ -16,17 +16,21 @@ const {
   getHighWinrateCombinations,
   getAllOPCombinations,
   getHeroDetailsByAbilityName,
-  getHeroDetailsById
+  getHeroDetailsById,
+  getAllHeroes,
+  getAbilitiesByHeroId
 } = require('./src/database/queries');
 const { scrapeAndStoreAbilitiesAndHeroes } = require('./src/scraper/abilityScraper');
 const { scrapeAndStoreAbilityPairs } = require('./src/scraper/abilityPairScraper');
-const { scrapeAndStoreLiquipediaData } = require('./src/scraper/liquipediaScraper'); // Import Liquipedia scraper
+const { scrapeAndStoreLiquipediaData } = require('./src/scraper/liquipediaScraper');
 const {
-  processDraftScreen: performMlScan, // Renamed for clarity within main.js
+  processDraftScreen: performMlScan,
   initializeImageProcessor,
   identifySlotsFromCache,
-  initializeImageProcessorIfNeeded
+  initializeImageProcessorIfNeeded,
+  identifySlots
 } = require('./src/imageProcessor');
+
 
 // --- Constants ---
 const IS_PACKAGED = app.isPackaged;
@@ -46,8 +50,8 @@ const ABILITIES_HIGH_SKILL_URL = 'https://windrun.io/ability-high-skill';
 const ABILITY_PAIRS_URL = 'https://windrun.io/ability-pairs';
 
 // ML & Scoring Configuration
-const MIN_PREDICTION_CONFIDENCE = 0.90; // Minimum confidence for ML predictions
-const NUM_TOP_TIER_SUGGESTIONS = 10;    // Number of top-tier suggestions to highlight
+const MIN_PREDICTION_CONFIDENCE = 0.90;
+const NUM_TOP_TIER_SUGGESTIONS = 10;
 
 // Scoring Weights (sum to 1.0)
 const WEIGHT_VALUE_PERCENTAGE = 0.40;
@@ -56,23 +60,23 @@ const WEIGHT_PICK_ORDER = 0.40;
 
 // Pick Order Normalization Range (for scoring)
 const MIN_PICK_ORDER_FOR_NORMALIZATION = 1.0;
-const MAX_PICK_ORDER_FOR_NORMALIZATION = 40.0; // Higher pick order is less desirable
+const MAX_PICK_ORDER_FOR_NORMALIZATION = 40.0;
 
 // --- Global State ---
 let mainWindow = null;
 let overlayWindow = null;
 let activeDbPath = '';
-let layoutCoordinatesPath = ''; // For layout_coordinates.json
+let layoutCoordinatesPath = '';
 
 let initialPoolAbilitiesCache = { ultimates: [], standard: [] };
-let fullLayoutConfigCache = null; // To cache the content of layout_coordinates.json
-let classNamesCache = null;     // To cache class names for the ML model
+let fullLayoutConfigCache = null;
+let classNamesCache = null;
 
 let isScanInProgress = false;
-let lastRawScanResults = null;        // Stores raw results from performMlScan for snapshotting
+let lastRawScanResults = null;
 let lastScanTargetResolution = null;
 let lastUsedScaleFactor = 1.0;
-let isFirstAppRun = false;            // Flag to manage initial setup/messaging
+let isFirstAppRun = false;
 
 // State for "My Hero" and "My Model" selections
 let mySelectedHeroDbIdForDrafting = null;
@@ -80,7 +84,7 @@ let mySelectedHeroOriginalOrder = null;
 let mySelectedModelDbHeroId = null;
 let mySelectedModelScreenOrder = null;
 
-let identifiedHeroModelsCache = null; // Caches identified hero models from the initial scan
+let identifiedHeroModelsCache = null;
 
 // --- Utility Functions ---
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -93,7 +97,6 @@ if (app.isPackaged) {
     PROD_API_URL = appConfig.API_ENDPOINT_URL;
     PROD_CLIENT_KEY = appConfig.CLIENT_API_KEY;
     PROD_SHARED_SECRET = appConfig.CLIENT_SHARED_SECRET;
-    console.log('[Main] Loaded production config from app-config.js');
   } catch (e) {
     console.error('[Main] FATAL: Could not load app-config.js in packaged app!', e);
   }
@@ -102,7 +105,6 @@ if (app.isPackaged) {
 if (!app.isPackaged) {
   try {
     require('dotenv').config();
-    console.log('[Main] Loaded .env file for development.');
   } catch (e) {
     console.warn('[Main] Could not load .env file for development:', e.message);
   }
@@ -116,7 +118,6 @@ if (!API_ENDPOINT_URL || !CLIENT_API_KEY || !CLIENT_SHARED_SECRET) {
   console.error("CRITICAL ERROR: API Configuration is missing. Please check .env for dev or app-config.js generation for prod.");
 }
 
-// Function to generate HMAC (place it somewhere accessible)
 function generateHmacSignature(sharedSecret, httpMethod, requestPath, timestamp, nonce, apiKey) {
   const stringToSign = `${httpMethod}\n${requestPath}\n${timestamp}\n${nonce}\n${apiKey}`;
   return crypto.createHmac('sha256', sharedSecret)
@@ -125,24 +126,12 @@ function generateHmacSignature(sharedSecret, httpMethod, requestPath, timestamp,
 }
 
 
-/**
- * Sends status updates to a specific webContents target.
- * @param {Electron.WebContents | null} targetWebContents - The webContents to send the status to.
- * @param {string} channel - The IPC channel name.
- * @param {any} message - The message payload.
- */
 function sendStatusUpdate(targetWebContents, channel, message) {
   if (targetWebContents && !targetWebContents.isDestroyed()) {
     targetWebContents.send(channel, message);
   }
 }
 
-/**
- * Loads class names from the JSON file if not already cached.
- * @async
- * @throws {Error} If class names cannot be loaded or parsed, or if the array is empty.
- * @returns {Promise<string[]>} A promise that resolves to an array of class names.
- */
 async function loadClassNamesForMain() {
   if (!classNamesCache) {
     const classNamesJsonPath = path.join(BASE_RESOURCES_PATH, 'model', MODEL_DIR_NAME, CLASS_NAMES_FILENAME);
@@ -161,12 +150,6 @@ async function loadClassNamesForMain() {
   return classNamesCache;
 }
 
-// --- Database Date Management ---
-/**
- * Updates or inserts the 'last_successful_scrape_date' in the Metadata table.
- * @param {string} dbPathToUse - Path to the database.
- * @returns {Promise<string | null>} The ISO date string (YYYY-MM-DD) of the update, or null on error.
- */
 async function updateLastSuccessfulScrapeDate(dbPathToUse) {
   const currentDate = new Date().toISOString().split('T')[0];
   let db = null;
@@ -183,11 +166,6 @@ async function updateLastSuccessfulScrapeDate(dbPathToUse) {
   }
 }
 
-/**
- * Retrieves the 'last_successful_scrape_date' from the Metadata table.
- * @param {string} dbPathToUse - Path to the database.
- * @returns {Promise<string | null>} The ISO date string (YYYY-MM-DD) or null if not found/error.
- */
 async function getLastSuccessfulScrapeDate(dbPathToUse) {
   let db = null;
   try {
@@ -202,11 +180,6 @@ async function getLastSuccessfulScrapeDate(dbPathToUse) {
   }
 }
 
-/**
- * Sends the formatted last updated date to the main window renderer.
- * @param {Electron.WebContents} webContents - The main window's webContents.
- * @param {string | null} dateStringYYYYMMDD - The date string in YYYY-MM-DD format.
- */
 function sendLastUpdatedDateToRenderer(webContents, dateStringYYYYMMDD) {
   let displayDate = "Never";
   if (dateStringYYYYMMDD) {
@@ -225,17 +198,11 @@ function sendLastUpdatedDateToRenderer(webContents, dateStringYYYYMMDD) {
   sendStatusUpdate(webContents, 'last-updated-date', displayDate);
 }
 
-// --- Scraping Orchestration ---
-/**
- * Performs a full data scrape from Windrun.io for heroes, abilities, and pairs.
- * @param {Electron.WebContents} statusCallbackWebContents - WebContents to send progress updates to.
- * @returns {Promise<boolean>} True if successful, false otherwise.
- */
 async function performFullScrape(statusCallbackWebContents) {
   const sendStatus = (msg) => sendStatusUpdate(statusCallbackWebContents, 'scrape-status', msg);
   try {
     sendStatus('Starting all data updates...');
-    await delay(100); // Brief delay for UI update
+    await delay(100);
 
     sendStatus('Phase 1/3: Updating heroes and abilities data from Windrun.io...');
     await scrapeAndStoreAbilitiesAndHeroes(activeDbPath, ABILITIES_URL, ABILITIES_HIGH_SKILL_URL, sendStatus);
@@ -245,17 +212,9 @@ async function performFullScrape(statusCallbackWebContents) {
     await scrapeAndStoreAbilityPairs(activeDbPath, ABILITY_PAIRS_URL, sendStatus);
     await delay(100);
 
-    // Phase 3: Enriching ability data with order and ultimate status from Liquipedia.
-    // This runs ONLY in development mode.
     if (!IS_PACKAGED) {
-      // The liquipediaScraper is conditionally required here to prevent it from being bundled
-      // in production builds if it's not strictly necessary for end-user functionality.
-      // However, for the purpose of this exercise, it's already at the top.
-      // Re-requiring here to ensure it's loaded if not at the top (defensive programming).
-      // For this current setup, it's fine as it's already imported at the top.
-      // const { scrapeAndStoreLiquipediaData } = require('./src/scraper/liquipediaScraper');
       sendStatus('Phase 3/3: Enriching ability data with order and ultimate status from Liquipedia (Dev Mode)...');
-      await scrapeAndStoreLiquipediaData(activeDbPath, sendStatus, false); // Pass false for full run in dev
+      await scrapeAndStoreLiquipediaData(activeDbPath, sendStatus, false);
       await delay(100);
     } else {
       sendStatus('Phase 3/3: Skipping Liquipedia data enrichment (Production Mode).');
@@ -275,7 +234,6 @@ async function performFullScrape(statusCallbackWebContents) {
   }
 }
 
-// --- Main Window Creation ---
 function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 1000,
@@ -294,7 +252,6 @@ function createMainWindow() {
     if (isFirstAppRun) {
       sendStatusUpdate(mainWindow.webContents, 'scrape-status', 'Using bundled data. Update data via "Update Windrun Data" if needed.');
     }
-    // Send initial system theme state to the renderer
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('initial-system-theme', {
         shouldUseDarkColors: nativeTheme.shouldUseDarkColors
@@ -307,7 +264,6 @@ function createMainWindow() {
   });
 }
 
-// Listen for system theme updates and forward them to the renderer
 nativeTheme.on('updated', () => {
   if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
     mainWindow.webContents.send('system-theme-updated', {
@@ -316,13 +272,6 @@ nativeTheme.on('updated', () => {
   }
 });
 
-// --- Overlay Window Creation & Management ---
-/**
- * Creates or recreates the overlay window.
- * @param {string} resolutionKey - The target screen resolution key.
- * @param {object} allCoordinatesConfig - The full layout coordinates configuration object.
- * @param {number} scaleFactorToUse - The display scale factor.
- */
 function createOverlayWindow(resolutionKey, allCoordinatesConfig, scaleFactorToUse) {
   if (overlayWindow) {
     overlayWindow.close();
@@ -333,7 +282,6 @@ function createOverlayWindow(resolutionKey, allCoordinatesConfig, scaleFactorToU
   identifiedHeroModelsCache = null;
   mySelectedModelDbHeroId = null;
   mySelectedModelScreenOrder = null;
-  // mySelectedHeroDbIdForDrafting and mySelectedHeroOriginalOrder persist across overlay reactivations.
 
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width: screenWidth, height: screenHeight, x, y } = primaryDisplay.bounds;
@@ -354,6 +302,12 @@ function createOverlayWindow(resolutionKey, allCoordinatesConfig, scaleFactorToU
   });
 
   overlayWindow.loadFile(path.join(__dirname, 'overlay.html'));
+
+  // Open DevTools for the overlay window if not in a packaged app
+  if (!IS_PACKAGED) {
+    overlayWindow.webContents.openDevTools({ mode: 'detach' });
+  }
+
   overlayWindow.setAlwaysOnTop(true, 'screen-saver');
   overlayWindow.setVisibleOnAllWorkspaces(true);
   overlayWindow.setIgnoreMouseEvents(true, { forward: true });
@@ -366,7 +320,7 @@ function createOverlayWindow(resolutionKey, allCoordinatesConfig, scaleFactorToU
       opCombinations: [],
       heroModels: [],
       heroesForMyHeroUI: [],
-      initialSetup: true, // Flag for overlayRenderer to do initial UI setup
+      initialSetup: true,
       scaleFactor: scaleFactorToUse,
       selectedHeroForDraftingDbId: mySelectedHeroDbIdForDrafting,
       selectedModelHeroOrder: mySelectedModelScreenOrder
@@ -379,7 +333,6 @@ function createOverlayWindow(resolutionKey, allCoordinatesConfig, scaleFactorToU
     lastRawScanResults = null;
     lastScanTargetResolution = null;
     identifiedHeroModelsCache = null;
-    // State for "My Model" and "My Hero" is not reset here to persist choices if overlay is reopened.
 
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.show();
@@ -389,7 +342,6 @@ function createOverlayWindow(resolutionKey, allCoordinatesConfig, scaleFactorToU
   });
 }
 
-// --- Application Lifecycle ---
 app.whenReady().then(async () => {
   const userDataPath = app.getPath('userData');
   activeDbPath = path.join(userDataPath, DB_FILENAME);
@@ -399,7 +351,7 @@ app.whenReady().then(async () => {
   try {
     const modelBasePath = path.join(BASE_RESOURCES_PATH, 'model', MODEL_DIR_NAME);
     const modelJsonPath = path.join(modelBasePath, MODEL_FILENAME);
-    const modelFileUrl = 'file://' + modelJsonPath.replace(/\\/g, '/'); // TFJS needs file URI
+    const modelFileUrl = 'file://' + modelJsonPath.replace(/\\/g, '/');
     const classNamesJsonPath = path.join(modelBasePath, CLASS_NAMES_FILENAME);
     initializeImageProcessor(modelFileUrl, classNamesJsonPath);
   } catch (initError) {
@@ -453,8 +405,6 @@ app.on('will-quit', () => {
   isScanInProgress = false;
 });
 
-// --- IPC Handlers ---
-
 ipcMain.handle('get-system-display-info', async () => {
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width, height } = primaryDisplay.size;
@@ -494,7 +444,6 @@ ipcMain.on('upload-failed-samples', async (event) => {
     const archive = archiver('zip', { zlib: { level: 9 } });
     const buffers = [];
 
-    // Create a promise to handle the archiver stream completion
     const archivePromise = new Promise((resolve, reject) => {
       archive.on('data', (buffer) => buffers.push(buffer));
       archive.on('end', () => resolve(Buffer.concat(buffers)));
@@ -508,7 +457,6 @@ ipcMain.on('upload-failed-samples', async (event) => {
     archive.finalize();
 
     const zipBuffer = await archivePromise;
-    console.log(`[Main] Zipping complete. Zip size: ${zipBuffer.length} bytes.`);
     sendStatus('Zip complete. Preparing to upload...', false, true);
 
     const timestamp = new Date().toISOString();
@@ -533,16 +481,11 @@ ipcMain.on('upload-failed-samples', async (event) => {
       'x-signature': signature,
     };
 
-    console.log(`[Main] Uploading failed samples to ${API_ENDPOINT_URL}/failed-samples-upload`);
-    console.log(`[Main] Headers for failed samples:`, JSON.stringify(headers, null, 2));
-
-
     const response = await axios.post(API_ENDPOINT_URL + '/failed-samples-upload', zipBuffer, {
       headers: headers,
       responseType: 'json',
     });
 
-    console.log('[Main] Failed Samples API Response:', response.data);
     if (response.status === 200 && response.data.message) {
       sendStatus(response.data.message, false, false);
     } else {
@@ -659,11 +602,9 @@ ipcMain.on('select-my-model', (event, { heroOrder, dbHeroId }) => {
   if (mySelectedModelScreenOrder === heroOrder && mySelectedModelDbHeroId === dbHeroId) {
     mySelectedModelDbHeroId = null;
     mySelectedModelScreenOrder = null;
-    console.log(`[MainState] "My Model" deselected.`);
   } else {
     mySelectedModelDbHeroId = dbHeroId;
     mySelectedModelScreenOrder = heroOrder;
-    console.log(`[MainState] "My Model" selected: Screen Order ${heroOrder}, DB ID ${dbHeroId}`);
   }
   if (overlayWindow && !overlayWindow.isDestroyed()) {
     sendStatusUpdate(overlayWindow.webContents, 'my-model-selection-changed', {
@@ -674,13 +615,11 @@ ipcMain.on('select-my-model', (event, { heroOrder, dbHeroId }) => {
 
 ipcMain.on('select-my-hero-for-drafting', (event, { heroOrder, dbHeroId }) => {
   if (mySelectedHeroOriginalOrder === heroOrder && mySelectedHeroDbIdForDrafting === dbHeroId) {
-    mySelectedHeroDbHeroIdForDrafting = null;
+    mySelectedHeroDbIdForDrafting = null;
     mySelectedHeroOriginalOrder = null;
-    console.log(`[MainState] "My Hero" (for drafting) deselected.`);
   } else {
     mySelectedHeroDbIdForDrafting = dbHeroId;
     mySelectedHeroOriginalOrder = heroOrder;
-    console.log(`[MainState] "My Hero" (for drafting) selected: Original List Order ${heroOrder}, DB ID ${dbHeroId}`);
   }
   if (overlayWindow && !overlayWindow.isDestroyed()) {
     sendStatusUpdate(overlayWindow.webContents, 'my-hero-for-drafting-selection-changed', {
@@ -699,8 +638,9 @@ ipcMain.on('open-external-link', (event, url) => {
   }
 });
 
-// --- Scan Execution Logic ---
 ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, selectedHeroOriginalOrderFromOverlay, isInitialScan) => {
+  const overallScanStart = performance.now();
+
   if (isScanInProgress) {
     sendStatusUpdate(overlayWindow.webContents, 'overlay-data', {
       info: 'Scan already in progress. Please wait.',
@@ -719,12 +659,21 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
 
   isScanInProgress = true;
   lastScanTargetResolution = selectedResolution;
-  const startTime = performance.now();
-  console.log(`[MainScan] Scan triggered. Initial: ${isInitialScan}, Overlay's selectedHeroOriginalOrder: ${selectedHeroOriginalOrderFromOverlay}, Main's current mySelectedHeroOriginalOrder: ${mySelectedHeroOriginalOrder}`);
 
   try {
+    let stepStartTime = performance.now();
     const layoutConfig = fullLayoutConfigCache;
-    if (!layoutConfig) throw new Error("Layout configuration not loaded.");
+    if (!layoutConfig) {
+      const layoutData = await fs.readFile(layoutCoordinatesPath, 'utf-8');
+      fullLayoutConfigCache = JSON.parse(layoutData);
+    }
+    console.log(`[MainScan] Layout config check/load in ${performance.now() - stepStartTime}ms.`);
+
+    stepStartTime = performance.now();
+    await loadClassNamesForMain();
+    await initializeImageProcessorIfNeeded();
+    console.log(`[MainScan] ML initialization check in ${performance.now() - stepStartTime}ms.`);
+
     const coords = layoutConfig.resolutions?.[selectedResolution];
     if (!coords) throw new Error(`Coordinates not found for ${selectedResolution}`);
 
@@ -736,60 +685,166 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
       models_coords = [],
       heroes_coords = []
     } = coords;
-    const currentClassNames = await loadClassNamesForMain();
-    const selected_hero_abilities_coords_full = selected_abilities_params ? selected_abilities_coords.map(sac => ({
-      ...sac,
-      width: selected_abilities_params.width,
-      height: selected_abilities_params.height,
-    })) : [];
-    const hero_defining_slots_coords = standard_slots_coords.filter(slot => slot.ability_order === 2);
 
     let tempRawResults;
+    let screenshotBuffer;
+
     if (isInitialScan) {
-      console.log("[MainScan] Performing Initial Scan.");
-      tempRawResults = await performMlScan(layoutCoordinatesPath, selectedResolution, MIN_PREDICTION_CONFIDENCE);
-      initialPoolAbilitiesCache.ultimates = tempRawResults.ultimates
-        .filter(item => item.name && item.coord)
-        .map(res => ({ ...res, type: 'ultimate' }));
-      initialPoolAbilitiesCache.standard = tempRawResults.standard
+      stepStartTime = performance.now();
+      let initialScanRawResults = await performMlScan(layoutCoordinatesPath, selectedResolution, MIN_PREDICTION_CONFIDENCE);
+      screenshotBuffer = await screenshotDesktop({ format: 'png' });
+      console.log(`[MainScan] Initial ML scan (focused) and screenshot in ${performance.now() - stepStartTime}ms.`);
+
+      initialPoolAbilitiesCache.ultimates = [];
+      initialPoolAbilitiesCache.standard = initialScanRawResults.standard
         .filter(item => item.name && item.coord)
         .map(res => ({ ...res, type: 'standard' }));
-      console.log(`[MainScan] Initial Cache: ${initialPoolAbilitiesCache.ultimates.length} ults, ${initialPoolAbilitiesCache.standard.length} std cached.`);
-      mySelectedModelDbHeroId = null; // Reset model on initial scan
+      mySelectedModelDbHeroId = null;
       mySelectedModelScreenOrder = null;
-      identifiedHeroModelsCache = await identifyHeroModels(tempRawResults.heroDefiningAbilities, models_coords);
-    } else { // Rescan
-      console.log("[MainScan] Performing Rescan.");
-      if (!initialPoolAbilitiesCache.ultimates.length && !initialPoolAbilitiesCache.standard.length) {
-        console.warn("[MainScan] Rescan with empty cache. Performing full scan logic for this rescan.");
-        tempRawResults = await performMlScan(layoutCoordinatesPath, selectedResolution, MIN_PREDICTION_CONFIDENCE);
-        initialPoolAbilitiesCache.ultimates = tempRawResults.ultimates.filter(item => item.name && item.coord).map(res => ({ ...res, type: 'ultimate' }));
-        initialPoolAbilitiesCache.standard = tempRawResults.standard.filter(item => item.name && item.coord).map(res => ({ ...res, type: 'standard' }));
-        if (!identifiedHeroModelsCache) {
-          identifiedHeroModelsCache = await identifyHeroModels(tempRawResults.heroDefiningAbilities, models_coords);
+
+      stepStartTime = performance.now();
+      identifiedHeroModelsCache = await identifyHeroModels(initialScanRawResults.heroDefiningAbilities, models_coords);
+      console.log(`[MainScan] Hero model identification from 2nd abilities in ${performance.now() - stepStartTime}ms.`);
+
+      const abilitiesToDisplayMap = new Map();
+      const slotsForAdditionalScan = [];
+
+      initialScanRawResults.standard.forEach(ab => {
+        if (ab.name && ab.hero_order !== undefined && ab.ability_order !== undefined) {
+          const key = `${ab.hero_order}-${ab.ability_order}`;
+          abilitiesToDisplayMap.set(key, ab);
         }
-      } else {
-        const screenshotBuffer = await screenshotDesktop({ format: 'png' });
-        await initializeImageProcessorIfNeeded();
-        const { identifySlots } = require('./src/imageProcessor'); // Re-require to ensure context if needed
+      });
 
-        const reconfirmedUltimates = await identifySlotsFromCache(initialPoolAbilitiesCache.ultimates, screenshotBuffer, currentClassNames, MIN_PREDICTION_CONFIDENCE);
-        const reconfirmedStandard = await identifySlotsFromCache(initialPoolAbilitiesCache.standard, screenshotBuffer, currentClassNames, MIN_PREDICTION_CONFIDENCE);
-        const identifiedSelectedAbilities = await identifySlots(selected_hero_abilities_coords_full, screenshotBuffer, currentClassNames, MIN_PREDICTION_CONFIDENCE, new Set());
+      for (const heroModel of identifiedHeroModelsCache) {
+        if (heroModel.dbHeroId !== null && heroModel.heroOrder !== undefined) {
+          const heroAbilitiesFromDb = await getAbilitiesByHeroId(activeDbPath, heroModel.dbHeroId);
+          const firstSlotCoord = standard_slots_coords.find(s => s.hero_order === heroModel.heroOrder && s.ability_order === 1);
+          const thirdSlotCoord = standard_slots_coords.find(s => s.hero_order === heroModel.heroOrder && s.ability_order === 3);
+          const ultimateSlotCoord = ultimate_slots_coords.find(s => s.hero_order === heroModel.heroOrder);
+          const abilitiesFor1stSlot = heroAbilitiesFromDb.filter(ab => ab.ability_order === 1 && !ab.is_ultimate);
+          const abilitiesFor3rdSlot = heroAbilitiesFromDb.filter(ab => ab.ability_order === 3 && !ab.is_ultimate);
+          const abilitiesForUltimateSlot = heroAbilitiesFromDb.filter(ab => ab.is_ultimate);
 
-        tempRawResults = {
-          ultimates: reconfirmedUltimates,
-          standard: reconfirmedStandard,
-          selectedAbilities: identifiedSelectedAbilities,
-          heroDefiningAbilities: reconfirmedStandard.filter(a => hero_defining_slots_coords.some(hc => hc.hero_order === a.hero_order && hc.ability_order === a.ability_order))
-        };
+          if (abilitiesFor1stSlot.length === 1 && firstSlotCoord) {
+            const ab = abilitiesFor1stSlot[0];
+            const key = `${heroModel.heroOrder}-1`;
+            abilitiesToDisplayMap.set(key, { name: ab.name, displayName: ab.display_name, confidence: 1.0, hero_order: firstSlotCoord.hero_order, ability_order: firstSlotCoord.ability_order, is_ultimate: false, coord: { x: firstSlotCoord.x, y: firstSlotCoord.y, width: firstSlotCoord.width, height: firstSlotCoord.height } });
+          } else if (firstSlotCoord) {
+            slotsForAdditionalScan.push({ ...firstSlotCoord, is_ultimate: false });
+          }
+
+          if (abilitiesFor3rdSlot.length === 1 && thirdSlotCoord) {
+            const ab = abilitiesFor3rdSlot[0];
+            const key = `${heroModel.heroOrder}-3`;
+            abilitiesToDisplayMap.set(key, { name: ab.name, displayName: ab.display_name, confidence: 1.0, hero_order: thirdSlotCoord.hero_order, ability_order: thirdSlotCoord.ability_order, is_ultimate: false, coord: { x: thirdSlotCoord.x, y: thirdSlotCoord.y, width: thirdSlotCoord.width, height: thirdSlotCoord.height } });
+          } else if (thirdSlotCoord) {
+            slotsForAdditionalScan.push({ ...thirdSlotCoord, is_ultimate: false });
+          }
+
+          if (abilitiesForUltimateSlot.length === 1 && ultimateSlotCoord) {
+            const ab = abilitiesForUltimateSlot[0];
+            const key = `${heroModel.heroOrder}-ultimate`;
+            abilitiesToDisplayMap.set(key, { name: ab.name, displayName: ab.display_name, confidence: 1.0, hero_order: ultimateSlotCoord.hero_order, ability_order: ab.ability_order, is_ultimate: true, coord: { x: ultimateSlotCoord.x, y: ultimateSlotCoord.y, width: ultimateSlotCoord.width, height: ultimateSlotCoord.height } });
+          } else if (ultimateSlotCoord) {
+            slotsForAdditionalScan.push({ ...ultimateSlotCoord, is_ultimate: true });
+          }
+        }
       }
+
+      if (slotsForAdditionalScan.length > 0) {
+        const currentClassNames = await loadClassNamesForMain();
+        const additionalScanResults = await identifySlots(slotsForAdditionalScan, screenshotBuffer, currentClassNames, MIN_PREDICTION_CONFIDENCE);
+        additionalScanResults.forEach(ab => {
+          if (ab.name && ab.hero_order !== undefined) {
+            const key = ab.is_ultimate ? `${ab.hero_order}-ultimate` : `${ab.hero_order}-${ab.ability_order}`;
+            const existing = abilitiesToDisplayMap.get(key);
+            if (!existing || existing.name === null || ab.confidence > existing.confidence) {
+              abilitiesToDisplayMap.set(key, ab);
+            }
+          }
+        });
+      }
+
+      const finalUltimates = ultimate_slots_coords.map(coord => {
+        const key = `${coord.hero_order}-ultimate`;
+        return abilitiesToDisplayMap.get(key) || { name: null, confidence: 0, hero_order: coord.hero_order, is_ultimate: true, coord };
+      });
+
+      const finalStandard = standard_slots_coords.map(coord => {
+        const key = `${coord.hero_order}-${coord.ability_order}`;
+        return abilitiesToDisplayMap.get(key) || { name: null, confidence: 0, hero_order: coord.hero_order, ability_order: coord.ability_order, is_ultimate: false, coord };
+      });
+
+      initialPoolAbilitiesCache.ultimates = finalUltimates.filter(item => item.name && item.coord).map(res => ({ ...res, type: 'ultimate' }));
+      initialPoolAbilitiesCache.standard = finalStandard.filter(item => item.name && item.coord).map(res => ({ ...res, type: 'standard' }));
+
+      tempRawResults = {
+        ultimates: finalUltimates,
+        standard: finalStandard,
+        selectedAbilities: initialScanRawResults.selectedAbilities,
+        heroDefiningAbilities: initialScanRawResults.heroDefiningAbilities
+      };
+
+    } else { // Rescan
+      screenshotBuffer = await screenshotDesktop({ format: 'png' });
+      console.log(`[MainScan] Screenshot captured for rescan in ${performance.now() - stepStartTime}ms.`);
+
+      if (!selected_abilities_params || selected_abilities_coords.length === 0) {
+        throw new Error('Selected abilities coordinates are not defined for this resolution.');
+      }
+
+      const selectedAbilitySlotsToScan = selected_abilities_coords.map(coord => ({
+        ...coord,
+        width: selected_abilities_params.width,
+        height: selected_abilities_params.height,
+      }));
+
+      const currentClassNames = await loadClassNamesForMain();
+      stepStartTime = performance.now();
+      const identifiedPickedAbilities = await identifySlots(selectedAbilitySlotsToScan, screenshotBuffer, currentClassNames, MIN_PREDICTION_CONFIDENCE);
+      console.log(`[MainScan] Identified ${identifiedPickedAbilities.filter(a => a.name).length} picked abilities in ${performance.now() - stepStartTime}ms.`);
+
+      const pickedAbilityNames = new Set(identifiedPickedAbilities.map(a => a.name).filter(Boolean));
+
+      initialPoolAbilitiesCache.standard = initialPoolAbilitiesCache.standard.filter(ability => !pickedAbilityNames.has(ability.name));
+      initialPoolAbilitiesCache.ultimates = initialPoolAbilitiesCache.ultimates.filter(ability => !pickedAbilityNames.has(ability.name));
+
+      tempRawResults = {
+        ultimates: initialPoolAbilitiesCache.ultimates,
+        standard: initialPoolAbilitiesCache.standard,
+        selectedAbilities: identifiedPickedAbilities,
+        heroDefiningAbilities: []
+      };
     }
     lastRawScanResults = { ...tempRawResults };
-    const heroesForMyHeroSelectionUI = prepareHeroesForMyHeroUI(identifiedHeroModelsCache, heroes_coords);
+
+    let heroesForMyHeroSelectionUI = prepareHeroesForMyHeroUI(identifiedHeroModelsCache, heroes_coords);
+
+    let currentIdentifiedHeroId = null;
+    let currentIdentifiedHeroScreenOrder = null;
+    if (mySelectedModelScreenOrder !== null && identifiedHeroModelsCache) {
+      const selectedModelEntry = identifiedHeroModelsCache.find(model => model.heroOrder === mySelectedModelScreenOrder);
+      if (selectedModelEntry && selectedModelEntry.dbHeroId) {
+        currentIdentifiedHeroId = selectedModelEntry.dbHeroId;
+        currentIdentifiedHeroScreenOrder = selectedModelEntry.heroOrder;
+      }
+    } else if (mySelectedHeroOriginalOrder !== null && heroesForMyHeroSelectionUI) {
+      const selectedHeroEntry = heroesForMyHeroSelectionUI.find(hero => hero.heroOrder === mySelectedHeroOriginalOrder);
+      if (selectedHeroEntry && selectedHeroEntry.dbHeroId) {
+        currentIdentifiedHeroId = selectedHeroEntry.dbHeroId;
+        currentIdentifiedHeroScreenOrder = selectedHeroEntry.heroOrder;
+      }
+    }
+    mySelectedHeroDbIdForDrafting = currentIdentifiedHeroId;
+    mySelectedHeroOriginalOrder = currentIdentifiedHeroScreenOrder;
+
+
     const { uniqueAbilityNamesInPool, allPickedAbilityNames } = collectAbilityNames(tempRawResults);
+
     const allCurrentlyRelevantAbilityNames = Array.from(new Set([...uniqueAbilityNamesInPool, ...allPickedAbilityNames]));
     const abilityDetailsMap = getAbilityDetails(activeDbPath, allCurrentlyRelevantAbilityNames);
+
     const centralDraftPoolArray = Array.from(uniqueAbilityNamesInPool);
 
     let synergisticPartnersInPoolForMyHero = new Set();
@@ -800,7 +855,6 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
       const myHeroPickedAbilityNames = myHeroPickedAbilitiesRaw.map(ab => ab.name);
 
       if (myHeroPickedAbilityNames.length > 0) {
-        console.log(`[MainScanLogic] My Hero (Original Order: ${mySelectedHeroOriginalOrder}) picked: ${myHeroPickedAbilityNames.join(', ')}. Checking synergies with pool of ${centralDraftPoolArray.length} abilities.`);
         for (const pickedAbilityName of myHeroPickedAbilityNames) {
           const combinations = await getHighWinrateCombinations(activeDbPath, pickedAbilityName, centralDraftPoolArray);
           combinations.forEach(combo => {
@@ -809,7 +863,6 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
             }
           });
         }
-        console.log(`[MainScanLogic] Found ${synergisticPartnersInPoolForMyHero.size} synergistic partners in pool for My Hero's abilities: ${Array.from(synergisticPartnersInPoolForMyHero).join(', ')}`);
       }
     }
 
@@ -835,6 +888,7 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
       synergyWinrate: combo.synergyWinrate
     }));
 
+
     let allEntitiesForScoring = prepareEntitiesForScoring(tempRawResults, abilityDetailsMap, identifiedHeroModelsCache);
     allEntitiesForScoring = calculateConsolidatedScores(allEntitiesForScoring);
     const myHeroHasPickedUltimate = checkMyHeroPickedUltimate(mySelectedHeroDbIdForDrafting, heroesForMyHeroSelectionUI, tempRawResults.selectedAbilities);
@@ -845,9 +899,9 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
     const formattedStandard = formatResultsForUiWithFlags(tempRawResults.standard, abilityDetailsMap, topTierMarkedEntities, 'standard', allEntitiesForScoring);
     const formattedSelectedAbilities = formatResultsForUiWithFlags(tempRawResults.selectedAbilities, abilityDetailsMap, [], 'selected', allEntitiesForScoring, true);
 
-    const endTime = performance.now();
-    const durationMs = Math.round(endTime - startTime);
-    console.log(`[MainScan] Scan and processing took ${durationMs}ms.`);
+    const overallScanEnd = performance.now();
+    const durationMs = Math.round(overallScanEnd - overallScanStart);
+    console.log(`[MainScan] Overall scan and processing took ${durationMs}ms.`);
 
     sendStatusUpdate(overlayWindow.webContents, 'overlay-data', {
       scanData: { ultimates: formattedUltimates, standard: formattedStandard, selectedAbilities: formattedSelectedAbilities },
@@ -913,12 +967,11 @@ async function identifyHeroModels(heroDefiningAbilities, modelCoords) {
 function prepareHeroesForMyHeroUI(cachedHeroModels, heroScreenCoords) {
   if (!cachedHeroModels || cachedHeroModels.length === 0 || !heroScreenCoords || heroScreenCoords.length === 0) return [];
   const uiData = [];
-  for (const heroScreenCoord of heroScreenCoords) { // heroScreenCoord.hero_order is 0-9
-    // Assumes model.heroOrder (screen order 0-11) directly maps to hero list order (0-9) for the first 10.
+  for (const heroScreenCoord of heroScreenCoords) {
     const matchedModel = cachedHeroModels.find(model => model.heroOrder === heroScreenCoord.hero_order);
     if (matchedModel && matchedModel.dbHeroId) {
       uiData.push({
-        heroOrder: heroScreenCoord.hero_order, // This is the 0-9 drafting list order
+        heroOrder: heroScreenCoord.hero_order,
         heroName: matchedModel.heroDisplayName,
         dbHeroId: matchedModel.dbHeroId,
       });
@@ -997,7 +1050,7 @@ function calculateConsolidatedScores(entities) {
       const clampedPRaw = Math.max(MIN_PICK_ORDER_FOR_NORMALIZATION, Math.min(MAX_PICK_ORDER_FOR_NORMALIZATION, pRaw));
       const range = MAX_PICK_ORDER_FOR_NORMALIZATION - MIN_PICK_ORDER_FOR_NORMALIZATION;
       if (range > 0) {
-        pNormalized = (MAX_PICK_ORDER_FOR_NORMALIZATION - clampedPRaw) / range; // Lower pick order number is better
+        pNormalized = (MAX_PICK_ORDER_FOR_NORMALIZATION - clampedPRaw) / range;
       }
     }
     entity.consolidatedScore = (WEIGHT_VALUE_PERCENTAGE * vScaled) +
@@ -1015,7 +1068,6 @@ function checkMyHeroPickedUltimate(selectedHeroDbId, heroesForUI, pickedAbilitie
   const myDraftingHeroSlotOrder = myDraftingHeroUIInfo.heroOrder;
   for (const pickedAbility of pickedAbilities) {
     if (pickedAbility.name && pickedAbility.hero_order === myDraftingHeroSlotOrder && pickedAbility.is_ultimate === true) {
-      console.log(`[MainScanLogic] "My Hero" (DB ID: ${selectedHeroDbId}) picked an ultimate: ${pickedAbility.name}`);
       return true;
     }
   }
@@ -1027,10 +1079,9 @@ function determineTopTierEntities(allScoredEntities, selectedModelId, myHeroHasU
   const finalTopTierEntities = [];
 
   if (myHeroHasUlt) {
-    console.log('[MainScanLogic] My Hero has an ultimate. Filtering out ultimates from suggestions.');
     entitiesToConsider = entitiesToConsider.filter(entity => {
       if (entity.entityType === 'ability') return entity.is_ultimate_from_coord_source !== true && entity.is_ultimate_from_db !== true;
-      return true; // Keep hero models
+      return true;
     });
     synergisticPartnersInPoolForMyHeroSet.forEach(partnerName => {
       const partnerEntity = allScoredEntities.find(e => e.internalName === partnerName);
@@ -1041,7 +1092,6 @@ function determineTopTierEntities(allScoredEntities, selectedModelId, myHeroHasU
   }
 
   if (selectedModelId !== null) {
-    console.log(`[MainScanLogic] "My Model" (ID: ${selectedModelId}) is selected. Filtering general Top Tier to abilities only.`);
   }
 
   const synergySuggestionsFromPool = [];
@@ -1054,12 +1104,11 @@ function determineTopTierEntities(allScoredEntities, selectedModelId, myHeroHasU
   });
   synergySuggestionsFromPool.sort((a, b) => b.consolidatedScore - a.consolidatedScore);
   finalTopTierEntities.push(...synergySuggestionsFromPool);
-  console.log(`[MainScanLogic] Added ${synergySuggestionsFromPool.length} synergy suggestions for My Hero.`);
 
   const remainingSlots = NUM_TOP_TIER_SUGGESTIONS - finalTopTierEntities.length;
   if (remainingSlots > 0) {
     let generalCandidates = [...entitiesToConsider];
-    if (selectedModelId !== null) { // If a model is selected, general picks should only be abilities
+    if (selectedModelId !== null) {
       generalCandidates = generalCandidates.filter(entity => entity.entityType === 'ability');
     }
     const generalTopPicks = generalCandidates
@@ -1067,9 +1116,7 @@ function determineTopTierEntities(allScoredEntities, selectedModelId, myHeroHasU
       .slice(0, remainingSlots)
       .map(entity => ({ ...entity, isSynergySuggestionForMyHero: false, isGeneralTopTier: true }));
     finalTopTierEntities.push(...generalTopPicks);
-    console.log(`[MainScanLogic] Added ${generalTopPicks.length} general top tier picks.`);
   }
-  console.log(`[MainScanLogic] Total top tier entities determined: ${finalTopTierEntities.length}`);
   return finalTopTierEntities;
 }
 
@@ -1128,7 +1175,7 @@ function formatResultsForUiWithFlags(
       confidence: result.confidence,
       hero_order: result.hero_order,
       ability_order: result.ability_order,
-      consolidatedScore: scoredPoolEntity ? (scoredPoolEntity.consolidatedScore || 0) : (dbDetails ? 0 : 0), // Fallback score if not in pool
+      consolidatedScore: scoredPoolEntity ? (scoredPoolEntity.consolidatedScore || 0) : (dbDetails ? 0 : 0),
       coord: originalCoord
     };
   });
@@ -1183,8 +1230,6 @@ ipcMain.on('take-snapshot', async (event) => {
         const heroOrderForThisAbility = abilityResult.hero_order;
         const coordsForThisHeroInLayout = coordsConfig.selected_abilities_coords.filter(c => c.hero_order === heroOrderForThisAbility);
 
-        // Determine the 0-based index of this ability among those picked by the same hero,
-        // to map to the correct layout coordinate.
         let NthAbilityForThisHero = 0;
         for (let k = 0; k < i; k++) {
           if (lastRawScanResults.selectedAbilities[k].hero_order === heroOrderForThisAbility) {
@@ -1268,7 +1313,7 @@ ipcMain.on('export-failed-samples', async (event) => {
     }
 
     sendStatus(`Zipping ${imageFiles.length} samples...`, false, true);
-    const output = require('fs').createWriteStream(filePath); // Node's fs for stream
+    const output = require('fs').createWriteStream(filePath);
     const archive = archiver('zip', { zlib: { level: 9 } });
 
     await new Promise((resolve, reject) => {
@@ -1308,29 +1353,22 @@ ipcMain.on('submit-new-resolution-snapshot', async (event) => {
   let wasMainWindowVisible = false;
 
   try {
-    // 1. Determine current primary screen resolution
     const primaryDisplay = screen.getPrimaryDisplay();
     const { width, height } = primaryDisplay.size;
     const scaleFactor = primaryDisplay.scaleFactor;
     const resolutionString = `${width}x${height}`;
-    console.log(`[Main] Current primary display resolution: ${resolutionString}, Scale Factor: ${scaleFactor}`);
 
-    // 2. Hide Control Panel if visible and add delay
     if (mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible()) {
       wasMainWindowVisible = true;
       sendStatus('Hiding control panel for screenshot...', false, true);
-      mainWindow.hide();
-      await delay(2000); // 2-second delay for the window to hide
+      await delay(2000);
     } else {
       await delay(100);
     }
 
-    // 3. Take a full-screen screenshot
     sendStatus('Capturing screen...', false, true);
     const screenshotBuffer = await screenshotDesktop({ format: 'png' });
-    console.log(`[Main] Screenshot taken, buffer size: ${screenshotBuffer.length} bytes.`);
 
-    // 4. API Call (existing logic)
     const timestamp = new Date().toISOString();
     const nonce = crypto.randomBytes(16).toString('hex');
     const httpMethod = 'POST';
@@ -1356,16 +1394,12 @@ ipcMain.on('submit-new-resolution-snapshot', async (event) => {
     };
 
     sendStatus('Submitting screenshot to API with security headers...', false, true);
-    console.log(`[Main] Sending screenshot for ${resolutionString} with signature.`);
-    console.log(`[Main] Headers being sent:`, JSON.stringify(headers, null, 2));
-
 
     const response = await axios.post(API_ENDPOINT_URL + '/failed-samples-upload', screenshotBuffer, {
       headers: headers,
       responseType: 'json',
     });
 
-    console.log('[Main] API Response:', response.data);
     if (response.status === 200 && response.data.message) {
       sendStatus(response.data.message, false, false);
     } else {
@@ -1382,7 +1416,6 @@ ipcMain.on('submit-new-resolution-snapshot', async (event) => {
     }
     sendStatus(errorMessage, true, false);
   } finally {
-    // 5. Show Control Panel again if it was hidden by this process
     if (wasMainWindowVisible && mainWindow && !mainWindow.isDestroyed()) {
       if (!mainWindow.isVisible()) {
         mainWindow.show();
@@ -1390,7 +1423,6 @@ ipcMain.on('submit-new-resolution-snapshot', async (event) => {
       if (!mainWindow.isFocused()) {
         mainWindow.focus();
       }
-      console.log('[Main] Control panel should be visible and focused if it was hidden.');
     }
   }
 });
