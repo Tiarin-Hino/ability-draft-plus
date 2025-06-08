@@ -1,5 +1,3 @@
-// src/scraper/liquipediaScraper.js
-
 const axios = require('axios');
 const cheerio = require('cheerio');
 const Database = require('better-sqlite3');
@@ -33,7 +31,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms)); //
  * @returns {string} The normalized string.
  */
 function normalizeForLiquipediaId(displayName) {
-    return displayName.replace(/ /g, '_').replace(/\./g, '').replace(/'/g, '%27');
+    return displayName.replace(/ /g, '_').replace(/\./g, '');
 } //
 
 /**
@@ -43,7 +41,7 @@ function normalizeForLiquipediaId(displayName) {
  * @returns {string} The normalized string for URL.
  */
 function normalizeForLiquipediaPageTitle(displayName) {
-    return displayName.replace(/ /g, '_').replace(/'/g, ''); //
+    return displayName.replace(/ /g, '_').replace(/'/g, '').replace(/'/g, '%27'); //
 }
 
 
