@@ -90,8 +90,6 @@ function initializeImageProcessor(modelPath, classNamesPath) {
 async function initializeImageProcessorIfNeeded() {
     if (!imageProcessorFullyInitialized) {
         if (!initialized && ABSOLUTE_MODEL_PATH && ABSOLUTE_CLASS_NAMES_PATH) {
-            // This case might occur if main.js tries to call before processDraftScreen ever ran.
-            // Assuming initializeImageProcessor in main.js or first call to processDraftScreen handles paths.
             console.warn("[ImageProcessor] initializeImageProcessorIfNeeded called when core paths not set. Relying on prior initialization call.");
         }
         if (!modelPromise || !classNamesPromise) {
@@ -106,9 +104,9 @@ async function initializeImageProcessorIfNeeded() {
 }
 
 /**
- * Identifies abilities in specified screen slots using the loaded ML model.
+ * Identifies abilities in specified screen slots using the loaded ML model via batch processing.
  *
- * @param {Array<object>} slotCoordsArray - Array of objects, each defining a slot with x, y, width, height,
+ * @param {Array<object>} slotDataArray - Array of objects, each defining a slot with x, y, width, height,
  * hero_order, ability_order, and is_ultimate.
  * @param {Buffer} screenBuffer - Buffer containing the PNG image of the screen.
  * @param {Array<string>} currentClassNames - The array of class names (ability internal names) to use for prediction.
@@ -118,114 +116,138 @@ async function initializeImageProcessorIfNeeded() {
  * each with name, confidence, and original slot data.
  * @throws {Error} If the image processor is not initialized.
  */
-async function identifySlots(slotCoordsArray, screenBuffer, currentClassNames, confidenceThreshold, previouslyPickedNames = new Set()) {
+async function identifySlots(slotDataArray, screenBuffer, currentClassNames, confidenceThreshold, previouslyPickedNames = new Set()) {
+    const identifySlotsStart = performance.now();
     if (!initialized || !modelPromise || !classNamesPromise) {
         throw new Error("[ImageProcessor] Not initialized. Call initializeImageProcessor first.");
     }
 
-    const model = await modelPromise; // Ensure model is loaded
+    const model = await modelPromise;
 
-    const defaultSlotData = (slot) => ({
+    const defaultSlotResult = (slot) => ({
         name: null,
         confidence: 0,
         hero_order: slot.hero_order,
         ability_order: slot.ability_order,
-        is_ultimate: slot.is_ultimate // Carry over the is_ultimate flag from coordinate data
+        is_ultimate: slot.is_ultimate,
+        coord: { x: slot.x, y: slot.y, width: slot.width, height: slot.height }
     });
 
     if (!model) {
         console.error("[ImageProcessor] Model not available for predictions. Returning empty results for slots.");
-        return slotCoordsArray.map(slotData => defaultSlotData(slotData));
+        return slotDataArray.map(slotData => defaultSlotResult(slotData));
     }
     if (!currentClassNames || currentClassNames.length === 0) {
         console.error("[ImageProcessor] Class names are empty or not provided to identifySlots. Returning empty results for slots.");
-        return slotCoordsArray.map(slotData => defaultSlotData(slotData));
+        return slotDataArray.map(slotData => defaultSlotResult(slotData));
     }
 
-    const identifiedResults = [];
+    if (slotDataArray.length === 0) {
+        console.log("[ImageProcessor] No slots to process in identifySlots.");
+        return [];
+    }
 
-    for (let i = 0; i < slotCoordsArray.length; i++) {
-        const slotData = slotCoordsArray[i];
+    const croppedBuffers = [];
+    const validSlotIndexes = [];
+
+    let cropStartTime = performance.now();
+    for (let i = 0; i < slotDataArray.length; i++) {
+        const slotData = slotDataArray[i];
         if (typeof slotData.x !== 'number' || typeof slotData.y !== 'number' ||
             typeof slotData.width !== 'number' || typeof slotData.height !== 'number' ||
             slotData.width <= 0 || slotData.height <= 0) {
-            console.warn(`[ImageProcessor] Skipping slot due to invalid/missing coordinate or dimension data:`, slotData);
-            identifiedResults.push(defaultSlotData(slotData));
+            console.warn(`[ImageProcessor] Skipping slot ${i} due to invalid/missing coordinate or dimension data:`, slotData);
             continue;
         }
 
-        const { x, y, width, height } = slotData;
-        let predictedAbilityName = null;
-        let predictionConfidence = 0;
-        const tensorsToDispose = []; // Keep track of tensors to dispose for this slot
-
         try {
-            // Crop the specific ability icon from the full screenshot buffer
             const croppedBuffer = await sharp(screenBuffer)
-                .extract({ left: x, top: y, width: width, height: height })
-                .png() // Ensure PNG format for consistency
+                .extract({ left: slotData.x, top: slotData.y, width: slotData.width, height: slotData.height })
+                .png()
                 .toBuffer();
+            croppedBuffers.push(croppedBuffer);
+            validSlotIndexes.push(i);
+        } catch (err) {
+            console.error(`[ImageProcessor] Error cropping image for slot ${i}: ${err.message}`);
+        }
+    }
+    console.log(`[ImageProcessor] Cropped ${croppedBuffers.length} images in ${performance.now() - cropStartTime}ms.`);
 
-            // Preprocess the image for the model
-            // 1. Decode image buffer to a tensor
-            let tensor = tf.node.decodeImage(croppedBuffer, 3); // 3 channels (RGB)
-            tensorsToDispose.push(tensor);
+    if (croppedBuffers.length === 0) {
+        console.log("[ImageProcessor] No valid images to process after cropping.");
+        return slotDataArray.map(slotData => defaultSlotResult(slotData));
+    }
 
-            // 2. Resize to the dimensions the model expects (IMG_HEIGHT x IMG_WIDTH)
-            let resizedTensor = tf.image.resizeBilinear(tensor, [IMG_HEIGHT, IMG_WIDTH]);
-            tensorsToDispose.push(resizedTensor);
+    let preprocessingStartTime = performance.now();
+    const imageTensors = [];
+    for (const buffer of croppedBuffers) {
+        let tensor = tf.node.decodeImage(buffer, 3);
+        let resizedTensor = tf.image.resizeBilinear(tensor, [IMG_HEIGHT, IMG_WIDTH]);
+        imageTensors.push(resizedTensor);
+        tf.dispose(tensor);
+    }
 
-            // 3. Expand dimensions to create a batch of 1 [batch_size, height, width, channels]
-            let batchTensor = resizedTensor.expandDims(0);
-            tensorsToDispose.push(batchTensor);
+    const batchTensor = tf.stack(imageTensors);
+    tf.dispose(imageTensors);
+    console.log(`[ImageProcessor] Preprocessed (decode/resize/stack) ${batchTensor.shape[0]} images in ${performance.now() - preprocessingStartTime}ms.`);
 
-            // 4. Perform prediction.
-            //    The model (MobileNetV2 based) is expected to have its own internal rescaling layers
-            //    (e.g., to normalize pixel values from [0, 255] to [-1, 1] or [0, 1]),
-            //    so we feed the raw [0, 255] pixel values from decodeImage.
-            let predictionTensor = model.predict(batchTensor);
-            tensorsToDispose.push(predictionTensor);
+    let predictionStartTime = performance.now();
+    let predictionTensor;
+    try {
+        predictionTensor = model.predict(batchTensor);
+    } catch (err) {
+        console.error(`[ImageProcessor] Error during batch prediction: ${err.message}`);
+        tf.dispose(batchTensor);
+        return slotDataArray.map(slotData => defaultSlotResult(slotData));
+    }
+    const probabilities = await predictionTensor.array();
+    tf.dispose([batchTensor, predictionTensor]);
+    console.log(`[ImageProcessor] Performed batch prediction for ${probabilities.length} images in ${performance.now() - predictionStartTime}ms.`);
 
-            const probabilities = await predictionTensor.data(); // Use await for async data retrieval
-            const maxProbability = Math.max(...probabilities);
-            const predictedIndex = probabilities.indexOf(maxProbability);
-            predictionConfidence = maxProbability;
+    const identifiedResults = Array(slotDataArray.length).fill(null);
 
-            if (predictionConfidence >= confidenceThreshold) {
-                if (predictedIndex >= 0 && predictedIndex < currentClassNames.length) {
-                    const tempPredictedName = currentClassNames[predictedIndex];
-                    // If the ability has already been picked by a hero (from selected_abilities), don't suggest it for the pool.
-                    if (previouslyPickedNames.has(tempPredictedName)) {
-                        predictedAbilityName = null; // Mark as null if already picked from the pool
-                    } else {
-                        predictedAbilityName = tempPredictedName;
-                    }
-                } else {
-                    console.warn(`[ImageProcessor] Slot ${i} (hero_order: ${slotData.hero_order}): Predicted index ${predictedIndex} out of bounds for ${currentClassNames.length} classes. Confidence: ${predictionConfidence.toFixed(2)}.`);
+    for (let i = 0; i < probabilities.length; i++) {
+        const originalSlotIndex = validSlotIndexes[i];
+        const slotData = slotDataArray[originalSlotIndex];
+        const slotProbabilities = probabilities[i];
+
+        const maxProbability = Math.max(...slotProbabilities);
+        const predictedIndex = slotProbabilities.indexOf(maxProbability);
+        const predictionConfidence = maxProbability;
+
+        let predictedAbilityName = null;
+        if (predictionConfidence >= confidenceThreshold) {
+            if (predictedIndex >= 0 && predictedIndex < currentClassNames.length) {
+                const tempPredictedName = currentClassNames[predictedIndex];
+                if (previouslyPickedNames.has(tempPredictedName)) {
                     predictedAbilityName = null;
+                } else {
+                    predictedAbilityName = tempPredictedName;
                 }
             } else {
-                // Confidence below threshold
-                predictedAbilityName = null;
+                console.warn(`[ImageProcessor] Slot ${originalSlotIndex} (HO:${slotData.hero_order}): Predicted index ${predictedIndex} out of bounds for ${currentClassNames.length} classes. Confidence: ${predictionConfidence.toFixed(2)}.`);
             }
-        } catch (err) {
-            console.error(`[ImageProcessor] Error processing slot ${i} (hero_order: ${slotData.hero_order}) with ML model: ${err.message}`);
-            predictedAbilityName = null;
-            predictionConfidence = 0;
-        } finally {
-            tf.dispose(tensorsToDispose);
         }
-        identifiedResults.push({
+
+        identifiedResults[originalSlotIndex] = {
             name: predictedAbilityName,
             confidence: predictionConfidence,
             hero_order: slotData.hero_order,
             ability_order: slotData.ability_order,
             is_ultimate: slotData.is_ultimate,
             coord: { x: slotData.x, y: slotData.y, width: slotData.width, height: slotData.height }
-        });
+        };
     }
+
+    for (let i = 0; i < identifiedResults.length; i++) {
+        if (identifiedResults[i] === null) {
+            identifiedResults[i] = defaultSlotResult(slotDataArray[i]);
+        }
+    }
+    console.log(`[ImageProcessor] identifySlots completed in ${performance.now() - identifySlotsStart}ms.`);
     return identifiedResults;
 }
+
 
 /**
  * Re-identifies abilities from a cached list of slots against a new screen buffer.
@@ -251,7 +273,7 @@ async function identifySlotsFromCache(cachedPoolAbilities, screenBuffer, current
             console.log("[ImageProcessor] identifySlotsFromCache: Model and class names awaited successfully.");
         } catch (e) {
             console.error("[ImageProcessor] identifySlotsFromCache: Error awaiting model/class names:", e);
-            return []; // Cannot proceed
+            return [];
         }
     }
 
@@ -264,64 +286,95 @@ async function identifySlotsFromCache(cachedPoolAbilities, screenBuffer, current
         console.error("[ImageProcessor] identifySlotsFromCache: Class names array is empty or not provided.");
         return [];
     }
-    if (CLASS_NAMES.length === 0) { // Internal check against the module's own cache
+    if (CLASS_NAMES.length === 0) {
         console.warn("[ImageProcessor] identifySlotsFromCache: Internal CLASS_NAMES cache is empty. This is unexpected if initialized.");
     }
 
     console.log(`[identifySlotsFromCache] Called. Cached abilities: ${cachedPoolAbilities.length}. Confidence Threshold: ${confidenceThreshold}.`);
     const confirmedAbilities = [];
-    let processedCount = 0;
 
-    for (const cachedSlot of cachedPoolAbilities) {
-        processedCount++;
-        const { coord, name: originalNameFromCache, hero_order, ability_order } = cachedSlot;
+    if (cachedPoolAbilities.length === 0) {
+        console.log("[ImageProcessor] No cached abilities to re-process in identifySlotsFromCache.");
+        return [];
+    }
 
-        if (!coord || typeof coord.x !== 'number' || !originalNameFromCache) {
-            console.warn(`[identifySlotsFromCache] Invalid data for cached slot ${processedCount}. Skipping. OriginalName: ${originalNameFromCache}, Coord: ${JSON.stringify(coord)}`);
+    const croppedBuffers = [];
+    const validCacheIndexes = [];
+
+    let cropStartTime = performance.now();
+    for (let i = 0; i < cachedPoolAbilities.length; i++) {
+        const cachedSlot = cachedPoolAbilities[i];
+        const { coord, name: originalNameFromCache } = cachedSlot;
+
+        if (!coord || typeof coord.x !== 'number' || !originalNameFromCache || coord.width <= 0 || coord.height <= 0) {
+            console.warn(`[identifySlotsFromCache] Invalid data for cached slot ${i}. Skipping. OriginalName: ${originalNameFromCache}, Coord: ${JSON.stringify(coord)}`);
             continue;
         }
-
-        let currentPredictionName = null;
-        let currentConfidence = 0;
-        const tensorsToDispose = [];
 
         try {
             const croppedBuffer = await sharp(screenBuffer)
                 .extract({ left: coord.x, top: coord.y, width: coord.width, height: coord.height })
                 .png()
                 .toBuffer();
+            croppedBuffers.push(croppedBuffer);
+            validCacheIndexes.push(i);
+        } catch (err) {
+            console.error(`[identifySlotsFromCache] Error cropping image for cached slot '${originalNameFromCache}': ${err.message}`);
+        }
+    }
+    console.log(`[identifySlotsFromCache] Cropped ${croppedBuffers.length} images in ${performance.now() - cropStartTime}ms.`);
 
-            let tensor = tf.node.decodeImage(croppedBuffer, 3);
-            tensorsToDispose.push(tensor);
-            let resizedTensor = tf.image.resizeBilinear(tensor, [IMG_HEIGHT, IMG_WIDTH]);
-            tensorsToDispose.push(resizedTensor);
-            let batchTensor = resizedTensor.expandDims(0);
-            tensorsToDispose.push(batchTensor);
+    if (croppedBuffers.length === 0) {
+        console.log("[ImageProcessor] No valid cached images to re-process after cropping.");
+        return [];
+    }
 
-            let predictionTensor = model.predict(batchTensor);
-            tensorsToDispose.push(predictionTensor);
+    let preprocessingStartTime = performance.now();
+    const imageTensors = [];
+    for (const buffer of croppedBuffers) {
+        let tensor = tf.node.decodeImage(buffer, 3);
+        let resizedTensor = tf.image.resizeBilinear(tensor, [IMG_HEIGHT, IMG_WIDTH]);
+        imageTensors.push(resizedTensor);
+        tf.dispose(tensor);
+    }
+    const batchTensor = tf.stack(imageTensors);
+    tf.dispose(imageTensors);
+    console.log(`[identifySlotsFromCache] Preprocessed (decode/resize/stack) ${batchTensor.shape[0]} images in ${performance.now() - preprocessingStartTime}ms.`);
 
-            const probabilities = await predictionTensor.data();
-            const maxProbability = Math.max(...probabilities);
-            const predictedIndex = probabilities.indexOf(maxProbability);
-            currentConfidence = maxProbability;
+    let predictionStartTime = performance.now();
+    let predictionTensor;
+    try {
+        predictionTensor = model.predict(batchTensor);
+    } catch (err) {
+        console.error(`[identifySlotsFromCache] Error during batch prediction from cache: ${err.message}`);
+        tf.dispose(batchTensor);
+        return [];
+    }
+    const probabilities = await predictionTensor.array();
+    tf.dispose([batchTensor, predictionTensor]);
+    console.log(`[identifySlotsFromCache] Performed batch prediction from cache for ${probabilities.length} images in ${performance.now() - predictionStartTime}ms.`);
 
-            if (currentConfidence >= confidenceThreshold) {
-                if (predictedIndex >= 0 && predictedIndex < currentClassNamesArray.length) {
-                    currentPredictionName = currentClassNamesArray[predictedIndex];
-                    if (currentPredictionName === originalNameFromCache) {
-                        confirmedAbilities.push({
-                            ...cachedSlot, // Spreads original data like coord, type, hero_order, ability_order, is_ultimate
-                            name: originalNameFromCache,
-                            confidence: currentConfidence, // Update with new confidence
-                        });
-                    }
+    for (let i = 0; i < probabilities.length; i++) {
+        const originalCacheIndex = validCacheIndexes[i];
+        const cachedSlot = cachedPoolAbilities[originalCacheIndex];
+        const originalNameFromCache = cachedSlot.name;
+        const slotProbabilities = probabilities[i];
+
+        const maxProbability = Math.max(...slotProbabilities);
+        const predictedIndex = slotProbabilities.indexOf(maxProbability);
+        const currentConfidence = maxProbability;
+
+        if (currentConfidence >= confidenceThreshold) {
+            if (predictedIndex >= 0 && predictedIndex < currentClassNamesArray.length) {
+                const currentPredictionName = currentClassNamesArray[predictedIndex];
+                if (currentPredictionName === originalNameFromCache) {
+                    confirmedAbilities.push({
+                        ...cachedSlot,
+                        name: originalNameFromCache,
+                        confidence: currentConfidence,
+                    });
                 }
             }
-        } catch (err) {
-            console.error(`[identifySlotsFromCache] Error reconfirming slot for '${originalNameFromCache}' (HO:${hero_order}, AO:${ability_order}): ${err.message}`);
-        } finally {
-            tf.dispose(tensorsToDispose);
         }
     }
     console.log(`[identifySlotsFromCache] Finished. Reconfirmed ${confirmedAbilities.length} of ${cachedPoolAbilities.length} cached abilities.`);
@@ -332,16 +385,18 @@ async function identifySlotsFromCache(cachedPoolAbilities, screenBuffer, current
 /**
  * Processes the entire draft screen: takes a screenshot, identifies abilities in various slots,
  * and organizes the results.
+ * For this version, it focuses on identifying hero-defining abilities (from 2nd slot).
  *
  * @param {string} coordinatesPath - Path to the JSON file defining slot coordinates for different resolutions.
  * @param {string} targetResolution - The screen resolution key (e.g., "1920x1080") to use from coordinates file.
  * @param {number} confidenceThreshold - Minimum confidence for an ability prediction to be considered valid.
- * @returns {Promise<object>} A promise that resolves to an object containing arrays of identified
- * ultimates, standard abilities, hero-defining abilities, and selected abilities.
+ * @returns {Promise<object>} A promise that resolves to an object containing identified
+ * hero-defining abilities in the 'standard' array, and empty arrays for other categories.
  * @throws {Error} If coordinates cannot be loaded, the screenshot fails, or if the processor is not initialized.
  */
 async function processDraftScreen(coordinatesPath, targetResolution, confidenceThreshold) {
-    console.log(`[ImageProcessor] Starting screen processing with ML Model for ${targetResolution} (Confidence: ${confidenceThreshold}).`);
+    const processDraftScreenStart = performance.now(); // Log start of processDraftScreen
+    console.log(`[ImageProcessor] Starting focused screen processing (Hero Defining Abilities Only) for ${targetResolution} (Confidence: ${confidenceThreshold}).`);
 
     if (!initialized || !modelPromise || !classNamesPromise) {
         console.error("[ImageProcessor] Not initialized. Cannot process draft screen.");
@@ -351,45 +406,39 @@ async function processDraftScreen(coordinatesPath, targetResolution, confidenceT
     const model = await modelPromise;
     const resolvedClassNames = await classNamesPromise;
 
-    const createEmptyResultsForSlots = (coordsArray = []) => {
-        if (!Array.isArray(coordsArray)) return [];
+    // Helper to create empty results array with original coord data for UI consistency
+    const createResultsWithCoords = (coordsArray = []) => {
         return coordsArray.map(slotData => ({
-            name: null, confidence: 0,
+            name: null, confidence: 0, // Name will be null initially, confidence 0
             hero_order: slotData.hero_order,
             ability_order: slotData.ability_order,
-            is_ultimate: slotData.is_ultimate
+            is_ultimate: slotData.is_ultimate,
+            coord: { x: slotData.x, y: slotData.y, width: slotData.width, height: slotData.height }
         }));
     };
 
     if (!model || !resolvedClassNames || resolvedClassNames.length === 0) {
         console.error("[ImageProcessor] Model or Class Names not loaded. Aborting scan and returning empty results structure.");
-        let ultimate_coords = [], standard_coords = [], hero_defining_coords = [], selected_hero_abilities_coords_full = [];
-        try {
+        let hero_defining_coords = [];
+        try { // Attempt to load coords for default empty results, so UI doesn't break
             const configData = await fs.readFile(coordinatesPath, 'utf-8');
             const layoutConfig = JSON.parse(configData);
             const coords = layoutConfig.resolutions?.[targetResolution];
             if (coords) {
-                ultimate_coords = coords.ultimate_slots_coords || [];
-                standard_coords = coords.standard_slots_coords || [];
                 hero_defining_coords = (coords.standard_slots_coords || []).filter(slot => slot.ability_order === 2);
-                if (coords.selected_abilities_coords && coords.selected_abilities_params) {
-                    selected_hero_abilities_coords_full = coords.selected_abilities_coords.map(sac => ({
-                        ...sac,
-                        width: coords.selected_abilities_params.width,
-                        height: coords.selected_abilities_params.height,
-                    }));
-                }
             }
         } catch (e) { console.error("[ImageProcessor] Error reading layout for empty results structure:", e); }
+
         return {
-            ultimates: createEmptyResultsForSlots(ultimate_coords),
-            standard: createEmptyResultsForSlots(standard_coords),
-            heroDefiningAbilities: createEmptyResultsForSlots(hero_defining_coords),
-            selectedAbilities: createEmptyResultsForSlots(selected_hero_abilities_coords_full)
+            ultimates: createResultsWithCoords(coords ? coords.ultimate_slots_coords : []),
+            standard: createResultsWithCoords(hero_defining_coords), // Still provide coord data for these
+            heroDefiningAbilities: createResultsWithCoords(hero_defining_coords),
+            selectedAbilities: createResultsWithCoords(coords ? (coords.selected_abilities_params ? coords.selected_abilities_coords.map(sac => ({ ...sac, width: coords.selected_abilities_params.width, height: coords.selected_abilities_params.height })) : []) : [])
         };
     }
 
     let layoutConfig;
+    let readConfigStartTime = performance.now();
     try {
         const configData = await fs.readFile(coordinatesPath, 'utf-8');
         layoutConfig = JSON.parse(configData);
@@ -397,6 +446,7 @@ async function processDraftScreen(coordinatesPath, targetResolution, confidenceT
         console.error(`[ImageProcessor] Error reading coordinates file from ${coordinatesPath}: ${err.message}`);
         throw err;
     }
+    console.log(`[ImageProcessor] Coordinates file read in ${performance.now() - readConfigStartTime}ms.`);
 
     const coords = layoutConfig.resolutions?.[targetResolution];
     if (!coords) {
@@ -405,6 +455,7 @@ async function processDraftScreen(coordinatesPath, targetResolution, confidenceT
         throw new Error(errorMsg);
     }
 
+    // Get all coordinate data, but only process hero-defining for now
     const {
         ultimate_slots_coords = [],
         standard_slots_coords = [],
@@ -412,59 +463,50 @@ async function processDraftScreen(coordinatesPath, targetResolution, confidenceT
         selected_abilities_params
     } = coords;
 
-    // Hero-defining abilities are typically the 2nd standard ability of a hero model.
+    // Filter to get only the 2nd slot abilities for hero identification
     const hero_defining_slots_coords = standard_slots_coords.filter(slot => slot.ability_order === 2);
 
-    // Combine individual selected ability coordinates with their common width/height params
-    const selected_hero_abilities_coords_full = selected_abilities_params ? selected_abilities_coords.map(sac => ({
-        ...sac, // Spreads x, y, hero_order, and is_ultimate flag from JSON
-        width: selected_abilities_params.width,
-        height: selected_abilities_params.height,
-    })) : [];
-
-    console.log(`[ImageProcessor] Coordinates loaded. Ultimates: ${ultimate_slots_coords.length}, Standard: ${standard_slots_coords.length}, HeroDefining: ${hero_defining_slots_coords.length}, SelectedHeroAbils: ${selected_hero_abilities_coords_full.length}`);
+    console.log(`[ImageProcessor] Coordinates loaded. Focusing on HeroDefining Abilities: ${hero_defining_slots_coords.length} slots.`);
 
     let screenshotBuffer;
+    let screenshotStartTime = performance.now();
     try {
         screenshotBuffer = await screenshot({ format: 'png' });
     } catch (err) {
         console.error("[ImageProcessor] Screenshot failed:", err);
         throw err;
     }
+    console.log(`[ImageProcessor] Screenshot taken in ${performance.now() - screenshotStartTime}ms.`);
 
-    // First, identify abilities already picked by heroes (selected_abilities)
-    // These will be used to filter out duplicates from the main draft pool.
-    const identifiedSelectedAbilities = await identifySlots(selected_hero_abilities_coords_full, screenshotBuffer, resolvedClassNames, confidenceThreshold);
-
-    const pickedAbilityNamesByHeroes = new Set();
-    identifiedSelectedAbilities.forEach(result => {
-        if (result.name) {
-            pickedAbilityNamesByHeroes.add(result.name);
-        }
-    });
-    console.log('[ImageProcessor] Abilities identified as picked by heroes:', Array.from(pickedAbilityNamesByHeroes));
-
-    // Now identify abilities in the draft pool, passing `pickedAbilityNamesByHeroes` to filter them.
-    const identifiedUltimates = await identifySlots(ultimate_slots_coords, screenshotBuffer, resolvedClassNames, confidenceThreshold, pickedAbilityNamesByHeroes);
-    const identifiedStandard = await identifySlots(standard_slots_coords, screenshotBuffer, resolvedClassNames, confidenceThreshold, pickedAbilityNamesByHeroes);
-
-    // Hero defining abilities are typically not filtered by `pickedAbilityNamesByHeroes` as they are unique to the hero model.
-    // If they can appear in the general pool, filtering might be desired. Assuming they are distinct for now.
+    // Identify hero-defining abilities
+    let identifyHeroDefiningStartTime = performance.now();
     const identifiedHeroDefiningAbilities = await identifySlots(hero_defining_slots_coords, screenshotBuffer, resolvedClassNames, confidenceThreshold);
+    console.log(`[ImageProcessor] Identified hero defining abilities in ${performance.now() - identifyHeroDefiningStartTime}ms.`);
 
-    console.log('[ImageProcessor] Screen processing finished.');
+    const processDraftScreenEnd = performance.now();
+    console.log(`[ImageProcessor] Focused processDraftScreen finished in ${processDraftScreenEnd - processDraftScreenStart}ms.`);
+
+    // Return the identified hero-defining abilities in the 'standard' array for hotspot display,
+    // and also in 'heroDefiningAbilities' for subsequent main.js processing.
+    // Other categories return empty arrays with their coordinate structures maintained.
     return {
-        ultimates: identifiedUltimates,
-        standard: identifiedStandard,
-        heroDefiningAbilities: identifiedHeroDefiningAbilities,
-        selectedAbilities: identifiedSelectedAbilities // These results already include the is_ultimate flag from coord data
+        ultimates: createResultsWithCoords(ultimate_slots_coords),
+        standard: identifiedHeroDefiningAbilities, // Place identified 2nd slot abilities here for hotspots
+        heroDefiningAbilities: identifiedHeroDefiningAbilities, // Also keep for main.js hero model identification
+        selectedAbilities: createResultsWithCoords(
+            selected_abilities_params ? selected_abilities_coords.map(sac => ({
+                ...sac,
+                width: selected_abilities_params.width,
+                height: selected_abilities_params.height,
+            })) : []
+        )
     };
 }
 
 module.exports = {
     initializeImageProcessor,
     processDraftScreen,
-    identifySlots, // Exported for potential direct use if ever needed, though processDraftScreen is primary
+    identifySlots,
     identifySlotsFromCache,
     initializeImageProcessorIfNeeded
 };
