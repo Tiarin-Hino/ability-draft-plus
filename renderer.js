@@ -8,6 +8,7 @@ const exportFailedSamplesButton = document.getElementById('export-failed-samples
 const uploadFailedSamplesButton = document.getElementById('upload-failed-samples-btn');
 const failedSamplesUploadStatusElement = document.getElementById('failed-samples-upload-status');
 const shareFeedbackExtButton = document.getElementById('share-feedback-ext-btn');
+const shareSamplesExtButton = document.getElementById('share-samples-ext-btn');
 const supportDevButton = document.getElementById('support-dev-btn');
 const supportWindrunButton = document.getElementById('support-windrun-btn');
 const themeToggleButton = document.getElementById('theme-toggle-btn');
@@ -21,6 +22,10 @@ const customResolutionPopup = document.getElementById('custom-resolution-popup')
 const customPopupMessage = document.getElementById('custom-popup-message');
 const customPopupSubmitLayoutBtn = document.getElementById('custom-popup-submit-layout-btn');
 const customPopupChangeResBtn = document.getElementById('custom-popup-change-res-btn');
+const screenshotPreviewPopup = document.getElementById('screenshot-preview-popup');
+const screenshotPreviewImage = document.getElementById('screenshot-preview-image');
+const screenshotSubmitBtn = document.getElementById('screenshot-submit-btn');
+const screenshotRetakeBtn = document.getElementById('screenshot-retake-btn');
 
 // --- Module State ---
 let selectedResolution = ''; // Stores the currently selected screen resolution
@@ -28,6 +33,7 @@ const THEMES = { SYSTEM: 'system', LIGHT: 'light', DARK: 'dark' };
 let currentUserPreference = THEMES.SYSTEM; // User's explicit choice: 'system', 'light', or 'dark'
 let currentSystemPrefersDark = false; // Tracks the OS's preference
 let systemDisplayInfo = null; // To store system display info
+let currentScreenshotDataUrl = null; // To hold screenshot data for submission
 
 /**
  * Overrides setButtonsState to temporarily also consider other controls for a modal state.
@@ -37,7 +43,7 @@ let systemDisplayInfo = null; // To store system display info
 function setGlobalControlsDisabledForModal(disabled) {
     const commonButtons = [
         updateAllDataButton, activateOverlayButton, exportFailedSamplesButton,
-        shareFeedbackExtButton, uploadFailedSamplesButton
+        shareFeedbackExtButton, uploadFailedSamplesButton, shareSamplesExtButton
     ];
     const otherControls = [
         resolutionSelect, systemThemeCheckbox, lightDarkToggle,
@@ -147,7 +153,7 @@ function applyEffectiveTheme() {
  * @param {HTMLElement | null} [initiatingButton=null] - The button that triggered the state change, to update its text.
  */
 function setButtonsState(disabled, initiatingButton = null) {
-    const buttonsToManage = [updateAllDataButton, activateOverlayButton, exportFailedSamplesButton, shareFeedbackExtButton];
+    const buttonsToManage = [updateAllDataButton, activateOverlayButton, exportFailedSamplesButton, shareFeedbackExtButton, shareSamplesExtButton];
     buttonsToManage.forEach(btn => {
         if (btn) btn.disabled = disabled;
     });
@@ -252,6 +258,23 @@ const initConditionalUI = async () => {
         } catch (error) {
             console.error("[Renderer] Error checking if app is packaged for export button:", error);
             exportFailedSamplesButton.style.display = 'none';
+        }
+    } else {
+        console.warn('[Renderer] "upload-failed-samples-btn" element not found.');
+    }
+
+    if (shareSamplesExtButton) {
+        try {
+            const isPackaged = await window.electronAPI.isAppPackaged();
+            if (!isPackaged) {
+                shareSamplesExtButton.style.display = 'inline-flex';
+            } else {
+                console.log('[Renderer] App is not packaged. Hiding "Share Failed Samples" button.');
+                shareSamplesExtButton.style.display = 'none';
+            }
+        } catch (error) {
+            console.error("[Renderer] Error checking if app is packaged for share failed samples button:", error);
+            shareSamplesExtButton.style.display = 'none';
         }
     } else {
         console.warn('[Renderer] "upload-failed-samples-btn" element not found.');
@@ -368,6 +391,7 @@ if (window.electronAPI) {
         if (exportFailedSamplesButton && exportFailedSamplesButton.style.display !== 'none') exportFailedSamplesButton.disabled = false;
         if (uploadFailedSamplesButton && uploadFailedSamplesButton.style.display !== 'none') uploadFailedSamplesButton.disabled = false;
         if (shareFeedbackExtButton) shareFeedbackExtButton.disabled = false;
+        if (shareSamplesExtButton) shareSamplesExtButton.disabled = false;
         if (supportDevButton) supportDevButton.disabled = false;
         if (supportWindrunButton) supportWindrunButton.disabled = false;
         if (submitNewResolutionButton && newResolutionSection && newResolutionSection.style.display !== 'none') submitNewResolutionButton.disabled = false;
@@ -421,6 +445,19 @@ if (window.electronAPI) {
         console.log('[Renderer] Overlay closed signal received. Re-enabling main window UI.');
         setButtonsState(false);
         updateStatusMessage('Ready. Overlay closed.');
+    });
+
+    window.electronAPI.onNewLayoutScreenshot((dataUrl) => {
+        if (dataUrl) {
+            currentScreenshotDataUrl = dataUrl;
+            if (screenshotPreviewImage) screenshotPreviewImage.src = dataUrl;
+            if (screenshotPreviewPopup) screenshotPreviewPopup.classList.add('visible'); // Use the .visible class
+            setGlobalControlsDisabledForModal(true); // Disable background controls
+            if (newResolutionStatusElement) newResolutionStatusElement.textContent = 'Screenshot captured. Please review.';
+        } else {
+            updateStatusMessage('Failed to capture screenshot.', true);
+            setButtonsState(false);
+        }
     });
 
     // --- DOM Event Listeners (User Interactions) ---
@@ -483,7 +520,8 @@ if (window.electronAPI) {
                 if (confirmed) {
                     updateStatusMessage('Capturing screen and preparing submission for new layout...', false);
                     setButtonsState(true, null);
-                    window.electronAPI.submitNewResolutionSnapshot();
+                    // CHANGED: Use the new, correct IPC channel
+                    window.electronAPI.requestNewLayoutScreenshot();
                 } else {
                     updateStatusMessage('Layout submission cancelled by user.', false);
                 }
@@ -534,9 +572,15 @@ if (window.electronAPI) {
 
     if (shareFeedbackExtButton) {
         shareFeedbackExtButton.addEventListener('click', () => {
-            console.log('[Renderer] "Share Feedback / Samples" button clicked.');
-            // The URL is hardcoded here as per the original design, main process handles opening.
-            window.electronAPI.openExternalLink('https://forms.gle/9hwyTkMNDubMppW1A');
+            console.log('[Renderer] "Share Feedback" button clicked.');
+            window.electronAPI.openExternalLink('https://tiarinhino.com/feedback.html');
+        });
+    }
+
+    if (shareSamplesExtButton) {
+        shareSamplesExtButton.addEventListener('click', () => {
+            console.log('[Renderer] "Share Samples" button clicked.');
+            window.electronAPI.openExternalLink('https://forms.gle/14Fmz6py7dAMMhKW9');
         });
     }
 
@@ -602,18 +646,41 @@ if (window.electronAPI) {
 
             if (confirmed) {
                 if (newResolutionStatusElement) {
-                    newResolutionStatusElement.textContent = 'Capturing screen and preparing submission...';
+                    newResolutionStatusElement.textContent = 'Hiding window and taking snapshot...';
                     newResolutionStatusElement.style.display = 'block';
                     newResolutionStatusElement.classList.remove('error-message');
                 }
-                setButtonsState(true, submitNewResolutionButton); // Pass the button itself for text change
-                window.electronAPI.submitNewResolutionSnapshot();
+                setButtonsState(true, submitNewResolutionButton);
+                // Request the screenshot from the main process
+                window.electronAPI.requestNewLayoutScreenshot();
             } else {
                 if (newResolutionStatusElement) {
                     newResolutionStatusElement.textContent = 'Resolution submission cancelled.';
                     newResolutionStatusElement.style.display = 'block';
                     newResolutionStatusElement.classList.remove('error-message');
                 }
+            }
+        });
+    }
+
+    if (screenshotRetakeBtn) {
+        screenshotRetakeBtn.addEventListener('click', () => {
+            if (screenshotPreviewPopup) screenshotPreviewPopup.classList.remove('visible'); // Use the .visible class
+            currentScreenshotDataUrl = null; // Clear old data
+
+            if (newResolutionStatusElement) newResolutionStatusElement.textContent = 'Hiding window and taking new snapshot...';
+            // The UI is already disabled, just request a new screenshot
+            window.electronAPI.requestNewLayoutScreenshot();
+        });
+    }
+
+    if (screenshotSubmitBtn) {
+        screenshotSubmitBtn.addEventListener('click', () => {
+            if (currentScreenshotDataUrl) {
+                if (screenshotPreviewPopup) screenshotPreviewPopup.classList.remove('visible'); // Use the .visible class
+                if (newResolutionStatusElement) newResolutionStatusElement.textContent = 'Submitting layout...';
+                // Send the confirmed screenshot data to the main process for API submission
+                window.electronAPI.submitConfirmedLayout(currentScreenshotDataUrl);
             }
         });
     }
@@ -644,7 +711,8 @@ if (window.electronAPI) {
         }
 
         if (!status.inProgress) { // Operation finished
-            setButtonsState(false); // Re-enable all relevant buttons
+            setButtonsState(false);
+            setGlobalControlsDisabledForModal(false); // Make sure to re-enable everything
         }
     });
 
@@ -657,6 +725,7 @@ if (window.electronAPI) {
     if (activateOverlayButton) activateOverlayButton.disabled = true;
     if (exportFailedSamplesButton) exportFailedSamplesButton.disabled = true;
     if (shareFeedbackExtButton) shareFeedbackExtButton.disabled = true;
+    if (shareSamplesExtButton) shareSamplesExtButton.disabled = true;
     if (supportDevButton) supportDevButton.disabled = true;
     if (supportWindrunButton) supportWindrunButton.disabled = true;
     document.body.classList.remove('dark-mode'); // Default to light

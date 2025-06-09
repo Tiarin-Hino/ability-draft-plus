@@ -26,9 +26,9 @@
                 <button id="close-overlay-btn" class="overlay-button" title="Close Overlay (Esc)"
                     aria-label="Close Overlay">X</button>
             </div>
-            <button id="take-snapshot-btn" class="overlay-button"
-                title="Save current ability icons for feedback (if misidentified)" style="display: none;">Take
-                Snapshot</button>
+            <button id="report-failed-rec-btn" class="overlay-button"
+                title="Report misidentified abilities to the developer" style="display: none;">Report Failed
+                Recognition</button>
         </section>
 
         <section id="op-combinations-container" aria-labelledby="op-combinations-heading">
@@ -54,6 +54,28 @@
     <div id="status-messages-container" role="status" aria-live="assertive">
         <p id="snapshot-status" class="status-popup"></p>
         <p id="scan-status-popup" class="status-popup" style="display: none;"></p>
+    </div>
+
+    <div id="initial-scan-confirm-popup" class="custom-popup" style="display: none;">
+        <div class="custom-popup-content">
+            <p class="custom-popup-message-text">Ensure that the Draft is loaded and all abilities are visible on the
+                screen.</p>
+            <div class="custom-popup-buttons">
+                <button id="confirm-scan-proceed-btn" class="overlay-button">Proceed</button>
+                <button id="confirm-scan-dont-show-btn" class="overlay-button">Don't Show Again</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="report-confirm-popup" class="custom-popup" style="display: none;">
+        <div class="custom-popup-content">
+            <p class="custom-popup-message-text">Want to report failed ability recognition? This will take a snapshot of
+                all ability icons in the pool. You can send this snapshots to the developer via "Share Failed Samples" button in control panel to improve the model.</p>
+            <div class="custom-popup-buttons">
+                <button id="report-confirm-submit-btn" class="overlay-button">Submit</button>
+                <button id="report-confirm-cancel-btn" class="overlay-button">Cancel</button>
+            </div>
+        </div>
     </div>
 
     <script src="./overlayRenderer.js"></script>
