@@ -1,0 +1,141 @@
+{
+    "appTitle": "Dota 2 Ability Draft Plus",
+    "controlPanel": {
+        "header": "Dota 2 Ability Draft Plus - Control Panel",
+        "theme": {
+            "system": "Use System Preference",
+            "light": "Light",
+            "dark": "Dark"
+        },
+        "lang": {
+            "label": "Language"
+        },
+        "status": {
+            "title": "Application Status",
+            "ready": "Ready.",
+            "loadingResolutions": "Loading resolutions...",
+            "resolutionsLoaded": "System resolution {res} automatically selected.",
+            "resolutionsMismatch": "Your resolution {systemRes} is not supported. Defaulting to {defaultRes}.",
+            "resolutionsNone": "No supported resolutions found. Please submit your layout.",
+            "errorLoadingResolutions": "Error loading resolutions: {error}"
+        },
+        "activation": {
+            "title": "Overlay Activation",
+            "label": "Select screen resolution for scanning:",
+            "helpText": "This resolution must match your Dota 2 game setting.",
+            "description": "Activate the overlay. You can do it before starting game or before game search. It would stay in standby mode until you click 'Initial Scan'.",
+            "button": "Activate Overlay",
+            "activating": "Activating Overlay..."
+        },
+        "newResolution": {
+            "title": "Submit New Layout",
+            "description": "If your screen resolution isn't listed, you can submit your current screen setup. Please ensure Dota 2 is in the Ability Draft phase, displaying the full draft interface, at the resolution you wish to add.",
+            "button": "Submit Current Screen Layout",
+            "statusTakingSnapshot": "Hiding window and taking snapshot...",
+            "statusSubmitting": "Submitting layout...",
+            "statusCancelled": "Resolution submission cancelled."
+        },
+        "data": {
+            "title": "Data Management",
+            "description": "Fetch all hero, ability, and pair data from Windrun.io. This may take a few moments.",
+            "button": "Update Windrun Data",
+            "buttonUpdating": "Updating All Data...",
+            "lastUpdated": "Last updated: {date}"
+        },
+        "feedback": {
+            "title": "Feedback & Diagnostics",
+            "description": "If the ML model misidentifies abilities, use the \"Report Failed Recognition\" feature in the overlay. You can then send these snapshots to developer for model improvement.",
+            "exportButton": "Export Failed Samples",
+            "uploadButton": "Send Failed Samples",
+            "shareButton": "Share Failed Samples",
+            "feedbackButton": "Share Feedback"
+        },
+        "footer": {
+            "supportDev": "Support Developer",
+            "supportWindrun": "Support Windrun.io"
+        },
+        "update": {
+            "title": "Application Update",
+            "checkButton": "Check for Updates"
+        },
+        "popups": {
+            "resolutionMismatch": {
+                "message": "Your resolution {systemRes} is not supported yet. Please change resolution to a supported one, or submit your resolution to be added.",
+                "submitBtn": "Submit Resolution",
+                "changeBtn": "Change Resolution"
+            },
+            "screenshotPreview": {
+                "title": "Screenshot Preview",
+                "message": "Is this screenshot of your draft screen correct?",
+                "submitBtn": "Submit",
+                "retakeBtn": "Retake Screencapture"
+            },
+            "updateAvailable": {
+                "title": "Update Available",
+                "downloadBtn": "Download Update",
+                "laterBtn": "Later"
+            }
+        }
+    },
+    "overlay": {
+        "controls": {
+            "initialScan": "Initial Scan",
+            "rescan": "Rescan",
+            "reset": "Reset",
+            "close": "X",
+            "report": "Report Failed Recognition",
+            "showOP": "Show OP Combinations",
+            "hideOP": "Hide"
+        },
+        "opCombinations": {
+            "title": "OP Combinations"
+        },
+        "popups": {
+            "initialScanConfirm": {
+                "message": "Ensure that the Draft is loaded and all abilities are visible on the screen.",
+                "proceed": "Proceed",
+                "dontShow": "Don't Show Again"
+            },
+            "reportConfirm": {
+                "message": "Want to report failed ability recognition? This will take a snapshot of all ability icons in the pool. You can send these snapshots to the developer via \"Send Failed Samples\" button in control panel to improve the model.",
+                "submit": "Take Snapshot",
+                "cancel": "Cancel"
+            }
+        },
+        "tooltip": {
+            "synergyPick": "SYNERGY PICK!",
+            "topPick": "TOP PICK!",
+            "yourModelPick": "(Your Model Pick)",
+            "topModel": "TOP MODEL!",
+            "winrate": "Winrate",
+            "hsWinrate": "High Skill Winrate",
+            "pickRate": "Pick Rate",
+            "hsPickRate": "High Skill Pick Rate",
+            "synergiesTitle": "Strong Synergies (within Pool):"
+        },
+        "dynamicButtons": {
+            "mySpot": "My Spot",
+            "myModel": "My Model",
+            "changeChoice": "Change"
+        },
+        "status": {
+            "scanning": "Scanning for {resolution}...",
+            "error": "Error: {error}",
+            "snapshotTaking": "Taking snapshot...",
+            "snapshotSuccess": "Snapshot: {count} images saved to app data.",
+            "snapshotError": "Snapshot Error: {error}"
+        }
+    },
+    "ipcMessages": {
+        "scrapeComplete": "All data updates finished successfully!",
+        "scrapeError": "Error during data update: {error}",
+        "overlayActivated": "Overlay activated for {res}. Main window hidden.",
+        "overlayActivationError": "Overlay Activation Error: {error}",
+        "snapshotSuccess": "Snapshot: {count} images saved.",
+        "snapshotError": "Snapshot Error: {error}",
+        "exportSuccess": "Exported {count} samples to {filePath}",
+        "exportError": "Export Error: {error}",
+        "exportCancelled": "Export canceled by user.",
+        "exportNoFiles": "No image files found to export."
+    }
+}

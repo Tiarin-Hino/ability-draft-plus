@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="Content-Security-Policy"
         content="default-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline'">
-    <title>Dota 2 Ability Draft Plus - Control Panel</title>
+    <title data-i18n="controlPanel.header">Dota 2 Ability Draft Plus - Control Panel</title>
     <style>
         /* CSS Variables for Theming */
         :root {
@@ -101,6 +101,25 @@
             --toggle-bg-active: var(--button-activate-bg);
             --toggle-slider-bg: #b9bbbe;
             /* Lighter slider for dark bg */
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .language-switcher {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .language-switcher label {
+            margin-bottom: 0;
+            font-weight: normal;
+            font-size: 0.9em;
+            color: var(--theme-option-text);
         }
 
         /* Apply variables to existing styles */
@@ -472,19 +491,29 @@
 
 <body>
     <header>
-        <h1>Dota 2 Ability Draft Plus</h1>
-        <div class="theme-switcher">
-            <div class="theme-option">
-                <input type="checkbox" id="system-theme-checkbox" title="Follow operating system theme setting">
-                <label for="system-theme-checkbox">Use System Preference</label>
+        <h1 data-i18n="appTitle">Dota 2 Ability Draft Plus</h1>
+        <div class="header-controls">
+            <div class="language-switcher">
+                <label for="language-select" data-i18n="controlPanel.lang.label">Language</label>
+                <select id="language-select">
+                    <option value="en">English</option>
+                    <option value="ru">Русский</option>
+                </select>
             </div>
-            <div class="theme-option manual-theme-controls">
-                <span class="theme-label">Light</span>
-                <label class="switch" title="Toggle between Light and Dark mode">
-                    <input type="checkbox" id="light-dark-toggle">
-                    <span class="slider round"></span>
-                </label>
-                <span class="theme-label">Dark</span>
+            <div class="theme-switcher">
+                <div class="theme-option">
+                    <input type="checkbox" id="system-theme-checkbox" title="Follow operating system theme setting">
+                    <label for="system-theme-checkbox" data-i18n="controlPanel.theme.system">Use System
+                        Preference</label>
+                </div>
+                <div class="theme-option manual-theme-controls">
+                    <span class="theme-label" data-i18n="controlPanel.theme.light">Light</span>
+                    <label class="switch" title="Toggle between Light and Dark mode">
+                        <input type="checkbox" id="light-dark-toggle">
+                        <span class="slider round"></span>
+                    </label>
+                    <span class="theme-label" data-i18n="controlPanel.theme.dark">Dark</span>
+                </div>
             </div>
         </div>
     </header>
@@ -492,80 +521,127 @@
     <main>
 
         <section id="status-section">
-            <h2>Application Status</h2>
-            <p id="status-message" class="status">Ready.</p>
+            <h2 data-i18n="controlPanel.status.title">Application Status</h2>
+            <p id="status-message" class="status" data-i18n="controlPanel.status.ready">Ready.</p>
         </section>
 
         <hr>
 
         <section id="overlay-activation-section">
-            <h2>Overlay Activation</h2>
+            <h2 data-i18n="controlPanel.activation.title">Overlay Activation</h2>
             <div>
-                <label for="resolution-select">Select screen resolution for scanning:</label>
+                <label for="resolution-select" data-i18n="controlPanel.activation.label">Select screen resolution for
+                    scanning:</label>
                 <select id="resolution-select" aria-describedby="resolution-help">
-                    <option value="">Loading resolutions...</option>
+                    <option value="" data-i18n="controlPanel.status.loadingResolutions">Loading resolutions...</option>
                 </select>
-                <p id="resolution-help" style="font-size: 0.85em; color: var(--text-color-muted);">This resolution must
+                <p id="resolution-help" style="font-size: 0.85em; color: var(--text-color-muted);"
+                    data-i18n="controlPanel.activation.helpText">This resolution must
                     match your Dota 2
                     game setting.</p>
             </div>
-            <p>Activate the overlay when Dota 2 is in the Ability Draft phase.</p>
-            <button id="activate-overlay-btn">Activate Overlay</button>
+            <p data-i18n="controlPanel.activation.description">Activate the overlay when Dota 2 is in the Ability Draft
+                phase.</p>
+            <button id="activate-overlay-btn" data-i18n="controlPanel.activation.button">Activate Overlay</button>
         </section>
 
         <hr>
 
 
         <section id="new-resolution-request-section">
-            <p>If your screen resolution isn't listed for the overlay, you can submit your current screen setup.
+            <h2 data-i18n="controlPanel.newResolution.title">Submit New Layout</h2>
+            <p data-i18n="controlPanel.newResolution.description">If your screen resolution isn't listed, you can submit
+                your current screen setup.
                 Please ensure Dota 2 is in the Ability Draft phase, displaying the full draft interface, at the
                 resolution you wish to add.</p>
-            <button id="submit-new-resolution-btn">Submit Current Screen Layout</button>
+            <button id="submit-new-resolution-btn" data-i18n="controlPanel.newResolution.button">Submit Current Screen
+                Layout</button>
             <p id="new-resolution-status" class="status" style="display: none; margin-top: 10px;"></p>
         </section>
 
         <hr>
 
         <section id="data-management-section">
-            <h2>Data Management</h2>
-            <p>Fetch all hero, ability, and pair data from Windrun.io. This may take a few moments.</p>
-            <button id="update-all-data-btn">Update Windrun Data</button>
-            <p class="last-updated">Last updated: <span id="last-updated-date">Checking...</span></p>
+            <h2 data-i18n="controlPanel.data.title">Data Management</h2>
+            <p data-i18n="controlPanel.data.description">Fetch all hero, ability, and pair data from Windrun.io. This
+                may take a few moments.</p>
+            <button id="update-all-data-btn" data-i18n="controlPanel.data.button">Update Windrun Data</button>
+            <p class="last-updated" data-i18n="controlPanel.data.lastUpdated" data-i18n-date-param="last-updated-date">
+                Last updated: <span id="last-updated-date">Checking...</span></p>
+        </section>
+
+        <hr>
+
+        <section id="update-section">
+            <h2 data-i18n="controlPanel.update.title">Application Update</h2>
+            <div class="button-group-inline">
+                <button id="check-for-updates-btn" data-i18n="controlPanel.update.checkButton">Check for
+                    Updates</button>
+            </div>
+            <p id="update-status-message" class="status" style="display: none; margin-top: 10px;"></p>
         </section>
 
         <hr>
 
         <section id="feedback-section">
-            <h2>Feedback &amp; Diagnostics</h2>
-            <p>If the ML model misidentifies abilities, use the "Take Snapshot" feature in the overlay. You can then
-                export these or provide general feedback.</p>
+            <h2 data-i18n="controlPanel.feedback.title">Feedback &amp; Diagnostics</h2>
+            <p data-i18n="controlPanel.feedback.description">If the ML model misidentifies abilities, use the "Report
+                Failed Recognition" feature in the overlay. You can then
+                export or upload these snapshots for model improvement.</p>
             <div class="button-group-inline">
-                <button id="export-failed-samples-btn">Export Failed Samples</button>
-                <button id="share-samples-ext-btn">Share Failed Samples</button>
-                <button id="upload-failed-samples-btn">Upload Failed Samples</button>
-                <button id="share-feedback-ext-btn">Share Feedback</button>
+                <button id="export-failed-samples-btn" data-i18n="controlPanel.feedback.exportButton">Export Failed
+                    Samples</button>
+                <button id="share-samples-ext-btn" data-i18n="controlPanel.feedback.shareButton">Share Failed
+                    Samples</button>
+                <button id="upload-failed-samples-btn" data-i18n="controlPanel.feedback.uploadButton">Upload Failed
+                    Samples</button>
+                <button id="share-feedback-ext-btn" data-i18n="controlPanel.feedback.feedbackButton">Share
+                    Feedback</button>
             </div>
         </section>
     </main>
     <div id="custom-resolution-popup" class="custom-popup">
         <div class="custom-popup-content">
-            <p id="custom-popup-message" class="custom-popup-message-text"></p>
+            <p id="custom-popup-message" class="custom-popup-message-text"
+                data-i18n="controlPanel.popups.resolutionMismatch.message"></p>
             <div class="custom-popup-buttons">
-                <button id="custom-popup-submit-layout-btn">Submit Resolution</button>
-                <button id="custom-popup-change-res-btn">Change Resolution</button>
+                <button id="custom-popup-submit-layout-btn"
+                    data-i18n="controlPanel.popups.resolutionMismatch.submitBtn">Submit Resolution</button>
+                <button id="custom-popup-change-res-btn"
+                    data-i18n="controlPanel.popups.resolutionMismatch.changeBtn">Change Resolution</button>
             </div>
         </div>
     </div>
 
     <div id="screenshot-preview-popup" class="custom-popup">
         <div id="screenshot-preview-content" class="custom-popup-content">
-            <h3>Screenshot Preview</h3>
-            <p>Is this screenshot of your draft screen correct?</p>
+            <h3 data-i18n="controlPanel.popups.screenshotPreview.title">Screenshot Preview</h3>
+            <p data-i18n="controlPanel.popups.screenshotPreview.message">Is this screenshot of your draft screen
+                correct?</p>
             <img id="screenshot-preview-image" src="" alt="Screenshot Preview"
                 style="max-width: 100%; max-height: 50vh; border: 1px solid #555; margin-top: 10px;" />
             <div class="custom-popup-buttons" style="margin-top: 15px;">
-                <button id="screenshot-submit-btn" class="overlay-button">Submit</button>
-                <button id="screenshot-retake-btn" class="overlay-button">Retake Screencapture</button>
+                <button id="screenshot-submit-btn" class="overlay-button"
+                    data-i18n="controlPanel.popups.screenshotPreview.submitBtn">Submit</button>
+                <button id="screenshot-retake-btn" class="overlay-button"
+                    data-i18n="controlPanel.popups.screenshotPreview.retakeBtn">Retake Screencapture</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="update-available-popup" class="custom-popup">
+        <div class="custom-popup-content">
+            <h3 id="update-popup-title" data-i18n="controlPanel.popups.updateAvailable.title">Update Available</h3>
+            <p id="update-popup-version"></p>
+            <p id="update-popup-release-date"></p>
+            <div id="update-popup-notes"
+                style="text-align: left; max-height: 200px; overflow-y: auto; background: var(--bg-color); padding: 10px; border-radius: 4px; margin-bottom: 15px;">
+            </div>
+            <div class="custom-popup-buttons">
+                <button id="update-popup-download-btn"
+                    data-i18n="controlPanel.popups.updateAvailable.downloadBtn">Download Update</button>
+                <button id="update-popup-later-btn"
+                    data-i18n="controlPanel.popups.updateAvailable.laterBtn">Later</button>
             </div>
         </div>
     </div>
@@ -574,11 +650,11 @@
         <div class="support-buttons-container">
             <button id="support-dev-btn" class="support-button">
                 <img src="./resources/images/ko-fi.svg" alt="Ko-fi icon" class="button-icon">
-                <span>Support Developer</span>
+                <span data-i18n="controlPanel.footer.supportDev">Support Developer</span>
             </button>
             <button id="support-windrun-btn" class="support-button">
                 <img src="./resources/images/ko-fi.svg" alt="Ko-fi icon" class="button-icon">
-                <span>Support Windrun.io</span>
+                <span data-i18n="controlPanel.footer.supportWindrun">Support Windrun.io</span>
             </button>
         </div>
     </footer>

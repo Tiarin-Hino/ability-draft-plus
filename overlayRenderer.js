@@ -20,19 +20,10 @@ const initialScanConfirmPopup = document.getElementById('initial-scan-confirm-po
 const confirmScanProceedBtn = document.getElementById('confirm-scan-proceed-btn');
 const confirmScanDontShowBtn = document.getElementById('confirm-scan-dont-show-btn');
 
-
-// --- Constants for Dynamic Buttons ---
-const MY_SPOT_BUTTON_WIDTH = 70; // px
-const MY_SPOT_BUTTON_HEIGHT = 25; // px
-const MY_SPOT_BUTTON_MARGIN = 5; // px
-
-const MY_MODEL_BUTTON_WIDTH = 90; // px
-const MY_MODEL_BUTTON_HEIGHT = 25; // px
-const MY_MODEL_BUTTON_MARGIN = 3; // px
-
 // --- Module State ---
 let currentCoordinatesConfig = null;
 let currentTargetResolution = null;
+let currentTranslations = {};
 let currentScaleFactor = 1; // Default scale factor
 let scanHasBeenPerformed = false;
 let isTooltipVisible = false;
@@ -46,6 +37,50 @@ let selectedHeroOriginalOrder = null; // Original 0-9 order of the user's drafte
 let selectedModelScreenOrder = null;  // 0-11 screen order of the user-selected "model" hero
 
 console.log('overlayRenderer.js loaded');
+
+// --- Translation Functions ---
+
+/**
+ * Gets a nested property from an object using a dot-notation string.
+ * @param {object} obj - The object to search.
+ * @param {string} path - The dot-notation path (e.g., 'a.b.c').
+ * @returns {any} The value at the path, or the path itself if not found.
+ */
+function getNested(obj, path) {
+    if (!path) return path;
+    return path.split('.').reduce((acc, part) => acc && acc[part], obj);
+}
+
+/**
+ * Translates a key into a string using the loaded translations.
+ * @param {string} key - The translation key (e.g., 'overlay.controls.rescan').
+ * @param {object} [params={}] - Optional parameters to replace in the string (e.g., { count: 5 }).
+ * @returns {string} The translated and formatted string.
+ */
+function translate(key, params = {}) {
+    let translated = getNested(currentTranslations, key);
+    if (typeof translated !== 'string') {
+        console.warn(`[i18n] Translation not found for key: ${key}`);
+        return key; // Fallback to the key itself
+    }
+    for (const [paramKey, paramValue] of Object.entries(params)) {
+        translated = translated.replace(new RegExp(`\\{${paramKey}\\}`, 'g'), paramValue);
+    }
+    return translated;
+}
+
+/**
+ * Applies all translations to the document based on data-i18n attributes.
+ */
+function applyTranslations() {
+    document.querySelectorAll('[data-i18n]').forEach(element => {
+        const key = element.getAttribute('data-i18n');
+        const translation = translate(key);
+        if (translation !== key) {
+            element.textContent = translation;
+        }
+    });
+}
 
 // --- Core UI & Scan Logic ---
 
@@ -131,7 +166,7 @@ function triggerScan(isInitialScan) {
         return;
     }
 
-    showScanStatusPopup(`Scanning for ${currentTargetResolution}...`);
+    showScanStatusPopup({ key: 'overlay.status.scanning', params: { resolution: currentTargetResolution } });
     console.log(`[OverlayRenderer] Triggering scan. Initial: ${isInitialScan}, Hero Order for Drafting: ${selectedHeroOriginalOrder}`);
     window.electronAPI.executeScanFromOverlay(currentTargetResolution, selectedHeroOriginalOrder, isInitialScan);
 }
@@ -141,8 +176,14 @@ function triggerScan(isInitialScan) {
  * @param {string} message - The message to display.
  * @param {boolean} [isError=false] - True if the message is an error, for styling.
  */
-function showScanStatusPopup(message, isError = false) {
+function showScanStatusPopup(messageOrKey, isError = false) {
     if (scanStatusPopup) {
+        let message;
+        if (typeof messageOrKey === 'object' && messageOrKey.key) {
+            message = translate(messageOrKey.key, messageOrKey.params);
+        } else {
+            message = messageOrKey;
+        }
         scanStatusPopup.textContent = message;
         scanStatusPopup.style.backgroundColor = isError ? 'rgba(200,0,0,0.8)' : 'rgba(0,100,200,0.8)';
         scanStatusPopup.style.display = 'block';
@@ -314,26 +355,26 @@ function createHotspotElement(coord, abilityData, uniqueIdPart, isSelectedAbilit
         let tooltipContent = '';
 
         if (hotspot.classList.contains('my-spot-selected-ability')) {
-            tooltipContent += '<span style="color: #FFD700;">(Your Hero Pick)</span><br>';
+            tooltipContent += `<span style="color: #FFD700;">${translate('overlay.tooltip.yourModelPick')}</span><br>`;
         }
         if (hotspot.dataset.isSynergySuggestion === 'true') {
-            tooltipContent += '<span style="color: #00BCD4; font-weight: bold;">&#10022; SYNERGY PICK!</span><br>';
+            tooltipContent += `<span style="color: #00BCD4; font-weight: bold;">&#10022; ${translate('overlay.tooltip.synergyPick')}</span><br>`;
         }
         if (hotspot.dataset.isGeneralTopTier === 'true') {
-            tooltipContent += '<span style="color: #66ff66; font-weight: bold;">&#9733; TOP PICK!</span><br>';
+            tooltipContent += `<span style="color: #66ff66; font-weight: bold;">&#9733; ${translate('overlay.tooltip.topPick')}</span><br>`;
         }
 
         tooltipContent += `
-            <div class="tooltip-title">${nameForDisplay}</div>
-            <div class="tooltip-stat">Winrate: ${winrateFormatted}</div>
-            <div class="tooltip-stat">High Skill Winrate: ${highSkillWinrateFormatted}</div>
-            <div class="tooltip-stat">Pick Rate: ${pr}</div>
-            <div class="tooltip-stat">High Skill Pick Rate: ${hsPr}</div>
-        `;
+                <div class="tooltip-title">${nameForDisplay}</div>
+                <div class="tooltip-stat">${translate('overlay.tooltip.winrate')}: ${winrateFormatted}</div>
+                <div class="tooltip-stat">${translate('overlay.tooltip.hsWinrate')}: ${highSkillWinrateFormatted}</div>
+                <div class="tooltip-stat">${translate('overlay.tooltip.pickRate')}: ${pr}</div>
+                <div class="tooltip-stat">${translate('overlay.tooltip.hsPickRate')}: ${hsPr}</div>
+            `;
 
         const combinations = JSON.parse(hotspot.dataset.combinations || '[]');
         if (combinations.length > 0) {
-            tooltipContent += `<div class="tooltip-section-title">Strong Synergies (within Pool):</div>`;
+            tooltipContent += `<div class="tooltip-section-title">${translate('overlay.tooltip.synergiesTitle')}</div>`;
             combinations.slice(0, 5).forEach(combo => {
                 const comboPartnerName = (combo.partnerAbilityDisplayName || 'Unknown Partner').replace(/_/g, ' ');
                 const comboWrFormatted = combo.synergyWinrate !== null ? `${(parseFloat(combo.synergyWinrate) * 100).toFixed(1)}%` : 'N/A';
@@ -394,15 +435,15 @@ function createHeroModelHotspots(heroModelDataArray) {
             const hsWinrateFormatted = hsWr !== 'N/A' ? `${(parseFloat(hsWr) * 100).toFixed(1)}%` : 'N/A';
             const pr = hotspot.dataset.pickRate;
             const hsPr = hotspot.dataset.hsPickRate;
-            const topTierIndicator = hotspot.dataset.isGeneralTopTier === 'true' ? '<span style="color: #FFD700; font-weight: bold;">&#9733; TOP MODEL!</span><br>' : '';
+            const topTierIndicator = hotspot.dataset.isGeneralTopTier === 'true' ? `<span style="color: #FFD700; font-weight: bold;">&#9733; ${translate('overlay.tooltip.topModel')}</span><br>` : '';
 
             const tooltipContent = `
                 ${topTierIndicator}
                 <div class="tooltip-title">${nameForDisplay}</div>
-                <div class="tooltip-stat">Win Rate: ${winrateFormatted}</div>
-                <div class="tooltip-stat">HS Win Rate: ${hsWinrateFormatted}</div>
-                <div class="tooltip-stat">Pick Rate: ${pr}</div>
-                <div class="tooltip-stat">HS Pick Rate: ${hsPr}</div>
+                <div class="tooltip-stat">${translate('overlay.tooltip.winrate')}: ${winrateFormatted}</div>
+                <div class="tooltip-stat">${translate('overlay.tooltip.hsWinrate')}: ${hsWinrateFormatted}</div>
+                <div class="tooltip-stat">${translate('overlay.tooltip.pickRate')}: ${pr}</div>
+                <div class="tooltip-stat">${translate('overlay.tooltip.hsPickRate')}: ${hsPr}</div>
             `;
             showTooltip(hotspot, tooltipContent);
         });
@@ -416,28 +457,32 @@ function createHeroModelHotspots(heroModelDataArray) {
  * @param {object} config - Configuration for the button.
  */
 function createDynamicButton({
-    dataHeroOrder, dataDbHeroId, baseClassName, changeClassName, baseText, changeText,
-    isSelected, anySelected, positionStyle, buttonWidth, buttonHeight, onClickCallback
+    dataHeroOrder, dataDbHeroId, baseClassName, changeClassName, baseKey,
+    isSelected, anySelected, positionStyle, isLeftSide, onClickCallback
 }) {
     const button = document.createElement('button');
     button.classList.add('overlay-button');
 
     if (isSelected) {
         button.classList.add(changeClassName);
+        // Set the text to ONLY the "(Change)" translation.
+        button.textContent = translate('overlay.dynamicButtons.changeChoice');
     } else {
         button.classList.add(baseClassName);
+        button.textContent = translate(baseKey);
+    }
+
+    if (isLeftSide) {
+        button.classList.add('left-side');
     }
 
     button.dataset.heroOrder = dataHeroOrder;
     if (dataDbHeroId !== null) button.dataset.dbHeroId = dataDbHeroId;
 
     button.style.position = 'absolute';
-    button.style.width = `${buttonWidth}px`;
-    button.style.height = `${buttonHeight}px`;
     Object.assign(button.style, positionStyle);
 
-    button.textContent = isSelected ? changeText : baseText;
-    button.style.display = (isSelected || !anySelected) ? 'inline-block' : 'none';
+    button.style.display = (isSelected || !anySelected) ? 'inline-flex' : 'none';
 
     button.addEventListener('click', onClickCallback);
     button.addEventListener('mouseenter', () => window.electronAPI?.setOverlayMouseEvents(false));
@@ -457,6 +502,7 @@ function manageMySpotButtons() {
     if (!resolutionCoords || !resolutionCoords.heroes_coords || !resolutionCoords.heroes_params) {
         return;
     }
+    const MY_SPOT_BUTTON_MARGIN = 5; // px
 
     currentHeroesForMySpotUIData.forEach(heroDataForUI => {
         const heroCoordInfo = resolutionCoords.heroes_coords.find(hc => hc.hero_order === heroDataForUI.heroOrder);
@@ -465,26 +511,32 @@ function manageMySpotButtons() {
             const heroBoxY = heroCoordInfo.y / currentScaleFactor;
             const heroBoxWidth = resolutionCoords.heroes_params.width / currentScaleFactor;
             const heroBoxHeight = resolutionCoords.heroes_params.height / currentScaleFactor;
+            const isLeftSide = heroDataForUI.heroOrder <= 4;
 
+            // Remove fixed height, use CSS padding for vertical alignment
             const positionStyle = {
-                left: (heroDataForUI.heroOrder <= 4)
-                    ? `${heroBoxX - MY_SPOT_BUTTON_WIDTH - MY_SPOT_BUTTON_MARGIN}px`
-                    : `${heroBoxX + heroBoxWidth + MY_SPOT_BUTTON_MARGIN}px`,
-                top: `${heroBoxY + (heroBoxHeight / 2) - (MY_SPOT_BUTTON_HEIGHT / 2)}px`
+                top: `${heroBoxY + (heroBoxHeight / 2)}px`,
+                transform: `translateY(-50%)`, // Center vertically relative to the hero box midpoint
+                left: isLeftSide
+                    ? `${heroBoxX - MY_SPOT_BUTTON_MARGIN}px`
+                    : `${heroBoxX + heroBoxWidth + MY_SPOT_BUTTON_MARGIN}px`
             };
+
+            // Add left-side transform if needed
+            if (isLeftSide) {
+                positionStyle.transform += ' translateX(-100%)';
+            }
 
             createDynamicButton({
                 dataHeroOrder: heroDataForUI.heroOrder,
                 dataDbHeroId: heroDataForUI.dbHeroId,
                 baseClassName: 'my-spot-btn-original',
                 changeClassName: 'change-my-spot-btn-original',
-                baseText: 'My Spot',
-                changeText: 'My Spot (Change)',
+                baseKey: 'overlay.dynamicButtons.mySpot',
                 isSelected: selectedHeroOriginalOrder === heroDataForUI.heroOrder,
                 anySelected: selectedHeroOriginalOrder !== null,
-                positionStyle,
-                buttonWidth: MY_SPOT_BUTTON_WIDTH,
-                buttonHeight: MY_SPOT_BUTTON_HEIGHT,
+                positionStyle: positionStyle,
+                isLeftSide: false, // The transform is now handled directly in positionStyle
                 onClickCallback: () => {
                     window.electronAPI?.selectMySpotForDrafting({
                         heroOrder: heroDataForUI.heroOrder,
@@ -502,6 +554,8 @@ function manageHeroModelButtons() {
 
     if (!currentHeroModelData || currentHeroModelData.length === 0) return;
 
+    const MY_MODEL_BUTTON_MARGIN = 3; // px
+
     currentHeroModelData.forEach(heroModel => {
         if (heroModel.dbHeroId === null && heroModel.heroDisplayName === "Unknown Hero") return;
 
@@ -509,25 +563,32 @@ function manageHeroModelButtons() {
         if (!modelHotspotElement) return;
 
         const rect = modelHotspotElement.getBoundingClientRect();
+        const isLeftSide = ((heroModel.heroOrder >= 0 && heroModel.heroOrder <= 4) || heroModel.heroOrder === 10);
+
+        // Remove fixed height, use CSS padding for vertical alignment
         const positionStyle = {
-            top: `${rect.top + (rect.height / 2) - (MY_MODEL_BUTTON_HEIGHT / 2)}px`,
-            left: ((heroModel.heroOrder >= 0 && heroModel.heroOrder <= 4) || heroModel.heroOrder === 10)
-                ? `${rect.left - MY_MODEL_BUTTON_WIDTH - MY_MODEL_BUTTON_MARGIN}px`
+            top: `${rect.top + (rect.height / 2)}px`,
+            transform: `translateY(-50%)`, // Center vertically relative to the hotspot midpoint
+            left: isLeftSide
+                ? `${rect.left - MY_MODEL_BUTTON_MARGIN}px`
                 : `${rect.right + MY_MODEL_BUTTON_MARGIN}px`
         };
+
+        // Add left-side transform if needed
+        if (isLeftSide) {
+            positionStyle.transform += ' translateX(-100%)';
+        }
 
         createDynamicButton({
             dataHeroOrder: heroModel.heroOrder,
             dataDbHeroId: heroModel.dbHeroId,
             baseClassName: 'my-model-btn',
             changeClassName: 'change-my-model-btn',
-            baseText: 'My Model',
-            changeText: 'My Model (Change)',
+            baseKey: 'overlay.dynamicButtons.myModel',
             isSelected: selectedModelScreenOrder === heroModel.heroOrder,
             anySelected: selectedModelScreenOrder !== null,
             positionStyle,
-            buttonWidth: MY_MODEL_BUTTON_WIDTH,
-            buttonHeight: MY_MODEL_BUTTON_HEIGHT,
+            isLeftSide: false, // The transform is now handled directly in positionStyle
             onClickCallback: () => {
                 window.electronAPI?.selectMyModel({
                     heroOrder: heroModel.heroOrder,
@@ -596,6 +657,11 @@ function updateOPCombinationsDisplay(opCombinations) {
 // --- IPC Event Handlers (from Main Process) ---
 
 if (window.electronAPI) {
+    window.electronAPI.onTranslationsLoaded((translations) => {
+        console.log('[OverlayRenderer] Translations loaded/updated.');
+        currentTranslations = translations;
+        applyTranslations();
+    });
     window.electronAPI.onOverlayData((data) => {
         console.log('[OverlayRenderer] === New Overlay Data Received ===', data);
 
@@ -809,7 +875,7 @@ if (reportConfirmSubmitBtn) {
             reportFailedRecButton.disabled = true;
         }
         if (snapshotStatusElement) {
-            snapshotStatusElement.textContent = 'Taking snapshot...';
+            snapshotStatusElement.textContent = translate('overlay.status.snapshotTaking');
             snapshotStatusElement.style.backgroundColor = 'rgba(0,100,200,0.8)';
             snapshotStatusElement.style.display = 'block';
         }
@@ -830,6 +896,8 @@ if (reportConfirmCancelBtn) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    window.electronAPI?.getInitialData();
+
     loadScanConfirmPreference();
 
     const staticInteractiveElements = [

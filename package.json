@@ -1,18 +1,14 @@
 {
   "name": "ability-draft-plus",
-  "version": "1.1.1",
+  "version": "1.1.0",
   "description": "Dota 2 Ability Draft Overlay with ML-powered ability recognition",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "prepare-config": "node scripts/prepare-app-config.js",
-    "rebuild-sqlite3": "electron-rebuild -f -w better-sqlite3",
-    "rebuild-sharp": "electron-rebuild -f -w sharp",
-    "rebuild-tensorflow": "electron-rebuild -f -w @tensorflow/tfjs-node -v 31.7.7",
-    "rebuild-all": "npm run rebuild-sqlite3 && npm run rebuild-sharp && npm run rebuild-tensorflow",
-    "fix-tfjs": "node scripts/fix-tfjs-node-build.js",
-    "build:native": "npm run rebuild-all && npm run fix-tfjs",
-    "dist": "npm run prepare-config && npm run build:native && electron-builder"
+    "rebuild": "electron-rebuild -f",
+    "postinstall": "npm run rebuild && node scripts/fix-tfjs-node-build.js",
+    "dist": "npm run prepare-config && electron-builder"
   },
   "keywords": [
     "dota2",
@@ -24,7 +20,7 @@
   "author": "Tiarin Hino",
   "license": "ISC",
   "devDependencies": {
-    "@electron/rebuild": "^4.0.1",
+    "@electron/rebuild": "^3.6.0",
     "electron": "^31.0.0",
     "electron-builder": "^24.13.3",
     "patch-package": "^8.0.0"
@@ -35,6 +31,8 @@
     "axios": "^1.8.4",
     "better-sqlite3": "^11.9.1",
     "cheerio": "^1.0.0",
+    "electron-updater": "^6.6.2",
+    "nvm": "^0.0.4",
     "screenshot-desktop": "^1.15.1",
     "sharp": "^0.34.1"
   },
@@ -44,6 +42,11 @@
     "copyright": "Copyright © 2025 Tiarin Hino",
     "directories": {
       "output": "dist"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "tiarin-hino",
+      "repo": "ability-draft-plus"
     },
     "files": [
       "**/*",

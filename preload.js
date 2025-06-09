@@ -41,7 +41,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   /**
    * Registers a callback function to be invoked when the main process sends a scrape status update.
-   * @param {(message: string) => void} callback - The function to call with the status message.
+   * The message can be a string or an object with a translation key and params.
+   * @param {(message: string | object) => void} callback - The function to call with the status message.
    */
   onUpdateStatus: (callback) => ipcRenderer.on('scrape-status', (_event, message) => callback(message)),
 
@@ -247,4 +248,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
    * @param {string} dataUrl - The screenshot data URL to submit.
    */
   submitConfirmedLayout: (dataUrl) => ipcRenderer.send('submit-confirmed-layout', dataUrl),
+
+  // --- Localization ---
+  /**
+   * Notifies the main process that the user has changed the language.
+   * @param {string} langCode - The new language code (e.g., "en", "ru").
+   */
+  changeLanguage: (langCode) => ipcRenderer.send('change-language', langCode),
+
+  /**
+   * Registers a callback to receive translation data from the main process.
+   * This is triggered on initial load and when the language is changed.
+   * @param {(translations: object) => void} callback
+   */
+  onTranslationsLoaded: (callback) => ipcRenderer.on('translations-loaded', (_event, translations) => callback(translations)),
+
+  /**
+   * Requests initial data (including translations) from the main process.
+   */
+  getInitialData: () => ipcRenderer.send('get-initial-data'),
 });
