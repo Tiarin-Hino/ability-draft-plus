@@ -313,7 +313,33 @@ body {
     z-index: 10000;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
     opacity: 0.75;
+    /* Let the content define the width */
+    width: auto;
+    /* Allow multi-line text */
+    white-space: normal;
+    text-align: center;
+    line-height: 1.2;
+    padding: 4px 8px;
+    /* Added padding for better spacing */
 }
+
+.my-model-btn.left-side,
+.change-my-model-btn.left-side,
+.my-spot-btn-original.left-side,
+.change-my-spot-btn-original.left-side {
+    /* This positions the button to the left of its anchor point */
+    transform: translateX(-100%);
+}
+
+.my-model-btn small,
+.change-my-model-btn small,
+.my-spot-btn-original small,
+.change-my-spot-btn-original small {
+    font-size: 0.8em;
+    opacity: 0.85;
+    font-weight: normal;
+}
+
 
 .my-model-btn:hover,
 .change-my-model-btn:hover,
