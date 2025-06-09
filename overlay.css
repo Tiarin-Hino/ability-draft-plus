@@ -117,7 +117,7 @@ body {
     border-radius: 4px;
 }
 
-.selected-ability-hotspot.my-hero-selected-ability {
+.selected-ability-hotspot.my-spot-selected-ability {
     border: 3px solid #8BC34A !important;
     box-shadow: 0 0 10px 4px rgba(139, 195, 74, 0.7) !important;
     border-radius: 4px;
@@ -304,11 +304,11 @@ body {
 }
 
 
-/* === "My Model" and "My Hero" Button Styles === */
+/* === "My Model" and "My Spot" Button Styles === */
 .my-model-btn,
 .change-my-model-btn,
-.my-hero-btn-original,
-.change-my-hero-btn-original {
+.my-spot-btn-original,
+.change-my-spot-btn-original {
     position: absolute;
     z-index: 10000;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
@@ -317,8 +317,8 @@ body {
 
 .my-model-btn:hover,
 .change-my-model-btn:hover,
-.my-hero-btn-original:hover,
-.change-my-hero-btn-original:hover {
+.my-spot-btn-original:hover,
+.change-my-spot-btn-original:hover {
     opacity: 1;
 }
 
@@ -344,25 +344,25 @@ body {
     background-color: rgba(26, 188, 156, 0.9);
 }
 
-.my-hero-btn-original.overlay-button {
+.my-spot-btn-original.overlay-button {
     background-color: rgba(52, 152, 219, 0.75);
     border-color: rgba(41, 128, 185, 0.9);
     font-size: 11px;
     padding: 4px 8px;
 }
 
-.my-hero-btn-original.overlay-button:hover {
+.my-spot-btn-original.overlay-button:hover {
     background-color: rgba(52, 152, 219, 0.95);
 }
 
-.change-my-hero-btn-original.overlay-button {
+.change-my-spot-btn-original.overlay-button {
     background-color: rgba(46, 204, 113, 0.8);
     border-color: rgba(39, 174, 96, 0.9);
     font-size: 11px;
     padding: 4px 8px;
 }
 
-.change-my-hero-btn-original.overlay-button:hover {
+.change-my-spot-btn-original.overlay-button:hover {
     background-color: rgba(46, 204, 113, 1);
 }
 

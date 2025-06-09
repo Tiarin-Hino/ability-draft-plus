@@ -19,9 +19,9 @@ const confirmScanDontShowBtn = document.getElementById('confirm-scan-dont-show-b
 
 
 // --- Constants for Dynamic Buttons ---
-const MY_HERO_BUTTON_WIDTH = 70; // px
-const MY_HERO_BUTTON_HEIGHT = 25; // px
-const MY_HERO_BUTTON_MARGIN = 5; // px
+const MY_SPOT_BUTTON_WIDTH = 70; // px
+const MY_SPOT_BUTTON_HEIGHT = 25; // px
+const MY_SPOT_BUTTON_MARGIN = 5; // px
 
 const MY_MODEL_BUTTON_WIDTH = 90; // px
 const MY_MODEL_BUTTON_HEIGHT = 25; // px
@@ -37,7 +37,7 @@ let opCombinationsAvailable = false;
 let hideInitialScanConfirm = false;
 
 let currentHeroModelData = []; // Holds data for identified hero models on screen
-let currentHeroesForMyHeroUIData = []; // Holds data for the "My Hero" selection buttons
+let currentHeroesForMySpotUIData = []; // Holds data for the "My Spot" selection buttons
 
 let selectedHeroOriginalOrder = null; // Original 0-9 order of the user's drafted hero
 let selectedModelScreenOrder = null;  // 0-11 screen order of the user-selected "model" hero
@@ -66,14 +66,14 @@ function resetOverlayUI() {
     console.log('[OverlayRenderer] Resetting Overlay UI to initial state.');
 
     // Remove dynamically generated elements
-    document.querySelectorAll('.ability-hotspot, .selected-ability-hotspot, .synergy-suggestion-hotspot, .hero-model-hotspot, .my-hero-btn-original, .change-my-hero-btn-original, .my-model-btn, .change-my-model-btn').forEach(el => el.remove());
+    document.querySelectorAll('.ability-hotspot, .selected-ability-hotspot, .synergy-suggestion-hotspot, .hero-model-hotspot, .my-spot-btn-original, .change-my-spot-btn-original, .my-model-btn, .change-my-model-btn').forEach(el => el.remove());
 
     // Reset state variables
     scanHasBeenPerformed = false;
     selectedHeroOriginalOrder = null;
     selectedModelScreenOrder = null;
     currentHeroModelData = [];
-    currentHeroesForMyHeroUIData = [];
+    currentHeroesForMySpotUIData = [];
     opCombinationsAvailable = false;
 
     // Reset button visibility and states
@@ -93,7 +93,7 @@ function resetOverlayUI() {
     toggleTopTierBordersVisibility(false);
 
     manageHeroModelButtons();
-    manageMyHeroButtons();
+    manageMySpotButtons();
     updateVisualHighlights();
 
     console.log('[OverlayRenderer] Overlay UI reset complete.');
@@ -284,15 +284,15 @@ function createHotspotElement(coord, abilityData, uniqueIdPart, isSelectedAbilit
     hotspot.dataset.hsPickRate = typeof abilityData.hsPickRate === 'number' ? abilityData.hsPickRate.toFixed(2) : 'N/A';
     hotspot.dataset.combinations = JSON.stringify(abilityData.highWinrateCombinations || []);
     hotspot.dataset.confidence = typeof abilityData.confidence === 'number' ? abilityData.confidence.toFixed(2) : 'N/A';
-    hotspot.dataset.isSynergySuggestion = String(abilityData.isSynergySuggestionForMyHero === true && !isSelectedAbilityHotspot);
+    hotspot.dataset.isSynergySuggestion = String(abilityData.isSynergySuggestionForMySpot === true && !isSelectedAbilityHotspot);
     hotspot.dataset.isGeneralTopTier = String(abilityData.isGeneralTopTier === true && !isSelectedAbilityHotspot);
 
     if (isSelectedAbilityHotspot) {
         if (selectedHeroOriginalOrder !== null && parseInt(hotspot.dataset.heroOrder) === selectedHeroOriginalOrder) {
-            hotspot.classList.add('my-hero-selected-ability');
+            hotspot.classList.add('my-spot-selected-ability');
         }
     } else {
-        if (abilityData.isSynergySuggestionForMyHero) {
+        if (abilityData.isSynergySuggestionForMySpot) {
             hotspot.classList.add('synergy-suggestion-hotspot');
         } else if (abilityData.isGeneralTopTier) {
             hotspot.classList.add('top-tier-ability');
@@ -310,7 +310,7 @@ function createHotspotElement(coord, abilityData, uniqueIdPart, isSelectedAbilit
 
         let tooltipContent = '';
 
-        if (hotspot.classList.contains('my-hero-selected-ability')) {
+        if (hotspot.classList.contains('my-spot-selected-ability')) {
             tooltipContent += '<span style="color: #FFD700;">(Your Hero Pick)</span><br>';
         }
         if (hotspot.dataset.isSynergySuggestion === 'true') {
@@ -323,14 +323,14 @@ function createHotspotElement(coord, abilityData, uniqueIdPart, isSelectedAbilit
         tooltipContent += `
             <div class="tooltip-title">${nameForDisplay}</div>
             <div class="tooltip-stat">Winrate: ${winrateFormatted}</div>
-            <div class="tooltip-stat">HS Winrate: ${highSkillWinrateFormatted}</div>
+            <div class="tooltip-stat">High Skill Winrate: ${highSkillWinrateFormatted}</div>
             <div class="tooltip-stat">Pick Rate: ${pr}</div>
-            <div class="tooltip-stat">HS Pick Rate: ${hsPr}</div>
+            <div class="tooltip-stat">High Skill Pick Rate: ${hsPr}</div>
         `;
 
         const combinations = JSON.parse(hotspot.dataset.combinations || '[]');
         if (combinations.length > 0) {
-            tooltipContent += `<div class="tooltip-section-title">Strong Synergies (with Pool):</div>`;
+            tooltipContent += `<div class="tooltip-section-title">Strong Synergies (within Pool):</div>`;
             combinations.slice(0, 5).forEach(combo => {
                 const comboPartnerName = (combo.partnerAbilityDisplayName || 'Unknown Partner').replace(/_/g, ' ');
                 const comboWrFormatted = combo.synergyWinrate !== null ? `${(parseFloat(combo.synergyWinrate) * 100).toFixed(1)}%` : 'N/A';
@@ -409,7 +409,7 @@ function createHeroModelHotspots(heroModelDataArray) {
 }
 
 /**
- * Helper function to create dynamic buttons (My Hero, My Model).
+ * Helper function to create dynamic buttons (My Spot, My Model).
  * @param {object} config - Configuration for the button.
  */
 function createDynamicButton({
@@ -443,11 +443,11 @@ function createDynamicButton({
     document.body.appendChild(button);
 }
 
-/** Creates or updates "My Hero" selection buttons next to hero portraits. */
-function manageMyHeroButtons() {
-    document.querySelectorAll('.my-hero-btn-original, .change-my-hero-btn-original').forEach(btn => btn.remove());
+/** Creates or updates "My Spot" selection buttons next to hero portraits. */
+function manageMySpotButtons() {
+    document.querySelectorAll('.my-spot-btn-original, .change-my-spot-btn-original').forEach(btn => btn.remove());
 
-    if (!currentCoordinatesConfig || !currentTargetResolution || !currentHeroesForMyHeroUIData || currentHeroesForMyHeroUIData.length === 0) {
+    if (!currentCoordinatesConfig || !currentTargetResolution || !currentHeroesForMySpotUIData || currentHeroesForMySpotUIData.length === 0) {
         return;
     }
     const resolutionCoords = currentCoordinatesConfig.resolutions[currentTargetResolution];
@@ -455,7 +455,7 @@ function manageMyHeroButtons() {
         return;
     }
 
-    currentHeroesForMyHeroUIData.forEach(heroDataForUI => {
+    currentHeroesForMySpotUIData.forEach(heroDataForUI => {
         const heroCoordInfo = resolutionCoords.heroes_coords.find(hc => hc.hero_order === heroDataForUI.heroOrder);
         if (heroCoordInfo && heroDataForUI.dbHeroId !== null) {
             const heroBoxX = heroCoordInfo.x / currentScaleFactor;
@@ -465,25 +465,25 @@ function manageMyHeroButtons() {
 
             const positionStyle = {
                 left: (heroDataForUI.heroOrder <= 4)
-                    ? `${heroBoxX - MY_HERO_BUTTON_WIDTH - MY_HERO_BUTTON_MARGIN}px`
-                    : `${heroBoxX + heroBoxWidth + MY_HERO_BUTTON_MARGIN}px`,
-                top: `${heroBoxY + (heroBoxHeight / 2) - (MY_HERO_BUTTON_HEIGHT / 2)}px`
+                    ? `${heroBoxX - MY_SPOT_BUTTON_WIDTH - MY_SPOT_BUTTON_MARGIN}px`
+                    : `${heroBoxX + heroBoxWidth + MY_SPOT_BUTTON_MARGIN}px`,
+                top: `${heroBoxY + (heroBoxHeight / 2) - (MY_SPOT_BUTTON_HEIGHT / 2)}px`
             };
 
             createDynamicButton({
                 dataHeroOrder: heroDataForUI.heroOrder,
                 dataDbHeroId: heroDataForUI.dbHeroId,
-                baseClassName: 'my-hero-btn-original',
-                changeClassName: 'change-my-hero-btn-original',
-                baseText: 'My Hero',
-                changeText: 'My Hero (Change)',
+                baseClassName: 'my-spot-btn-original',
+                changeClassName: 'change-my-spot-btn-original',
+                baseText: 'My Spot',
+                changeText: 'My Spot (Change)',
                 isSelected: selectedHeroOriginalOrder === heroDataForUI.heroOrder,
                 anySelected: selectedHeroOriginalOrder !== null,
                 positionStyle,
-                buttonWidth: MY_HERO_BUTTON_WIDTH,
-                buttonHeight: MY_HERO_BUTTON_HEIGHT,
+                buttonWidth: MY_SPOT_BUTTON_WIDTH,
+                buttonHeight: MY_SPOT_BUTTON_HEIGHT,
                 onClickCallback: () => {
-                    window.electronAPI?.selectMyHeroForDrafting({
+                    window.electronAPI?.selectMySpotForDrafting({
                         heroOrder: heroDataForUI.heroOrder,
                         dbHeroId: heroDataForUI.dbHeroId
                     });
@@ -518,7 +518,7 @@ function manageHeroModelButtons() {
             dataDbHeroId: heroModel.dbHeroId,
             baseClassName: 'my-model-btn',
             changeClassName: 'change-my-model-btn',
-            baseText: 'Set Model',
+            baseText: 'My Model',
             changeText: 'My Model (Change)',
             isSelected: selectedModelScreenOrder === heroModel.heroOrder,
             anySelected: selectedModelScreenOrder !== null,
@@ -538,9 +538,9 @@ function manageHeroModelButtons() {
 /** Updates visual highlights on hotspots based on current selections. */
 function updateVisualHighlights() {
     document.querySelectorAll('.ability-hotspot.selected-ability-hotspot').forEach(hotspot => {
-        hotspot.classList.remove('my-hero-selected-ability');
+        hotspot.classList.remove('my-spot-selected-ability');
         if (selectedHeroOriginalOrder !== null && parseInt(hotspot.dataset.heroOrder) === selectedHeroOriginalOrder) {
-            hotspot.classList.add('my-hero-selected-ability');
+            hotspot.classList.add('my-spot-selected-ability');
         }
     });
 
@@ -614,11 +614,11 @@ if (window.electronAPI) {
 
         if (data && typeof data.opCombinations !== 'undefined') updateOPCombinationsDisplay(data.opCombinations);
         if (data && data.heroModels) currentHeroModelData = data.heroModels;
-        if (data.heroesForMyHeroUI) currentHeroesForMyHeroUIData = data.heroesForMyHeroUI;
+        if (data.heroesForMySpotUI) currentHeroesForMySpotUIData = data.heroesForMySpotUI;
 
         if (typeof data.selectedHeroForDraftingDbId !== 'undefined') {
-            const myHeroEntry = currentHeroesForMyHeroUIData.find(h => h.dbHeroId === data.selectedHeroForDraftingDbId);
-            selectedHeroOriginalOrder = myHeroEntry ? myHeroEntry.heroOrder : null;
+            const mySpotEntry = currentHeroesForMySpotUIData.find(h => h.dbHeroId === data.selectedHeroForDraftingDbId);
+            selectedHeroOriginalOrder = mySpotEntry ? mySpotEntry.heroOrder : null;
         }
         if (typeof data.selectedModelHeroOrder !== 'undefined') {
             selectedModelScreenOrder = data.selectedModelHeroOrder;
@@ -640,7 +640,7 @@ if (window.electronAPI) {
                 return;
             }
 
-            document.querySelectorAll('.ability-hotspot, .selected-ability-hotspot, .synergy-suggestion-hotspot, .hero-model-hotspot, .my-hero-btn-original, .change-my-hero-btn-original, .my-model-btn, .change-my-model-btn').forEach(el => el.remove());
+            document.querySelectorAll('.ability-hotspot, .selected-ability-hotspot, .synergy-suggestion-hotspot, .hero-model-hotspot, .my-spot-btn-original, .change-my-spot-btn-original, .my-model-btn, .change-my-model-btn').forEach(el => el.remove());
 
             createHotspotsForType(data.scanData.ultimates, 'ultimates');
             createHotspotsForType(data.scanData.standard, 'standard');
@@ -654,7 +654,7 @@ if (window.electronAPI) {
             }
 
             manageHeroModelButtons();
-            manageMyHeroButtons();
+            manageMySpotButtons();
             updateVisualHighlights();
 
             if (initialScanButton) initialScanButton.style.display = 'none';
@@ -676,10 +676,10 @@ if (window.electronAPI) {
         updateVisualHighlights();
     });
 
-    window.electronAPI.onMyHeroForDraftingSelectionChanged(({ selectedHeroOrderForDrafting }) => {
-        console.log('[OverlayRenderer] My Hero (for drafting) selection changed in main. New selection:', selectedHeroOrderForDrafting);
+    window.electronAPI.onMySpotForDraftingSelectionChanged(({ selectedHeroOrderForDrafting }) => {
+        console.log('[OverlayRenderer] My Spot (for drafting) selection changed in main. New selection:', selectedHeroOrderForDrafting);
         selectedHeroOriginalOrder = selectedHeroOrderForDrafting;
-        manageMyHeroButtons();
+        manageMySpotButtons();
         updateVisualHighlights();
     });
 

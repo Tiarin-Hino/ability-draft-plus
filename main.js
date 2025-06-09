@@ -70,9 +70,9 @@ let lastScanTargetResolution = null;
 let lastUsedScaleFactor = 1.0;
 let isFirstAppRun = false;
 
-// State for "My Hero" and "My Model" selections
-let mySelectedHeroDbIdForDrafting = null;
-let mySelectedHeroOriginalOrder = null;
+// State for "My Spot" and "My Model" selections
+let mySelectedSpotDbIdForDrafting = null;
+let mySelectedSpotOriginalOrder = null;
 let mySelectedModelDbHeroId = null;
 let mySelectedModelScreenOrder = null;
 
@@ -311,10 +311,10 @@ function createOverlayWindow(resolutionKey, allCoordinatesConfig, scaleFactorToU
       targetResolution: resolutionKey,
       opCombinations: [],
       heroModels: [],
-      heroesForMyHeroUI: [],
+      heroesForMySpotUI: [],
       initialSetup: true,
       scaleFactor: scaleFactorToUse,
-      selectedHeroForDraftingDbId: mySelectedHeroDbIdForDrafting,
+      selectedHeroForDraftingDbId: mySelectedSpotDbIdForDrafting,
       selectedModelHeroOrder: mySelectedModelScreenOrder
     });
   });
@@ -397,8 +397,8 @@ async function processAndSendResultsToOverlay(rawScanResults, isInitialScan) {
       initialPoolAbilitiesCache.ultimates = tempRawResults.ultimates.filter(item => item.name && item.coord).map(res => ({ ...res, type: 'ultimate' }));
       initialPoolAbilitiesCache.standard = tempRawResults.standard.filter(item => item.name && item.coord).map(res => ({ ...res, type: 'standard' }));
 
-      mySelectedHeroDbIdForDrafting = null;
-      mySelectedHeroOriginalOrder = null;
+      mySelectedSpotDbIdForDrafting = null;
+      mySelectedSpotOriginalOrder = null;
       mySelectedModelDbHeroId = null;
       mySelectedModelScreenOrder = null;
 
@@ -419,22 +419,22 @@ async function processAndSendResultsToOverlay(rawScanResults, isInitialScan) {
     // The rest of the data enrichment and scoring logic remains identical
     // to the version that was working correctly for you.
     lastRawScanResults = { ...tempRawResults };
-    let heroesForMyHeroSelectionUI = prepareHeroesForMyHeroUI(identifiedHeroModelsCache, heroes_coords);
+    let heroesForMySpotSelectionUI = prepareHeroesForMySpotUI(identifiedHeroModelsCache, heroes_coords);
     const { uniqueAbilityNamesInPool, allPickedAbilityNames } = collectAbilityNames(tempRawResults);
     const allCurrentlyRelevantAbilityNames = Array.from(new Set([...uniqueAbilityNamesInPool, ...allPickedAbilityNames]));
     const abilityDetailsMap = getAbilityDetails(activeDbPath, allCurrentlyRelevantAbilityNames);
     const centralDraftPoolArray = Array.from(uniqueAbilityNamesInPool);
 
-    let synergisticPartnersInPoolForMyHero = new Set();
-    if (mySelectedHeroDbIdForDrafting !== null && mySelectedHeroOriginalOrder !== null) {
-      const myHeroPickedAbilitiesRaw = tempRawResults.selectedAbilities.filter(
-        ab => ab.name && ab.hero_order === mySelectedHeroOriginalOrder
+    let synergisticPartnersInPoolForMySpot = new Set();
+    if (mySelectedSpotDbIdForDrafting !== null && mySelectedSpotOriginalOrder !== null) {
+      const mySpotPickedAbilitiesRaw = tempRawResults.selectedAbilities.filter(
+        ab => ab.name && ab.hero_order === mySelectedSpotOriginalOrder
       );
-      const myHeroPickedAbilityNames = myHeroPickedAbilitiesRaw.map(ab => ab.name);
-      for (const pickedAbilityName of myHeroPickedAbilityNames) {
+      const mySpotPickedAbilityNames = mySpotPickedAbilitiesRaw.map(ab => ab.name);
+      for (const pickedAbilityName of mySpotPickedAbilityNames) {
         const combinations = await getHighWinrateCombinations(activeDbPath, pickedAbilityName, centralDraftPoolArray);
         combinations.forEach(combo => {
-          if (combo.partnerInternalName) synergisticPartnersInPoolForMyHero.add(combo.partnerInternalName);
+          if (combo.partnerInternalName) synergisticPartnersInPoolForMySpot.add(combo.partnerInternalName);
         });
       }
     }
@@ -459,8 +459,8 @@ async function processAndSendResultsToOverlay(rawScanResults, isInitialScan) {
 
     let allEntitiesForScoring = prepareEntitiesForScoring(tempRawResults, abilityDetailsMap, identifiedHeroModelsCache);
     allEntitiesForScoring = calculateConsolidatedScores(allEntitiesForScoring);
-    const myHeroHasPickedUltimate = checkMyHeroPickedUltimate(mySelectedHeroDbIdForDrafting, heroesForMyHeroSelectionUI, tempRawResults.selectedAbilities);
-    const topTierMarkedEntities = determineTopTierEntities(allEntitiesForScoring, mySelectedModelDbHeroId, myHeroHasPickedUltimate, synergisticPartnersInPoolForMyHero);
+    const mySpotHasPickedUltimate = checkMySpotPickedUltimate(mySelectedSpotDbIdForDrafting, heroesForMySpotSelectionUI, tempRawResults.selectedAbilities);
+    const topTierMarkedEntities = determineTopTierEntities(allEntitiesForScoring, mySelectedModelDbHeroId, mySpotHasPickedUltimate, synergisticPartnersInPoolForMySpot);
 
     const enrichedHeroModels = enrichHeroModelDataWithFlags(identifiedHeroModelsCache, topTierMarkedEntities, allEntitiesForScoring);
     const formattedUltimates = formatResultsForUiWithFlags(tempRawResults.ultimates, abilityDetailsMap, topTierMarkedEntities, 'ultimates', allEntitiesForScoring);
@@ -473,12 +473,12 @@ async function processAndSendResultsToOverlay(rawScanResults, isInitialScan) {
     sendStatusUpdate(overlayWindow.webContents, 'overlay-data', {
       scanData: { ultimates: formattedUltimates, standard: formattedStandard, selectedAbilities: formattedSelectedAbilities },
       heroModels: enrichedHeroModels,
-      heroesForMyHeroUI: heroesForMyHeroSelectionUI,
+      heroesForMySpotUI: heroesForMySpotSelectionUI,
       targetResolution: lastScanTargetResolution,
       opCombinations: relevantOPCombinations,
       initialSetup: false,
       scaleFactor: lastUsedScaleFactor,
-      selectedHeroForDraftingDbId: mySelectedHeroDbIdForDrafting,
+      selectedHeroForDraftingDbId: mySelectedSpotDbIdForDrafting,
       selectedModelHeroOrder: mySelectedModelScreenOrder,
       durationMs
     });
@@ -828,21 +828,21 @@ ipcMain.on('select-my-model', (event, { heroOrder, dbHeroId }) => {
   }
 });
 
-ipcMain.on('select-my-hero-for-drafting', (event, { heroOrder, dbHeroId }) => {
+ipcMain.on('select-my-spot-for-drafting', (event, { heroOrder, dbHeroId }) => {
   // This logic ensures that if the user clicks the same hero again, it deselects it.
-  if (mySelectedHeroOriginalOrder === heroOrder && mySelectedHeroDbIdForDrafting === dbHeroId) {
-    mySelectedHeroDbIdForDrafting = null;
-    mySelectedHeroOriginalOrder = null;
+  if (mySelectedSpotOriginalOrder === heroOrder && mySelectedSpotDbIdForDrafting === dbHeroId) {
+    mySelectedSpotDbIdForDrafting = null;
+    mySelectedSpotOriginalOrder = null;
   } else {
-    mySelectedHeroDbIdForDrafting = dbHeroId;
-    mySelectedHeroOriginalOrder = heroOrder;
+    mySelectedSpotDbIdForDrafting = dbHeroId;
+    mySelectedSpotOriginalOrder = heroOrder;
   }
 
-  // Notify the overlay UI so the "My Hero (Change)" button appears/disappears correctly.
+  // Notify the overlay UI so the "My Spot (Change)" button appears/disappears correctly.
   if (overlayWindow && !overlayWindow.isDestroyed()) {
-    sendStatusUpdate(overlayWindow.webContents, 'my-hero-for-drafting-selection-changed', {
-      selectedHeroOrderForDrafting: mySelectedHeroOriginalOrder,
-      selectedHeroDbId: mySelectedHeroDbIdForDrafting // Pass both back for consistency
+    sendStatusUpdate(overlayWindow.webContents, 'my-spot-for-drafting-selection-changed', {
+      selectedHeroOrderForDrafting: mySelectedSpotOriginalOrder,
+      selectedHeroDbId: mySelectedSpotDbIdForDrafting // Pass both back for consistency
     });
   }
 });
@@ -869,7 +869,7 @@ ipcMain.on('execute-scan-from-overlay', async (event, selectedResolution, select
 
   isScanInProgress = true;
   lastScanTargetResolution = selectedResolution;
-  mySelectedHeroOriginalOrder = selectedHeroOriginalOrderFromOverlay;
+  mySelectedSpotOriginalOrder = selectedHeroOriginalOrderFromOverlay;
 
   try {
     const screenshotBuffer = await screenshotDesktop({ format: 'png' });
@@ -933,7 +933,7 @@ async function identifyHeroModels(heroDefiningAbilities, modelCoords) {
   return heroModelData;
 }
 
-function prepareHeroesForMyHeroUI(cachedHeroModels, heroScreenCoords) {
+function prepareHeroesForMySpotUI(cachedHeroModels, heroScreenCoords) {
   if (!cachedHeroModels || cachedHeroModels.length === 0 || !heroScreenCoords || heroScreenCoords.length === 0) return [];
   const uiData = [];
   for (const heroScreenCoord of heroScreenCoords) {
@@ -1024,7 +1024,7 @@ function calculateConsolidatedScores(entities) {
   });
 }
 
-function checkMyHeroPickedUltimate(selectedHeroDbId, heroesForUI, pickedAbilities) {
+function checkMySpotPickedUltimate(selectedHeroDbId, heroesForUI, pickedAbilities) {
   if (selectedHeroDbId === null) return false;
   const myDraftingHeroUIInfo = heroesForUI.find(h => h.dbHeroId === selectedHeroDbId);
   if (!myDraftingHeroUIInfo) return false;
@@ -1038,19 +1038,19 @@ function checkMyHeroPickedUltimate(selectedHeroDbId, heroesForUI, pickedAbilitie
   return false;
 }
 
-function determineTopTierEntities(allScoredEntities, selectedModelId, myHeroHasUlt, synergisticPartnersInPoolForMyHeroSet = new Set()) {
+function determineTopTierEntities(allScoredEntities, selectedModelId, mySpotHasUlt, synergisticPartnersInPoolForMySpotSet = new Set()) {
   let entitiesToConsider = [...allScoredEntities];
   const finalTopTierEntities = [];
 
-  if (myHeroHasUlt) {
+  if (mySpotHasUlt) {
     entitiesToConsider = entitiesToConsider.filter(entity => {
       if (entity.entityType === 'ability') return entity.is_ultimate_from_coord_source !== true && entity.is_ultimate_from_db !== true;
       return true;
     });
-    synergisticPartnersInPoolForMyHeroSet.forEach(partnerName => {
+    synergisticPartnersInPoolForMySpotSet.forEach(partnerName => {
       const partnerEntity = allScoredEntities.find(e => e.internalName === partnerName);
       if (partnerEntity && (partnerEntity.is_ultimate_from_coord_source === true || partnerEntity.is_ultimate_from_db === true)) {
-        synergisticPartnersInPoolForMyHeroSet.delete(partnerName);
+        synergisticPartnersInPoolForMySpotSet.delete(partnerName);
       }
     });
   }
@@ -1060,8 +1060,8 @@ function determineTopTierEntities(allScoredEntities, selectedModelId, myHeroHasU
 
   const synergySuggestionsFromPool = [];
   entitiesToConsider = entitiesToConsider.filter(entity => {
-    if (entity.entityType === 'ability' && synergisticPartnersInPoolForMyHeroSet.has(entity.internalName)) {
-      synergySuggestionsFromPool.push({ ...entity, isSynergySuggestionForMyHero: true, isGeneralTopTier: false });
+    if (entity.entityType === 'ability' && synergisticPartnersInPoolForMySpotSet.has(entity.internalName)) {
+      synergySuggestionsFromPool.push({ ...entity, isSynergySuggestionForMySpot: true, isGeneralTopTier: false });
       return false;
     }
     return true;
@@ -1078,7 +1078,7 @@ function determineTopTierEntities(allScoredEntities, selectedModelId, myHeroHasU
     const generalTopPicks = generalCandidates
       .sort((a, b) => b.consolidatedScore - a.consolidatedScore)
       .slice(0, remainingSlots)
-      .map(entity => ({ ...entity, isSynergySuggestionForMyHero: false, isGeneralTopTier: true }));
+      .map(entity => ({ ...entity, isSynergySuggestionForMySpot: false, isGeneralTopTier: true }));
     finalTopTierEntities.push(...generalTopPicks);
   }
   return finalTopTierEntities;
@@ -1092,7 +1092,7 @@ function enrichHeroModelDataWithFlags(heroModels, topTierMarkedEntities, allScor
     return {
       ...hModel,
       isGeneralTopTier: !!topTierEntry,
-      isSynergySuggestionForMyHero: false,
+      isSynergySuggestionForMySpot: false,
       consolidatedScore: scoredEntity ? scoredEntity.consolidatedScore : 0,
     };
   });
@@ -1112,7 +1112,7 @@ function formatResultsForUiWithFlags(
       return {
         internalName: null, displayName: 'Unknown Ability', winrate: null, highSkillWinrate: null,
         avgPickOrder: null, valuePercentage: null, highWinrateCombinations: [],
-        isGeneralTopTier: false, isSynergySuggestionForMyHero: false,
+        isGeneralTopTier: false, isSynergySuggestionForMySpot: false,
         confidence: result.confidence, hero_order: result.hero_order, ability_order: result.ability_order,
         is_ultimate_from_layout: isUltimateFromLayoutSlot, is_ultimate_from_db: null,
         consolidatedScore: 0, coord: originalCoord
@@ -1135,7 +1135,7 @@ function formatResultsForUiWithFlags(
       ability_order_from_db: dbDetails ? dbDetails.ability_order : null,
       highWinrateCombinations: dbDetails ? (dbDetails.highWinrateCombinations || []) : [],
       isGeneralTopTier: topTierEntry ? (topTierEntry.isGeneralTopTier || false) : false,
-      isSynergySuggestionForMyHero: topTierEntry ? (topTierEntry.isSynergySuggestionForMyHero || false) : false,
+      isSynergySuggestionForMySpot: topTierEntry ? (topTierEntry.isSynergySuggestionForMySpot || false) : false,
       confidence: result.confidence,
       hero_order: result.hero_order,
       ability_order: result.ability_order,
