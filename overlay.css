@@ -94,43 +94,33 @@ body {
 /* === Animated Hotspot Styles === */
 .top-tier-ability {
     border: 1px solid rgba(80, 255, 80, 0.8);
-    /* Base color for animation */
     border-radius: 4px;
-    /* Rounded corners */
     animation: shimmerGreen 1.5s infinite ease-in-out;
 }
 
 .synergy-suggestion-hotspot {
     border: 1px solid rgba(0, 207, 255, 0.8);
-    /* Base color for animation */
     border-radius: 4px;
-    /* Rounded corners */
     animation: shimmerTeal 1.5s infinite ease-in-out;
 }
 
 .hero-model-hotspot.top-tier-hero-model {
     border: 1px solid rgba(255, 223, 30, 0.8);
-    /* Base color for animation */
     border-radius: 4px;
-    /* Rounded corners */
     animation: shimmerGold 1.5s infinite ease-in-out;
 }
 
 /* === Static Highlight Hotspot Styles === */
 .hero-model-hotspot.is-my-model {
     border: 3px solid #00BCD4 !important;
-    /* A vibrant cyan */
     box-shadow: 0 0 10px 3px rgba(0, 188, 212, 0.6) !important;
     border-radius: 4px;
-    /* Ensure rounded corners for consistency if not animated similarly */
 }
 
-.selected-ability-hotspot.my-hero-selected-ability {
+.selected-ability-hotspot.my-spot-selected-ability {
     border: 3px solid #8BC34A !important;
-    /* A clear, friendly green */
     box-shadow: 0 0 10px 4px rgba(139, 195, 74, 0.7) !important;
     border-radius: 4px;
-    /* Ensure rounded corners */
 }
 
 
@@ -154,13 +144,11 @@ body {
 
 .tooltip .synergy-pick-indicator {
     color: #00BCD4;
-    /* Teal */
     font-weight: bold;
 }
 
 .tooltip .top-pick-indicator {
     color: #66ff66;
-    /* Green */
     font-weight: bold;
 }
 
@@ -171,7 +159,8 @@ body {
     font-size: 15px;
 }
 
-.tooltip-winrate {
+.tooltip-winrate,
+.tooltip-stat {
     color: #a8b2bc;
     margin-bottom: 4px;
     font-size: 12px;
@@ -196,7 +185,6 @@ body {
 
 .tooltip-combo span {
     color: #82c995;
-    /* Greenish for positive winrates */
 }
 
 /* === UI Controls Container (Top-Right) === */
@@ -316,11 +304,11 @@ body {
 }
 
 
-/* === "My Model" and "My Hero" Button Styles === */
+/* === "My Model" and "My Spot" Button Styles === */
 .my-model-btn,
 .change-my-model-btn,
-.my-hero-btn-original,
-.change-my-hero-btn-original {
+.my-spot-btn-original,
+.change-my-spot-btn-original {
     position: absolute;
     z-index: 10000;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
@@ -329,14 +317,13 @@ body {
 
 .my-model-btn:hover,
 .change-my-model-btn:hover,
-.my-hero-btn-original:hover,
-.change-my-hero-btn-original:hover {
+.my-spot-btn-original:hover,
+.change-my-spot-btn-original:hover {
     opacity: 1;
 }
 
 .my-model-btn.overlay-button {
     background-color: rgba(0, 188, 212, 0.7);
-    /* Cyan */
     border-color: rgba(0, 150, 170, 0.9);
     font-size: 10px;
     padding: 3px 6px;
@@ -348,7 +335,6 @@ body {
 
 .change-my-model-btn.overlay-button {
     background-color: rgba(26, 188, 156, 0.7);
-    /* Turquoise/Greenish Cyan */
     border-color: rgba(22, 160, 133, 0.9);
     font-size: 10px;
     padding: 3px 6px;
@@ -358,27 +344,25 @@ body {
     background-color: rgba(26, 188, 156, 0.9);
 }
 
-.my-hero-btn-original.overlay-button {
+.my-spot-btn-original.overlay-button {
     background-color: rgba(52, 152, 219, 0.75);
-    /* Peter River Blue */
     border-color: rgba(41, 128, 185, 0.9);
     font-size: 11px;
     padding: 4px 8px;
 }
 
-.my-hero-btn-original.overlay-button:hover {
+.my-spot-btn-original.overlay-button:hover {
     background-color: rgba(52, 152, 219, 0.95);
 }
 
-.change-my-hero-btn-original.overlay-button {
+.change-my-spot-btn-original.overlay-button {
     background-color: rgba(46, 204, 113, 0.8);
-    /* Emerald Green */
     border-color: rgba(39, 174, 96, 0.9);
     font-size: 11px;
     padding: 4px 8px;
 }
 
-.change-my-hero-btn-original.overlay-button:hover {
+.change-my-spot-btn-original.overlay-button:hover {
     background-color: rgba(46, 204, 113, 1);
 }
 
@@ -390,14 +374,13 @@ body {
     top: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
+    background-color: rgba(0, 0, 0, 0.75);
     display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1050;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
+    justify-content: flex-end;
+    align-items: flex-start;
+    padding: 15px;
+    box-sizing: border-box;
+    z-index: 10005;
 }
 
 .custom-popup.visible {
@@ -406,25 +389,25 @@ body {
 }
 
 .custom-popup-content {
-    background-color: var(--section-bg);
-    padding: 25px 30px;
+    background-color: rgba(44, 47, 51, 0.95);
+    padding: 20px 25px;
     border-radius: 8px;
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
     text-align: center;
-    max-width: 420px;
-    color: var(--text-color);
-    border: 1px solid var(--hr-bg);
+    max-width: 450px;
+    color: #dcddde;
+    border: 1px solid rgba(70, 75, 80, 0.9);
 }
 
 .custom-popup-message-text {
-    margin-bottom: 25px;
-    line-height: 1.7;
-    font-size: 1.05em;
+    margin-bottom: 20px;
+    line-height: 1.6;
+    font-size: 1.1em;
 }
 
 .custom-popup-buttons {
     display: flex;
-    justify-content: space-evenly;
+    justify-content: center;
     gap: 15px;
 }
 
@@ -449,6 +432,23 @@ body {
     background-color: var(--button-default-hover-bg);
 }
 
+#confirm-scan-proceed-btn {
+    background-color: rgba(0, 150, 136, 0.7);
+    /* Teal */
+}
+
+#confirm-scan-proceed-btn:hover {
+    background-color: rgba(0, 150, 136, 0.9);
+}
+
+#confirm-scan-dont-show-btn {
+    background-color: rgba(114, 118, 125, 0.7);
+}
+
+#confirm-scan-dont-show-btn:hover {
+    background-color: rgba(114, 118, 125, 0.9);
+}
+
 /* === Status Popups (Bottom-Right) === */
 .status-popup {
     position: fixed;
@@ -461,7 +461,6 @@ body {
     font-size: 13px;
     z-index: 10001;
     display: none;
-    /* Shown by JS */
     border: 1px solid rgba(70, 75, 80, 0.8);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
     max-width: 300px;
@@ -529,7 +528,6 @@ body {
 
 #op-combinations-list div span {
     color: #ffb380;
-    /* Orange/gold for synergy winrates */
     font-weight: 500;
 }
 
@@ -541,4 +539,20 @@ body {
 
 #show-op-combinations-btn.overlay-button:hover {
     background-color: rgba(140, 90, 90, 0.9);
+}
+
+#report-confirm-submit-btn {
+    background-color: rgba(230, 126, 34, 0.7);
+}
+
+#report-confirm-submit-btn:hover {
+    background-color: rgba(243, 156, 18, 0.9);
+}
+
+#report-confirm-cancel-btn {
+    background-color: rgba(114, 118, 125, 0.7);
+}
+
+#report-confirm-cancel-btn:hover {
+    background-color: rgba(114, 118, 125, 0.9);
 }

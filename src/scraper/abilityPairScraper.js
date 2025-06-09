@@ -7,7 +7,7 @@ const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
 
 // Thresholds for determining significant synergies
 const SYNERGY_WINRATE_THRESHOLD = 0.50; // Only store pairs with a combined winrate >= 50%
-const OP_SYNERGY_THRESHOLD_PERCENTAGE = 0.09; // Synergy percentage increase to be marked as "OP" (Overpowered), e.g., +9%
+const OP_SYNERGY_THRESHOLD_PERCENTAGE = 0.13; // Synergy percentage increase to be marked as "OP" (Overpowered), e.g., +11%
 
 /**
  * Parses a text value representing a percentage.

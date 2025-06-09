@@ -4,7 +4,6 @@ const Database = require('better-sqlite3');
  * Fetches all heroes (hero_id, name, display_name) from the database.
  * @param {string} dbPath - Path to the SQLite database file.
  * @returns {Promise<Array<{hero_id: number, name: string, display_name: string}>>}
- * An array of hero objects, or an empty array if none found/error.
  */
 async function getAllHeroes(dbPath) {
     let db;
@@ -32,13 +31,10 @@ async function getAllHeroes(dbPath) {
 
 /**
  * Fetches details for a list of ability names from the database.
- *
  * @param {string} dbPath - Path to the SQLite database file.
  * @param {string[]} abilityNames - An array of ability internal names to query.
  * @returns {Map<string, object | null>} A Map where keys are ability internal names
- * and values are objects containing ability details (internalName, displayName, winrate,
- * highSkillWinrate, avgPickOrder, valuePercentage, is_ultimate, ability_order)
- * or null if an ability is not found.
+ * and values are objects containing ability details.
  */
 function getAbilityDetails(dbPath, abilityNames) {
     const detailsMap = new Map();
@@ -57,8 +53,8 @@ function getAbilityDetails(dbPath, abilityNames) {
                 display_name,
                 winrate,
                 high_skill_winrate,
-                avg_pick_order,
-                value_percentage,
+                pick_rate,
+                hs_pick_rate,
                 is_ultimate,
                 ability_order
             FROM Abilities
@@ -74,16 +70,15 @@ function getAbilityDetails(dbPath, abilityNames) {
                 displayName: row.display_name || row.name,
                 winrate: (typeof row.winrate === 'number') ? row.winrate : null,
                 highSkillWinrate: (typeof row.high_skill_winrate === 'number') ? row.high_skill_winrate : null,
-                avgPickOrder: (typeof row.avg_pick_order === 'number') ? row.avg_pick_order : null,
-                valuePercentage: (typeof row.value_percentage === 'number') ? row.value_percentage : null,
-                is_ultimate: row.is_ultimate, // SQLite stores BOOL as 0 or 1
+                pickRate: (typeof row.pick_rate === 'number') ? row.pick_rate : null,
+                hsPickRate: (typeof row.hs_pick_rate === 'number') ? row.hs_pick_rate : null,
+                is_ultimate: row.is_ultimate,
                 ability_order: row.ability_order
             });
         });
 
     } catch (err) {
         console.error(`[DB Queries] Error fetching ability details: ${err.message}`);
-        // Return an empty map on error to avoid downstream issues
         return new Map();
     } finally {
         if (db && db.open) {
@@ -95,14 +90,10 @@ function getAbilityDetails(dbPath, abilityNames) {
 
 /**
  * Fetches high winrate combinations for a specific ability against a pool of other abilities.
- * This function ensures that synergistic abilities are from different heroes.
- *
  * @param {string} dbPath - Path to the SQLite database file.
  * @param {string} baseAbilityInternalName - The internal name of the ability to find synergies for.
  * @param {string[]} draftPoolInternalNames - An array of internal names of other abilities in the draft pool.
  * @returns {Promise<Array<{partnerAbilityDisplayName: string, partnerInternalName: string, synergyWinrate: number}>>}
- * An array of objects, each representing a synergistic partner ability with its display name, internal name, and synergy winrate.
- * Returns an empty array if no valid combinations are found or in case of an error.
  */
 async function getHighWinrateCombinations(dbPath, baseAbilityInternalName, draftPoolInternalNames) {
     const combinations = [];
@@ -127,7 +118,6 @@ async function getHighWinrateCombinations(dbPath, baseAbilityInternalName, draft
         }
 
         const otherPoolPlaceholders = otherPoolAbilities.map(() => '?').join(', ');
-        // If baseAbilityHeroId is null, don't filter by hero_id; otherwise, ensure partner is from a different, non-null hero_id.
         const heroIdFilterClause = baseAbilityHeroId === null ? '1=1' : 'ab_other.hero_id IS NOT NULL AND ab_other.hero_id != ?';
 
         const synergyQuery = `
@@ -138,10 +128,10 @@ async function getHighWinrateCombinations(dbPath, baseAbilityInternalName, draft
             FROM AbilitySynergies s
             JOIN Abilities ab_base ON (s.base_ability_id = ab_base.ability_id OR s.synergy_ability_id = ab_base.ability_id)
             JOIN Abilities ab_other ON ((s.synergy_ability_id = ab_other.ability_id AND s.base_ability_id = ab_base.ability_id) OR (s.base_ability_id = ab_other.ability_id AND s.synergy_ability_id = ab_base.ability_id))
-            WHERE ab_base.name = ?                            -- Base ability
-              AND ab_other.name IN (${otherPoolPlaceholders}) -- Partner is in the draft pool
-              AND ab_other.name != ?                          -- Partner is not the base ability itself
-              AND (${heroIdFilterClause})                     -- Partner is from a different hero
+            WHERE ab_base.name = ?
+              AND ab_other.name IN (${otherPoolPlaceholders})
+              AND ab_other.name != ?
+              AND (${heroIdFilterClause})
             ORDER BY s.synergy_winrate DESC;
         `;
 
@@ -173,13 +163,9 @@ async function getHighWinrateCombinations(dbPath, baseAbilityInternalName, draft
 
 /**
  * Fetches "OP" (overpowered) ability combinations present in the current draft pool.
- * An OP combination is one where the 'is_op' flag is true in the AbilitySynergies table.
- *
  * @param {string} dbPath - Path to the SQLite database file.
  * @param {string[]} draftPoolInternalNames - An array of internal names of all abilities in the draft pool.
  * @returns {Promise<Array<{ability1DisplayName: string, ability2DisplayName: string, synergyWinrate: number}>>}
- * An array of objects, each representing an OP combination with display names and synergy winrate.
- * Returns an empty array if no OP combinations are found or in case of an error.
  */
 async function getOPCombinationsInPool(dbPath, draftPoolInternalNames) {
     const opCombinations = [];
@@ -193,8 +179,6 @@ async function getOPCombinationsInPool(dbPath, draftPoolInternalNames) {
 
         const poolPlaceholders = draftPoolInternalNames.map(() => '?').join(',');
 
-        // Query for OP combinations where both abilities are in the current draft pool.
-        // "a1.name < a2.name" ensures each pair is reported only once (e.g., (A, B) not (B, A)).
         const opQuery = `
             SELECT
                 a1.display_name AS ability1_display_name,
@@ -208,7 +192,7 @@ async function getOPCombinationsInPool(dbPath, draftPoolInternalNames) {
             WHERE s.is_op = 1
               AND a1.name IN (${poolPlaceholders})
               AND a2.name IN (${poolPlaceholders})
-              AND a1.name < a2.name; -- Ensures each pair is unique and ordered
+              AND a1.name < a2.name;
         `;
 
         const queryParams = [...draftPoolInternalNames, ...draftPoolInternalNames];
@@ -216,7 +200,6 @@ async function getOPCombinationsInPool(dbPath, draftPoolInternalNames) {
         const opRows = opStmt.all(...queryParams);
 
         opRows.forEach(row => {
-            // Sanity check if both abilities are indeed in the draftPoolInternalNames
             if (draftPoolInternalNames.includes(row.ability1_internal_name) && draftPoolInternalNames.includes(row.ability2_internal_name)) {
                 opCombinations.push({
                     ability1DisplayName: row.ability1_display_name || row.ability1_internal_name,
@@ -238,11 +221,9 @@ async function getOPCombinationsInPool(dbPath, draftPoolInternalNames) {
 
 /**
  * Fetches basic hero details (ID, name, display name) using an ability name that belongs to that hero.
- *
  * @param {string} dbPath - Path to the SQLite database file.
  * @param {string} abilityName - The internal name of an ability associated with the hero.
  * @returns {Promise<{hero_id: number, heroName: string, heroDisplayName: string} | null>}
- * An object with hero details or null if not found or in case of an error.
  */
 async function getHeroDetailsByAbilityName(dbPath, abilityName) {
     if (!abilityName) {
@@ -275,16 +256,13 @@ async function getHeroDetailsByAbilityName(dbPath, abilityName) {
 }
 
 /**
- * Fetches detailed hero information (ID, name, display name, winrate, pick order, value) by the hero's database ID.
- *
+ * Fetches detailed hero information by the hero's database ID.
  * @param {string} dbPath - Path to the SQLite database file.
  * @param {number} heroId - The database ID (hero_id) of the hero.
- * @returns {Promise<{dbHeroId: number, heroName: string, heroDisplayName: string, winrate: number | null, avg_pick_order: number | null, value_percentage: number | null} | null>}
- * An object with detailed hero statistics or null if not found or in case of an error.
+ * @returns {Promise<object | null>} An object with detailed hero statistics or null if not found.
  */
 async function getHeroDetailsById(dbPath, heroId) {
     if (heroId === null || typeof heroId === 'undefined') {
-        console.warn('[DB Queries] getHeroDetailsById called with null or undefined heroId.');
         return null;
     }
 
@@ -297,8 +275,9 @@ async function getHeroDetailsById(dbPath, heroId) {
                 name,
                 display_name,
                 winrate,
-                avg_pick_order,
-                value_percentage
+                high_skill_winrate,
+                pick_rate,
+                hs_pick_rate
             FROM Heroes
             WHERE hero_id = ?;
         `).get(heroId);
@@ -309,8 +288,9 @@ async function getHeroDetailsById(dbPath, heroId) {
                 heroName: row.name,
                 heroDisplayName: row.display_name,
                 winrate: (typeof row.winrate === 'number') ? row.winrate : null,
-                avg_pick_order: (typeof row.avg_pick_order === 'number') ? row.avg_pick_order : null,
-                value_percentage: (typeof row.value_percentage === 'number') ? row.value_percentage : null
+                highSkillWinrate: (typeof row.high_skill_winrate === 'number') ? row.high_skill_winrate : null,
+                pickRate: (typeof row.pick_rate === 'number') ? row.pick_rate : null,
+                hsPickRate: (typeof row.hs_pick_rate === 'number') ? row.hs_pick_rate : null,
             };
         }
         return null;
@@ -326,10 +306,8 @@ async function getHeroDetailsById(dbPath, heroId) {
 
 /**
  * Fetches all "OP" (overpowered) ability combinations from the database.
- * An OP combination is one where the 'is_op' flag is true.
  * @param {string} dbPath - Path to the SQLite database file.
- * @returns {Promise<Array<{ability1InternalName: string, ability1DisplayName: string, ability2InternalName: string, ability2DisplayName: string, synergyWinrate: number}>>}
- * An array of objects, each representing an OP combination.
+ * @returns {Promise<Array<object>>}
  */
 async function getAllOPCombinations(dbPath) {
     let db;
@@ -337,8 +315,6 @@ async function getAllOPCombinations(dbPath) {
 
     try {
         db = new Database(dbPath, { readonly: true });
-        // "a1.name < a2.name" ensures each pair is reported only once (e.g., (A, B) not (B, A))
-        // to avoid duplicates and provide a canonical representation.
         const opQuery = `
             SELECT
                 a1.name AS ability1_internal_name,
@@ -353,7 +329,7 @@ async function getAllOPCombinations(dbPath) {
               AND a1.name < a2.name; 
         `;
         const opStmt = db.prepare(opQuery);
-        const opRows = opStmt.all(); // No parameters needed to fetch all
+        const opRows = opStmt.all();
 
         opRows.forEach(row => {
             opCombinations.push({
@@ -375,11 +351,10 @@ async function getAllOPCombinations(dbPath) {
 }
 
 /**
- * Fetches all abilities associated with a specific hero_id, ordered by ability_order.
+ * Fetches all abilities associated with a specific hero_id.
  * @param {string} dbPath - Path to the SQLite database file.
  * @param {number} heroId - The database ID of the hero.
- * @returns {Promise<Array<{name: string, display_name: string, is_ultimate: boolean, ability_order: number}>>}
- * An array of ability objects, or empty array if none found/error.
+ * @returns {Promise<Array<object>>}
  */
 async function getAbilitiesByHeroId(dbPath, heroId) {
     if (heroId === null || typeof heroId === 'undefined') {

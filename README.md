@@ -20,7 +20,7 @@
 * **Local Statistics Database:** All statistical data (hero/ability win rates, synergy data) is stored in a local SQLite database, initially bundled with the application.
 * **Manual Data Updates:** The Control Panel allows users to scrape and update the local database from Windrun.io for the latest statistics.
 * **Hero-Specific Context:**
-    * When a user selects their hero ("My Hero"), the overlay can tailor suggestions and ability valuations.
+    * When a user selects their hero ("My Spot"), the overlay can tailor suggestions and ability valuations.
     * When a user selects a "My Model" hero, suggestions are filtered to focus on abilities.
 * **Feedback Mechanism:** Allows users to "Take Snapshot" of ability icons if misidentified. These snapshots can be exported and shared (e.g., via [Google Form](https://forms.gle/gkz7U3EBi1P1RHaCA) or GitHub Issues) to help improve the ML model.
 * **Standalone Operation:** Once data is updated, the overlay functions locally without needing a constant internet connection during gameplay.
@@ -71,20 +71,20 @@ The overlay provides in-game assistance once activated.
         * ML prediction confidence (for abilities).
         * Strong synergistic combinations (for abilities in the pool) with other available abilities.
         * "Top Tier" abilities/models (based on a consolidated score) are highlighted with a shimmering border.
-* **Select Your Hero (Recommended):**
-    * After the initial scan, "**My Hero**" buttons appear next to each of the 10 hero portrait areas.
-    * Click the "**My Hero**" button corresponding to your hero in the draft.
+* **Select Your Spot (Recommended):**
+    * After the initial scan, "**My Spot**" buttons appear next to each of the 10 hero portrait areas.
+    * Click the "**My Spot**" button corresponding to your hero in the draft.
     * **Benefits:**
         * The overlay may provide more tailored "value" or "pick order" context for abilities if this feature is expanded.
         * Abilities you pick will be distinctly highlighted.
         * Top-tier ultimate suggestions may be filtered if you've already picked an ultimate.
-    * If you misclick, a "**My Hero (Change)**" button appears; click it to deselect, then choose the correct one.
-* **Set Model Hero (Optional):**
-    * After the initial scan, "**Set Model**" buttons appear near the 12 hero models displayed in the center of the draft screen.
+    * If you misclick, a "**My Spot (Change)**" button appears; click it to deselect, then choose the correct one.
+* **Set Model (Optional):**
+    * After the initial scan, "**My Model**" buttons appear near the 12 hero models displayed in the center of the draft screen.
     * Clicking this for one of the hero models will tailor "Top Tier" suggestions to focus only on *abilities* (filtering out other hero models from suggestions), assuming you want to build around that model's abilities.
     * Click "**My Model (Change)**" to deselect.
 * **Rescan:**
-    * After selecting "My Hero", "My Model", or if the draft state changes (abilities are picked), click "**Rescan**".
+    * After selecting "My Spot", "My Model", or if the draft state changes (abilities are picked), click "**Rescan**".
     * This re-processes the screen, updating insights based on the current context.
 * **OP Combinations Window:**
     * If any pre-defined high-performing ("OP") two-ability combos are detected among available draft pool abilities, a window will appear (top-right). You can hide/show this.

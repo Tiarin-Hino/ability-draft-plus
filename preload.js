@@ -22,7 +22,7 @@ const { contextBridge, ipcRenderer } = require('electron');
  */
 
 /**
- * @typedef {object} MyHeroForDraftingSelectionData
+ * @typedef {object} MySpotForDraftingSelectionData
  * @property {number | null} selectedHeroOrderForDrafting - The original list order (0-9) of the hero selected for drafting.
  * @property {number | null} selectedHeroDbId - The database ID of the hero selected for drafting.
  */
@@ -164,16 +164,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
   /**
    * (For Overlay Renderer) Sends the user's own hero selection for the current draft to the main process.
    * This helps tailor statistics and suggestions.
-   * @param {MyHeroForDraftingSelectionData} data - Object containing heroOrder (original 0-9 list index) and dbHeroId.
+   * @param {MySpotForDraftingSelectionData} data - Object containing heroOrder (original 0-9 list index) and dbHeroId.
    */
-  selectMyHeroForDrafting: (data) => ipcRenderer.send('select-my-hero-for-drafting', data),
+  selectMySpotForDrafting: (data) => ipcRenderer.send('select-my-spot-for-drafting', data),
 
   /**
-   * (For Overlay Renderer) Registers a callback function to be invoked when the "My Hero for Drafting"
+   * (For Overlay Renderer) Registers a callback function to be invoked when the "My Spot for Drafting"
    * selection is changed in the main process, so the overlay UI can update.
    * @param {(data: { selectedHeroOrderForDrafting: number | null, selectedHeroDbId: number | null }) => void} callback - The function to call with the updated selection.
    */
-  onMyHeroForDraftingSelectionChanged: (callback) => ipcRenderer.on('my-hero-for-drafting-selection-changed', (_event, data) => callback(data)),
+  onMySpotForDraftingSelectionChanged: (callback) => ipcRenderer.on('my-spot-for-drafting-selection-changed', (_event, data) => callback(data)),
 
   /**
   * Sends a request to the main process to open the given URL in the default external browser.
@@ -200,12 +200,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
    * @returns {Promise<{shouldUseDarkColors: boolean}>}
    */
   getCurrentSystemTheme: () => ipcRenderer.invoke('get-current-system-theme'),
-
-  /**
-   * Sends a request to the main process to capture the current screen
-   * and (eventually) submit it as a new resolution layout.
-   */
-  submitNewResolutionSnapshot: () => ipcRenderer.send('submit-new-resolution-snapshot'),
 
   /**
    * Registers a callback function to be invoked when the main process sends status updates
@@ -236,4 +230,21 @@ contextBridge.exposeInMainWorld('electronAPI', {
    * @returns {Promise<{width: number, height: number, scaleFactor: number, resolutionString: string}>}
    */
   getSystemDisplayInfo: () => ipcRenderer.invoke('get-system-display-info'),
+
+  /**
+   * Requests that the main process take a screenshot for the new layout preview.
+   */
+  requestNewLayoutScreenshot: () => ipcRenderer.send('request-new-layout-screenshot'),
+
+  /**
+   * Registers a callback for when the main process sends back the captured screenshot data.
+   * @param {(dataUrl: string | null) => void} callback
+   */
+  onNewLayoutScreenshot: (callback) => ipcRenderer.on('new-layout-screenshot-taken', (_event, dataUrl) => callback(dataUrl)),
+
+  /**
+   * Sends the confirmed screenshot (as a data URL) to the main process for API submission.
+   * @param {string} dataUrl - The screenshot data URL to submit.
+   */
+  submitConfirmedLayout: (dataUrl) => ipcRenderer.send('submit-confirmed-layout', dataUrl),
 });

@@ -18,9 +18,10 @@ const initialSchemaSql = `
         name TEXT UNIQUE NOT NULL,      -- Internal name, e.g., "antimage"
         display_name TEXT,              -- Display name, e.g., "Anti-Mage"
         winrate REAL,
-        windrun_id INTEGER,             -- ID from windrun.io for potential linking
-        avg_pick_order REAL,
-        value_percentage REAL
+        high_skill_winrate REAL,        -- Winrate from high-skill specific data
+        pick_rate REAL,                 -- Formerly avg_pick_order
+        hs_pick_rate REAL,              -- High-skill pick rate
+        windrun_id INTEGER              -- ID from windrun.io for potential linking
     );
 
     CREATE TABLE IF NOT EXISTS Abilities (
@@ -30,8 +31,8 @@ const initialSchemaSql = `
         hero_id INTEGER,                -- Foreign key to Heroes table
         winrate REAL,                   -- Regular winrate
         high_skill_winrate REAL,        -- Winrate from high-skill specific data
-        avg_pick_order REAL,            -- Average pick order statistic
-        value_percentage REAL,          -- Value statistic (percentage)
+        pick_rate REAL,                 -- Formerly avg_pick_order
+        hs_pick_rate REAL,              -- High-skill pick rate
         is_ultimate BOOLEAN,            -- True if the ability is an ultimate
         ability_order INTEGER,          -- Order of the ability for a hero (1, 2, 3, ult=4 etc.)
         FOREIGN KEY (hero_id) REFERENCES Heroes (hero_id) ON DELETE SET NULL ON UPDATE CASCADE
@@ -69,28 +70,41 @@ const initialSchemaSql = `
 const columnsToEnsure = [
     // Abilities table
     { table: 'Abilities', column: 'high_skill_winrate', type: 'REAL' },
-    { table: 'Abilities', column: 'hero_id', type: 'INTEGER' }, // Ensure FK constraint is handled by initialSchema or manual check
-    { table: 'Abilities', column: 'is_ultimate', type: 'BOOLEAN' }, // SQLite uses 0 or 1
+    { table: 'Abilities', column: 'hero_id', type: 'INTEGER' },
+    { table: 'Abilities', column: 'is_ultimate', type: 'BOOLEAN' },
     { table: 'Abilities', column: 'ability_order', type: 'INTEGER' },
     { table: 'Abilities', column: 'display_name', type: 'TEXT' },
-    { table: 'Abilities', column: 'avg_pick_order', type: 'REAL' },
-    { table: 'Abilities', column: 'value_percentage', type: 'REAL' },
+    { table: 'Abilities', column: 'pick_rate', type: 'REAL' },
+    { table: 'Abilities', column: 'hs_pick_rate', type: 'REAL' },
 
     // Heroes table
     { table: 'Heroes', column: 'display_name', type: 'TEXT' },
+    { table: 'Heroes', column: 'high_skill_winrate', type: 'REAL' },
     { table: 'Heroes', column: 'windrun_id', type: 'INTEGER' },
-    { table: 'Heroes', column: 'avg_pick_order', type: 'REAL' },
-    { table: 'Heroes', column: 'value_percentage', type: 'REAL' },
+    { table: 'Heroes', column: 'pick_rate', type: 'REAL' },
+    { table: 'Heroes', column: 'hs_pick_rate', type: 'REAL' },
 
     // AbilitySynergies table
     { table: 'AbilitySynergies', column: 'is_op', type: 'BOOLEAN DEFAULT 0' }
 ];
 
+/**
+ * Defines obsolete columns that should be removed from the database for cleanup.
+ * @type {Array<{table: string, column: string}>}
+ */
+const columnsToDrop = [
+    { table: 'Abilities', column: 'value_percentage' },
+    { table: 'Abilities', column: 'avg_pick_order' },
+    { table: 'Abilities', column: 'pick_order' },
+    { table: 'Heroes', column: 'value_percentage' },
+    { table: 'Heroes', column: 'avg_pick_order' },
+];
+
 
 /**
  * Sets up the SQLite database.
- * This function creates the necessary tables and columns if they don't already exist.
- * It handles basic schema migrations by adding missing columns.
+ * This function creates the necessary tables, adds missing columns for forward compatibility,
+ * and drops obsolete columns for cleanup.
  *
  * @throws {Error} If there's a critical error during database setup.
  */
@@ -98,7 +112,6 @@ function setupDatabase() {
     let db;
     try {
         console.log(`[DB Setup] Using database at: ${dbPath}`);
-        // The 'verbose' option logs all SQL statements to the console, useful for debugging.
         db = new Database(dbPath, { verbose: console.log });
 
         // Execute initial schema creation (tables, indexes).
@@ -111,16 +124,32 @@ function setupDatabase() {
                 db.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${type};`).run();
                 console.log(`[DB Setup] Added column "${column}" to table "${table}".`);
             } catch (err) {
-                // It's common for this to fail if the column already exists, which is fine.
-                if (err.message.includes('duplicate column name')) {
-                    // Column already exists, no action needed.
-                } else {
-                    // Log other errors, but don't necessarily stop the setup unless critical.
+                if (!err.message.includes('duplicate column name')) {
                     console.error(`[DB Setup] Error adding column "${column}" to "${table}": ${err.message}`);
                 }
             }
         }
         console.log('[DB Setup] Database schema verification and column additions complete.');
+
+        // New step: Clean up obsolete columns from previous versions.
+        console.log('[DB Setup] Checking for obsolete columns to drop for cleanup...');
+        for (const { table, column } of columnsToDrop) {
+            try {
+                // Check if the column exists before trying to drop it.
+                const tableInfo = db.prepare(`PRAGMA table_info(${table});`).all();
+                const columnExists = tableInfo.some(col => col.name === column);
+
+                if (columnExists) {
+                    // The `DROP COLUMN` syntax is supported in recent SQLite versions.
+                    db.prepare(`ALTER TABLE ${table} DROP COLUMN ${column};`).run();
+                    console.log(`[DB Setup] Dropped obsolete column "${column}" from table "${table}".`);
+                }
+            } catch (err) {
+                // This might fail on very old SQLite versions, but it's a non-critical cleanup task.
+                console.error(`[DB Setup] Could not drop column "${column}" from "${table}": ${err.message}.`);
+            }
+        }
+        console.log('[DB Setup] Obsolete column cleanup complete.');
 
     } catch (err) {
         console.error('[DB Setup] Critical error setting up database:', err.message);
