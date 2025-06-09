@@ -540,3 +540,19 @@ body {
 #show-op-combinations-btn.overlay-button:hover {
     background-color: rgba(140, 90, 90, 0.9);
 }
+
+#report-confirm-submit-btn {
+    background-color: rgba(230, 126, 34, 0.7);
+}
+
+#report-confirm-submit-btn:hover {
+    background-color: rgba(243, 156, 18, 0.9);
+}
+
+#report-confirm-cancel-btn {
+    background-color: rgba(114, 118, 125, 0.7);
+}
+
+#report-confirm-cancel-btn:hover {
+    background-color: rgba(114, 118, 125, 0.9);
+}

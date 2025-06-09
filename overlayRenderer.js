@@ -5,7 +5,7 @@ const closeOverlayButton = document.getElementById('close-overlay-btn');
 const initialScanButton = document.getElementById('initial-scan-btn');
 const rescanButton = document.getElementById('rescan-btn');
 const resetOverlayButton = document.getElementById('reset-overlay-btn');
-const takeSnapshotButton = document.getElementById('take-snapshot-btn');
+const reportFailedRecButton = document.getElementById('report-failed-rec-btn');
 const snapshotStatusElement = document.getElementById('snapshot-status');
 const controlsContainer = document.getElementById('controls-container');
 const opCombinationsContainer = document.getElementById('op-combinations-container');
@@ -13,6 +13,9 @@ const opCombinationsWindow = document.getElementById('op-combinations-window');
 const opCombinationsListElement = document.getElementById('op-combinations-list');
 const hideOpCombinationsButton = document.getElementById('hide-op-combinations-btn');
 const showOpCombinationsButton = document.getElementById('show-op-combinations-btn');
+const reportConfirmPopup = document.getElementById('report-confirm-popup');
+const reportConfirmSubmitBtn = document.getElementById('report-confirm-submit-btn');
+const reportConfirmCancelBtn = document.getElementById('report-confirm-cancel-btn');
 const initialScanConfirmPopup = document.getElementById('initial-scan-confirm-popup');
 const confirmScanProceedBtn = document.getElementById('confirm-scan-proceed-btn');
 const confirmScanDontShowBtn = document.getElementById('confirm-scan-dont-show-btn');
@@ -79,7 +82,7 @@ function resetOverlayUI() {
     // Reset button visibility and states
     if (initialScanButton) { initialScanButton.style.display = 'inline-block'; initialScanButton.disabled = false; }
     if (rescanButton) { rescanButton.style.display = 'none'; }
-    if (takeSnapshotButton) { takeSnapshotButton.style.display = 'none'; takeSnapshotButton.disabled = true; }
+    if (reportFailedRecButton) { reportFailedRecButton.style.display = 'none'; reportFailedRecButton.disabled = true; }
     if (resetOverlayButton) { resetOverlayButton.style.display = 'none'; }
 
     hideTooltip();
@@ -109,7 +112,7 @@ function triggerScan(isInitialScan) {
     if (scanButtonToDisable && scanButtonToDisable.disabled) return;
 
     if (scanButtonToDisable) scanButtonToDisable.disabled = true;
-    if (takeSnapshotButton) takeSnapshotButton.disabled = true;
+    if (reportFailedRecButton) reportFailedRecButton.disabled = true;
     if (resetOverlayButton && resetOverlayButton.style.display !== 'none') resetOverlayButton.style.display = 'none';
 
     document.querySelectorAll('.ability-hotspot, .selected-ability-hotspot, .synergy-suggestion-hotspot').forEach(el => el.remove());
@@ -124,7 +127,7 @@ function triggerScan(isInitialScan) {
         console.error('[OverlayRenderer] Cannot scan: target resolution not set.');
         showScanStatusPopup('Error: Resolution not set.', true);
         if (scanButtonToDisable) scanButtonToDisable.disabled = false;
-        if (takeSnapshotButton && initialScanButton && initialScanButton.style.display === 'none') takeSnapshotButton.disabled = false;
+        if (reportFailedRecButton && initialScanButton && initialScanButton.style.display === 'none') reportFailedRecButton.disabled = false;
         return;
     }
 
@@ -605,8 +608,8 @@ if (window.electronAPI) {
             showScanStatusPopup(`Error: ${data.error}`, true);
             if (initialScanButton && initialScanButton.disabled) initialScanButton.disabled = false;
             if (rescanButton && rescanButton.disabled) rescanButton.disabled = false;
-            if (takeSnapshotButton && takeSnapshotButton.disabled && initialScanButton && initialScanButton.style.display === 'none') {
-                takeSnapshotButton.disabled = false;
+            if (reportFailedRecButton && reportFailedRecButton.disabled && initialScanButton && initialScanButton.style.display === 'none') {
+                reportFailedRecButton.disabled = false;
             }
             if (resetOverlayButton && scanHasBeenPerformed) resetOverlayButton.style.display = 'inline-block';
             return;
@@ -659,7 +662,7 @@ if (window.electronAPI) {
 
             if (initialScanButton) initialScanButton.style.display = 'none';
             if (rescanButton) { rescanButton.style.display = 'inline-block'; rescanButton.disabled = false; }
-            if (takeSnapshotButton) { takeSnapshotButton.style.display = 'block'; takeSnapshotButton.disabled = false; }
+            if (reportFailedRecButton) { reportFailedRecButton.style.display = 'block'; reportFailedRecButton.disabled = false; }
             if (resetOverlayButton) resetOverlayButton.style.display = 'inline-block';
 
             hideTooltip();
@@ -689,14 +692,14 @@ if (window.electronAPI) {
             snapshotStatusElement.style.backgroundColor = status.error ? 'rgba(200,0,0,0.8)' : 'rgba(0,150,50,0.8)';
             snapshotStatusElement.style.display = 'block';
 
-            if (takeSnapshotButton && (!status.error || status.allowRetry)) {
-                takeSnapshotButton.disabled = false;
+            if (reportFailedRecButton && (!status.error || status.allowRetry)) {
+                reportFailedRecButton.disabled = false;
             }
             setTimeout(() => {
                 snapshotStatusElement.style.display = 'none';
             }, 5000);
         } else {
-            if (takeSnapshotButton && (!status.error || status.allowRetry)) takeSnapshotButton.disabled = false;
+            if (reportFailedRecButton && (!status.error || status.allowRetry)) reportFailedRecButton.disabled = false;
         }
     });
 
@@ -736,16 +739,15 @@ if (rescanButton) {
 if (resetOverlayButton) {
     resetOverlayButton.addEventListener('click', resetOverlayUI);
 }
-if (takeSnapshotButton) {
-    takeSnapshotButton.addEventListener('click', () => {
-        if (!scanHasBeenPerformed || takeSnapshotButton.disabled) return;
-        takeSnapshotButton.disabled = true;
-        if (snapshotStatusElement) {
-            snapshotStatusElement.textContent = 'Taking snapshot...';
-            snapshotStatusElement.style.backgroundColor = 'rgba(0,100,200,0.8)';
-            snapshotStatusElement.style.display = 'block';
+if (reportFailedRecButton) {
+    reportFailedRecButton.addEventListener('click', () => {
+        if (!scanHasBeenPerformed || reportFailedRecButton.disabled) return;
+
+        // Show the confirmation popup
+        if (reportConfirmPopup) {
+            reportConfirmPopup.style.display = 'flex';
+            window.electronAPI?.setOverlayMouseEvents(false); // Capture mouse events
         }
-        window.electronAPI?.takeSnapshot();
     });
 }
 if (closeOverlayButton) {
@@ -795,6 +797,37 @@ if (confirmScanDontShowBtn) {
         triggerScan(true);
     });
 }
+if (reportConfirmSubmitBtn) {
+    reportConfirmSubmitBtn.addEventListener('click', () => {
+        // Hide the popup
+        if (reportConfirmPopup) {
+            reportConfirmPopup.style.display = 'none';
+        }
+
+        // Now perform the original snapshot logic
+        if (reportFailedRecButton) {
+            reportFailedRecButton.disabled = true;
+        }
+        if (snapshotStatusElement) {
+            snapshotStatusElement.textContent = 'Taking snapshot...';
+            snapshotStatusElement.style.backgroundColor = 'rgba(0,100,200,0.8)';
+            snapshotStatusElement.style.display = 'block';
+        }
+        window.electronAPI?.takeSnapshot();
+
+        // Re-enable mouse pass-through so the user can interact with the overlay again
+        window.electronAPI?.setOverlayMouseEvents(true);
+    });
+}
+if (reportConfirmCancelBtn) {
+    reportConfirmCancelBtn.addEventListener('click', () => {
+        // Just hide the popup and re-enable mouse-pass through
+        if (reportConfirmPopup) {
+            reportConfirmPopup.style.display = 'none';
+        }
+        window.electronAPI?.setOverlayMouseEvents(true);
+    });
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     loadScanConfirmPreference();
@@ -803,7 +836,8 @@ document.addEventListener('DOMContentLoaded', () => {
         controlsContainer,
         opCombinationsWindow,
         showOpCombinationsButton,
-        initialScanConfirmPopup
+        initialScanConfirmPopup,
+        reportConfirmPopup
     ];
     staticInteractiveElements.forEach(element => {
         if (element) {
