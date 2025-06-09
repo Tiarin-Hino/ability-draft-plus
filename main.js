@@ -39,8 +39,7 @@ const MODEL_FILENAME = 'model.json';
 const CLASS_NAMES_FILENAME = 'class_names.json';
 
 // Scraper URLs
-const ABILITIES_URL = 'https://windrun.io/abilities';
-const ABILITIES_HIGH_SKILL_URL = 'https://windrun.io/ability-high-skill';
+const ABILITIES_URL = 'https://windrun.io/ability-high-skill';
 const ABILITY_PAIRS_URL = 'https://windrun.io/ability-pairs';
 
 // ML & Scoring Configuration
@@ -48,13 +47,12 @@ const MIN_PREDICTION_CONFIDENCE = 0.90;
 const NUM_TOP_TIER_SUGGESTIONS = 10;
 
 // Scoring Weights (sum to 1.0)
-const WEIGHT_VALUE_PERCENTAGE = 0.40;
-const WEIGHT_WINRATE = 0.20;
-const WEIGHT_PICK_ORDER = 0.40;
+const WEIGHT_WINRATE = 0.4;
+const WEIGHT_PICK_ORDER = 0.6;
 
 // Pick Order Normalization Range (for scoring)
 const MIN_PICK_ORDER_FOR_NORMALIZATION = 1.0;
-const MAX_PICK_ORDER_FOR_NORMALIZATION = 40.0;
+const MAX_PICK_ORDER_FOR_NORMALIZATION = 50.0;
 
 // --- Global State ---
 let mainWindow = null;
@@ -199,7 +197,7 @@ async function performFullScrape(statusCallbackWebContents) {
     await delay(100);
 
     sendStatus('Phase 1/3: Updating heroes and abilities data from Windrun.io...');
-    await scrapeAndStoreAbilitiesAndHeroes(activeDbPath, ABILITIES_URL, ABILITIES_HIGH_SKILL_URL, sendStatus);
+    await scrapeAndStoreAbilitiesAndHeroes(activeDbPath, ABILITIES_URL, sendStatus);
     await delay(100);
 
     sendStatus('Phase 2/3: Updating ability pair data from Windrun.io...');
@@ -910,8 +908,9 @@ async function identifyHeroModels(heroDefiningAbilities, modelCoords) {
           dbHeroId: fullHeroDetails.dbHeroId,
           heroName: fullHeroDetails.heroName,
           winrate: fullHeroDetails.winrate,
-          avg_pick_order: fullHeroDetails.avg_pick_order,
-          value_percentage: fullHeroDetails.value_percentage,
+          highSkillWinrate: fullHeroDetails.highSkillWinrate,
+          pickRate: fullHeroDetails.pickRate,
+          hsPickRate: fullHeroDetails.hsPickRate,
           identificationConfidence: heroAbility.confidence
         });
       }
@@ -992,8 +991,7 @@ function prepareEntitiesForScoring(rawResults, abilityDetailsMap, cachedHeroMode
           internalName: heroData.heroName,
           displayName: heroData.heroDisplayName,
           winrate: heroData.winrate,
-          avgPickOrder: heroData.avg_pick_order,
-          valuePercentage: heroData.value_percentage,
+          pickRate: heroData.pickRate,
           entityType: 'hero',
           dbHeroId: heroData.dbHeroId,
           heroOrderScreen: heroData.heroOrder,
@@ -1008,11 +1006,9 @@ function prepareEntitiesForScoring(rawResults, abilityDetailsMap, cachedHeroMode
 
 function calculateConsolidatedScores(entities) {
   return entities.map(entity => {
-    let vRaw = entity.valuePercentage;
     let wRaw = entity.winrate;
-    let pRaw = entity.avgPickOrder;
+    let pRaw = entity.pickRate; // UPDATED from avgPickOrder
 
-    const vScaled = (vRaw !== null && typeof vRaw === 'number') ? vRaw : 0.5;
     const wNormalized = (wRaw !== null && typeof wRaw === 'number') ? wRaw : 0.5;
 
     let pNormalized = 0.5;
@@ -1023,9 +1019,7 @@ function calculateConsolidatedScores(entities) {
         pNormalized = (MAX_PICK_ORDER_FOR_NORMALIZATION - clampedPRaw) / range;
       }
     }
-    entity.consolidatedScore = (WEIGHT_VALUE_PERCENTAGE * vScaled) +
-      (WEIGHT_WINRATE * wNormalized) +
-      (WEIGHT_PICK_ORDER * pNormalized);
+    entity.consolidatedScore = (WEIGHT_WINRATE * wNormalized) + (WEIGHT_PICK_ORDER * pNormalized);
     return entity;
   });
 }
@@ -1134,8 +1128,8 @@ function formatResultsForUiWithFlags(
       displayName: dbDetails ? (dbDetails.displayName || internalName) : internalName,
       winrate: dbDetails ? dbDetails.winrate : null,
       highSkillWinrate: dbDetails ? dbDetails.highSkillWinrate : null,
-      avgPickOrder: dbDetails ? dbDetails.avgPickOrder : null,
-      valuePercentage: dbDetails ? dbDetails.valuePercentage : null,
+      pickRate: dbDetails ? dbDetails.pickRate : null,
+      hsPickRate: dbDetails ? dbDetails.hsPickRate : null,
       is_ultimate_from_db: dbDetails ? dbDetails.is_ultimate : null,
       is_ultimate_from_layout: isUltimateFromLayoutSlot,
       ability_order_from_db: dbDetails ? dbDetails.ability_order : null,

@@ -535,8 +535,7 @@ if (window.electronAPI) {
     if (shareFeedbackExtButton) {
         shareFeedbackExtButton.addEventListener('click', () => {
             console.log('[Renderer] "Share Feedback / Samples" button clicked.');
-            // The URL is hardcoded here as per the original design, main process handles opening.
-            window.electronAPI.openExternalLink('https://forms.gle/9hwyTkMNDubMppW1A');
+            window.electronAPI.openExternalLink('https://tiarinhino.com/feedback.html');
         });
     }
 

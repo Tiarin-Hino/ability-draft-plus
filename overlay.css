@@ -94,43 +94,33 @@ body {
 /* === Animated Hotspot Styles === */
 .top-tier-ability {
     border: 1px solid rgba(80, 255, 80, 0.8);
-    /* Base color for animation */
     border-radius: 4px;
-    /* Rounded corners */
     animation: shimmerGreen 1.5s infinite ease-in-out;
 }
 
 .synergy-suggestion-hotspot {
     border: 1px solid rgba(0, 207, 255, 0.8);
-    /* Base color for animation */
     border-radius: 4px;
-    /* Rounded corners */
     animation: shimmerTeal 1.5s infinite ease-in-out;
 }
 
 .hero-model-hotspot.top-tier-hero-model {
     border: 1px solid rgba(255, 223, 30, 0.8);
-    /* Base color for animation */
     border-radius: 4px;
-    /* Rounded corners */
     animation: shimmerGold 1.5s infinite ease-in-out;
 }
 
 /* === Static Highlight Hotspot Styles === */
 .hero-model-hotspot.is-my-model {
     border: 3px solid #00BCD4 !important;
-    /* A vibrant cyan */
     box-shadow: 0 0 10px 3px rgba(0, 188, 212, 0.6) !important;
     border-radius: 4px;
-    /* Ensure rounded corners for consistency if not animated similarly */
 }
 
 .selected-ability-hotspot.my-hero-selected-ability {
     border: 3px solid #8BC34A !important;
-    /* A clear, friendly green */
     box-shadow: 0 0 10px 4px rgba(139, 195, 74, 0.7) !important;
     border-radius: 4px;
-    /* Ensure rounded corners */
 }
 
 
@@ -154,13 +144,11 @@ body {
 
 .tooltip .synergy-pick-indicator {
     color: #00BCD4;
-    /* Teal */
     font-weight: bold;
 }
 
 .tooltip .top-pick-indicator {
     color: #66ff66;
-    /* Green */
     font-weight: bold;
 }
 
@@ -171,7 +159,8 @@ body {
     font-size: 15px;
 }
 
-.tooltip-winrate {
+.tooltip-winrate,
+.tooltip-stat {
     color: #a8b2bc;
     margin-bottom: 4px;
     font-size: 12px;
@@ -196,7 +185,6 @@ body {
 
 .tooltip-combo span {
     color: #82c995;
-    /* Greenish for positive winrates */
 }
 
 /* === UI Controls Container (Top-Right) === */
@@ -336,7 +324,6 @@ body {
 
 .my-model-btn.overlay-button {
     background-color: rgba(0, 188, 212, 0.7);
-    /* Cyan */
     border-color: rgba(0, 150, 170, 0.9);
     font-size: 10px;
     padding: 3px 6px;
@@ -348,7 +335,6 @@ body {
 
 .change-my-model-btn.overlay-button {
     background-color: rgba(26, 188, 156, 0.7);
-    /* Turquoise/Greenish Cyan */
     border-color: rgba(22, 160, 133, 0.9);
     font-size: 10px;
     padding: 3px 6px;
@@ -360,7 +346,6 @@ body {
 
 .my-hero-btn-original.overlay-button {
     background-color: rgba(52, 152, 219, 0.75);
-    /* Peter River Blue */
     border-color: rgba(41, 128, 185, 0.9);
     font-size: 11px;
     padding: 4px 8px;
@@ -372,7 +357,6 @@ body {
 
 .change-my-hero-btn-original.overlay-button {
     background-color: rgba(46, 204, 113, 0.8);
-    /* Emerald Green */
     border-color: rgba(39, 174, 96, 0.9);
     font-size: 11px;
     padding: 4px 8px;
@@ -461,7 +445,6 @@ body {
     font-size: 13px;
     z-index: 10001;
     display: none;
-    /* Shown by JS */
     border: 1px solid rgba(70, 75, 80, 0.8);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
     max-width: 300px;
@@ -529,7 +512,6 @@ body {
 
 #op-combinations-list div span {
     color: #ffb380;
-    /* Orange/gold for synergy winrates */
     font-weight: 500;
 }
 
