@@ -26,6 +26,7 @@ const screenshotPreviewPopup = document.getElementById('screenshot-preview-popup
 const screenshotPreviewImage = document.getElementById('screenshot-preview-image');
 const screenshotSubmitBtn = document.getElementById('screenshot-submit-btn');
 const screenshotRetakeBtn = document.getElementById('screenshot-retake-btn');
+const languageSelect = document.getElementById('language-select');
 
 // --- Module State ---
 let selectedResolution = ''; // Stores the currently selected screen resolution
@@ -34,6 +35,60 @@ let currentUserPreference = THEMES.SYSTEM; // User's explicit choice: 'system', 
 let currentSystemPrefersDark = false; // Tracks the OS's preference
 let systemDisplayInfo = null; // To store system display info
 let currentScreenshotDataUrl = null; // To hold screenshot data for submission
+let currentTranslations = {}; // To hold the loaded translation object
+
+// --- Translation Functions ---
+
+/**
+ * Gets a nested property from an object using a dot-notation string.
+ * @param {object} obj - The object to search.
+ * @param {string} path - The dot-notation path (e.g., 'a.b.c').
+ * @returns {any} The value at the path, or the path itself if not found.
+ */
+function getNested(obj, path) {
+    if (!path) return path;
+    return path.split('.').reduce((acc, part) => acc && acc[part], obj);
+}
+
+/**
+ * Translates a key into a string using the loaded translations.
+ * @param {string} key - The translation key (e.g., 'controlPanel.status.ready').
+ * @param {object} [params={}] - Optional parameters to replace in the string (e.g., { count: 5 }).
+ * @returns {string} The translated and formatted string.
+ */
+function translate(key, params = {}) {
+    let translated = getNested(currentTranslations, key);
+    if (typeof translated !== 'string') {
+        console.warn(`[i18n] Translation not found for key: ${key}`);
+        return key; // Fallback to the key itself
+    }
+    for (const [paramKey, paramValue] of Object.entries(params)) {
+        translated = translated.replace(new RegExp(`\\{${paramKey}\\}`, 'g'), paramValue);
+    }
+    return translated;
+}
+
+/**
+ * Applies all translations to the document based on data-i18n attributes.
+ */
+function applyTranslations() {
+    document.querySelectorAll('[data-i18n]').forEach(element => {
+        const key = element.getAttribute('data-i18n');
+        const translation = translate(key);
+        if (translation !== key) {
+            // Check for date param to avoid overwriting the span
+            if (element.hasAttribute('data-i18n-date-param')) {
+                const dateSpan = element.querySelector(`#${element.getAttribute('data-i18n-date-param')}`);
+                if (dateSpan) {
+                    element.firstChild.textContent = translation.replace(/\{date\}/, '');
+                }
+            } else {
+                element.textContent = translation;
+            }
+        }
+    });
+}
+
 
 /**
  * Overrides setButtonsState to temporarily also consider other controls for a modal state.
@@ -48,7 +103,7 @@ function setGlobalControlsDisabledForModal(disabled) {
     const otherControls = [
         resolutionSelect, systemThemeCheckbox, lightDarkToggle,
         supportDevButton, supportWindrunButton,
-        submitNewResolutionButton
+        submitNewResolutionButton, languageSelect
     ];
 
     commonButtons.forEach(btn => {
@@ -75,7 +130,10 @@ function setGlobalControlsDisabledForModal(disabled) {
  */
 function showResolutionMismatchPopup(systemRes, defaultSelectedRes) {
     if (customResolutionPopup && customPopupMessage) {
-        customPopupMessage.textContent = `Your resolution ${systemRes} is not supported yet. Please change resolution to a supported one, or submit your resolution to be added.`;
+        customPopupMessage.textContent = translate('controlPanel.popups.resolutionMismatch.message', {
+            systemRes,
+            defaultRes: defaultSelectedRes
+        });
         customResolutionPopup.classList.add('visible');
         setGlobalControlsDisabledForModal(true);
     }
@@ -158,52 +216,58 @@ function setButtonsState(disabled, initiatingButton = null) {
         if (btn) btn.disabled = disabled;
     });
     if (resolutionSelect) resolutionSelect.disabled = disabled;
+    if (languageSelect) languageSelect.disabled = disabled;
 
     if (disabled && initiatingButton) {
         if (initiatingButton === updateAllDataButton) {
-            updateAllDataButton.textContent = 'Updating All Data...';
+            updateAllDataButton.textContent = translate('controlPanel.data.buttonUpdating');
         } else if (initiatingButton === activateOverlayButton) {
-            activateOverlayButton.textContent = 'Activating Overlay...';
+            activateOverlayButton.textContent = translate('controlPanel.activation.activating');
         } else if (initiatingButton === exportFailedSamplesButton) {
-            exportFailedSamplesButton.textContent = 'Exporting Samples...';
+            exportFailedSamplesButton.textContent = 'Exporting Samples...'; // TODO: Localize
         }
     } else {
-        if (updateAllDataButton) updateAllDataButton.textContent = 'Update Windrun Data (Full)';
-        if (activateOverlayButton) activateOverlayButton.textContent = 'Activate Overlay';
-        if (exportFailedSamplesButton) exportFailedSamplesButton.textContent = 'Export Failed Samples';
+        if (updateAllDataButton) updateAllDataButton.textContent = translate('controlPanel.data.button');
+        if (activateOverlayButton) activateOverlayButton.textContent = translate('controlPanel.activation.button');
+        if (exportFailedSamplesButton) exportFailedSamplesButton.textContent = translate('controlPanel.feedback.exportButton');
     }
 }
 
 /**
  * Updates the main status message displayed to the user.
- * @param {string} message - The message to display.
+ * @param {string|object} message - The message string or an object {key, params}.
  * @param {boolean} [isError=false] - If true, indicates an error message (could be used for styling).
  */
 function updateStatusMessage(message, isError = false) {
     if (statusMessageElement) {
-        statusMessageElement.textContent = message;
+        let textToShow;
+        if (typeof message === 'object' && message.key) {
+            textToShow = translate(message.key, message.params);
+        } else {
+            textToShow = message;
+        }
+
+        statusMessageElement.textContent = textToShow;
         statusMessageElement.classList.toggle('error-message', isError);
     }
-    console.log(`[RendererStatus] ${isError ? 'Error: ' : ''}${message}`);
+    console.log(`[RendererStatus] ${isError ? 'Error: ' : ''}${typeof message === 'object' ? JSON.stringify(message) : message}`);
 }
 
 /**
  * Checks if a status message indicates the end of an operation.
- * Used to re-enable UI controls.
- * @param {string} message - The status message from the main process.
+ * @param {string | object} message - The status message from the main process.
  * @returns {boolean} True if the message indicates completion or failure, false otherwise.
  */
 function isOperationFinishedMessage(message) {
     if (!message) return false;
-    const lowerMessage = message.toLowerCase();
+
+    // Handle both plain strings and new object format
+    const messageKey = (typeof message === 'object' && message.key) ? message.key : message.toString().toLowerCase();
+
     const keywords = [
-        'complete!', 'error:', 'failed:', 'cancelled',
-        'finished successfully!', 'operation halted',
-        'export finished', 'export error', 'nothing to do',
-        'overlay activated', // Added this as it's an end state for activation
-        'overlay activation error'
+        'complete', 'error', 'failed', 'cancelled', 'finished', 'halted', 'activated'
     ];
-    return keywords.some(keyword => lowerMessage.includes(keyword));
+    return keywords.some(keyword => messageKey.includes(keyword));
 }
 
 // Function to set visibility of the "New Resolution Request" section
@@ -301,6 +365,14 @@ if (window.electronAPI) {
             window.electronAPI.getAvailableResolutions();
         });
 
+    // --- IPC Event Handlers (Listening to Main Process) ---
+
+    window.electronAPI.onTranslationsLoaded((translations) => {
+        console.log('[Renderer] Translations loaded/updated.');
+        currentTranslations = translations;
+        applyTranslations();
+    });
+
     // Listener for status updates from the failed samples upload process
     window.electronAPI.onUploadFailedSamplesStatus((status) => {
         console.log('[Renderer] Failed Samples Upload Status:', status);
@@ -332,10 +404,8 @@ if (window.electronAPI) {
         }
     });
 
-    // Request available resolutions on load
-    window.electronAPI.getAvailableResolutions();
-
-    // --- IPC Event Handlers (Listening to Main Process) ---
+    // Request initial data on load
+    window.electronAPI.getInitialData();
 
     window.electronAPI.onAvailableResolutions((resolutions) => {
         if (!resolutionSelect) return;
@@ -355,7 +425,7 @@ if (window.electronAPI) {
                 if (resolutions.includes(systemResString)) {
                     resolutionSelect.value = systemResString;
                     selectedResolution = systemResString;
-                    updateStatusMessage(`System resolution ${systemResString} automatically selected.`);
+                    updateStatusMessage({ key: 'controlPanel.status.resolutionsLoaded', params: { res: systemResString } });
                     resolutionEffectivelySelected = true;
                 } else {
                     resolutionSelect.value = resolutions[0];
@@ -371,7 +441,7 @@ if (window.electronAPI) {
         } else {
             const option = document.createElement('option');
             option.value = "";
-            option.textContent = "No resolutions configured";
+            option.textContent = translate('controlPanel.status.resolutionsNone');
             resolutionSelect.appendChild(option);
             selectedResolution = "";
 
@@ -411,7 +481,7 @@ if (window.electronAPI) {
             setButtonsState(false); // Re-enable buttons
         }
         if (!status.error && !status.inProgress && status.filePath) {
-            updateStatusMessage(`Export successful: ${status.filePath}`);
+            updateStatusMessage({ key: 'ipcMessages.exportSuccess', params: { count: status.count, filePath: status.filePath } });
         }
     });
 
@@ -444,7 +514,7 @@ if (window.electronAPI) {
     window.electronAPI.onOverlayClosedResetUI(() => {
         console.log('[Renderer] Overlay closed signal received. Re-enabling main window UI.');
         setButtonsState(false);
-        updateStatusMessage('Ready. Overlay closed.');
+        updateStatusMessage({ key: 'controlPanel.status.ready' });
     });
 
     window.electronAPI.onNewLayoutScreenshot((dataUrl) => {
@@ -461,6 +531,14 @@ if (window.electronAPI) {
     });
 
     // --- DOM Event Listeners (User Interactions) ---
+
+    if (languageSelect) {
+        languageSelect.addEventListener('change', (event) => {
+            const langCode = event.target.value;
+            console.log(`[Renderer] Language changed to: ${langCode}`);
+            window.electronAPI.changeLanguage(langCode);
+        });
+    }
 
     if (customPopupChangeResBtn) {
         customPopupChangeResBtn.addEventListener('click', () => {
@@ -555,7 +633,7 @@ if (window.electronAPI) {
                 return;
             }
             console.log(`[Renderer] "Activate Overlay" button clicked for resolution: ${selectedResolution}`);
-            updateStatusMessage(`Activating overlay for ${selectedResolution}...`);
+            updateStatusMessage({ key: 'controlPanel.activation.activating' });
             setButtonsState(true, activateOverlayButton);
             window.electronAPI.activateOverlay(selectedResolution);
         });
@@ -646,7 +724,7 @@ if (window.electronAPI) {
 
             if (confirmed) {
                 if (newResolutionStatusElement) {
-                    newResolutionStatusElement.textContent = 'Hiding window and taking snapshot...';
+                    newResolutionStatusElement.textContent = translate('controlPanel.newResolution.statusTakingSnapshot');
                     newResolutionStatusElement.style.display = 'block';
                     newResolutionStatusElement.classList.remove('error-message');
                 }
@@ -655,7 +733,7 @@ if (window.electronAPI) {
                 window.electronAPI.requestNewLayoutScreenshot();
             } else {
                 if (newResolutionStatusElement) {
-                    newResolutionStatusElement.textContent = 'Resolution submission cancelled.';
+                    newResolutionStatusElement.textContent = translate('controlPanel.newResolution.statusCancelled');
                     newResolutionStatusElement.style.display = 'block';
                     newResolutionStatusElement.classList.remove('error-message');
                 }
@@ -678,7 +756,7 @@ if (window.electronAPI) {
         screenshotSubmitBtn.addEventListener('click', () => {
             if (currentScreenshotDataUrl) {
                 if (screenshotPreviewPopup) screenshotPreviewPopup.classList.remove('visible'); // Use the .visible class
-                if (newResolutionStatusElement) newResolutionStatusElement.textContent = 'Submitting layout...';
+                if (newResolutionStatusElement) newResolutionStatusElement.textContent = translate('controlPanel.newResolution.statusSubmitting');
                 // Send the confirmed screenshot data to the main process for API submission
                 window.electronAPI.submitConfirmedLayout(currentScreenshotDataUrl);
             }

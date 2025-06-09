@@ -78,6 +78,10 @@ let mySelectedModelScreenOrder = null;
 
 let identifiedHeroModelsCache = null;
 
+// --- Localization State ---
+let currentLang = 'en'; // Default language
+let translations = {}; // Cache for loaded translations
+
 // --- Utility Functions ---
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -108,6 +112,27 @@ const CLIENT_SHARED_SECRET = app.isPackaged ? PROD_SHARED_SECRET : (process.env.
 
 if (!API_ENDPOINT_URL || !CLIENT_API_KEY || !CLIENT_SHARED_SECRET) {
   console.error("CRITICAL ERROR: API Configuration is missing. Please check .env for dev or app-config.js generation for prod.");
+}
+
+/**
+ * Loads translation file for the given language code.
+ * @param {string} lang - The language code (e.g., 'en', 'ru').
+ * @returns {Promise<object>} The translations object.
+ */
+async function loadTranslations(lang) {
+  try {
+    const filePath = path.join(__dirname, 'locales', `${lang}.json`);
+    const fileContent = await fs.readFile(filePath, 'utf-8');
+    translations = JSON.parse(fileContent);
+    return translations;
+  } catch (error) {
+    console.error(`[Localization] Could not load translations for '${lang}'. Falling back to 'en'.`, error);
+    // Fallback to English if the requested language file is missing or invalid
+    if (lang !== 'en') {
+      return await loadTranslations('en');
+    }
+    return {}; // Return empty object if English also fails
+  }
 }
 
 function generateHmacSignature(sharedSecret, httpMethod, requestPath, timestamp, nonce, apiKey) {
@@ -215,11 +240,11 @@ async function performFullScrape(statusCallbackWebContents) {
 
     const newDate = await updateLastSuccessfulScrapeDate(activeDbPath);
     sendLastUpdatedDateToRenderer(statusCallbackWebContents, newDate);
-    sendStatus('All data updates finished successfully!');
+    sendStatus({ key: 'ipcMessages.scrapeComplete' });
     return true;
   } catch (error) {
     console.error('[MainScrape] Consolidated scraping failed:', error.message);
-    sendStatus(`Error during data update. Operation halted. Check logs. (${error.message})`);
+    sendStatus({ key: 'ipcMessages.scrapeError', params: { error: error.message } });
     const currentDate = await getLastSuccessfulScrapeDate(activeDbPath);
     sendLastUpdatedDateToRenderer(statusCallbackWebContents, currentDate);
     return false;
@@ -239,12 +264,15 @@ function createMainWindow() {
   mainWindow.loadFile('index.html');
 
   mainWindow.webContents.on('did-finish-load', async () => {
-    const lastDate = await getLastSuccessfulScrapeDate(activeDbPath);
-    sendLastUpdatedDateToRenderer(mainWindow.webContents, lastDate);
-    if (isFirstAppRun) {
-      sendStatusUpdate(mainWindow.webContents, 'scrape-status', 'Using bundled data. Update data via "Update Windrun Data" if needed.');
-    }
+    // Send initial data when window is ready
     if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('translations-loaded', translations);
+      const lastDate = await getLastSuccessfulScrapeDate(activeDbPath);
+      sendLastUpdatedDateToRenderer(mainWindow.webContents, lastDate);
+
+      if (isFirstAppRun) {
+        sendStatusUpdate(mainWindow.webContents, 'scrape-status', 'Using bundled data. Update data via "Update Windrun Data" if needed.');
+      }
       mainWindow.webContents.send('initial-system-theme', {
         shouldUseDarkColors: nativeTheme.shouldUseDarkColors
       });
@@ -305,6 +333,10 @@ function createOverlayWindow(resolutionKey, allCoordinatesConfig, scaleFactorToU
   overlayWindow.setIgnoreMouseEvents(true, { forward: true });
 
   overlayWindow.webContents.on('did-finish-load', () => {
+    // Send translations to the overlay as well
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      overlayWindow.webContents.send('translations-loaded', translations);
+    }
     sendStatusUpdate(overlayWindow.webContents, 'overlay-data', {
       scanData: null,
       coordinatesConfig: allCoordinatesConfig,
@@ -578,6 +610,8 @@ async function processWorkerMessage(result) {
 }
 
 app.whenReady().then(async () => {
+  await loadTranslations(currentLang); // Load default language on startup
+
   const userDataPath = app.getPath('userData');
   activeDbPath = path.join(userDataPath, DB_FILENAME);
   layoutCoordinatesPath = path.join(BASE_RESOURCES_PATH, 'config', LAYOUT_COORDS_FILENAME);
@@ -737,6 +771,29 @@ ipcMain.handle('get-current-system-theme', async () => {
   return { shouldUseDarkColors: nativeTheme.shouldUseDarkColors };
 });
 
+// --- New and Updated IPC Handlers for Localization ---
+
+ipcMain.on('get-initial-data', async (event) => {
+  // This handler can be expanded to send other initial config as well
+  if (event.sender && !event.sender.isDestroyed()) {
+    event.sender.send('translations-loaded', translations);
+    const lastDate = await getLastSuccessfulScrapeDate(activeDbPath);
+    sendLastUpdatedDateToRenderer(event.sender, lastDate);
+  }
+});
+
+ipcMain.on('change-language', async (event, langCode) => {
+  currentLang = langCode;
+  await loadTranslations(langCode);
+
+  // Notify all windows of the change
+  BrowserWindow.getAllWindows().forEach(win => {
+    if (win && !win.isDestroyed() && win.webContents) {
+      win.webContents.send('translations-loaded', translations);
+    }
+  });
+});
+
 ipcMain.on('scrape-all-windrun-data', async (event) => {
   await performFullScrape(event.sender);
 });
@@ -750,13 +807,13 @@ ipcMain.on('get-available-resolutions', async (event) => {
   } catch (error) {
     console.error('[MainIPC] Error loading resolutions from layout_coordinates.json:', error);
     event.sender.send('available-resolutions', []);
-    sendStatusUpdate(mainWindow.webContents, 'scrape-status', `Error loading resolutions: ${error.message}`);
+    sendStatusUpdate(mainWindow.webContents, { key: 'controlPanel.status.errorLoadingResolutions', params: { error: error.message } });
   }
 });
 
 ipcMain.on('activate-overlay', async (event, selectedResolution) => {
   if (!selectedResolution) {
-    sendStatusUpdate(event.sender, 'scrape-status', 'Error: No resolution selected for overlay.');
+    sendStatusUpdate(event.sender, { key: 'overlayActivationError', params: { error: 'No resolution selected' } });
     return;
   }
   if (mainWindow && !mainWindow.isDestroyed()) {
@@ -789,10 +846,10 @@ ipcMain.on('activate-overlay', async (event, selectedResolution) => {
     lastUsedScaleFactor = primaryDisplay.scaleFactor || 1.0;
 
     createOverlayWindow(selectedResolution, layoutConfigToUse, lastUsedScaleFactor);
-    sendStatusUpdate(event.sender, 'scrape-status', `Overlay activated for ${selectedResolution}. Main window hidden.`);
+    sendStatusUpdate(event.sender, { key: 'ipcMessages.overlayActivated', params: { res: selectedResolution } });
   } catch (error) {
     console.error('[MainIPC] Overlay Activation Error:', error);
-    sendStatusUpdate(event.sender, 'scrape-status', `Overlay Activation Error: ${error.message}`);
+    sendStatusUpdate(event.sender, { key: 'ipcMessages.overlayActivationError', params: { error: error.message } });
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.show();
   }
 });
@@ -1038,7 +1095,7 @@ function checkMySpotPickedUltimate(selectedHeroDbId, heroesForUI, pickedAbilitie
   return false;
 }
 
-function determineTopTierEntities(allScoredEntities, selectedModelId, mySpotHasUlt, synergisticPartnersInPoolForMySpotSet = new Set()) {
+function determineTopTierEntities(allScoredEntities, selectedModelId, mySpotHasUlt, synergisticPartnersInPoolForMySpot = new Set()) {
   let entitiesToConsider = [...allScoredEntities];
   const finalTopTierEntities = [];
 
@@ -1047,10 +1104,10 @@ function determineTopTierEntities(allScoredEntities, selectedModelId, mySpotHasU
       if (entity.entityType === 'ability') return entity.is_ultimate_from_coord_source !== true && entity.is_ultimate_from_db !== true;
       return true;
     });
-    synergisticPartnersInPoolForMySpotSet.forEach(partnerName => {
+    synergisticPartnersInPoolForMySpot.forEach(partnerName => {
       const partnerEntity = allScoredEntities.find(e => e.internalName === partnerName);
       if (partnerEntity && (partnerEntity.is_ultimate_from_coord_source === true || partnerEntity.is_ultimate_from_db === true)) {
-        synergisticPartnersInPoolForMySpotSet.delete(partnerName);
+        synergisticPartnersInPoolForMySpot.delete(partnerName);
       }
     });
   }
@@ -1060,7 +1117,7 @@ function determineTopTierEntities(allScoredEntities, selectedModelId, mySpotHasU
 
   const synergySuggestionsFromPool = [];
   entitiesToConsider = entitiesToConsider.filter(entity => {
-    if (entity.entityType === 'ability' && synergisticPartnersInPoolForMySpotSet.has(entity.internalName)) {
+    if (entity.entityType === 'ability' && synergisticPartnersInPoolForMySpot.has(entity.internalName)) {
       synergySuggestionsFromPool.push({ ...entity, isSynergySuggestionForMySpot: true, isGeneralTopTier: false });
       return false;
     }
