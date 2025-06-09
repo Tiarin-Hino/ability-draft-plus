@@ -13,6 +13,10 @@ const opCombinationsWindow = document.getElementById('op-combinations-window');
 const opCombinationsListElement = document.getElementById('op-combinations-list');
 const hideOpCombinationsButton = document.getElementById('hide-op-combinations-btn');
 const showOpCombinationsButton = document.getElementById('show-op-combinations-btn');
+const initialScanConfirmPopup = document.getElementById('initial-scan-confirm-popup');
+const confirmScanProceedBtn = document.getElementById('confirm-scan-proceed-btn');
+const confirmScanDontShowBtn = document.getElementById('confirm-scan-dont-show-btn');
+
 
 // --- Constants for Dynamic Buttons ---
 const MY_HERO_BUTTON_WIDTH = 70; // px
@@ -30,6 +34,7 @@ let currentScaleFactor = 1; // Default scale factor
 let scanHasBeenPerformed = false;
 let isTooltipVisible = false;
 let opCombinationsAvailable = false;
+let hideInitialScanConfirm = false;
 
 let currentHeroModelData = []; // Holds data for identified hero models on screen
 let currentHeroesForMyHeroUIData = []; // Holds data for the "My Hero" selection buttons
@@ -40,6 +45,19 @@ let selectedModelScreenOrder = null;  // 0-11 screen order of the user-selected 
 console.log('overlayRenderer.js loaded');
 
 // --- Core UI & Scan Logic ---
+
+/**
+ * Loads the user's preference for showing the initial scan confirmation.
+ */
+function loadScanConfirmPreference() {
+    try {
+        const storedPref = localStorage.getItem('hideInitialScanConfirm');
+        hideInitialScanConfirm = storedPref === 'true';
+    } catch (e) {
+        console.error("Could not read from localStorage", e);
+        hideInitialScanConfirm = false; // Default to showing the confirmation on error
+    }
+}
 
 /**
  * Resets the overlay UI to its initial state.
@@ -700,7 +718,17 @@ if (window.electronAPI) {
 
 // --- Event Listeners for Overlay Controls ---
 if (initialScanButton) {
-    initialScanButton.addEventListener('click', () => triggerScan(true));
+    initialScanButton.addEventListener('click', () => {
+        if (hideInitialScanConfirm) {
+            triggerScan(true);
+        } else {
+            if (initialScanConfirmPopup) {
+                initialScanConfirmPopup.style.display = 'flex';
+                // Prevent clicks from passing through to the game while the popup is visible
+                window.electronAPI?.setOverlayMouseEvents(false);
+            }
+        }
+    });
 }
 if (rescanButton) {
     rescanButton.addEventListener('click', () => triggerScan(false));
@@ -741,12 +769,41 @@ if (showOpCombinationsButton && opCombinationsWindow) {
         showOpCombinationsButton.setAttribute('aria-expanded', 'true');
     });
 }
+if (confirmScanProceedBtn) {
+    confirmScanProceedBtn.addEventListener('click', () => {
+        if (initialScanConfirmPopup) {
+            initialScanConfirmPopup.style.display = 'none';
+            // Allow clicks to pass through again
+            window.electronAPI?.setOverlayMouseEvents(true);
+        }
+        triggerScan(true);
+    });
+}
+if (confirmScanDontShowBtn) {
+    confirmScanDontShowBtn.addEventListener('click', () => {
+        if (initialScanConfirmPopup) {
+            initialScanConfirmPopup.style.display = 'none';
+        }
+        hideInitialScanConfirm = true;
+        try {
+            localStorage.setItem('hideInitialScanConfirm', 'true');
+        } catch (e) {
+            console.error("Could not write to localStorage", e);
+        }
+        // Allow clicks to pass through again and trigger the scan
+        window.electronAPI?.setOverlayMouseEvents(true);
+        triggerScan(true);
+    });
+}
 
 document.addEventListener('DOMContentLoaded', () => {
+    loadScanConfirmPreference();
+
     const staticInteractiveElements = [
         controlsContainer,
         opCombinationsWindow,
-        showOpCombinationsButton
+        showOpCombinationsButton,
+        initialScanConfirmPopup
     ];
     staticInteractiveElements.forEach(element => {
         if (element) {

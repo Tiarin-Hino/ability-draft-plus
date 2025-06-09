@@ -202,12 +202,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getCurrentSystemTheme: () => ipcRenderer.invoke('get-current-system-theme'),
 
   /**
-   * Sends a request to the main process to capture the current screen
-   * and (eventually) submit it as a new resolution layout.
-   */
-  submitNewResolutionSnapshot: () => ipcRenderer.send('submit-new-resolution-snapshot'),
-
-  /**
    * Registers a callback function to be invoked when the main process sends status updates
    * about the "Submit New Resolution Snapshot" operation.
    * @param {(status: {message: string, error: boolean, inProgress: boolean}) => void} callback
@@ -236,4 +230,21 @@ contextBridge.exposeInMainWorld('electronAPI', {
    * @returns {Promise<{width: number, height: number, scaleFactor: number, resolutionString: string}>}
    */
   getSystemDisplayInfo: () => ipcRenderer.invoke('get-system-display-info'),
+
+  /**
+   * Requests that the main process take a screenshot for the new layout preview.
+   */
+  requestNewLayoutScreenshot: () => ipcRenderer.send('request-new-layout-screenshot'),
+
+  /**
+   * Registers a callback for when the main process sends back the captured screenshot data.
+   * @param {(dataUrl: string | null) => void} callback
+   */
+  onNewLayoutScreenshot: (callback) => ipcRenderer.on('new-layout-screenshot-taken', (_event, dataUrl) => callback(dataUrl)),
+
+  /**
+   * Sends the confirmed screenshot (as a data URL) to the main process for API submission.
+   * @param {string} dataUrl - The screenshot data URL to submit.
+   */
+  submitConfirmedLayout: (dataUrl) => ipcRenderer.send('submit-confirmed-layout', dataUrl),
 });

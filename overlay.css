@@ -374,14 +374,13 @@ body {
     top: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
+    background-color: rgba(0, 0, 0, 0.75);
     display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1050;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
+    justify-content: flex-end;
+    align-items: flex-start;
+    padding: 15px;
+    box-sizing: border-box;
+    z-index: 10005;
 }
 
 .custom-popup.visible {
@@ -390,25 +389,25 @@ body {
 }
 
 .custom-popup-content {
-    background-color: var(--section-bg);
-    padding: 25px 30px;
+    background-color: rgba(44, 47, 51, 0.95);
+    padding: 20px 25px;
     border-radius: 8px;
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
     text-align: center;
-    max-width: 420px;
-    color: var(--text-color);
-    border: 1px solid var(--hr-bg);
+    max-width: 450px;
+    color: #dcddde;
+    border: 1px solid rgba(70, 75, 80, 0.9);
 }
 
 .custom-popup-message-text {
-    margin-bottom: 25px;
-    line-height: 1.7;
-    font-size: 1.05em;
+    margin-bottom: 20px;
+    line-height: 1.6;
+    font-size: 1.1em;
 }
 
 .custom-popup-buttons {
     display: flex;
-    justify-content: space-evenly;
+    justify-content: center;
     gap: 15px;
 }
 
@@ -431,6 +430,23 @@ body {
 
 #custom-popup-change-res-btn:hover {
     background-color: var(--button-default-hover-bg);
+}
+
+#confirm-scan-proceed-btn {
+    background-color: rgba(0, 150, 136, 0.7);
+    /* Teal */
+}
+
+#confirm-scan-proceed-btn:hover {
+    background-color: rgba(0, 150, 136, 0.9);
+}
+
+#confirm-scan-dont-show-btn {
+    background-color: rgba(114, 118, 125, 0.7);
+}
+
+#confirm-scan-dont-show-btn:hover {
+    background-color: rgba(114, 118, 125, 0.9);
 }
 
 /* === Status Popups (Bottom-Right) === */

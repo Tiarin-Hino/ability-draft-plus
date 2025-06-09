@@ -1304,34 +1304,49 @@ ipcMain.on('export-failed-samples', async (event) => {
   }
 });
 
-ipcMain.on('submit-new-resolution-snapshot', async (event) => {
+ipcMain.on('request-new-layout-screenshot', async (event) => {
+  let wasMainWindowVisible = false;
+  try {
+    if (mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible()) {
+      wasMainWindowVisible = true;
+      mainWindow.hide();
+      await delay(500); // Give OS time for the window to disappear
+    }
+
+    const screenshotBuffer = await screenshotDesktop({ format: 'png' });
+    const dataUrl = `data:image/png;base64,${screenshotBuffer.toString('base64')}`;
+
+    // The window is shown in the 'finally' block now
+    event.sender.send('new-layout-screenshot-taken', dataUrl);
+
+  } catch (error) {
+    console.error('[Main] Error taking new layout screenshot:', error);
+    event.sender.send('new-layout-screenshot-taken', null); // Send null on error
+  } finally {
+    // This block ensures the main window always reappears, even if screenshotting fails.
+    if (wasMainWindowVisible && mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.show();
+    }
+  }
+});
+
+ipcMain.on('submit-confirmed-layout', async (event, dataUrl) => {
   const sendStatus = (message, error = false, inProgress = true) => {
     if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
       mainWindow.webContents.send('submit-new-resolution-status', { message, error, inProgress });
-    } else if (!inProgress) {
-      console.log(`[Main] submit-new-resolution-status (mainWindow gone): ${message}`);
     }
   };
 
-  console.log('[Main] Received request to submit new resolution snapshot.');
-  let wasMainWindowVisible = false;
-
   try {
+    if (!dataUrl) throw new Error("Screenshot data URL is missing for submission.");
+
     const primaryDisplay = screen.getPrimaryDisplay();
     const { width, height } = primaryDisplay.size;
     const scaleFactor = primaryDisplay.scaleFactor;
     const resolutionString = `${width}x${height}`;
 
-    if (mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible()) {
-      wasMainWindowVisible = true;
-      sendStatus('Hiding control panel for screenshot...', false, true);
-      await delay(2000);
-    } else {
-      await delay(100);
-    }
-
-    sendStatus('Capturing screen...', false, true);
-    const screenshotBuffer = await screenshotDesktop({ format: 'png' });
+    const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "");
+    const screenshotBuffer = Buffer.from(base64Data, 'base64');
 
     const timestamp = new Date().toISOString();
     const nonce = crypto.randomBytes(16).toString('hex');
@@ -1357,9 +1372,9 @@ ipcMain.on('submit-new-resolution-snapshot', async (event) => {
       'x-signature': signature
     };
 
-    sendStatus('Submitting screenshot to API with security headers...', false, true);
+    sendStatus('Submitting screenshot to API...', false, true);
 
-    const response = await axios.post(API_ENDPOINT_URL + '/failed-samples-upload', screenshotBuffer, {
+    const response = await axios.post(API_ENDPOINT_URL + requestPath, screenshotBuffer, {
       headers: headers,
       responseType: 'json',
     });
@@ -1369,24 +1384,14 @@ ipcMain.on('submit-new-resolution-snapshot', async (event) => {
     } else {
       throw new Error(response.data.error || `API returned status ${response.status}`);
     }
-
   } catch (error) {
-    console.error('[Main] Error processing new resolution snapshot:', error);
-    let errorMessage = 'Failed to process/submit snapshot.';
+    console.error('[Main] Error submitting new resolution snapshot:', error);
+    let errorMessage = 'Failed to submit snapshot.';
     if (error.response && error.response.data && (error.response.data.error || error.response.data.message)) {
       errorMessage = `API Error: ${error.response.data.error || error.response.data.message}`;
     } else if (error.message) {
       errorMessage = error.message;
     }
     sendStatus(errorMessage, true, false);
-  } finally {
-    if (wasMainWindowVisible && mainWindow && !mainWindow.isDestroyed()) {
-      if (!mainWindow.isVisible()) {
-        mainWindow.show();
-      }
-      if (!mainWindow.isFocused()) {
-        mainWindow.focus();
-      }
-    }
   }
 });

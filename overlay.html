@@ -56,6 +56,17 @@
         <p id="scan-status-popup" class="status-popup" style="display: none;"></p>
     </div>
 
+    <div id="initial-scan-confirm-popup" class="custom-popup" style="display: none;">
+        <div class="custom-popup-content">
+            <p class="custom-popup-message-text">Ensure that the Draft is loaded and all abilities are visible on the
+                screen.</p>
+            <div class="custom-popup-buttons">
+                <button id="confirm-scan-proceed-btn" class="overlay-button">Proceed</button>
+                <button id="confirm-scan-dont-show-btn" class="overlay-button">Don't Show Again</button>
+            </div>
+        </div>
+    </div>
+
     <script src="./overlayRenderer.js"></script>
     <style>
         /* Basic style to hide visually-hidden elements, primarily for screen readers */

@@ -36,6 +36,8 @@
             --button-export-hover-bg: #e67e22;
             --button-feedback-bg: #9b59b6;
             --button-feedback-hover-bg: #8e44ad;
+            --button-samples-bg: #9b59b6;
+            --button-samples-hover-bg: #8e44ad;
 
             --button-support-bg: #292F3F;
             --button-support-hover-bg: #3d4455;
@@ -82,6 +84,8 @@
             --button-export-hover-bg: #f0960a;
             --button-feedback-bg: #5865f2;
             --button-feedback-hover-bg: #4f5bda;
+            --button-samples-bg: #5865f2;
+            --button-samples-hover-bg: #4f5bda;
 
             --button-support-bg: #4f545c;
             --button-support-hover-bg: #5a6066;
@@ -205,6 +209,14 @@
 
         #share-feedback-ext-btn:hover {
             background-color: var(--button-feedback-hover-bg);
+        }
+
+        #share-samples-ext-btn {
+            background-color: var(--button-samples-bg);
+        }
+
+        #share-samples-ext-btn:hover {
+            background-color: var(--button-samples-hover-bg);
         }
 
         .support-button {
@@ -529,8 +541,9 @@
                 export these or provide general feedback.</p>
             <div class="button-group-inline">
                 <button id="export-failed-samples-btn">Export Failed Samples</button>
+                <button id="share-samples-ext-btn">Share Failed Samples</button>
                 <button id="upload-failed-samples-btn">Upload Failed Samples</button>
-                <button id="share-feedback-ext-btn">Share Feedback / Samples</button>
+                <button id="share-feedback-ext-btn">Share Feedback</button>
             </div>
         </section>
     </main>
@@ -540,6 +553,19 @@
             <div class="custom-popup-buttons">
                 <button id="custom-popup-submit-layout-btn">Submit Resolution</button>
                 <button id="custom-popup-change-res-btn">Change Resolution</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="screenshot-preview-popup" class="custom-popup">
+        <div id="screenshot-preview-content" class="custom-popup-content">
+            <h3>Screenshot Preview</h3>
+            <p>Is this screenshot of your draft screen correct?</p>
+            <img id="screenshot-preview-image" src="" alt="Screenshot Preview"
+                style="max-width: 100%; max-height: 50vh; border: 1px solid #555; margin-top: 10px;" />
+            <div class="custom-popup-buttons" style="margin-top: 15px;">
+                <button id="screenshot-submit-btn" class="overlay-button">Submit</button>
+                <button id="screenshot-retake-btn" class="overlay-button">Retake Screencapture</button>
             </div>
         </div>
     </div>
