@@ -9,6 +9,7 @@ const screenshotDesktop = require('screenshot-desktop');
 const sharp = require('sharp');
 const axios = require('axios');
 const { Worker } = require('worker_threads');
+const { autoUpdater } = require('electron-updater');
 let mlWorker;
 let intermediateScanData = {};
 
@@ -37,6 +38,10 @@ const LAYOUT_COORDS_FILENAME = 'layout_coordinates.json';
 const MODEL_DIR_NAME = 'tfjs_model';
 const MODEL_FILENAME = 'model.json';
 const CLASS_NAMES_FILENAME = 'class_names.json';
+
+// --- Auto-Updater Configuration and Logging ---
+autoUpdater.autoDownload = false; // We will trigger download manually based on user choice.
+autoUpdater.autoInstallOnAppQuit = true; // Installs on restart after download.
 
 // Scraper URLs
 const ABILITIES_URL = 'https://windrun.io/ability-high-skill';
@@ -662,6 +667,82 @@ app.on('will-quit', () => {
   isScanInProgress = false;
 });
 
+// --- IPC Handlers for Auto-Update Flow ---
+
+ipcMain.on('check-for-updates', () => {
+  console.log('[Updater] Received request to check for updates from renderer.');
+  autoUpdater.checkForUpdates();
+});
+
+ipcMain.on('start-download-update', () => {
+  console.log('[Updater] Received request to start downloading update.');
+  autoUpdater.downloadUpdate();
+});
+
+ipcMain.on('quit-and-install-update', () => {
+  console.log('[Updater] Received request to quit and install update.');
+  autoUpdater.quitAndInstall();
+});
+
+// --- Auto-Updater Event Listeners ---
+// These will send messages to the renderer process (our UI)
+
+autoUpdater.on('update-not-available', (info) => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('update-status', {
+      status: 'not-available',
+      message: 'You are on the latest version.',
+      info: info
+    });
+  }
+});
+
+autoUpdater.on('update-available', (info) => {
+  // This is where we get the version, release date, and changelog.
+  // 'info' object contains version, files, path, releaseName, releaseNotes, releaseDate.
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('update-status', {
+      status: 'available',
+      message: 'A new version is available!',
+      info: info // Pass the full info object to the renderer
+    });
+  }
+});
+
+autoUpdater.on('download-progress', (progressInfo) => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('update-status', {
+      status: 'downloading',
+      message: 'Downloading update...',
+      progress: {
+        percent: progressInfo.percent,
+        transferred: progressInfo.transferred,
+        total: progressInfo.total
+      }
+    });
+  }
+});
+
+autoUpdater.on('update-downloaded', (info) => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('update-status', {
+      status: 'downloaded',
+      message: 'Update downloaded. It will be installed on restart.',
+      info: info
+    });
+  }
+});
+
+autoUpdater.on('error', (err) => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('update-status', {
+      status: 'error',
+      message: 'An error occurred during the update process.',
+      error: err.message
+    });
+  }
+});
+
 ipcMain.handle('get-system-display-info', async () => {
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width, height } = primaryDisplay.size;
@@ -813,7 +894,7 @@ ipcMain.on('get-available-resolutions', async (event) => {
 
 ipcMain.on('activate-overlay', async (event, selectedResolution) => {
   if (!selectedResolution) {
-    sendStatusUpdate(event.sender, { key: 'overlayActivationError', params: { error: 'No resolution selected' } });
+    sendStatusUpdate(event.sender, 'scrape-status', { key: 'overlayActivationError', params: { error: 'No resolution selected' } });
     return;
   }
   if (mainWindow && !mainWindow.isDestroyed()) {
@@ -846,10 +927,10 @@ ipcMain.on('activate-overlay', async (event, selectedResolution) => {
     lastUsedScaleFactor = primaryDisplay.scaleFactor || 1.0;
 
     createOverlayWindow(selectedResolution, layoutConfigToUse, lastUsedScaleFactor);
-    sendStatusUpdate(event.sender, { key: 'ipcMessages.overlayActivated', params: { res: selectedResolution } });
+    sendStatusUpdate(event.sender, 'scrape-status', { key: 'ipcMessages.overlayActivated', params: { res: selectedResolution } });
   } catch (error) {
     console.error('[MainIPC] Overlay Activation Error:', error);
-    sendStatusUpdate(event.sender, { key: 'ipcMessages.overlayActivationError', params: { error: error.message } });
+    sendStatusUpdate(event.sender, 'scrape-status', { key: 'ipcMessages.overlayActivationError', params: { error: error.message } });
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.show();
   }
 });

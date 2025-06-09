@@ -27,6 +27,15 @@ const screenshotPreviewImage = document.getElementById('screenshot-preview-image
 const screenshotSubmitBtn = document.getElementById('screenshot-submit-btn');
 const screenshotRetakeBtn = document.getElementById('screenshot-retake-btn');
 const languageSelect = document.getElementById('language-select');
+const checkForUpdatesButton = document.getElementById('check-for-updates-btn');
+const updateStatusMessageElement = document.getElementById('update-status-message');
+const updateAvailablePopup = document.getElementById('update-available-popup');
+const updatePopupTitle = document.getElementById('update-popup-title');
+const updatePopupVersion = document.getElementById('update-popup-version');
+const updatePopupReleaseDate = document.getElementById('update-popup-release-date');
+const updatePopupNotes = document.getElementById('update-popup-notes');
+const updatePopupDownloadBtn = document.getElementById('update-popup-download-btn');
+const updatePopupLaterBtn = document.getElementById('update-popup-later-btn');
 
 // --- Module State ---
 let selectedResolution = ''; // Stores the currently selected screen resolution
@@ -794,6 +803,61 @@ if (window.electronAPI) {
         }
     });
 
+    checkForUpdatesButton.addEventListener('click', () => {
+        console.log('[Renderer] Check for updates clicked.');
+        updateStatusMessageElement.textContent = 'Checking for updates...';
+        updateStatusMessageElement.style.display = 'block';
+        window.electronAPI.checkForUpdates();
+    });
+
+    updatePopupDownloadBtn.addEventListener('click', () => {
+        updateAvailablePopup.classList.remove('visible');
+        updateStatusMessageElement.textContent = 'Downloading update... (0%)';
+        updateStatusMessageElement.style.display = 'block';
+        window.electronAPI.startDownloadUpdate();
+    });
+
+    updatePopupLaterBtn.addEventListener('click', () => {
+        updateAvailablePopup.classList.remove('visible');
+    });
+
+    window.electronAPI.onUpdateStatus((arg) => {
+        console.log('[Renderer] Update status from main:', arg);
+
+        switch (arg.status) {
+            case 'not-available':
+                updateStatusMessageElement.textContent = `You're up to date! Version ${arg.info.version}.`;
+                updateStatusMessageElement.style.display = 'block';
+                break;
+
+            case 'available':
+                updatePopupVersion.textContent = `New Version: ${arg.info.version}`;
+                updatePopupReleaseDate.textContent = `Released: ${new Date(arg.info.releaseDate).toLocaleDateString()}`;
+                // electron-updater can parse markdown in release notes
+                updatePopupNotes.innerHTML = arg.info.releaseNotes || 'No release notes provided.';
+                updateAvailablePopup.classList.add('visible');
+                break;
+
+            case 'downloading':
+                updateStatusMessageElement.textContent = `Downloading... ${Math.round(arg.progress.percent)}%`;
+                updateStatusMessageElement.style.display = 'block';
+                break;
+
+            case 'downloaded':
+                updateStatusMessageElement.textContent = `Update downloaded. Restart the application to install.`;
+                const confirmed = confirm('Update downloaded. Do you want to restart and install it now?');
+                if (confirmed) {
+                    window.electronAPI.quitAndInstallUpdate();
+                }
+                break;
+
+            case 'error':
+                updateStatusMessageElement.textContent = `Update Error: ${arg.error}`;
+                updateStatusMessageElement.style.backgroundColor = 'rgba(200,0,0,0.8)'; // Make error visible
+                updateStatusMessageElement.style.display = 'block';
+                break;
+        }
+    });
 } else {
     // Critical error: Electron API not exposed
     console.error('[Renderer] FATAL: Electron API not found. Preload script might not be configured or failed.');

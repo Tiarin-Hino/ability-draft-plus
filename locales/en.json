@@ -54,6 +54,10 @@
             "supportDev": "Support Developer",
             "supportWindrun": "Support Windrun.io"
         },
+        "update": {
+            "title": "Application Update",
+            "checkButton": "Check for Updates"
+        },
         "popups": {
             "resolutionMismatch": {
                 "message": "Your resolution {systemRes} is not supported yet. Please change resolution to a supported one, or submit your resolution to be added.",
@@ -65,6 +69,11 @@
                 "message": "Is this screenshot of your draft screen correct?",
                 "submitBtn": "Submit",
                 "retakeBtn": "Retake Screencapture"
+            },
+            "updateAvailable": {
+                "title": "Update Available",
+                "downloadBtn": "Download Update",
+                "laterBtn": "Later"
             }
         }
     },

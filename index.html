@@ -572,6 +572,17 @@
 
         <hr>
 
+        <section id="update-section">
+            <h2 data-i18n="controlPanel.update.title">Application Update</h2>
+            <div class="button-group-inline">
+                <button id="check-for-updates-btn" data-i18n="controlPanel.update.checkButton">Check for
+                    Updates</button>
+            </div>
+            <p id="update-status-message" class="status" style="display: none; margin-top: 10px;"></p>
+        </section>
+
+        <hr>
+
         <section id="feedback-section">
             <h2 data-i18n="controlPanel.feedback.title">Feedback &amp; Diagnostics</h2>
             <p data-i18n="controlPanel.feedback.description">If the ML model misidentifies abilities, use the "Report
@@ -614,6 +625,23 @@
                     data-i18n="controlPanel.popups.screenshotPreview.submitBtn">Submit</button>
                 <button id="screenshot-retake-btn" class="overlay-button"
                     data-i18n="controlPanel.popups.screenshotPreview.retakeBtn">Retake Screencapture</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="update-available-popup" class="custom-popup">
+        <div class="custom-popup-content">
+            <h3 id="update-popup-title" data-i18n="controlPanel.popups.updateAvailable.title">Update Available</h3>
+            <p id="update-popup-version"></p>
+            <p id="update-popup-release-date"></p>
+            <div id="update-popup-notes"
+                style="text-align: left; max-height: 200px; overflow-y: auto; background: var(--bg-color); padding: 10px; border-radius: 4px; margin-bottom: 15px;">
+            </div>
+            <div class="custom-popup-buttons">
+                <button id="update-popup-download-btn"
+                    data-i18n="controlPanel.popups.updateAvailable.downloadBtn">Download Update</button>
+                <button id="update-popup-later-btn"
+                    data-i18n="controlPanel.popups.updateAvailable.laterBtn">Later</button>
             </div>
         </div>
     </div>
