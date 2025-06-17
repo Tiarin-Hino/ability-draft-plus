@@ -1,12 +1,22 @@
+/**
+ * @file Manages the setup and migration of the application's SQLite database.
+ * This includes creating the initial schema if it doesn't exist,
+ * and applying simple migrations like adding or dropping columns to ensure
+ * the database schema is up-to-date with the application version.
+ */
+
 const path = require('path');
 const Database = require('better-sqlite3');
 const { app } = require('electron');
 
-// Construct the database path within the Electron app's user data directory.
+/**
+ * @const {string} dbPath - The absolute path to the SQLite database file,
+ * located within the Electron application's user data directory.
+ */
 const dbPath = path.join(app.getPath('userData'), 'dota_ad_data.db');
 
 /**
- * Defines the SQL statements for creating the initial database schema.
+ * @const {string} initialSchemaSql - SQL statements for creating the initial database schema.
  * This includes tables for Heroes, Abilities, AbilitySynergies, and Metadata.
  * Indexes are also created to optimize query performance.
  */
@@ -63,39 +73,41 @@ const initialSchemaSql = `
 `;
 
 /**
- * Represents columns to be added to tables if they don't already exist.
+ * @const {Array<{table: string, column: string, type: string}>} columnsToEnsure
+ * - An array of objects defining columns to be added to tables if they don't already exist.
  * This is used for simple schema migrations.
- * @type {Array<{table: string, column: string, type: string}>}
  */
 const columnsToEnsure = [
     // Abilities table
-    { table: 'Abilities', column: 'high_skill_winrate', type: 'REAL' },
-    { table: 'Abilities', column: 'hero_id', type: 'INTEGER' },
-    { table: 'Abilities', column: 'is_ultimate', type: 'BOOLEAN' },
     { table: 'Abilities', column: 'ability_order', type: 'INTEGER' },
     { table: 'Abilities', column: 'display_name', type: 'TEXT' },
-    { table: 'Abilities', column: 'pick_rate', type: 'REAL' },
+    { table: 'Abilities', column: 'hero_id', type: 'INTEGER' }, // Foreign key to Heroes
+    { table: 'Abilities', column: 'high_skill_winrate', type: 'REAL' },
     { table: 'Abilities', column: 'hs_pick_rate', type: 'REAL' },
+    { table: 'Abilities', column: 'is_ultimate', type: 'BOOLEAN' },
+    { table: 'Abilities', column: 'pick_rate', type: 'REAL' },
+
+    // AbilitySynergies table
+    { table: 'AbilitySynergies', column: 'is_op', type: 'BOOLEAN DEFAULT 0' },
 
     // Heroes table
     { table: 'Heroes', column: 'display_name', type: 'TEXT' },
     { table: 'Heroes', column: 'high_skill_winrate', type: 'REAL' },
-    { table: 'Heroes', column: 'windrun_id', type: 'INTEGER' },
-    { table: 'Heroes', column: 'pick_rate', type: 'REAL' },
     { table: 'Heroes', column: 'hs_pick_rate', type: 'REAL' },
-
-    // AbilitySynergies table
-    { table: 'AbilitySynergies', column: 'is_op', type: 'BOOLEAN DEFAULT 0' }
+    { table: 'Heroes', column: 'pick_rate', type: 'REAL' },
+    { table: 'Heroes', column: 'windrun_id', type: 'INTEGER' }, // ID from windrun.io
 ];
 
 /**
- * Defines obsolete columns that should be removed from the database for cleanup.
- * @type {Array<{table: string, column: string}>}
+ * @const {Array<{table: string, column: string}>} columnsToDrop
+ * - An array of objects defining obsolete columns that should be removed from the database for cleanup.
  */
 const columnsToDrop = [
-    { table: 'Abilities', column: 'value_percentage' },
+    // Abilities table
     { table: 'Abilities', column: 'avg_pick_order' },
     { table: 'Abilities', column: 'pick_order' },
+    { table: 'Abilities', column: 'value_percentage' },
+    // Heroes table
     { table: 'Heroes', column: 'value_percentage' },
     { table: 'Heroes', column: 'avg_pick_order' },
 ];
@@ -112,7 +124,7 @@ function setupDatabase() {
     let db;
     try {
         console.log(`[DB Setup] Using database at: ${dbPath}`);
-        db = new Database(dbPath, { verbose: console.log });
+        db = new Database(dbPath, { verbose: console.log }); // verbose logs all SQL statements
 
         // Execute initial schema creation (tables, indexes).
         db.exec(initialSchemaSql);

@@ -1,28 +1,36 @@
+/**
+ * @fileoverview Scrapes ability data (order, ultimate status) from Liquipedia
+ * using its API and updates the local SQLite database.
+ * It prioritizes matching abilities by their display name and hero association.
+ */
+
 const axios = require('axios');
 const cheerio = require('cheerio');
 const Database = require('better-sqlite3');
-const { getAllHeroes } = require('../database/queries'); // Import the new query function
+const { getAllHeroes } = require('../database/queries');
 
 const AXIOS_TIMEOUT = 30000; // 30 seconds
 // Updated User-Agent to be more descriptive as per Liquipedia API terms
 // IMPORTANT: Replace 'your@example.com' with a real contact email if deployed!
-const USER_AGENT = 'Dota2AbilityDraftPlusOverlay/1.0 (https://github.com/tiarin-hino/ability-draft-plus; your@example.com)'; //
-const LIQUIPEDIA_API_BASE_URL = 'https://liquipedia.net/dota2/api.php'; //
-const API_REQUEST_DELAY_MS = 31000; // 31 seconds, to be safe (Liquipedia recommends 30s for action=parse)
+const USER_AGENT = 'Dota2AbilityDraftPlusOverlay/1.0 (https://github.com/tiarin-hino/ability-draft-plus; your@example.com)';
+const LIQUIPEDIA_API_BASE_URL = 'https://liquipedia.net/dota2/api.php';
+/** API request delay in milliseconds. Liquipedia recommends ~30 seconds between `action=parse` requests. */
+const API_REQUEST_DELAY_MS = 31000;
 
 // Hotkey to Ability Order/isUltimate mapping
 const HOTKEY_MAPPING = {
     'Q': { ability_order: 1, is_ultimate: false },
     'W': { ability_order: 2, is_ultimate: false },
     'E': { ability_order: 3, is_ultimate: false },
-    'R': { ability_order: 0, is_ultimate: true },  // 'R' typically implies ultimate, order 0 for convention
-}; //
+    'R': { ability_order: 0, is_ultimate: true },  // 'R' is conventionally the ultimate, assigned order 0.
+};
 
 /**
  * A simple delay function.
  * @param {number} ms - The number of milliseconds to wait.
+ * @returns {Promise<void>} A promise that resolves after the specified delay.
  */
-const delay = ms => new Promise(resolve => setTimeout(resolve, ms)); //
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
  * Normalizes a display name for use in Liquipedia element IDs and sometimes URLs.
@@ -32,7 +40,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms)); //
  */
 function normalizeForLiquipediaId(displayName) {
     return displayName.replace(/ /g, '_').replace(/\./g, '');
-} //
+}
 
 /**
  * Normalizes a display name for use in Liquipedia API page titles (URLs).
@@ -41,13 +49,13 @@ function normalizeForLiquipediaId(displayName) {
  * @returns {string} The normalized string for URL.
  */
 function normalizeForLiquipediaPageTitle(displayName) {
-    return displayName.replace(/ /g, '_').replace(/'/g, '').replace(/'/g, '%27'); //
+    return displayName.replace(/ /g, '_').replace(/'/g, '');
 }
-
 
 /**
  * Scrapes ability order and ultimate status from Liquipedia (via its API) and updates the database.
  * This scraper will prioritize matching abilities by their display name.
+ * It respects Liquipedia's API usage guidelines by including a User-Agent and request delay.
  * @param {string} dbPath - Path to the SQLite database file.
  * @param {function(string): void} statusCallback - Function to send status updates.
  * @param {boolean} [testMode=false] - If true, only processes the first hero for testing.
@@ -73,14 +81,12 @@ async function scrapeAndStoreLiquipediaData(dbPath, statusCallback, testMode = f
             WHERE hero_id = ?;
         `);
 
-        // New prepared statement to check if a hero's abilities need updating
         const checkHeroAbilitiesNeedUpdateStmt = db.prepare(`
             SELECT COUNT(*) AS count
             FROM Abilities
             WHERE hero_id = ?
               AND (is_ultimate IS NULL OR ability_order IS NULL);
         `);
-
 
         statusCallback('Fetching hero list from local database...');
         const heroes = await getAllHeroes(dbPath);
@@ -106,63 +112,51 @@ async function scrapeAndStoreLiquipediaData(dbPath, statusCallback, testMode = f
                 processedHeroesCount++;
                 continue; // Skip API call and delay if no update is needed for this hero
             }
-
-
             const liquipediaPageTitle = normalizeForLiquipediaPageTitle(hero.display_name);
-            const apiUrl = `${LIQUIPEDIA_API_BASE_URL}?action=parse&page=${liquipediaPageTitle}&format=json`; //
+            const apiUrl = `${LIQUIPEDIA_API_BASE_URL}?action=parse&page=${liquipediaPageTitle}&format=json`;
             statusCallback(`Fetching API data for ${hero.display_name} from ${apiUrl}...`);
 
             try {
                 const response = await axios.get(apiUrl, {
                     headers: {
-                        'User-Agent': USER_AGENT, //
-                        'Accept-Encoding': 'gzip' //
+                        'User-Agent': USER_AGENT,
+                        'Accept-Encoding': 'gzip'
                     },
-                    timeout: AXIOS_TIMEOUT //
+                    timeout: AXIOS_TIMEOUT
                 });
 
                 if (!response.data || !response.data.parse || !response.data.parse.text || !response.data.parse.text['*']) {
-                    console.warn(`[Liquipedia Scraper] No parsed HTML content found for "${hero.display_name}" via API. Skipping.`); //
+                    console.warn(`[Liquipedia Scraper] No parsed HTML content found for "${hero.display_name}" via API. Skipping.`);
                     processedHeroesCount++;
-                    await delay(API_REQUEST_DELAY_MS); //
+                    await delay(API_REQUEST_DELAY_MS);
                     continue;
                 }
 
-                const htmlContent = response.data.parse.text['*']; //
-                const $ = cheerio.load(htmlContent); //
+                const htmlContent = response.data.parse.text['*'];
+                const $ = cheerio.load(htmlContent);
 
-                // Fetch abilities currently associated with this hero from our local DB for matching
-                const abilitiesOfCurrentHero = getAbilitiesOfHeroFromDb.all(hero.hero_id); //
-                // Create a map from display_name (from DB) to the full ability object for quick lookup
-                // This map also helps us track which abilities from our DB are relevant for this hero's page.
-                const abilityDisplayNameToDbDataMap = new Map(abilitiesOfCurrentHero.map(ab => [ab.display_name, ab])); //
-
-
-                // NEW LOGIC: Iterate through abilities from our DB, then find their hotkey on Liquipedia
+                const abilitiesOfCurrentHero = getAbilitiesOfHeroFromDb.all(hero.hero_id);
                 for (const dbAbility of abilitiesOfCurrentHero) {
                     // Only attempt to update if the ability is missing data
                     if (dbAbility.is_ultimate !== null && dbAbility.ability_order !== null) {
                         continue; // Skip if already populated
                     }
 
-                    const normalizedAbilityId = normalizeForLiquipediaId(dbAbility.display_name); //
-                    // Construct the selector for the specific ability's spellcard-wrapper using its ID
-                    const spellcardWrapper = $(`.spellcard-wrapper[id="${normalizedAbilityId}"]`); //
+                    const normalizedAbilityId = normalizeForLiquipediaId(dbAbility.display_name);
+                    const spellcardWrapper = $(`.spellcard-wrapper[id="${normalizedAbilityId}"]`);
 
                     if (spellcardWrapper.length > 0) {
-                        // Look for the default hotkey span within this specific spellcard-wrapper
-                        // Updated selector based on previous debugging to find the specific span within the hotkey div
                         const hotkeySpan = spellcardWrapper.find('div[title="Default Hotkey"] span').first();
-                        const hotkeyChar = hotkeySpan.text().trim().toUpperCase(); // Ensure uppercase for map lookup
+                        const hotkeyChar = hotkeySpan.text().trim().toUpperCase();
 
-                        if (hotkeyChar && HOTKEY_MAPPING[hotkeyChar]) { //
-                            const mapping = HOTKEY_MAPPING[hotkeyChar]; //
+                        if (hotkeyChar && HOTKEY_MAPPING[hotkeyChar]) {
+                            const mapping = HOTKEY_MAPPING[hotkeyChar];
 
                             const updateResult = updateAbilityStmt.run({
-                                is_ultimate: mapping.is_ultimate ? 1 : 0, // SQLite boolean is 0 or 1
-                                ability_order: mapping.ability_order, //
-                                display_name: dbAbility.display_name, //
-                                hero_id: dbAbility.hero_id // Use hero_id from DB for this ability
+                                is_ultimate: mapping.is_ultimate ? 1 : 0,
+                                ability_order: mapping.ability_order,
+                                display_name: dbAbility.display_name,
+                                hero_id: dbAbility.hero_id
                             });
 
                             if (updateResult.changes > 0) {
@@ -170,42 +164,38 @@ async function scrapeAndStoreLiquipediaData(dbPath, statusCallback, testMode = f
                                 // console.log(`[Liquipedia Scraper] Updated ${hero.display_name}'s ability: "${dbAbility.display_name}" (Hotkey: ${hotkeyChar})`);
                             }
                         } else {
-                            console.warn(`[Liquipedia Scraper] Hotkey not found or not Q/W/E/R for "${dbAbility.display_name}" on "${hero.display_name}"'s page. Skipping update.`); //
+                            console.warn(`[Liquipedia Scraper] Hotkey not found or not Q/W/E/R for "${dbAbility.display_name}" on "${hero.display_name}"'s page. Skipping update.`);
                         }
                     } else {
                         // This might happen for innate abilities, Aghs/Shard abilities, or if normalization
                         // for ID doesn't match Liquipedia's actual ID for the spellcard.
                         // Or simply abilities not found on the main hero page in a spellcard wrapper.
-                        console.warn(`[Liquipedia Scraper] Spellcard-wrapper for "${dbAbility.display_name}" (ID: #${normalizedAbilityId}) not found on "${hero.display_name}"'s page. Skipping update.`); //
+                        console.warn(`[Liquipedia Scraper] Spellcard-wrapper for "${dbAbility.display_name}" (ID: #${normalizedAbilityId}) not found on "${hero.display_name}"'s page. Skipping update.`);
                     }
                 }
-
             } catch (error) {
-                // Log specific error types for better diagnostics
                 if (error.response && error.response.status === 404) {
-                    console.warn(`[Liquipedia Scraper] API page not found for "${hero.display_name}" (normalized: "${liquipediaPageTitle}") at "${apiUrl}". Skipping.`); //
+                    console.warn(`[Liquipedia Scraper] API page not found for "${hero.display_name}" (normalized: "${liquipediaPageTitle}") at "${apiUrl}". Skipping.`);
                 } else if (error.response && error.response.status === 429) {
-                    console.error(`[Liquipedia Scraper] Rate limit hit (429) for "${hero.display_name}". This indicates either insufficient delay or a temporary IP ban. Please wait before retrying a full scrape. Stopping scrape.`); //
-                    // Crucial: Break the outer loop on 429 to avoid further bans
+                    console.error(`[Liquipedia Scraper] Rate limit hit (429) for "${hero.display_name}". This indicates either insufficient delay or a temporary IP ban. Please wait before retrying a full scrape. Stopping scrape.`);
                     break;
                 } else {
-                    console.error(`[Liquipedia Scraper] Error fetching or parsing data for "${hero.display_name}" from API (${apiUrl}): ${error.message}`); //
+                    console.error(`[Liquipedia Scraper] Error fetching or parsing data for "${hero.display_name}" from API (${apiUrl}): ${error.message}`);
                 }
             }
             processedHeroesCount++;
-            await delay(API_REQUEST_DELAY_MS); // Introduce delay after each API request, even if errors occurred
+            await delay(API_REQUEST_DELAY_MS);
         }
 
-        statusCallback(`Liquipedia API scrape finished. Processed ${processedHeroesCount} heroes, updated ${updatedAbilitiesCount} abilities.`); //
-
+        statusCallback(`Liquipedia API scrape finished. Processed ${processedHeroesCount} heroes, updated ${updatedAbilitiesCount} abilities.`);
     } catch (error) {
-        console.error('[Liquipedia Scraper] Fatal error during Liquipedia API scraping:', error); //
-        statusCallback(`Liquipedia API scraping failed: ${error.message}. Check console for details.`); //
+        console.error('[Liquipedia Scraper] Fatal error during Liquipedia API scraping:', error);
+        statusCallback(`Liquipedia API scraping failed: ${error.message}. Check console for details.`);
         throw error; // Rethrow to be caught by the main process
     } finally {
         if (db && db.open) {
-            db.close();
-            console.log('[Liquipedia Scraper] Database connection closed.'); //
+            db.close(); //
+            console.log('[Liquipedia Scraper] Database connection closed.');
         }
     }
 }

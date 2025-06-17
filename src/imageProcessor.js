@@ -3,6 +3,14 @@ const screenshot = require('screenshot-desktop');
 const sharp = require('sharp');
 const tf = require('@tensorflow/tfjs-node');
 
+/**
+ * @file Manages image processing tasks, including loading a TensorFlow.js model,
+ * capturing screenshots, and identifying abilities in screen regions using the model.
+ * This module is primarily designed to be used within a worker thread for ML inferences
+ * to avoid blocking the main application process.
+ * @module imageProcessor
+ */
+
 // --- Constants ---
 /** Image dimensions the model was trained on. */
 const IMG_HEIGHT = 96;
@@ -10,20 +18,34 @@ const IMG_WIDTH = 96;
 
 // --- Module State ---
 /** Absolute path to the TensorFlow.js Graph Model JSON file. Set during initialization. */
-let ABSOLUTE_MODEL_PATH;
+let absoluteModelPath;
 /** Absolute path to the class names JSON file. Set during initialization. */
-let ABSOLUTE_CLASS_NAMES_PATH;
+let absoluteClassNamesPath;
 
 /** Array of class names (ability internal names) loaded from the JSON file. */
-let CLASS_NAMES = [];
+let classNamesCache = [];
 /** Promise for loading class names, ensures it's done only once. */
 let classNamesPromise;
 /** Promise for loading the TFJS model, ensures it's done only once. */
 let modelPromise;
-/** Flag to indicate if the image processor has been initialized. */
+/**
+ * Flag to indicate if {@link initializeImageProcessor} has been called at least once
+ * to set up the model and class name loading promises.
+ */
 let initialized = false;
-/** Flag to indicate if promises for model and class names have resolved. */
+/**
+ * Flag to indicate if the promises for loading the model and class names have successfully resolved,
+ * meaning the image processor is fully ready for inference tasks.
+ */
 let imageProcessorFullyInitialized = false;
+
+/**
+ * @typedef {object} SlotCoordinate
+ * @property {number} x - The x-coordinate of the top-left corner of the slot.
+ * @property {number} y - The y-coordinate of the top-left corner of the slot.
+ * @property {number} width - The width of the slot.
+ * @property {number} height - The height of the slot.
+ */
 
 /**
  * Initializes the image processor by loading the TFJS model and class names.
@@ -38,27 +60,27 @@ function initializeImageProcessor(modelPath, classNamesPath) {
         console.warn("[ImageProcessor] Image processor is already initialized.");
         return;
     }
-    ABSOLUTE_MODEL_PATH = modelPath;
-    ABSOLUTE_CLASS_NAMES_PATH = classNamesPath;
+    absoluteModelPath = modelPath;
+    absoluteClassNamesPath = classNamesPath;
 
-    console.log(`[ImageProcessor] Initializing with Model: ${ABSOLUTE_MODEL_PATH}, Classes: ${ABSOLUTE_CLASS_NAMES_PATH}`);
+    console.log(`[ImageProcessor] Initializing with Model: ${absoluteModelPath}, Classes: ${absoluteClassNamesPath}`);
 
-    classNamesPromise = fs.readFile(ABSOLUTE_CLASS_NAMES_PATH, 'utf8')
+    classNamesPromise = fs.readFile(absoluteClassNamesPath, 'utf8')
         .then(data => {
-            CLASS_NAMES = JSON.parse(data);
-            if (!CLASS_NAMES || CLASS_NAMES.length === 0) {
+            classNamesCache = JSON.parse(data);
+            if (!classNamesCache || classNamesCache.length === 0) {
                 throw new Error('Class names array is empty or invalid after parsing.');
             }
-            console.log(`[ImageProcessor] Loaded ${CLASS_NAMES.length} class names from ${ABSOLUTE_CLASS_NAMES_PATH}`);
-            return CLASS_NAMES;
+            console.log(`[ImageProcessor] Loaded ${classNamesCache.length} class names from ${absoluteClassNamesPath}`);
+            return classNamesCache;
         })
         .catch(err => {
-            console.error(`[ImageProcessor] FATAL: Error loading or parsing class names from ${ABSOLUTE_CLASS_NAMES_PATH}: ${err.message}`);
-            CLASS_NAMES = []; // Ensure it's an empty array on failure
+            console.error(`[ImageProcessor] FATAL: Error loading or parsing class names from ${absoluteClassNamesPath}: ${err.message}`);
+            classNamesCache = []; // Ensure it's an empty array on failure
             throw err; // Re-throw to prevent application from proceeding in an invalid state
         });
 
-    modelPromise = tf.loadGraphModel(ABSOLUTE_MODEL_PATH)
+    modelPromise = tf.loadGraphModel(absoluteModelPath)
         .then(model => {
             console.log('[ImageProcessor] TFJS Graph Model loaded successfully.');
             // Warm up the model with a dummy input to potentially speed up the first real prediction.
@@ -74,7 +96,7 @@ function initializeImageProcessor(modelPath, classNamesPath) {
             return model;
         })
         .catch(err => {
-            console.error(`[ImageProcessor] FATAL: Error loading TFJS model from ${ABSOLUTE_MODEL_PATH}: ${err.message}`);
+            console.error(`[ImageProcessor] FATAL: Error loading TFJS model from ${absoluteModelPath}: ${err.message}`);
             throw err; // Re-throw for critical failure
         });
 
@@ -85,29 +107,43 @@ function initializeImageProcessor(modelPath, classNamesPath) {
  * Ensures that the model and class names promises have resolved.
  * Should be called before operations that directly use the model or class names
  * if there's a possibility they haven't been awaited yet.
+ * Throws an error if {@link initializeImageProcessor} was not called first.
  * @async
+ * @throws {Error} If core promises for model and class names are not available.
  */
 async function initializeImageProcessorIfNeeded() {
+    if (imageProcessorFullyInitialized) {
+        return; // Already fully initialized and ready
+    }
+
+    // Check if initializeImageProcessor was called and set up the promises
     if (!imageProcessorFullyInitialized) {
-        if (!initialized && ABSOLUTE_MODEL_PATH && ABSOLUTE_CLASS_NAMES_PATH) {
-            console.warn("[ImageProcessor] initializeImageProcessorIfNeeded called when core paths not set. Relying on prior initialization call.");
-        }
         if (!modelPromise || !classNamesPromise) {
-            console.error("[ImageProcessor] Model or ClassNames promise not available in initializeImageProcessorIfNeeded. This indicates a setup issue.");
-            throw new Error("Image processor essential promises not found.");
+            console.error("[ImageProcessor] Critical: initializeImageProcessorIfNeeded called before promises were set up by initializeImageProcessor.");
+            throw new Error("Image processor core promises not available. Ensure initializeImageProcessor is called first.");
         }
         await modelPromise;
         await classNamesPromise;
         imageProcessorFullyInitialized = true; // Mark as ready for direct calls
-        console.log("[ImageProcessor] Confirmed ready for direct slot identification calls.");
+        console.log("[ImageProcessor] Image processor is now fully initialized and ready for operations.");
     }
 }
 
 /**
+ * @typedef {object} SlotData
+ * @property {number} x - The x-coordinate of the slot.
+ * @property {number} y - The y-coordinate of the slot.
+ * @property {number} width - The width of the slot.
+ * @property {number} height - The height of the slot.
+ * @property {number} hero_order - The hero order index associated with the slot.
+ * @property {number} ability_order - The ability order index associated with the slot.
+ * @property {boolean} is_ultimate - Whether the slot is for an ultimate ability.
+ */
+
+/**
  * Identifies abilities in specified screen slots using the loaded ML model via batch processing.
  *
- * @param {Array<object>} slotDataArray - Array of objects, each defining a slot with x, y, width, height,
- * hero_order, ability_order, and is_ultimate.
+ * @param {SlotData[]} slotDataArray - Array of objects, each defining a slot's properties.
  * @param {Buffer} screenBuffer - Buffer containing the PNG image of the screen.
  * @param {Array<string>} currentClassNames - The array of class names (ability internal names) to use for prediction.
  * @param {number} confidenceThreshold - The minimum prediction confidence required to identify an ability.
@@ -116,11 +152,18 @@ async function initializeImageProcessorIfNeeded() {
  * each with name, confidence, and original slot data.
  * @throws {Error} If the image processor is not initialized.
  */
+/**
+ * @typedef {object} IdentifiedSlotResult
+ * @property {string|null} name - The identified ability name, or null if not identified or below threshold.
+ * @property {number} confidence - The prediction confidence score.
+ * @property {number} hero_order - The hero order index from the input slot data.
+ * @property {number} ability_order - The ability order index from the input slot data.
+ * @property {boolean} is_ultimate - Whether the slot was for an ultimate ability, from input slot data.
+ * @property {SlotCoordinate} coord - The coordinates of the processed slot.
+ */
 async function identifySlots(slotDataArray, screenBuffer, currentClassNames, confidenceThreshold, previouslyPickedNames = new Set()) {
     const identifySlotsStart = performance.now();
-    if (!initialized || !modelPromise || !classNamesPromise) {
-        throw new Error("[ImageProcessor] Not initialized. Call initializeImageProcessor first.");
-    }
+    // Assumes initializeImageProcessorIfNeeded has been called or promises are awaited by caller context
 
     const model = await modelPromise;
 
@@ -135,11 +178,11 @@ async function identifySlots(slotDataArray, screenBuffer, currentClassNames, con
 
     if (!model) {
         console.error("[ImageProcessor] Model not available for predictions. Returning empty results for slots.");
-        return slotDataArray.map(slotData => defaultSlotResult(slotData));
+        return slotDataArray.map(defaultSlotResult);
     }
     if (!currentClassNames || currentClassNames.length === 0) {
         console.error("[ImageProcessor] Class names are empty or not provided to identifySlots. Returning empty results for slots.");
-        return slotDataArray.map(slotData => defaultSlotResult(slotData));
+        return slotDataArray.map(defaultSlotResult);
     }
 
     if (slotDataArray.length === 0) {
@@ -150,7 +193,6 @@ async function identifySlots(slotDataArray, screenBuffer, currentClassNames, con
     const croppedBuffers = [];
     const validSlotIndexes = [];
 
-    let cropStartTime = performance.now();
     for (let i = 0; i < slotDataArray.length; i++) {
         const slotData = slotDataArray[i];
         if (typeof slotData.x !== 'number' || typeof slotData.y !== 'number' ||
@@ -174,10 +216,9 @@ async function identifySlots(slotDataArray, screenBuffer, currentClassNames, con
 
     if (croppedBuffers.length === 0) {
         console.log("[ImageProcessor] No valid images to process after cropping.");
-        return slotDataArray.map(slotData => defaultSlotResult(slotData));
+        return slotDataArray.map(defaultSlotResult);
     }
 
-    let preprocessingStartTime = performance.now();
     const imageTensors = [];
     for (const buffer of croppedBuffers) {
         let tensor = tf.node.decodeImage(buffer, 3);
@@ -189,14 +230,13 @@ async function identifySlots(slotDataArray, screenBuffer, currentClassNames, con
     const batchTensor = tf.stack(imageTensors);
     tf.dispose(imageTensors);
 
-    let predictionStartTime = performance.now();
     let predictionTensor;
     try {
         predictionTensor = model.predict(batchTensor);
     } catch (err) {
         console.error(`[ImageProcessor] Error during batch prediction: ${err.message}`);
         tf.dispose(batchTensor);
-        return slotDataArray.map(slotData => defaultSlotResult(slotData));
+        return slotDataArray.map(defaultSlotResult);
     }
     const probabilities = await predictionTensor.array();
     tf.dispose([batchTensor, predictionTensor]);
@@ -245,25 +285,31 @@ async function identifySlots(slotDataArray, screenBuffer, currentClassNames, con
     return identifiedResults;
 }
 
+/**
+ * @typedef {object} CachedAbilityData
+ * @property {SlotCoordinate} coord - Coordinates of the ability.
+ * @property {string} name - The original identified name of the ability.
+ * @property {number} hero_order - Original hero order.
+ * @property {number} ability_order - Original ability order.
+ * @property {boolean} is_ultimate - Whether it's an ultimate.
+ * @property {string} type - Type classification (e.g., 'ultimate', 'standard').
+ */
 
 /**
  * Re-identifies abilities from a cached list of slots against a new screen buffer.
  * Only returns abilities that are re-confirmed with sufficient confidence matching their original identification.
  *
- * @param {Array<object>} cachedPoolAbilities - Array of cached ability data, each must include
- * { coord, name (originalName), hero_order, ability_order, is_ultimate (from layout), type ('ultimate' or 'standard') }.
+ * @param {CachedAbilityData[]} cachedPoolAbilities - Array of cached ability data.
  * @param {Buffer} screenBuffer - Buffer containing the new PNG image of the screen.
  * @param {Array<string>} currentClassNamesArray - The array of class names (ability internal names).
  * @param {number} confidenceThreshold - The minimum prediction confidence required.
- * @returns {Promise<Array<object>>} A promise that resolves to an array of re-confirmed abilities,
+ * @returns {Promise<IdentifiedSlotResult[]>} A promise that resolves to an array of re-confirmed abilities,
  * maintaining original structure but with updated confidence.
  */
 async function identifySlotsFromCache(cachedPoolAbilities, screenBuffer, currentClassNamesArray, confidenceThreshold) {
     if (!imageProcessorFullyInitialized) {
         console.warn("[ImageProcessor] identifySlotsFromCache: imageProcessor not fully initialized. Attempting to wait for promises.");
-        if (!modelPromise || !classNamesPromise) {
-            throw new Error("[ImageProcessor] Model or ClassNames promise not available in identifySlotsFromCache. Initialization failed or was skipped.");
-        }
+        // Ensure promises are available and awaited. initializeImageProcessorIfNeeded handles this.
         try {
             await modelPromise;
             await classNamesPromise;
@@ -283,8 +329,9 @@ async function identifySlotsFromCache(cachedPoolAbilities, screenBuffer, current
         console.error("[ImageProcessor] identifySlotsFromCache: Class names array is empty or not provided.");
         return [];
     }
-    if (CLASS_NAMES.length === 0) {
-        console.warn("[ImageProcessor] identifySlotsFromCache: Internal CLASS_NAMES cache is empty. This is unexpected if initialized.");
+    // Check against the module's cache as a sanity check, though currentClassNamesArray is the primary source.
+    if (classNamesCache.length === 0) {
+        console.warn("[ImageProcessor] identifySlotsFromCache: Internal classNamesCache is empty. This is unexpected if initialized properly.");
     }
 
     console.log(`[identifySlotsFromCache] Called. Cached abilities: ${cachedPoolAbilities.length}. Confidence Threshold: ${confidenceThreshold}.`);
@@ -379,209 +426,21 @@ async function identifySlotsFromCache(cachedPoolAbilities, screenBuffer, current
 }
 
 /**
- * Processes a screenshot buffer to identify abilities.
- * This is the version used by the ML worker thread.
- *
- * @param {object} params - The parameters for the scan.
- * @param {Buffer} params.screenshotBuffer - The PNG buffer of the screen.
- * @param {string} params.coordinatesPath - Path to the layout coordinates JSON.
- * @param {string} params.targetResolution - The resolution key (e.g., "1920x1080").
- * @param {number} params.confidenceThreshold - Minimum confidence for prediction.
- * @returns {Promise<object>} A promise that resolves to the raw scan results.
- */
-async function performScanWithBuffer({ screenshotBuffer, coordinatesPath, targetResolution, confidenceThreshold }) {
-    const processScanStart = performance.now();
-    console.log(`[ImageProcessor/Worker] Starting scan with buffer for ${targetResolution}`);
-
-    if (!initialized || !modelPromise || !classNamesPromise) {
-        throw new Error("[ImageProcessor] Not initialized. Cannot process screen buffer.");
-    }
-    const model = await modelPromise;
-    const resolvedClassNames = await classNamesPromise;
-
-    const createResultsWithCoords = (coordsArray = []) => coordsArray.map(slotData => ({
-        name: null, confidence: 0,
-        hero_order: slotData.hero_order, ability_order: slotData.ability_order, is_ultimate: slotData.is_ultimate,
-        coord: { x: slotData.x, y: slotData.y, width: slotData.width, height: slotData.height }
-    }));
-
-    if (!model || !resolvedClassNames || resolvedClassNames.length === 0) {
-        // This logic remains important for handling initialization failures.
-        console.error("[ImageProcessor/Worker] Model or Class Names not loaded. Aborting scan.");
-        // We can still try to return the basic structure for consistency.
-        let emptyCoords = {};
-        try {
-            const configData = await fs.readFile(coordinatesPath, 'utf-8');
-            const layoutConfig = JSON.parse(configData);
-            emptyCoords = layoutConfig.resolutions?.[targetResolution] || {};
-        } catch (e) { /* ignore */ }
-        return {
-            ultimates: createResultsWithCoords(emptyCoords.ultimate_slots_coords),
-            standard: createResultsWithCoords((emptyCoords.standard_slots_coords || []).filter(slot => slot.ability_order === 2)),
-            heroDefiningAbilities: createResultsWithCoords((emptyCoords.standard_slots_coords || []).filter(slot => slot.ability_order === 2)),
-            selectedAbilities: createResultsWithCoords(emptyCoords.selected_abilities_coords ? emptyCoords.selected_abilities_coords.map(sac => ({ ...sac, width: emptyCoords.selected_abilities_params.width, height: emptyCoords.selected_abilities_params.height })) : [])
-        };
-    }
-
-    const layoutConfig = JSON.parse(await fs.readFile(coordinatesPath, 'utf-8'));
-    const coords = layoutConfig.resolutions?.[targetResolution];
-    if (!coords) {
-        throw new Error(`Coordinates not found for resolution: ${targetResolution}`);
-    }
-
-    const { standard_slots_coords = [] } = coords;
-    const hero_defining_slots_coords = standard_slots_coords.filter(slot => slot.ability_order === 2);
-
-    // Identify hero-defining abilities from the provided buffer
-    const identifiedHeroDefiningAbilities = await identifySlots(hero_defining_slots_coords, screenshotBuffer, resolvedClassNames, confidenceThreshold);
-
-    console.log(`[ImageProcessor/Worker] Scan with buffer finished in ${performance.now() - processScanStart}ms.`);
-
-    // Return the same structure as the original processDraftScreen
-    return {
-        ultimates: createResultsWithCoords(coords.ultimate_slots_coords),
-        standard: identifiedHeroDefiningAbilities,
-        heroDefiningAbilities: identifiedHeroDefiningAbilities,
-        selectedAbilities: createResultsWithCoords(
-            coords.selected_abilities_params ? coords.selected_abilities_coords.map(sac => ({
-                ...sac,
-                width: coords.selected_abilities_params.width,
-                height: coords.selected_abilities_params.height,
-            })) : []
-        )
-    };
-}
-
-
-/**
- * Processes the entire draft screen: takes a screenshot, identifies abilities in various slots,
- * and organizes the results.
- * For this version, it focuses on identifying hero-defining abilities (from 2nd slot).
- *
- * @param {string} coordinatesPath - Path to the JSON file defining slot coordinates for different resolutions.
- * @param {string} targetResolution - The screen resolution key (e.g., "1920x1080") to use from coordinates file.
- * @param {number} confidenceThreshold - Minimum confidence for an ability prediction to be considered valid.
- * @returns {Promise<object>} A promise that resolves to an object containing identified
- * hero-defining abilities in the 'standard' array, and empty arrays for other categories.
- * @throws {Error} If coordinates cannot be loaded, the screenshot fails, or if the processor is not initialized.
- */
-async function processDraftScreen(coordinatesPath, targetResolution, confidenceThreshold) {
-    const processDraftScreenStart = performance.now(); // Log start of processDraftScreen
-    console.log(`[ImageProcessor] Starting focused screen processing (Hero Defining Abilities Only) for ${targetResolution} (Confidence: ${confidenceThreshold}).`);
-
-    if (!initialized || !modelPromise || !classNamesPromise) {
-        console.error("[ImageProcessor] Not initialized. Cannot process draft screen.");
-        throw new Error("Image processor not initialized.");
-    }
-
-    const model = await modelPromise;
-    const resolvedClassNames = await classNamesPromise;
-
-    // Helper to create empty results array with original coord data for UI consistency
-    const createResultsWithCoords = (coordsArray = []) => {
-        return coordsArray.map(slotData => ({
-            name: null, confidence: 0, // Name will be null initially, confidence 0
-            hero_order: slotData.hero_order,
-            ability_order: slotData.ability_order,
-            is_ultimate: slotData.is_ultimate,
-            coord: { x: slotData.x, y: slotData.y, width: slotData.width, height: slotData.height }
-        }));
-    };
-
-    if (!model || !resolvedClassNames || resolvedClassNames.length === 0) {
-        console.error("[ImageProcessor] Model or Class Names not loaded. Aborting scan and returning empty results structure.");
-        let hero_defining_coords = [];
-        try { // Attempt to load coords for default empty results, so UI doesn't break
-            const configData = await fs.readFile(coordinatesPath, 'utf-8');
-            const layoutConfig = JSON.parse(configData);
-            const coords = layoutConfig.resolutions?.[targetResolution];
-            if (coords) {
-                hero_defining_coords = (coords.standard_slots_coords || []).filter(slot => slot.ability_order === 2);
-            }
-        } catch (e) { console.error("[ImageProcessor] Error reading layout for empty results structure:", e); }
-
-        return {
-            ultimates: createResultsWithCoords(coords ? coords.ultimate_slots_coords : []),
-            standard: createResultsWithCoords(hero_defining_coords), // Still provide coord data for these
-            heroDefiningAbilities: createResultsWithCoords(hero_defining_coords),
-            selectedAbilities: createResultsWithCoords(coords ? (coords.selected_abilities_params ? coords.selected_abilities_coords.map(sac => ({ ...sac, width: coords.selected_abilities_params.width, height: coords.selected_abilities_params.height })) : []) : [])
-        };
-    }
-
-    let layoutConfig;
-    let readConfigStartTime = performance.now();
-    try {
-        const configData = await fs.readFile(coordinatesPath, 'utf-8');
-        layoutConfig = JSON.parse(configData);
-    } catch (err) {
-        console.error(`[ImageProcessor] Error reading coordinates file from ${coordinatesPath}: ${err.message}`);
-        throw err;
-    }
-    console.log(`[ImageProcessor] Coordinates file read in ${performance.now() - readConfigStartTime}ms.`);
-
-    const coords = layoutConfig.resolutions?.[targetResolution];
-    if (!coords) {
-        const errorMsg = `Coordinates not found for resolution: ${targetResolution} in ${coordinatesPath}`;
-        console.error(`[ImageProcessor] ${errorMsg}`);
-        throw new Error(errorMsg);
-    }
-
-    // Get all coordinate data, but only process hero-defining for now
-    const {
-        ultimate_slots_coords = [],
-        standard_slots_coords = [],
-        selected_abilities_coords = [],
-        selected_abilities_params
-    } = coords;
-
-    // Filter to get only the 2nd slot abilities for hero identification
-    const hero_defining_slots_coords = standard_slots_coords.filter(slot => slot.ability_order === 2);
-
-    console.log(`[ImageProcessor] Coordinates loaded. Focusing on HeroDefining Abilities: ${hero_defining_slots_coords.length} slots.`);
-
-    let screenshotBuffer;
-    let screenshotStartTime = performance.now();
-    try {
-        screenshotBuffer = await screenshot({ format: 'png' });
-    } catch (err) {
-        console.error("[ImageProcessor] Screenshot failed:", err);
-        throw err;
-    }
-    console.log(`[ImageProcessor] Screenshot taken in ${performance.now() - screenshotStartTime}ms.`);
-
-    // Identify hero-defining abilities
-    let identifyHeroDefiningStartTime = performance.now();
-    const identifiedHeroDefiningAbilities = await identifySlots(hero_defining_slots_coords, screenshotBuffer, resolvedClassNames, confidenceThreshold);
-    console.log(`[ImageProcessor] Identified hero defining abilities in ${performance.now() - identifyHeroDefiningStartTime}ms.`);
-
-    const processDraftScreenEnd = performance.now();
-    console.log(`[ImageProcessor] Focused processDraftScreen finished in ${processDraftScreenEnd - processDraftScreenStart}ms.`);
-
-    // Return the identified hero-defining abilities in the 'standard' array for hotspot display,
-    // and also in 'heroDefiningAbilities' for subsequent main.js processing.
-    // Other categories return empty arrays with their coordinate structures maintained.
-    return {
-        ultimates: createResultsWithCoords(ultimate_slots_coords),
-        standard: identifiedHeroDefiningAbilities, // Place identified 2nd slot abilities here for hotspots
-        heroDefiningAbilities: identifiedHeroDefiningAbilities, // Also keep for main.js hero model identification
-        selectedAbilities: createResultsWithCoords(
-            selected_abilities_params ? selected_abilities_coords.map(sac => ({
-                ...sac,
-                width: selected_abilities_params.width,
-                height: selected_abilities_params.height,
-            })) : []
-        )
-    };
-}
-
-/**
  * Performs a comprehensive initial scan of the main ability pool.
  * This scans all 36 standard slots and 12 ultimate slots.
  * @param {Buffer} screenshotBuffer - The PNG buffer of the screen.
  * @param {object} layoutConfig - The full layout configuration object.
  * @param {string} targetResolution - The resolution key.
  * @param {number} confidenceThreshold - Minimum confidence for prediction.
- * @returns {Promise<object>} A promise resolving to the raw scan results for the ability pool.
+ * @returns {Promise<InitialScanResults>} A promise resolving to the raw scan results for the ability pool.
+ * @throws {Error} If model, class names, or coordinates are not ready/found.
+ */
+/**
+ * @typedef {object} InitialScanResults
+ * @property {IdentifiedSlotResult[]} ultimates - Identified ultimate abilities.
+ * @property {IdentifiedSlotResult[]} standard - Identified standard abilities from all standard slots.
+ * @property {IdentifiedSlotResult[]} selectedAbilities - Empty array, as initial scan assumes no selections.
+ * @property {IdentifiedSlotResult[]} heroDefiningAbilities - Identified abilities from hero-defining slots (subset of standard).
  */
 async function performInitialScan(screenshotBuffer, layoutConfig, targetResolution, confidenceThreshold) {
     console.log('[ImageProcessor/Worker] Performing comprehensive initial scan of all 48 pool abilities...');
@@ -614,14 +473,14 @@ async function performInitialScan(screenshotBuffer, layoutConfig, targetResoluti
     };
 }
 
-
 /**
  * Scans only the slots where selected abilities appear. Used for rescans.
  * @param {Buffer} screenshotBuffer - The PNG buffer of the screen.
- * @param {object} layoutConfig - The full layout configuration object.
+ * @param {object} layoutConfig - The full layout configuration object, containing resolution-specific coordinates.
  * @param {string} targetResolution - The resolution key (e.g., "1920x1080").
  * @param {number} confidenceThreshold - Minimum confidence for prediction.
- * @returns {Promise<Array<object>>} A promise resolving to an array of identified selected abilities.
+ * @returns {Promise<IdentifiedSlotResult[]>} A promise resolving to an array of identified selected abilities.
+ * @throws {Error} If model, class names, or coordinates are not ready/found.
  */
 async function performSelectedAbilitiesScan(screenshotBuffer, layoutConfig, targetResolution, confidenceThreshold) {
     console.log('[ImageProcessor/Worker] Performing selected abilities only scan (rescan)...');
@@ -651,8 +510,8 @@ async function performSelectedAbilitiesScan(screenshotBuffer, layoutConfig, targ
 module.exports = {
     initializeImageProcessor,
     initializeImageProcessorIfNeeded,
-    performInitialScan, // New export
-    performSelectedAbilitiesScan, // New export
+    performInitialScan,
+    performSelectedAbilitiesScan,
     identifySlots,
     identifySlotsFromCache
 };

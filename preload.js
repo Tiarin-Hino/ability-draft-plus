@@ -27,244 +27,220 @@ const { contextBridge, ipcRenderer } = require('electron');
  * @property {number | null} selectedHeroDbId - The database ID of the hero selected for drafting.
  */
 
+//! IMPORTANT:
+//! When adding new IPC channels, ensure they are unique and descriptive.
+//! Corresponding handlers must be set up in the main process (e.g., in relevant ipcHandler files).
+
 contextBridge.exposeInMainWorld('electronAPI', {
+  getInitialData: () => ipcRenderer.send('get-initial-data'),
+
+  // --- Application Lifecycle & Updates ---
   /**
-   * Sends a request to the main process to scrape all data from Windrun.io.
+   * Sends a request to the main process to check for application updates.
    */
-  scrapeAllWindrunData: () => ipcRenderer.send('scrape-all-windrun-data'),
-
+  checkForUpdates: () => ipcRenderer.send('check-for-updates'),
   /**
-   * Sends a request to the main process to get the list of available screen resolutions
-   * defined in the layout_coordinates.json configuration file.
+   * Sends a request to the main process to start downloading an available update.
    */
-  getAvailableResolutions: () => ipcRenderer.send('get-available-resolutions'),
-
+  startDownloadUpdate: () => ipcRenderer.send('start-download-update'),
   /**
-   * Registers a callback function to be invoked when the main process sends a scrape status update.
-   * The message can be a string or an object with a translation key and params.
-   * @param {(message: string | object) => void} callback - The function to call with the status message.
+   * Sends a request to the main process to quit the application and install a downloaded update.
    */
-  onUpdateStatus: (callback) => ipcRenderer.on('scrape-status', (_event, message) => callback(message)),
-
+  quitAndInstallUpdate: () => ipcRenderer.send('quit-and-install-update'),
   /**
-   * Registers a callback function to be invoked when the main process sends scan results
-   * or error information related to a screen scan.
-   * @param {(results: object) => void} callback - The function to call with the scan results or error object.
+   * Registers a callback for application update notifications from the main process.
+   * @param {(updateInfo: {status: string, info?: any, error?: any, progress?: any}) => void} callback - Function to call with update details.
+   * @remarks Ensure 'renderer.js' uses this for app updates and the main process sends on 'app-update-notification'.
    */
-  onScanResults: (callback) => ipcRenderer.on('scan-results', (_event, results) => callback(results)),
-
-  /**
-   * Registers a callback function to be invoked when the main process sends the list
-   * of available screen resolutions.
-   * @param {(resolutions: string[]) => void} callback - The function to call with an array of resolution strings.
-   */
-  onAvailableResolutions: (callback) => ipcRenderer.on('available-resolutions', (_event, resolutions) => callback(resolutions)),
-
-  /**
-   * Registers a callback function to be invoked when the main process sends the
-   * last updated date for the scraped data.
-   * @param {(dateStr: string | null) => void} callback - The function to call with the formatted date string or null.
-   */
-  onLastUpdatedDate: (callback) => ipcRenderer.on('last-updated-date', (_event, dateStr) => callback(dateStr)),
-
-  /**
-   * Registers a callback function to be invoked when the main process requests to
-   * enable or disable UI elements in the main control panel (e.g., during initial data sync).
-   * @param {(isDisabled: boolean) => void} callback - The function to call with a boolean indicating if UI should be disabled.
-   */
-  onSetUIDisabledState: (callback) => ipcRenderer.on('set-ui-disabled-state', (_event, isDisabled) => callback(isDisabled)),
-
-  /**
-   * (For Overlay Renderer) Registers a callback function to be invoked when the main process sends
-   * data to the overlay (e.g., scan results, configuration).
-   * @param {(data: object) => void} callback - The function to call with the overlay data object.
-   */
-  onOverlayData: (callback) => ipcRenderer.on('overlay-data', (_event, data) => callback(data)),
-
-  /**
-   * (For Overlay Renderer) Sends a request to the main process to close the overlay window.
-   */
-  closeOverlay: () => ipcRenderer.send('close-overlay'),
-
-  /**
-   * (For Overlay Renderer) Sends a request to the main process to set whether mouse events
-   * should be ignored by the overlay window (allowing clicks to pass through).
-   * @param {boolean} ignore - True to ignore mouse events, false to capture them.
-   * @param {boolean} [forward=true] - (Windows specific) Whether to forward mouse move messages when ignored.
-   */
-  setOverlayMouseEvents: (ignore, forward = true) => ipcRenderer.send('set-overlay-mouse-ignore', ignore, { forward }),
-
-  /**
-   * Sends a request to the main process to activate the overlay for a specified screen resolution.
-   * @param {string} resolution - The selected screen resolution string (e.g., "1920x1080").
-   */
-  activateOverlay: (resolution) => ipcRenderer.send('activate-overlay', resolution),
-
-  /**
-   * (For Overlay Renderer) Sends a request to the main process to execute a screen scan.
-   * @param {string} resolution - The target screen resolution for the scan.
-   * @param {number | null} selectedHeroOrder - The original list order (0-9) of the hero the user is drafting for, if selected.
-   * @param {boolean} isInitialScan - True if this is the first scan after overlay activation.
-   */
-  executeScanFromOverlay: (resolution, selectedHeroOrder, isInitialScan) => ipcRenderer.send('execute-scan-from-overlay', resolution, selectedHeroOrder, isInitialScan),
-
-  /**
-   * Registers a callback function to be invoked when the main process signals that
-   * the overlay window has been closed, allowing the main control panel UI to reset.
-   * @param {() => void} callback - The function to call.
-   */
-  onOverlayClosedResetUI: (callback) => ipcRenderer.on('overlay-closed-reset-ui', () => callback()),
-
-  /**
-   * (For Overlay Renderer) Sends a request to the main process to take a snapshot of the
-   * current ability icons on screen for feedback purposes.
-   */
-  takeSnapshot: () => ipcRenderer.send('take-snapshot'),
-
-  /**
-   * (For Overlay Renderer) Registers a callback function to be invoked when the main process
-   * sends the status of a snapshot operation.
-   * @param {(status: SnapshotStatus) => void} callback - The function to call with the snapshot status.
-   */
-  onSnapshotTaken: (callback) => ipcRenderer.on('snapshot-taken-status', (_event, status) => callback(status)),
-
-  /**
-   * (For Overlay Renderer) Registers a callback function to be invoked when the main process
-   * requests to toggle the visibility of hotspot borders (e.g., before taking a snapshot).
-   * @param {(visible: boolean) => void} callback - The function to call with a boolean indicating if borders should be visible.
-   */
-  onToggleHotspotBorders: (callback) => ipcRenderer.on('toggle-hotspot-borders', (_event, visible) => callback(visible)),
-
-  /**
-   * Sends a request to the main process to export images of misidentified abilities
-   * that were saved via the "Take Snapshot" feature.
-   */
-  exportFailedSamples: () => ipcRenderer.send('export-failed-samples'),
-
-  /**
-   * Registers a callback function to be invoked when the main process sends status updates
-   * about the "Export Failed Samples" operation.
-   * @param {(status: ExportFailedSamplesStatus) => void} callback - The function to call with the export status.
-   */
-  onExportFailedSamplesStatus: (callback) => ipcRenderer.on('export-failed-samples-status', (_event, status) => callback(status)),
-
-  /**
-   * (For Overlay Renderer) Sends the user's "My Model" selection (a hero model whose abilities
-   * might be prioritized for suggestions) to the main process.
-   * @param {MyModelSelectionData} data - Object containing heroOrder and dbHeroId of the selected model.
-   */
-  selectMyModel: (data) => ipcRenderer.send('select-my-model', data),
-
-  /**
-   * (For Overlay Renderer) Registers a callback function to be invoked when the "My Model"
-   * selection is changed in the main process, so the overlay UI can update.
-   * @param {(data: { selectedModelHeroOrder: number | null }) => void} callback - The function to call with the updated selection.
-   */
-  onMyModelSelectionChanged: (callback) => ipcRenderer.on('my-model-selection-changed', (_event, data) => callback(data)),
-
-  /**
-   * (For Overlay Renderer) Sends the user's own hero selection for the current draft to the main process.
-   * This helps tailor statistics and suggestions.
-   * @param {MySpotForDraftingSelectionData} data - Object containing heroOrder (original 0-9 list index) and dbHeroId.
-   */
-  selectMySpotForDrafting: (data) => ipcRenderer.send('select-my-spot-for-drafting', data),
-
-  /**
-   * (For Overlay Renderer) Registers a callback function to be invoked when the "My Spot for Drafting"
-   * selection is changed in the main process, so the overlay UI can update.
-   * @param {(data: { selectedHeroOrderForDrafting: number | null, selectedHeroDbId: number | null }) => void} callback - The function to call with the updated selection.
-   */
-  onMySpotForDraftingSelectionChanged: (callback) => ipcRenderer.on('my-spot-for-drafting-selection-changed', (_event, data) => callback(data)),
-
-  /**
-  * Sends a request to the main process to open the given URL in the default external browser.
-  * @param {string} url - The URL to open.
-  */
-  openExternalLink: (url) => ipcRenderer.send('open-external-link', url),
-
-  /**
-   * Registers a callback to receive the initial system theme setting when the window loads.
-   * This is pushed by the main process.
-   * @param {(settings: {shouldUseDarkColors: boolean}) => void} callback
-   */
-  onInitialSystemTheme: (callback) => ipcRenderer.on('initial-system-theme', (_event, settings) => callback(settings)),
-
-  /**
-   * Registers a callback function to be invoked when the system's theme preference
-   * is updated by the operating system.
-   * @param {(settings: {shouldUseDarkColors: boolean}) => void} callback
-   */
-  onSystemThemeUpdated: (callback) => ipcRenderer.on('system-theme-updated', (_event, settings) => callback(settings)),
-
-  /**
-   * Gets the current system theme settings on demand.
-   * @returns {Promise<{shouldUseDarkColors: boolean}>}
-   */
-  getCurrentSystemTheme: () => ipcRenderer.invoke('get-current-system-theme'),
-
-  /**
-   * Registers a callback function to be invoked when the main process sends status updates
-   * about the "Submit New Resolution Snapshot" operation.
-   * @param {(status: {message: string, error: boolean, inProgress: boolean}) => void} callback
-   */
-  onSubmitNewResolutionStatus: (callback) => ipcRenderer.on('submit-new-resolution-status', (_event, status) => callback(status)),
-
+  onAppUpdateNotification: (callback) => ipcRenderer.on('app-update-notification', (_event, updateInfo) => callback(updateInfo)),
   /**
    * Checks if the application is currently running in a packaged state.
    * @returns {Promise<boolean>} True if packaged, false otherwise.
    */
   isAppPackaged: () => ipcRenderer.invoke('is-app-packaged'),
 
+  // --- Main Window: Data & State ---
   /**
-   * Sends a request to the main process to zip and upload failed samples.
+   * Sends a request to the main process to scrape all data from Windrun.io.
+   */
+  scrapeAllWindrunData: () => ipcRenderer.send('scrape-all-windrun-data'),
+  /**
+   * Registers a callback for status updates during Windrun.io data scraping.
+   * The message can be a string or an object with a translation key and params.
+   * @param {(message: string | object) => void} callback - The function to call with the scrape status message.
+   */
+  onScrapeStatus: (callback) => ipcRenderer.on('scrape-status', (_event, message) => callback(message)),
+  /**
+   * Sends a request to get available screen resolutions from the configuration.
+   */
+  getAvailableResolutions: () => ipcRenderer.send('get-available-resolutions'),
+  /**
+   * Registers a callback for when the main process sends the list of available screen resolutions.
+   * @param {(resolutions: string[]) => void} callback - Function to call with an array of resolution strings.
+   */
+  onAvailableResolutions: (callback) => ipcRenderer.on('available-resolutions', (_event, resolutions) => callback(resolutions)),
+  /**
+   * Registers a callback for when the main process sends the last updated date for scraped data.
+   * @param {(dateStr: string | null) => void} callback - Function to call with the formatted date string or null.
+   */
+  onLastUpdatedDate: (callback) => ipcRenderer.on('last-updated-date', (_event, dateStr) => callback(dateStr)),
+  /**
+   * Gets the primary display's current resolution and scale factor.
+   * @returns {Promise<{width: number, height: number, scaleFactor: number, resolutionString: string} | null>}
+   */
+  getSystemDisplayInfo: () => ipcRenderer.invoke('get-system-display-info'),
+
+  // --- Main Window: UI & Interaction ---
+  /**
+   * Registers a callback for requests from the main process to enable/disable UI elements.
+   * @param {(isDisabled: boolean) => void} callback - Function to call with a boolean indicating UI disable state.
+   */
+  onSetUIDisabledState: (callback) => ipcRenderer.on('set-ui-disabled-state', (_event, isDisabled) => callback(isDisabled)),
+  /**
+   * Registers a callback for when the overlay window is closed, to reset the main window UI.
+   * @param {() => void} callback - The function to call.
+   */
+  onOverlayClosedResetUI: (callback) => ipcRenderer.on('overlay-closed-reset-ui', () => callback()),
+  /**
+  * Sends a request to open a URL in the default external browser.
+  * @param {string} url - The URL to open.
+  */
+  openExternalLink: (url) => ipcRenderer.send('open-external-link', url),
+
+  // --- Main Window: Theme Management ---
+  /**
+   * Registers a callback to receive the initial system theme setting.
+   * @param {(settings: {shouldUseDarkColors: boolean}) => void} callback
+   */
+  onInitialSystemTheme: (callback) => ipcRenderer.on('initial-system-theme', (_event, settings) => callback(settings)),
+  /**
+   * Registers a callback for updates to the system's theme preference.
+   * @param {(settings: {shouldUseDarkColors: boolean}) => void} callback
+   */
+  onSystemThemeUpdated: (callback) => ipcRenderer.on('system-theme-updated', (_event, settings) => callback(settings)),
+  /**
+   * Gets the current system theme settings on demand.
+   * @returns {Promise<{shouldUseDarkColors: boolean}>}
+   */
+  getCurrentSystemTheme: () => ipcRenderer.invoke('get-current-system-theme'),
+
+  // --- Main Window: Localization ---
+  /**
+   * Notifies the main process of a language change.
+   * @param {string} langCode - The new language code (e.g., "en", "ru").
+   */
+  changeLanguage: (langCode) => ipcRenderer.send('change-language', langCode),
+  /**
+   * Registers a callback to receive translation data.
+   * Triggered on initial load and on language change.
+   * @param {(translations: object) => void} callback
+   */
+  onTranslationsLoaded: (callback) => ipcRenderer.on('translations-loaded', (_event, translations) => callback(translations)),
+
+  // --- Main Window: Feedback & Layout Submission ---
+  /**
+   * Sends a request to export images of misidentified abilities.
+   */
+  exportFailedSamples: () => ipcRenderer.send('export-failed-samples'),
+  /**
+   * Registers a callback for status updates on the "Export Failed Samples" operation.
+   * @param {(status: ExportFailedSamplesStatus) => void} callback - Function to call with export status.
+   */
+  onExportFailedSamplesStatus: (callback) => ipcRenderer.on('export-failed-samples-status', (_event, status) => callback(status)),
+  /**
+   * Sends a request to zip and upload failed samples.
    */
   uploadFailedSamples: () => ipcRenderer.send('upload-failed-samples'),
-
   /**
    * Registers a callback for status updates during failed samples upload.
    * @param {(status: {message: string, error: boolean, inProgress: boolean}) => void} callback
    */
   onUploadFailedSamplesStatus: (callback) => ipcRenderer.on('upload-failed-samples-status', (_event, status) => callback(status)),
-
   /**
-   * Gets the primary display's current resolution and scale factor.
-   * @returns {Promise<{width: number, height: number, scaleFactor: number, resolutionString: string}>}
-   */
-  getSystemDisplayInfo: () => ipcRenderer.invoke('get-system-display-info'),
-
-  /**
-   * Requests that the main process take a screenshot for the new layout preview.
+   * Requests the main process to take a screenshot for new layout preview.
    */
   requestNewLayoutScreenshot: () => ipcRenderer.send('request-new-layout-screenshot'),
-
   /**
-   * Registers a callback for when the main process sends back the captured screenshot data.
-   * @param {(dataUrl: string | null) => void} callback
+   * Registers a callback for when the main process sends captured screenshot data.
+   * @param {(dataUrl: string | null) => void} callback - Function to call with screenshot data URL or null.
    */
   onNewLayoutScreenshot: (callback) => ipcRenderer.on('new-layout-screenshot-taken', (_event, dataUrl) => callback(dataUrl)),
-
   /**
-   * Sends the confirmed screenshot (as a data URL) to the main process for API submission.
-   * @param {string} dataUrl - The screenshot data URL to submit.
+   * Sends a confirmed screenshot (as data URL) to the main process for API submission.
+   * @param {string} dataUrl - The screenshot data URL.
    */
   submitConfirmedLayout: (dataUrl) => ipcRenderer.send('submit-confirmed-layout', dataUrl),
-
-  // --- Localization ---
   /**
-   * Notifies the main process that the user has changed the language.
-   * @param {string} langCode - The new language code (e.g., "en", "ru").
+   * Registers a callback for status updates on "Submit New Resolution Snapshot" operation.
+   * @param {(status: {message: string, error: boolean, inProgress: boolean}) => void} callback
    */
-  changeLanguage: (langCode) => ipcRenderer.send('change-language', langCode),
+  onSubmitNewResolutionStatus: (callback) => ipcRenderer.on('submit-new-resolution-status', (_event, status) => callback(status)),
 
+  // --- Overlay Window API ---
   /**
-   * Registers a callback to receive translation data from the main process.
-   * This is triggered on initial load and when the language is changed.
-   * @param {(translations: object) => void} callback
+   * Sends a request to activate the overlay for a specified screen resolution.
+   * @param {string} resolution - The selected screen resolution string (e.g., "1920x1080").
    */
-  onTranslationsLoaded: (callback) => ipcRenderer.on('translations-loaded', (_event, translations) => callback(translations)),
-
+  activateOverlay: (resolution) => ipcRenderer.send('activate-overlay', resolution),
   /**
-   * Requests initial data (including translations) from the main process.
+   * Registers a callback for data sent from the main process to the overlay (e.g., scan results, config).
+   * @param {(data: object) => void} callback - Function to call with overlay data.
    */
-  getInitialData: () => ipcRenderer.send('get-initial-data'),
+  onOverlayData: (callback) => ipcRenderer.on('overlay-data', (_event, data) => callback(data)),
+  /**
+   * Sends a request to close the overlay window.
+   */
+  closeOverlay: () => ipcRenderer.send('close-overlay'),
+  /**
+   * Sends a request to set mouse event pass-through for the overlay window.
+   * @param {boolean} ignore - True to ignore mouse events (pass-through), false to capture.
+   * @param {boolean} [forward=true] - (Windows specific) Whether to forward mouse move messages when ignored.
+   */
+  setOverlayMouseEvents: (ignore, forward = true) => ipcRenderer.send('set-overlay-mouse-ignore', ignore, { forward }),
+  /**
+   * Sends a request to execute a screen scan from the overlay.
+   * @param {string} resolution - Target screen resolution for the scan.
+   * @param {number | null} selectedHeroOrder - Original list order (0-9) of the hero being drafted for.
+   * @param {boolean} isInitialScan - True if this is the first scan after overlay activation.
+   */
+  executeScanFromOverlay: (resolution, selectedHeroOrder, isInitialScan) => ipcRenderer.send('execute-scan-from-overlay', resolution, selectedHeroOrder, isInitialScan),
+  /**
+   * Registers a callback for scan results or errors, typically for the main window before detailed processing.
+   * @param {(results: object) => void} callback - Function to call with scan results/error object.
+   */
+  onScanResults: (callback) => ipcRenderer.on('scan-results', (_event, results) => callback(results)),
+  /**
+   * Sends a request to take a snapshot of ability icons for feedback.
+   */
+  takeSnapshot: () => ipcRenderer.send('take-snapshot'),
+  /**
+   * Registers a callback for the status of a snapshot operation.
+   * @param {(status: SnapshotStatus) => void} callback - Function to call with snapshot status.
+   */
+  onSnapshotTaken: (callback) => ipcRenderer.on('snapshot-taken-status', (_event, status) => callback(status)),
+  /**
+   * Registers a callback for requests to toggle hotspot border visibility (e.g., for snapshots).
+   * @param {(visible: boolean) => void} callback - Function to call with visibility state.
+   */
+  onToggleHotspotBorders: (callback) => ipcRenderer.on('toggle-hotspot-borders', (_event, visible) => callback(visible)),
+  /**
+   * Sends the user's "My Model" selection to the main process.
+   * @param {MyModelSelectionData} data - Data of the selected model.
+   */
+  selectMyModel: (data) => ipcRenderer.send('select-my-model', data),
+  /**
+   * Registers a callback for when "My Model" selection changes in the main process.
+   * @param {(data: { selectedModelHeroOrder: number | null }) => void} callback - Function to call with updated selection.
+   */
+  onMyModelSelectionChanged: (callback) => ipcRenderer.on('my-model-selection-changed', (_event, data) => callback(data)),
+  /**
+   * Sends the user's hero selection for the current draft to the main process.
+   * @param {MySpotForDraftingSelectionData} data - Data of the hero selected for drafting.
+   */
+  selectMySpotForDrafting: (data) => ipcRenderer.send('select-my-spot-for-drafting', data),
+  /**
+   * Registers a callback for when "My Spot for Drafting" selection changes in the main process.
+   * @param {(data: { selectedHeroOrderForDrafting: number | null, selectedHeroDbId: number | null }) => void} callback
+   */
+  onMySpotForDraftingSelectionChanged: (callback) => ipcRenderer.on('my-spot-for-drafting-selection-changed', (_event, data) => callback(data)),
 });

@@ -1,5 +1,8 @@
 {
     "appTitle": "Dota 2 Ability Draft Plus",
+    "terms": {
+        "displayScale": "Display Scale"
+    },
     "controlPanel": {
         "header": "Dota 2 Ability Draft Plus - Control Panel",
         "theme": {
@@ -17,7 +20,9 @@
             "resolutionsLoaded": "System resolution {res} automatically selected.",
             "resolutionsMismatch": "Your resolution {systemRes} is not supported. Defaulting to {defaultRes}.",
             "resolutionsNone": "No supported resolutions found. Please submit your layout.",
-            "errorLoadingResolutions": "Error loading resolutions: {error}"
+            "errorLoadingResolutions": "Error loading resolutions: {error}",
+            "selectResolutionFirst": "Please select a resolution first.",
+            "requestingWindrunUpdate": "Requesting Windrun update"
         },
         "activation": {
             "title": "Overlay Activation",
@@ -33,7 +38,10 @@
             "button": "Submit Current Screen Layout",
             "statusTakingSnapshot": "Hiding window and taking snapshot...",
             "statusSubmitting": "Submitting layout...",
-            "statusCancelled": "Resolution submission cancelled."
+            "statusCancelled": "Resolution submission cancelled.",
+            "statusCaptured": "Resolution captured.",
+            "statusRetaking": "Hiding window and re-taking snapshot...",
+            "submitConfirm": "This will take a full-screen snapshot for {resolutionString} {scaleFactorString} to submit your current screen layout.\n\nPlease ensure:\n1. Dota 2 is running in the Ability Draft phase.\n2. The game is at the resolution you want to add (${resolutionString}).\n\nMove mouse aside after clicking OK for a clean snapshot.\n\nProceed with snapshot and submission?"
         },
         "data": {
             "title": "Data Management",
@@ -44,11 +52,15 @@
         },
         "feedback": {
             "title": "Feedback & Diagnostics",
+            "uploadConfirmTitle": "Send Failed Samples",
+            "uploadConfirmBody": "This will zip all images in your 'failed-samples' directory and upload them for model improvement analysis.\n\nProceed with zipping and uploading?",
             "description": "If the ML model misidentifies abilities, use the \"Report Failed Recognition\" feature in the overlay. You can then send these snapshots to developer for model improvement.",
             "exportButton": "Export Failed Samples",
             "uploadButton": "Send Failed Samples",
             "shareButton": "Share Failed Samples",
-            "feedbackButton": "Share Feedback"
+            "feedbackButton": "Share Feedback",
+            "exportButtonPreparing": "Preparing Failed Samples Archive",
+            "exportButtonExporting": "Exporting Failed Samples Archive"
         },
         "footer": {
             "supportDev": "Support Developer",
@@ -56,7 +68,27 @@
         },
         "update": {
             "title": "Application Update",
-            "checkButton": "Check for Updates"
+            "checkButton": "Check for Updates",
+            "checking": "Checking update...",
+            "downloading": "Downloading update... {percent}%",
+            "downloadingNoProgress": "Downloading update...",
+            "errorOccurred": "An error occurred while checking for updates",
+            "githubUnreachableError": "Couldn't reach GitHub for updates. Please try again later.",
+            "networkError": "Couldn't connect to the update server. Please check your internet connection and try again.",
+            "unknownError": "Unknown error.",
+            "latestVersion": "You are on the latest version.",
+            "popup": {
+                "version": "Version {version} is available",
+                "releaseDate": "Released: {date}",
+                "noNotes": "No release notes available.",
+                "updateAvailable": "New Update Available",
+                "noDetails": "Further details will be shown upon download.",
+                "download": "Download",
+                "later": "Later",
+                "readyToInstall": "Update {version} Ready",
+                "restartToInstall": "The application will restart to install the update.",
+                "restartInstall": "Restart & Install"
+            }
         },
         "popups": {
             "resolutionMismatch": {

@@ -4,489 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline'">
+        content="default-src 'self' data:; script-src 'self'; style-src 'self'">
     <title data-i18n="controlPanel.header">Dota 2 Ability Draft Plus - Control Panel</title>
-    <style>
-        /* CSS Variables for Theming */
-        :root {
-            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-
-            /* Light Theme (Default) */
-            --bg-color: #f4f4f4;
-            --text-color: #333;
-            --text-color-muted: #555;
-            --header-color: #2c3e50;
-            --section-bg: #fff;
-            --section-shadow: rgba(0, 0, 0, 0.1);
-            --hr-bg: #ddd;
-            --status-bg: #e9ecef;
-            --status-border: #7f8c8d;
-            --footer-bg: #e9ecef;
-            --footer-border-top: #ddd;
-
-            --button-default-bg: #3498db;
-            --button-default-hover-bg: #2980b9;
-            --button-default-text: white;
-            --button-disabled-bg: #bdc3c7;
-            --button-disabled-opacity: 0.7;
-
-            --button-activate-bg: #2ecc71;
-            --button-activate-hover-bg: #27ae60;
-            --button-export-bg: #f39c12;
-            --button-export-hover-bg: #e67e22;
-            --button-feedback-bg: #9b59b6;
-            --button-feedback-hover-bg: #8e44ad;
-            --button-samples-bg: #9b59b6;
-            --button-samples-hover-bg: #8e44ad;
-
-            --button-support-bg: #292F3F;
-            --button-support-hover-bg: #3d4455;
-            --button-support-border: #1a1e28;
-            --button-support-text: white;
-
-
-            --select-bg: white;
-            --select-border: #ccc;
-            --select-text: #333;
-
-            --theme-option-text: #444;
-            --toggle-bg-inactive: #ccc;
-            --toggle-bg-active: var(--button-activate-bg);
-            /* Or a specific theme color */
-            --toggle-slider-bg: white;
-            --toggle-disabled-opacity: 0.5;
-        }
-
-        body.dark-mode {
-            /* Dark Theme Overrides */
-            --bg-color: #23272a;
-            --text-color: #dcddde;
-            --text-color-muted: #b9bbbe;
-            --header-color: #ffffff;
-            --section-bg: #2c2f33;
-            --section-shadow: rgba(0, 0, 0, 0.4);
-            /* Darker shadow */
-            --hr-bg: #4f545c;
-            --status-bg: #2c2f33;
-            --status-border: #4f545c;
-            --footer-bg: #23272a;
-            --footer-border-top: #2c2f33;
-
-            --button-default-bg: #5865f2;
-            /* Discord Blurple */
-            --button-default-hover-bg: #4f5bda;
-            --button-disabled-bg: #4f545c;
-
-            --button-activate-bg: #43b581;
-            /* Discord Green */
-            --button-activate-hover-bg: #3aa570;
-            --button-export-bg: #faa61a;
-            --button-export-hover-bg: #f0960a;
-            --button-feedback-bg: #5865f2;
-            --button-feedback-hover-bg: #4f5bda;
-            --button-samples-bg: #5865f2;
-            --button-samples-hover-bg: #4f5bda;
-
-            --button-support-bg: #4f545c;
-            --button-support-hover-bg: #5a6066;
-            --button-support-border: #40444b;
-
-            --select-bg: #40444b;
-            --select-border: #2d2f33;
-            --select-text: #dcddde;
-
-            --theme-option-text: #b9bbbe;
-            --toggle-bg-inactive: #72767d;
-            /* Darker inactive toggle */
-            --toggle-bg-active: var(--button-activate-bg);
-            --toggle-slider-bg: #b9bbbe;
-            /* Lighter slider for dark bg */
-        }
-
-        .header-controls {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-
-        .language-switcher {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .language-switcher label {
-            margin-bottom: 0;
-            font-weight: normal;
-            font-size: 0.9em;
-            color: var(--theme-option-text);
-        }
-
-        /* Apply variables to existing styles */
-        body {
-            font-family: var(--font-family);
-            margin: 0;
-            padding: 0;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            line-height: 1.6;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-            transition: background-color 0.2s ease-out, color 0.2s ease-out;
-        }
-
-        header {
-            padding: 15px 20px;
-            /* Adjusted padding */
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--footer-border-top);
-            /* Consistent separator */
-            transition: border-bottom-color 0.2s ease-out;
-        }
-
-        main {
-            padding: 20px;
-            flex-grow: 1;
-        }
-
-        h1 {
-            color: var(--header-color);
-            text-align: left;
-            margin: 0;
-            font-size: 1.8em;
-            /* Slightly larger */
-            flex-grow: 1;
-        }
-
-
-        section {
-            background-color: var(--section-bg);
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 5px;
-            box-shadow: 0 2px 4px var(--section-shadow);
-            transition: background-color 0.2s ease-out, box-shadow 0.2s ease-out;
-        }
-
-        button {
-            padding: 10px 15px;
-            background-color: var(--button-default-bg);
-            color: var(--button-default-text) !important;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 1em;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            transition: background-color 0.15s ease-out;
-        }
-
-        button:hover {
-            background-color: var(--button-default-hover-bg);
-        }
-
-        button:disabled {
-            background-color: var(--button-disabled-bg) !important;
-            cursor: not-allowed;
-            opacity: var(--button-disabled-opacity);
-        }
-
-        /* Specific button background colors using variables */
-        #update-all-data-btn {
-            background-color: var(--button-default-bg);
-        }
-
-        #update-all-data-btn:hover {
-            background-color: var(--button-default-hover-bg);
-        }
-
-        #activate-overlay-btn {
-            background-color: var(--button-activate-bg);
-        }
-
-        #activate-overlay-btn:hover {
-            background-color: var(--button-activate-hover-bg);
-        }
-
-        #export-failed-samples-btn {
-            background-color: var(--button-export-bg);
-        }
-
-        #export-failed-samples-btn:hover {
-            background-color: var(--button-export-hover-bg);
-        }
-
-        #share-feedback-ext-btn {
-            background-color: var(--button-feedback-bg);
-        }
-
-        #share-feedback-ext-btn:hover {
-            background-color: var(--button-feedback-hover-bg);
-        }
-
-        #share-samples-ext-btn {
-            background-color: var(--button-samples-bg);
-        }
-
-        #share-samples-ext-btn:hover {
-            background-color: var(--button-samples-hover-bg);
-        }
-
-        .support-button {
-            background-color: var(--button-support-bg);
-            border: 1px solid var(--button-support-border);
-            color: var(--button-support-text) !important;
-        }
-
-        .support-button:hover {
-            background-color: var(--button-support-hover-bg);
-        }
-
-        .button-icon {
-            width: 20px;
-            height: 20px;
-        }
-
-        select {
-            padding: 8px;
-            margin-bottom: 10px;
-            border-radius: 4px;
-            border: 1px solid var(--select-border);
-            background-color: var(--select-bg);
-            color: var(--select-text);
-            transition: background-color 0.2s ease-out, color 0.2s ease-out, border-color 0.2s ease-out;
-        }
-
-        hr {
-            border: 0;
-            height: 1px;
-            background: var(--hr-bg);
-            margin: 20px 0;
-        }
-
-        p {
-            margin-bottom: 10px;
-        }
-
-        .status {
-            padding: 10px;
-            background-color: var(--status-bg);
-            border-left: 4px solid var(--status-border);
-            margin-top: 15px;
-            border-radius: 4px;
-            transition: background-color 0.2s ease-out, border-left-color 0.2s ease-out;
-        }
-
-        .last-updated {
-            font-size: 0.9em;
-            color: var(--text-color-muted);
-        }
-
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-
-        .button-group-inline {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .app-footer {
-            padding: 20px;
-            text-align: center;
-            background-color: var(--footer-bg);
-            border-top: 1px solid var(--footer-border-top);
-            margin-top: auto;
-            transition: background-color 0.2s ease-out, border-top-color 0.2s ease-out;
-        }
-
-        .support-buttons-container {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-        }
-
-        /* Theme Switcher Styles */
-        .theme-switcher {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            gap: 5px;
-        }
-
-        .theme-option {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.9em;
-            color: var(--theme-option-text);
-        }
-
-        .theme-option label {
-            margin-bottom: 0;
-            font-weight: normal;
-        }
-
-        /* Adjust label style within theme option */
-        .manual-theme-controls .theme-label {
-            font-size: 0.9em;
-            color: var(--text-color-muted);
-        }
-
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 44px;
-            /* Slightly smaller */
-            height: 22px;
-        }
-
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: var(--toggle-bg-inactive);
-            transition: .3s;
-            border-radius: 22px;
-        }
-
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 16px;
-            width: 16px;
-            left: 3px;
-            bottom: 3px;
-            background-color: var(--toggle-slider-bg);
-            transition: .3s;
-            border-radius: 50%;
-        }
-
-        input:checked+.slider {
-            background-color: var(--toggle-bg-active);
-        }
-
-        input:focus+.slider {
-            box-shadow: 0 0 1px var(--toggle-bg-active);
-        }
-
-        input:checked+.slider:before {
-            transform: translateX(22px);
-        }
-
-        .manual-theme-controls.disabled .switch,
-        .manual-theme-controls.disabled .theme-label {
-            opacity: var(--toggle-disabled-opacity);
-        }
-
-        .manual-theme-controls.disabled .switch input {
-            pointer-events: none;
-            /* Disable clicks on the input itself */
-            cursor: not-allowed;
-        }
-
-        .manual-theme-controls.disabled .slider {
-            cursor: not-allowed;
-        }
-
-        .custom-popup {
-            position: fixed;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.65);
-            display: none;
-            /* Controlled by JS adding/removing .visible */
-            justify-content: center;
-            align-items: center;
-            z-index: 1050;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.25s ease-in-out, visibility 0s linear 0.25s;
-        }
-
-        .custom-popup.visible {
-            display: flex;
-            opacity: 1;
-            visibility: visible;
-            transition: opacity 0.25s ease-in-out;
-        }
-
-        .custom-popup-content {
-            /* Content box for the mismatch popup */
-            background-color: var(--section-bg);
-            padding: 25px 35px;
-            border-radius: 8px;
-            box-shadow: 0 6px 25px rgba(0, 0, 0, 0.3);
-            text-align: center;
-            max-width: 450px;
-            /* Adjusted width */
-            color: var(--text-color);
-            border: 1px solid var(--hr-bg);
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .custom-popup-message-text {
-            /* Class for the message paragraph */
-            margin-bottom: 10px;
-            /* Adjusted */
-            line-height: 1.6;
-            font-size: 1.0em;
-            /* Adjusted */
-        }
-
-        .custom-popup-buttons {
-            /* Container for the popup's own buttons */
-            display: flex;
-            justify-content: space-evenly;
-            gap: 15px;
-        }
-
-        .custom-popup-buttons button {
-            /* Styling for buttons inside this specific popup */
-            padding: 10px 18px;
-            font-weight: 500;
-        }
-
-        #custom-popup-submit-layout-btn {
-            /* Specific button in mismatch popup */
-            background-color: var(--button-activate-bg);
-        }
-
-        #custom-popup-submit-layout-btn:hover {
-            background-color: var(--button-activate-hover-bg);
-        }
-
-        #custom-popup-change-res-btn {
-            /* Specific button in mismatch popup */
-            background-color: var(--button-default-bg);
-        }
-
-        #custom-popup-change-res-btn:hover {
-            background-color: var(--button-default-hover-bg);
-        }
-    </style>
+    <link rel="stylesheet" href="./styles.css">
 </head>
 
 <body>
@@ -535,10 +55,8 @@
                 <select id="resolution-select" aria-describedby="resolution-help">
                     <option value="" data-i18n="controlPanel.status.loadingResolutions">Loading resolutions...</option>
                 </select>
-                <p id="resolution-help" style="font-size: 0.85em; color: var(--text-color-muted);"
-                    data-i18n="controlPanel.activation.helpText">This resolution must
-                    match your Dota 2
-                    game setting.</p>
+                <p id="resolution-help" data-i18n="controlPanel.activation.helpText">This resolution must
+                    match your Dota 2 game setting.</p>
             </div>
             <p data-i18n="controlPanel.activation.description">Activate the overlay when Dota 2 is in the Ability Draft
                 phase.</p>
@@ -556,7 +74,7 @@
                 resolution you wish to add.</p>
             <button id="submit-new-resolution-btn" data-i18n="controlPanel.newResolution.button">Submit Current Screen
                 Layout</button>
-            <p id="new-resolution-status" class="status" style="display: none; margin-top: 10px;"></p>
+            <p id="new-resolution-status" class="status"></p>
         </section>
 
         <hr>
@@ -578,7 +96,7 @@
                 <button id="check-for-updates-btn" data-i18n="controlPanel.update.checkButton">Check for
                     Updates</button>
             </div>
-            <p id="update-status-message" class="status" style="display: none; margin-top: 10px;"></p>
+            <p id="update-status-message" class="status"></p>
         </section>
 
         <hr>
@@ -618,10 +136,9 @@
             <h3 data-i18n="controlPanel.popups.screenshotPreview.title">Screenshot Preview</h3>
             <p data-i18n="controlPanel.popups.screenshotPreview.message">Is this screenshot of your draft screen
                 correct?</p>
-            <img id="screenshot-preview-image" src="" alt="Screenshot Preview"
-                style="max-width: 100%; max-height: 50vh; border: 1px solid #555; margin-top: 10px;" />
-            <div class="custom-popup-buttons" style="margin-top: 15px;">
-                <button id="screenshot-submit-btn" class="overlay-button"
+            <img id="screenshot-preview-image" src="" alt="Screenshot Preview" />
+            <div class="custom-popup-buttons">
+                <button id="screenshot-submit-btn"
                     data-i18n="controlPanel.popups.screenshotPreview.submitBtn">Submit</button>
                 <button id="screenshot-retake-btn" class="overlay-button"
                     data-i18n="controlPanel.popups.screenshotPreview.retakeBtn">Retake Screencapture</button>
@@ -634,8 +151,7 @@
             <h3 id="update-popup-title" data-i18n="controlPanel.popups.updateAvailable.title">Update Available</h3>
             <p id="update-popup-version"></p>
             <p id="update-popup-release-date"></p>
-            <div id="update-popup-notes"
-                style="text-align: left; max-height: 200px; overflow-y: auto; background: var(--bg-color); padding: 10px; border-radius: 4px; margin-bottom: 15px;">
+            <div id="update-popup-notes">
             </div>
             <div class="custom-popup-buttons">
                 <button id="update-popup-download-btn"
@@ -659,7 +175,7 @@
         </div>
     </footer>
 
-    <script src="./renderer.js"></script>
+    <script type="module" src="./renderer.js"></script>
 </body>
 
 </html>
