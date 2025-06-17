@@ -1,6 +1,6 @@
 {
   "name": "ability-draft-plus",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Dota 2 Ability Draft Overlay with ML-powered ability recognition",
   "main": "main.js",
   "scripts": {
@@ -85,6 +85,10 @@
       {
         "from": "resources/images",
         "to": "resources/images"
+      },
+      {
+        "from": "locales",
+        "to": "locales"
       }
     ],
     "asar": true,

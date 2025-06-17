@@ -1,4 +1,4 @@
-/* === Global Styles === */
+/* === Global Styles & Resets === */
 body {
     margin: 0;
     padding: 0;
@@ -10,7 +10,7 @@ body {
     color: #e0e0e0;
 }
 
-/* === Helper for Visually Hidden (Accessibility) === */
+/* === Accessibility Helpers === */
 .visually-hidden {
     position: absolute;
     width: 1px;
@@ -23,23 +23,7 @@ body {
     border: 0;
 }
 
-/* === Hotspot Base Styles === */
-.ability-hotspot,
-.hero-model-hotspot,
-.synergy-suggestion-hotspot {
-    position: absolute;
-    box-sizing: border-box;
-}
-
-.ability-hotspot.snapshot-hidden-border,
-.hero-model-hotspot.snapshot-hidden-border,
-.synergy-suggestion-hotspot.snapshot-hidden-border {
-    border: none !important;
-    animation: none !important;
-    box-shadow: none !important;
-}
-
-/* --- Animations --- */
+/* === Keyframe Animations === */
 @keyframes shimmerGreen {
     0% {
         box-shadow: 0 0 3px 0px rgba(50, 255, 50, 0.7), inset 0 0 2px 0px rgba(50, 255, 50, 0.5);
@@ -91,6 +75,65 @@ body {
     }
 }
 
+/* === Layout Containers === */
+
+/* --- Top-Right UI Container --- */
+#top-right-ui-container {
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 12px;
+}
+
+#controls-container {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-end;
+    background-color: rgba(30, 32, 35, 0.7);
+    padding: 8px;
+    border-radius: 6px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    opacity: 0.8;
+    transition: opacity 0.2s ease-in-out, background-color 0.2s ease-in-out;
+}
+
+#controls-container:hover {
+    opacity: 1;
+    background-color: rgba(40, 42, 45, 0.85);
+}
+
+/* --- OP Combinations Window Container --- */
+#op-combinations-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+/* === Component: Hotspots === */
+
+/* --- Base Hotspot Styles --- */
+.ability-hotspot,
+.hero-model-hotspot,
+.synergy-suggestion-hotspot {
+    position: absolute;
+    box-sizing: border-box;
+}
+
+/* --- Hotspot Snapshot Utility --- */
+/* Used to hide borders/animations for snapshot functionality */
+.ability-hotspot.snapshot-hidden-border,
+.hero-model-hotspot.snapshot-hidden-border,
+.synergy-suggestion-hotspot.snapshot-hidden-border {
+    border: none !important;
+    animation: none !important;
+    box-shadow: none !important;
+}
+
 /* === Animated Hotspot Styles === */
 .top-tier-ability {
     border: 1px solid rgba(80, 255, 80, 0.8);
@@ -111,18 +154,19 @@ body {
 }
 
 /* === Static Highlight Hotspot Styles === */
+/* Applied to indicate user's own hero model, overrides other border/shadow styles */
 .hero-model-hotspot.is-my-model {
     border: 3px solid #00BCD4 !important;
     box-shadow: 0 0 10px 3px rgba(0, 188, 212, 0.6) !important;
     border-radius: 4px;
 }
 
+/* Applied to indicate user's selected ability, overrides other border/shadow styles */
 .selected-ability-hotspot.my-spot-selected-ability {
     border: 3px solid #8BC34A !important;
     box-shadow: 0 0 10px 4px rgba(139, 195, 74, 0.7) !important;
     border-radius: 4px;
 }
-
 
 /* === Tooltip Styles === */
 .tooltip {
@@ -187,37 +231,8 @@ body {
     color: #82c995;
 }
 
-/* === UI Controls Container (Top-Right) === */
-#top-right-ui-container {
-    position: fixed;
-    top: 15px;
-    right: 15px;
-    z-index: 10000;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 12px;
-}
-
-#controls-container {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    align-items: flex-end;
-    background-color: rgba(30, 32, 35, 0.7);
-    padding: 8px;
-    border-radius: 6px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-    opacity: 0.8;
-    transition: opacity 0.2s ease-in-out, background-color 0.2s ease-in-out;
-}
-
-#controls-container:hover {
-    opacity: 1;
-    background-color: rgba(40, 42, 45, 0.85);
-}
-
-/* === General Button Styles === */
+/* === Component: Buttons === */
+/* --- General Overlay Button Styles --- */
 .overlay-button {
     background-color: rgba(55, 60, 65, 0.8);
     color: #dce0e4;
@@ -252,7 +267,7 @@ body {
     cursor: not-allowed;
 }
 
-/* Specific button color overrides */
+/* --- Specific Button Color Overrides (ID-based) --- */
 #initial-scan-btn.overlay-button {
     background-color: rgba(0, 128, 255, 0.7);
     border-color: rgba(0, 100, 200, 0.9);
@@ -303,8 +318,7 @@ body {
     background-color: rgba(243, 156, 18, 0.9);
 }
 
-
-/* === "My Model" and "My Spot" Button Styles === */
+/* --- "My Model" & "My Spot" Button Styles --- */
 .my-model-btn,
 .change-my-model-btn,
 .my-spot-btn-original,
@@ -320,7 +334,7 @@ body {
     text-align: center;
     line-height: 1.2;
     padding: 4px 8px;
-    /* Added padding for better spacing */
+    /* Base padding, can be overridden by specific types */
 }
 
 .my-model-btn.left-side,
@@ -340,7 +354,6 @@ body {
     font-weight: normal;
 }
 
-
 .my-model-btn:hover,
 .change-my-model-btn:hover,
 .my-spot-btn-original:hover,
@@ -348,6 +361,7 @@ body {
     opacity: 1;
 }
 
+/* Specific styling when these are also overlay buttons */
 .my-model-btn.overlay-button {
     background-color: rgba(0, 188, 212, 0.7);
     border-color: rgba(0, 150, 170, 0.9);
@@ -392,8 +406,8 @@ body {
     background-color: rgba(46, 204, 113, 1);
 }
 
-
-/* === Custom Popups === */
+/* === Component: Popups === */
+/* --- Custom Popup (Modal Style) --- */
 .custom-popup {
     position: fixed;
     left: 0;
@@ -475,7 +489,7 @@ body {
     background-color: rgba(114, 118, 125, 0.9);
 }
 
-/* === Status Popups (Bottom-Right) === */
+/* --- Status Popup (Toast Style) --- */
 .status-popup {
     position: fixed;
     bottom: 15px;
@@ -492,13 +506,7 @@ body {
     max-width: 300px;
 }
 
-/* === OP Combinations Window === */
-#op-combinations-container {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-}
-
+/* === Component: OP Combinations Alert Window === */
 .op-alert-window {
     width: 260px;
     background-color: rgba(45, 30, 30, 0.9);
@@ -567,6 +575,7 @@ body {
     background-color: rgba(140, 90, 90, 0.9);
 }
 
+/* --- Report Confirmation Popup Buttons --- */
 #report-confirm-submit-btn {
     background-color: rgba(230, 126, 34, 0.7);
 }

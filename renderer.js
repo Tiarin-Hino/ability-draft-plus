@@ -1,4 +1,3 @@
-// --- DOM Element References ---
 const updateAllDataButton = document.getElementById('update-all-data-btn');
 const activateOverlayButton = document.getElementById('activate-overlay-btn');
 const resolutionSelect = document.getElementById('resolution-select');
@@ -11,7 +10,6 @@ const shareFeedbackExtButton = document.getElementById('share-feedback-ext-btn')
 const shareSamplesExtButton = document.getElementById('share-samples-ext-btn');
 const supportDevButton = document.getElementById('support-dev-btn');
 const supportWindrunButton = document.getElementById('support-windrun-btn');
-const themeToggleButton = document.getElementById('theme-toggle-btn');
 const systemThemeCheckbox = document.getElementById('system-theme-checkbox');
 const lightDarkToggle = document.getElementById('light-dark-toggle');
 const manualThemeControlsDiv = document.querySelector('.manual-theme-controls');
@@ -30,337 +28,69 @@ const languageSelect = document.getElementById('language-select');
 const checkForUpdatesButton = document.getElementById('check-for-updates-btn');
 const updateStatusMessageElement = document.getElementById('update-status-message');
 const updateAvailablePopup = document.getElementById('update-available-popup');
-const updatePopupTitle = document.getElementById('update-popup-title');
 const updatePopupVersion = document.getElementById('update-popup-version');
 const updatePopupReleaseDate = document.getElementById('update-popup-release-date');
 const updatePopupNotes = document.getElementById('update-popup-notes');
 const updatePopupDownloadBtn = document.getElementById('update-popup-download-btn');
 const updatePopupLaterBtn = document.getElementById('update-popup-later-btn');
 
-// --- Module State ---
-let selectedResolution = ''; // Stores the currently selected screen resolution
-const THEMES = { SYSTEM: 'system', LIGHT: 'light', DARK: 'dark' };
-let currentUserPreference = THEMES.SYSTEM; // User's explicit choice: 'system', 'light', or 'dark'
-let currentSystemPrefersDark = false; // Tracks the OS's preference
-let systemDisplayInfo = null; // To store system display info
-let currentScreenshotDataUrl = null; // To hold screenshot data for submission
-let currentTranslations = {}; // To hold the loaded translation object
+import * as themeManager from './src/renderer/themeManager.js';
+import * as translationUtils from './src/renderer/translationUtils.js';
+import * as uiUtils from './src/renderer/uiUtils.js';
+import * as initUtils from './src/renderer/initUtils.js';
+
+/** @type {string} Stores the currently selected screen resolution (e.g., "1920x1080"). */
+let selectedResolution = '';
+/** @type {object | null} Stores system display information (width, height, scaleFactor, resolutionString). */
+let systemDisplayInfo = null;
+/** @type {string | null} Holds the Data URL of the captured screenshot for layout submission. */
+let currentScreenshotDataUrl = null;
+/** @type {object} Holds the currently loaded translation strings for the UI. */
+let currentTranslations = {};
+
 
 // --- Translation Functions ---
-
-/**
- * Gets a nested property from an object using a dot-notation string.
- * @param {object} obj - The object to search.
- * @param {string} path - The dot-notation path (e.g., 'a.b.c').
- * @returns {any} The value at the path, or the path itself if not found.
- */
-function getNested(obj, path) {
-    if (!path) return path;
-    return path.split('.').reduce((acc, part) => acc && acc[part], obj);
-}
-
 /**
  * Translates a key into a string using the loaded translations.
  * @param {string} key - The translation key (e.g., 'controlPanel.status.ready').
  * @param {object} [params={}] - Optional parameters to replace in the string (e.g., { count: 5 }).
  * @returns {string} The translated and formatted string.
  */
-function translate(key, params = {}) {
-    let translated = getNested(currentTranslations, key);
-    if (typeof translated !== 'string') {
-        console.warn(`[i18n] Translation not found for key: ${key}`);
-        return key; // Fallback to the key itself
-    }
-    for (const [paramKey, paramValue] of Object.entries(params)) {
-        translated = translated.replace(new RegExp(`\\{${paramKey}\\}`, 'g'), paramValue);
-    }
-    return translated;
-}
+const translate = (key, params = {}) => translationUtils.translate(currentTranslations, key, params);
 
 /**
  * Applies all translations to the document based on data-i18n attributes.
  */
 function applyTranslations() {
-    document.querySelectorAll('[data-i18n]').forEach(element => {
-        const key = element.getAttribute('data-i18n');
-        const translation = translate(key);
-        if (translation !== key) {
-            // Check for date param to avoid overwriting the span
-            if (element.hasAttribute('data-i18n-date-param')) {
-                const dateSpan = element.querySelector(`#${element.getAttribute('data-i18n-date-param')}`);
-                if (dateSpan) {
-                    element.firstChild.textContent = translation.replace(/\{date\}/, '');
-                }
-            } else {
-                element.textContent = translation;
-            }
-        }
-    });
+    translationUtils.applyTranslationsToDOM(translate);
 }
 
-
-/**
- * Overrides setButtonsState to temporarily also consider other controls for a modal state.
- * This makes the resolution mismatch popup modal.
- * @param {boolean} disabled - True to disable controls, false to enable.
- */
-function setGlobalControlsDisabledForModal(disabled) {
-    const commonButtons = [
-        updateAllDataButton, activateOverlayButton, exportFailedSamplesButton,
-        shareFeedbackExtButton, uploadFailedSamplesButton, shareSamplesExtButton
-    ];
-    const otherControls = [
-        resolutionSelect, systemThemeCheckbox, lightDarkToggle,
-        supportDevButton, supportWindrunButton,
-        submitNewResolutionButton, languageSelect
-    ];
-
-    commonButtons.forEach(btn => {
-        if (btn) btn.disabled = disabled;
-    });
-    otherControls.forEach(control => {
-        if (control) control.disabled = disabled;
-    });
-
-    if (manualThemeControlsDiv) {
-        const isSystemTheme = systemThemeCheckbox ? systemThemeCheckbox.checked : true;
-        const shouldDisableManualTheme = disabled || isSystemTheme;
-        manualThemeControlsDiv.classList.toggle('disabled', shouldDisableManualTheme);
-        if (lightDarkToggle) {
-            lightDarkToggle.disabled = shouldDisableManualTheme;
-        }
-    }
-}
-
-/**
- * Shows the custom resolution mismatch pop-up.
- * @param {string} systemRes - The user's detected system resolution string.
- * @param {string} defaultSelectedRes - The resolution string that was defaulted to in the dropdown.
- */
-function showResolutionMismatchPopup(systemRes, defaultSelectedRes) {
-    if (customResolutionPopup && customPopupMessage) {
-        customPopupMessage.textContent = translate('controlPanel.popups.resolutionMismatch.message', {
-            systemRes,
-            defaultRes: defaultSelectedRes
-        });
-        customResolutionPopup.classList.add('visible');
-        setGlobalControlsDisabledForModal(true);
-    }
-}
-
-/**
- * Hides the custom resolution mismatch pop-up.
- */
-function hideResolutionMismatchPopup() {
-    if (customResolutionPopup) {
-        customResolutionPopup.classList.remove('visible');
-        setGlobalControlsDisabledForModal(false);
-    }
-}
-
-/**
- * Loads the user's theme choice from localStorage.
- */
-function loadUserPreference() {
-    const storedPreference = localStorage.getItem('themeUserChoice');
-    if (storedPreference && Object.values(THEMES).includes(storedPreference)) {
-        currentUserPreference = storedPreference;
-    } else {
-        currentUserPreference = THEMES.SYSTEM; // Default to system if nothing valid is stored
-    }
-    console.log(`[Theme] Loaded user preference: ${currentUserPreference}`);
-}
-
-/**
- * Saves the user's theme choice to localStorage.
- * @param {string} preference - The theme preference to save (THEMES.SYSTEM, THEMES.LIGHT, THEMES.DARK).
- */
-function saveUserPreference(preference) {
-    currentUserPreference = preference;
-    localStorage.setItem('themeUserChoice', preference);
-    console.log(`[Theme] Saved user preference: ${currentUserPreference}`);
-}
-
-/**
- * Applies the effective theme to the UI based on user choice and system preference.
- * Updates the state of the toggle switches.
- */
-function applyEffectiveTheme() {
-    let useDarkMode;
-
-    if (currentUserPreference === THEMES.SYSTEM) {
-        useDarkMode = currentSystemPrefersDark;
-        if (systemThemeCheckbox) systemThemeCheckbox.checked = true;
-        if (lightDarkToggle) {
-            lightDarkToggle.checked = currentSystemPrefersDark;
-            lightDarkToggle.disabled = true;
-        }
-        if (manualThemeControlsDiv) manualThemeControlsDiv.classList.add('disabled');
-    } else { // Manual override (Light or Dark)
-        useDarkMode = (currentUserPreference === THEMES.DARK);
-        if (systemThemeCheckbox) systemThemeCheckbox.checked = false;
-        if (lightDarkToggle) {
-            lightDarkToggle.checked = useDarkMode;
-            lightDarkToggle.disabled = false;
-        }
-        if (manualThemeControlsDiv) manualThemeControlsDiv.classList.remove('disabled');
-    }
-
-    if (useDarkMode) {
-        document.body.classList.add('dark-mode');
-    } else {
-        document.body.classList.remove('dark-mode');
-    }
-    console.log(`[Theme] Effective theme applied: ${useDarkMode ? 'Dark' : 'Light'}. User Pref: ${currentUserPreference}, System Dark: ${currentSystemPrefersDark}`);
-}
-
-/**
- * Sets the enabled/disabled state of UI controls and updates button text.
- * @param {boolean} disabled - True to disable controls, false to enable.
- * @param {HTMLElement | null} [initiatingButton=null] - The button that triggered the state change, to update its text.
- */
-function setButtonsState(disabled, initiatingButton = null) {
-    const buttonsToManage = [updateAllDataButton, activateOverlayButton, exportFailedSamplesButton, shareFeedbackExtButton, shareSamplesExtButton];
-    buttonsToManage.forEach(btn => {
-        if (btn) btn.disabled = disabled;
-    });
-    if (resolutionSelect) resolutionSelect.disabled = disabled;
-    if (languageSelect) languageSelect.disabled = disabled;
-
-    if (disabled && initiatingButton) {
-        if (initiatingButton === updateAllDataButton) {
-            updateAllDataButton.textContent = translate('controlPanel.data.buttonUpdating');
-        } else if (initiatingButton === activateOverlayButton) {
-            activateOverlayButton.textContent = translate('controlPanel.activation.activating');
-        } else if (initiatingButton === exportFailedSamplesButton) {
-            exportFailedSamplesButton.textContent = 'Exporting Samples...'; // TODO: Localize
-        }
-    } else {
-        if (updateAllDataButton) updateAllDataButton.textContent = translate('controlPanel.data.button');
-        if (activateOverlayButton) activateOverlayButton.textContent = translate('controlPanel.activation.button');
-        if (exportFailedSamplesButton) exportFailedSamplesButton.textContent = translate('controlPanel.feedback.exportButton');
-    }
-}
-
-/**
- * Updates the main status message displayed to the user.
- * @param {string|object} message - The message string or an object {key, params}.
- * @param {boolean} [isError=false] - If true, indicates an error message (could be used for styling).
- */
-function updateStatusMessage(message, isError = false) {
-    if (statusMessageElement) {
-        let textToShow;
-        if (typeof message === 'object' && message.key) {
-            textToShow = translate(message.key, message.params);
-        } else {
-            textToShow = message;
-        }
-
-        statusMessageElement.textContent = textToShow;
-        statusMessageElement.classList.toggle('error-message', isError);
-    }
-    console.log(`[RendererStatus] ${isError ? 'Error: ' : ''}${typeof message === 'object' ? JSON.stringify(message) : message}`);
-}
-
-/**
- * Checks if a status message indicates the end of an operation.
- * @param {string | object} message - The status message from the main process.
- * @returns {boolean} True if the message indicates completion or failure, false otherwise.
- */
-function isOperationFinishedMessage(message) {
-    if (!message) return false;
-
-    // Handle both plain strings and new object format
-    const messageKey = (typeof message === 'object' && message.key) ? message.key : message.toString().toLowerCase();
-
-    const keywords = [
-        'complete', 'error', 'failed', 'cancelled', 'finished', 'halted', 'activated'
-    ];
-    return keywords.some(keyword => messageKey.includes(keyword));
-}
-
-// Function to set visibility of the "New Resolution Request" section
-const initConditionalUI = async () => {
-    if (newResolutionSection) { // Check if the section element exists
-        try {
-            const isPackaged = await window.electronAPI.isAppPackaged();
-            if (isPackaged) {
-                // In a packaged app, the section should be visible
-                console.log('[Renderer] App is packaged. "Submit New Resolution Layout" section will be visible.');
-                newResolutionSection.style.display = 'block'; // Or remove this line if 'block' is the CSS default
-            } else {
-                // In development (not packaged), hide the entire section
-                console.log('[Renderer] App is not packaged. Hiding "Submit New Resolution Layout" section.');
-                newResolutionSection.style.display = 'none';
-            }
-        } catch (error) {
-            console.error('[Renderer] Error determining if app is packaged:', error);
-            // Fallback: hide the section if there's an error, to be safe in dev
-            newResolutionSection.style.display = 'none';
-        }
-    } else {
-        console.warn('[Renderer] "new-resolution-request-section" element not found.');
-    }
-
-    if (uploadFailedSamplesButton) {
-        try {
-            const isPackaged = await window.electronAPI.isAppPackaged();
-            if (isPackaged) {
-                uploadFailedSamplesButton.style.display = 'inline-flex';
-            } else {
-                console.log('[Renderer] App is not packaged. Hiding "Upload Failed Samples" button.');
-                uploadFailedSamplesButton.style.display = 'none';
-            }
-        } catch (error) {
-            console.error("[Renderer] Error checking if app is packaged for upload button:", error);
-            uploadFailedSamplesButton.style.display = 'none';
-        }
-    } else {
-        console.warn('[Renderer] "upload-failed-samples-btn" element not found.');
-    }
-
-    if (exportFailedSamplesButton) {
-        try {
-            const isPackaged = await window.electronAPI.isAppPackaged();
-            if (!isPackaged) {
-                exportFailedSamplesButton.style.display = 'inline-flex';
-            } else {
-                console.log('[Renderer] App is not packaged. Hiding "Export Failed Samples" button.');
-                exportFailedSamplesButton.style.display = 'none';
-            }
-        } catch (error) {
-            console.error("[Renderer] Error checking if app is packaged for export button:", error);
-            exportFailedSamplesButton.style.display = 'none';
-        }
-    } else {
-        console.warn('[Renderer] "upload-failed-samples-btn" element not found.');
-    }
-
-    if (shareSamplesExtButton) {
-        try {
-            const isPackaged = await window.electronAPI.isAppPackaged();
-            if (!isPackaged) {
-                shareSamplesExtButton.style.display = 'inline-flex';
-            } else {
-                console.log('[Renderer] App is not packaged. Hiding "Share Failed Samples" button.');
-                shareSamplesExtButton.style.display = 'none';
-            }
-        } catch (error) {
-            console.error("[Renderer] Error checking if app is packaged for share failed samples button:", error);
-            shareSamplesExtButton.style.display = 'none';
-        }
-    } else {
-        console.warn('[Renderer] "upload-failed-samples-btn" element not found.');
-    }
-};
-
-
-// --- Initialization and Electron API Setup ---
 if (window.electronAPI) {
     console.log('[Renderer] Electron API available. Setting up listeners.');
 
-    initConditionalUI();
-    loadUserPreference();
+    // Initialize Renderer Modules
+    themeManager.initThemeManager({
+        systemThemeCheckbox,
+        lightDarkToggle,
+        manualThemeControlsDiv,
+        body: document.body,
+    });
+
+    uiUtils.initUIUtils({
+        updateAllDataButton, activateOverlayButton, exportFailedSamplesButton,
+        uploadFailedSamplesButton, shareFeedbackExtButton, shareSamplesExtButton,
+        supportDevButton, supportWindrunButton, submitNewResolutionButton,
+        resolutionSelect, languageSelect, systemThemeCheckbox, lightDarkToggle,
+        statusMessageElement, customResolutionPopup, customPopupMessage, manualThemeControlsDiv,
+    }, translate);
+
+    initUtils.initConditionalUIManager({
+        newResolutionSection,
+        uploadFailedSamplesButton,
+        exportFailedSamplesButton,
+        shareSamplesExtButton,
+    }, window.electronAPI);
+    initUtils.initConditionalUI();
 
     window.electronAPI.getSystemDisplayInfo()
         .then(info => {
@@ -370,9 +100,12 @@ if (window.electronAPI) {
         })
         .catch(error => {
             console.error('[Renderer] Error getting system display info:', error);
-            updateStatusMessage('Could not retrieve system display info. Please select resolution manually.', true);
+            uiUtils.updateStatusMessage('Could not retrieve system display info. Please select resolution manually.', true); // TODO: Localize
             window.electronAPI.getAvailableResolutions();
         });
+
+    // Request initial data on load (e.g., last updated date, potentially other config)
+    window.electronAPI.getInitialData();
 
     // --- IPC Event Handlers (Listening to Main Process) ---
 
@@ -380,9 +113,10 @@ if (window.electronAPI) {
         console.log('[Renderer] Translations loaded/updated.');
         currentTranslations = translations;
         applyTranslations();
+        // After translations are loaded, update any UI elements that depend on them initially.
+        uiUtils.updateStatusMessage({ key: 'controlPanel.status.ready' });
     });
 
-    // Listener for status updates from the failed samples upload process
     window.electronAPI.onUploadFailedSamplesStatus((status) => {
         console.log('[Renderer] Failed Samples Upload Status:', status);
         if (failedSamplesUploadStatusElement) {
@@ -391,30 +125,24 @@ if (window.electronAPI) {
             failedSamplesUploadStatusElement.classList.toggle('error-message', status.error);
         }
         if (status.error || !status.inProgress) {
-            setButtonsState(false);
+            uiUtils.setButtonsState(false);
         }
     });
 
-    // Get initial system theme and apply
     window.electronAPI.onInitialSystemTheme(settings => {
         console.log('[Theme] Received initial system theme settings:', settings);
-        currentSystemPrefersDark = settings.shouldUseDarkColors;
-        applyEffectiveTheme(); // Apply theme based on loaded user pref and initial system pref
+        themeManager.updateSystemPreference(settings.shouldUseDarkColors);
+        themeManager.applyEffectiveTheme();
     });
 
-    // Listen for live system theme changes from main process
     window.electronAPI.onSystemThemeUpdated(settings => {
         console.log('[Theme] System theme updated by OS:', settings);
-        const oldSystemPrefersDark = currentSystemPrefersDark;
-        currentSystemPrefersDark = settings.shouldUseDarkColors;
-        // Only re-apply if user preference is 'system' and the system preference actually changed
-        if (currentUserPreference === THEMES.SYSTEM && oldSystemPrefersDark !== currentSystemPrefersDark) {
-            applyEffectiveTheme();
+        const oldSystemPrefersDark = themeManager.getCurrentSystemPrefersDark();
+        themeManager.updateSystemPreference(settings.shouldUseDarkColors);
+        if (themeManager.isUsingSystemTheme() && oldSystemPrefersDark !== settings.shouldUseDarkColors) {
+            themeManager.applyEffectiveTheme();
         }
     });
-
-    // Request initial data on load
-    window.electronAPI.getInitialData();
 
     window.electronAPI.onAvailableResolutions((resolutions) => {
         if (!resolutionSelect) return;
@@ -434,17 +162,17 @@ if (window.electronAPI) {
                 if (resolutions.includes(systemResString)) {
                     resolutionSelect.value = systemResString;
                     selectedResolution = systemResString;
-                    updateStatusMessage({ key: 'controlPanel.status.resolutionsLoaded', params: { res: systemResString } });
+                    uiUtils.updateStatusMessage({ key: 'controlPanel.status.resolutionsLoaded', params: { res: systemResString } });
                     resolutionEffectivelySelected = true;
                 } else {
                     resolutionSelect.value = resolutions[0];
                     selectedResolution = resolutions[0];
-                    showResolutionMismatchPopup(systemResString, selectedResolution);
+                    uiUtils.showResolutionMismatchPopup(systemResString, selectedResolution);
                 }
             } else {
                 resolutionSelect.value = resolutions[0];
                 selectedResolution = resolutions[0];
-                updateStatusMessage(`Defaulted to ${selectedResolution}. Please verify or select your Dota 2 resolution.`);
+                uiUtils.updateStatusMessage(translate('controlPanel.status.resolutionDefaulted', { resolution: selectedResolution }));
                 resolutionEffectivelySelected = true;
             }
         } else {
@@ -459,12 +187,12 @@ if (window.electronAPI) {
                 errorMsg += `Your system resolution ${systemDisplayInfo.resolutionString} is also not supported. `;
             }
             errorMsg += "Please use 'Submit Current Screen Layout'.";
-            updateStatusMessage(errorMsg, true);
+            uiUtils.updateStatusMessage(errorMsg, true); // TODO: Localize complex message
             resolutionEffectivelySelected = false;
         }
 
         if (activateOverlayButton) {
-            activateOverlayButton.disabled = !selectedResolution || (customResolutionPopup && customResolutionPopup.classList.contains('visible'));
+            activateOverlayButton.disabled = !selectedResolution || (customResolutionPopup?.classList.contains('visible'));
         }
 
         if (exportFailedSamplesButton && exportFailedSamplesButton.style.display !== 'none') exportFailedSamplesButton.disabled = false;
@@ -476,67 +204,169 @@ if (window.electronAPI) {
         if (submitNewResolutionButton && newResolutionSection && newResolutionSection.style.display !== 'none') submitNewResolutionButton.disabled = false;
     });
 
-    window.electronAPI.onUpdateStatus((message) => {
-        updateStatusMessage(message);
-        if (isOperationFinishedMessage(message)) {
-            setButtonsState(false); // Re-enable all buttons
+    // Listener for status updates from Windrun.io data scraping
+    window.electronAPI.onScrapeStatus((message) => {
+        uiUtils.updateStatusMessage(message);
+        if (uiUtils.isOperationFinishedMessage(message)) {
+            uiUtils.setButtonsState(false);
         }
     });
 
     window.electronAPI.onExportFailedSamplesStatus((status) => {
         console.log('[Renderer] Export Failed Samples Status:', status);
-        updateStatusMessage(status.message, status.error);
+        uiUtils.updateStatusMessage(status.message, status.error);
         if (status.error || !status.inProgress) {
-            setButtonsState(false); // Re-enable buttons
+            uiUtils.setButtonsState(false);
         }
         if (!status.error && !status.inProgress && status.filePath) {
-            updateStatusMessage({ key: 'ipcMessages.exportSuccess', params: { count: status.count, filePath: status.filePath } });
+            uiUtils.updateStatusMessage({ key: 'ipcMessages.exportSuccess', params: { count: status.count, filePath: status.filePath } });
         }
     });
 
     window.electronAPI.onLastUpdatedDate((dateStr) => {
         if (lastUpdatedDateElement) {
-            lastUpdatedDateElement.textContent = dateStr || 'Never';
+            lastUpdatedDateElement.textContent = dateStr || translate('controlPanel.data.lastUpdatedNever');
         }
     });
 
     window.electronAPI.onSetUIDisabledState((isDisabled) => {
-        setButtonsState(isDisabled, isDisabled ? updateAllDataButton : null);
+        uiUtils.setButtonsState(isDisabled, isDisabled ? updateAllDataButton : null);
         if (isDisabled) {
-            updateStatusMessage("Performing initial data synchronization with Windrun.io...");
-            if (updateAllDataButton) updateAllDataButton.textContent = 'Syncing Data...';
+            const syncingMsg = translate('controlPanel.status.syncingWindrun');
+            uiUtils.updateStatusMessage(syncingMsg);
+            if (updateAllDataButton) updateAllDataButton.textContent = syncingMsg; // Or a shorter version
         }
     });
 
     window.electronAPI.onScanResults((results) => {
-        // This primarily handles errors during overlay activation or if main process sends error status for a scan.
-        // Most detailed scan results are for the overlay window itself.
+        // This primarily handles errors during overlay activation or if the main process sends an error status for a scan.
+        // Detailed scan results are typically handled by overlayRenderer.js.
         console.log('[Renderer] Scan-related message from main:', results);
         if (results && results.error) {
-            setButtonsState(false); // Re-enable UI on error
+            uiUtils.setButtonsState(false);
             const errorMessage = `Overlay/Scan Error: ${results.error}\nTarget Resolution: ${results.resolution || selectedResolution || 'N/A'}`;
-            updateStatusMessage(errorMessage, true);
+            uiUtils.updateStatusMessage(errorMessage, true); // TODO: Localize complex message
         }
         // Non-error scan results are typically handled by overlayRenderer.js
     });
 
     window.electronAPI.onOverlayClosedResetUI(() => {
         console.log('[Renderer] Overlay closed signal received. Re-enabling main window UI.');
-        setButtonsState(false);
-        updateStatusMessage({ key: 'controlPanel.status.ready' });
+        uiUtils.setButtonsState(false);
+        uiUtils.updateStatusMessage({ key: 'controlPanel.status.ready' });
     });
 
     window.electronAPI.onNewLayoutScreenshot((dataUrl) => {
         if (dataUrl) {
             currentScreenshotDataUrl = dataUrl;
             if (screenshotPreviewImage) screenshotPreviewImage.src = dataUrl;
-            if (screenshotPreviewPopup) screenshotPreviewPopup.classList.add('visible'); // Use the .visible class
-            setGlobalControlsDisabledForModal(true); // Disable background controls
-            if (newResolutionStatusElement) newResolutionStatusElement.textContent = 'Screenshot captured. Please review.';
+            if (screenshotPreviewPopup) screenshotPreviewPopup.classList.add('visible');
+            uiUtils.setGlobalControlsDisabledForModal(true);
+            if (newResolutionStatusElement) newResolutionStatusElement.textContent = translate('controlPanel.newResolution.statusCaptured');
         } else {
-            updateStatusMessage('Failed to capture screenshot.', true);
-            setButtonsState(false);
+            uiUtils.updateStatusMessage(translate('controlPanel.newResolution.statusCaptureFailed'), true);
+            uiUtils.setButtonsState(false);
         }
+    });
+
+    window.electronAPI.onSubmitNewResolutionStatus((status) => {
+        console.log('[Renderer] New Resolution Submission Status:', status);
+        const statusElemToUse = (newResolutionSection?.style.display !== 'none' && newResolutionStatusElement)
+            ? newResolutionStatusElement
+            : null;
+
+        if (statusElemToUse) {
+            statusElemToUse.textContent = status.message; // Assuming message is already translated or a key handled by main
+            statusElemToUse.style.display = 'block';
+            statusElemToUse.classList.toggle('error-message', status.error);
+        } else {
+            uiUtils.updateStatusMessage(translate('controlPanel.newResolution.submissionStatusPrefix', { message: status.message }), status.error);
+        }
+
+        if (!status.inProgress) {
+            uiUtils.setButtonsState(false);
+            uiUtils.setGlobalControlsDisabledForModal(false);
+        }
+    });
+
+    window.electronAPI.onAppUpdateNotification((updateInfo) => {
+        console.log('[Renderer] App Update Notification from main:', updateInfo);
+
+        // Hide "update available" popup by default, show only if status is 'available' or 'downloaded'
+        if (updateInfo.status !== 'available' && updateInfo.status !== 'downloaded') {
+            if (updateAvailablePopup) updateAvailablePopup.classList.remove('visible');
+        }
+
+        if (updateStatusMessageElement) {
+            updateStatusMessageElement.classList.remove('error-message'); // Reset error styling
+
+            switch (updateInfo.status) {
+                case 'checking':
+                    updateStatusMessageElement.textContent = translate('controlPanel.update.checking');
+                    updateStatusMessageElement.style.display = 'block';
+                    break;
+                case 'error':
+                    let finalErrorMessage;
+                    const genericNetworkErrorMsg = translate('controlPanel.update.networkError');
+                    const githubSpecificErrorMsg = translate('controlPanel.update.githubUnreachableError');
+
+                    if (updateInfo.error) {
+                        const errorStr = String(updateInfo.error).toLowerCase();
+                        // Check for GitHub specific server errors (like 500, 502, 503, 504)
+                        if (errorStr.includes('github.com') && (errorStr.includes('httperror: 500') || errorStr.includes('httperror: 502') || errorStr.includes('httperror: 503') || errorStr.includes('httperror: 504'))) {
+                            finalErrorMessage = githubSpecificErrorMsg;
+                            // Check for common general network errors
+                        } else if (errorStr.includes('enotfound') || errorStr.includes('etimedout') || errorStr.includes('econnrefused') || errorStr.includes('net::err_internet_disconnected') || errorStr.includes('failed to fetch')) {
+                            finalErrorMessage = genericNetworkErrorMsg;
+                        } else {
+                            // For other errors, use the detailed message from electron-updater if available
+                            finalErrorMessage = updateInfo.error || translate('controlPanel.update.unknownError');
+                        }
+                    } else {
+                        finalErrorMessage = translate('controlPanel.update.unknownError');
+                    }
+                    updateStatusMessageElement.textContent = `${translate('controlPanel.update.errorOccurred')}: ${finalErrorMessage}`.trim();
+                    updateStatusMessageElement.style.display = 'block';
+                    updateStatusMessageElement.classList.add('error-message');
+                    break;
+                case 'not-available':
+                    // updateInfo.message is now the key 'controlPanel.update.latestVersion'
+                    // The fallback `|| translate(...)` is technically redundant if main always sends the key.
+                    updateStatusMessageElement.textContent = translate(updateInfo.message || 'controlPanel.update.latestVersion');
+                    updateStatusMessageElement.style.display = 'block';
+                    break;
+                case 'available':
+                case 'downloaded':
+                    // The "update available" or "ready to install" popup will be shown by uiUtils.handleAppUpdateNotifications.
+                    // Hide the general status message element for these cases.
+                    updateStatusMessageElement.style.display = 'none';
+                    break;
+                case 'downloading':
+                    updateStatusMessageElement.textContent = updateInfo.progress ?
+                        translate('controlPanel.update.downloading', { percent: Math.round(updateInfo.progress.percent) }) :
+                        // updateInfo.message is now the key 'controlPanel.update.downloadingNoProgress'
+                        translate(updateInfo.message || 'controlPanel.update.downloadingNoProgress');
+                    updateStatusMessageElement.style.display = 'block';
+                    break;
+                default:
+                    updateStatusMessageElement.style.display = 'none';
+            }
+        }
+
+        // Call uiUtils.handleAppUpdateNotifications to manage the "Update Available" popup
+        uiUtils.handleAppUpdateNotifications(
+            updateInfo,
+            updateAvailablePopup, // The popup element itself
+            { // Content elements within the popup
+                updatePopupVersion,
+                updatePopupReleaseDate,
+                updatePopupNotes,
+                updatePopupDownloadBtn,
+                updatePopupLaterBtn
+            },
+            () => window.electronAPI.startDownloadUpdate(),    // Callback for "Download" button
+            () => window.electronAPI.quitAndInstallUpdate()   // Callback for "Restart & Install" button
+        );
     });
 
     // --- DOM Event Listeners (User Interactions) ---
@@ -551,10 +381,10 @@ if (window.electronAPI) {
 
     if (customPopupChangeResBtn) {
         customPopupChangeResBtn.addEventListener('click', () => {
-            hideResolutionMismatchPopup();
+            uiUtils.hideResolutionMismatchPopup();
             if (resolutionSelect) {
                 resolutionSelect.focus();
-                updateStatusMessage('Please select a supported resolution from the dropdown.');
+                uiUtils.updateStatusMessage('Please select a supported resolution from the dropdown.'); // TODO: Localize
             }
             if (activateOverlayButton) {
                 activateOverlayButton.disabled = !selectedResolution;
@@ -566,21 +396,21 @@ if (window.electronAPI) {
         uploadFailedSamplesButton.addEventListener('click', () => {
             console.log('[Renderer] "Upload Failed Samples" button clicked.');
             const confirmed = confirm(
-                "This will zip all images in your 'failed-samples' directory and upload them for model improvement analysis.\n\n" +
-                "Proceed with zipping and uploading?"
+                translate('controlPanel.feedback.uploadConfirmTitle') + "\n\n" +
+                translate('controlPanel.feedback.uploadConfirmBody')
             );
 
             if (confirmed) {
                 if (failedSamplesUploadStatusElement) {
-                    failedSamplesUploadStatusElement.textContent = 'Zipping and preparing upload...';
+                    failedSamplesUploadStatusElement.textContent = translate('controlPanel.feedback.uploadStatusZipping');
                     failedSamplesUploadStatusElement.style.display = 'block';
                     failedSamplesUploadStatusElement.classList.remove('error-message');
                 }
-                setButtonsState(true, uploadFailedSamplesButton);
+                uiUtils.setButtonsState(true, uploadFailedSamplesButton);
                 window.electronAPI.uploadFailedSamples();
             } else {
                 if (failedSamplesUploadStatusElement) {
-                    failedSamplesUploadStatusElement.textContent = 'Upload cancelled.';
+                    failedSamplesUploadStatusElement.textContent = translate('controlPanel.feedback.uploadCancelled');
                     failedSamplesUploadStatusElement.style.display = 'block';
                     failedSamplesUploadStatusElement.classList.remove('error-message');
                 }
@@ -590,27 +420,23 @@ if (window.electronAPI) {
 
     if (customPopupSubmitLayoutBtn) {
         customPopupSubmitLayoutBtn.addEventListener('click', () => {
-            hideResolutionMismatchPopup();
+            uiUtils.hideResolutionMismatchPopup();
 
             if (newResolutionSection && newResolutionSection.style.display !== 'none' && submitNewResolutionButton) {
                 console.log('[Renderer] Mismatch popup "Submit Resolution" delegating to main submit button.');
                 submitNewResolutionButton.click();
             } else {
                 console.warn('[Renderer] Mismatch popup "Submit Resolution": Main submit section not visible. User will be prompted directly.');
-                const directConfirmMessage = `Your resolution is not supported. ` +
-                    `Do you want to submit this resolution - ${systemDisplayInfo?.width || 'auto'}x${systemDisplayInfo?.height || 'auto'}?` +
-                    "\n\nPlease ensure Dota 2 is open and all abilities are loaded and not picked at the draft screen. Easiest way is to start empty Ability Draft lobby." +
-                    "\n\nMove mouse aside after clicking OK for a clean snapshot.\n\n" +
-                    "Proceed with snapshot and submission?";
+                const resolutionText = systemDisplayInfo ? `${systemDisplayInfo.width}x${systemDisplayInfo.height}` : translate('terms.yourCurrentResolution');
+                const directConfirmMessage = translate('controlPanel.newResolution.directSubmitConfirm', { resolution: resolutionText });
 
                 const confirmed = confirm(directConfirmMessage);
                 if (confirmed) {
-                    updateStatusMessage('Capturing screen and preparing submission for new layout...', false);
-                    setButtonsState(true, null);
-                    // CHANGED: Use the new, correct IPC channel
+                    uiUtils.updateStatusMessage(translate('controlPanel.newResolution.statusTakingSnapshot'), false);
+                    uiUtils.setButtonsState(true, null);
                     window.electronAPI.requestNewLayoutScreenshot();
                 } else {
-                    updateStatusMessage('Layout submission cancelled by user.', false);
+                    uiUtils.updateStatusMessage(translate('controlPanel.newResolution.statusCancelled'), false);
                 }
             }
         });
@@ -629,8 +455,8 @@ if (window.electronAPI) {
     if (updateAllDataButton) {
         updateAllDataButton.addEventListener('click', () => {
             console.log('[Renderer] "Update Windrun Data" button clicked.');
-            updateStatusMessage('Requesting Windrun.io data update...');
-            setButtonsState(true, updateAllDataButton);
+            uiUtils.updateStatusMessage(translate('controlPanel.status.requestingWindrunUpdate'));
+            uiUtils.setButtonsState(true, updateAllDataButton);
             window.electronAPI.scrapeAllWindrunData();
         });
     }
@@ -638,12 +464,12 @@ if (window.electronAPI) {
     if (activateOverlayButton) {
         activateOverlayButton.addEventListener('click', () => {
             if (!selectedResolution) {
-                updateStatusMessage('Please select a game resolution first.', true);
+                uiUtils.updateStatusMessage(translate('controlPanel.status.selectResolutionFirst'), true);
                 return;
             }
             console.log(`[Renderer] "Activate Overlay" button clicked for resolution: ${selectedResolution}`);
-            updateStatusMessage({ key: 'controlPanel.activation.activating' });
-            setButtonsState(true, activateOverlayButton);
+            uiUtils.updateStatusMessage({ key: 'controlPanel.activation.activating' });
+            uiUtils.setButtonsState(true, activateOverlayButton);
             window.electronAPI.activateOverlay(selectedResolution);
         });
     }
@@ -651,8 +477,8 @@ if (window.electronAPI) {
     if (exportFailedSamplesButton) {
         exportFailedSamplesButton.addEventListener('click', () => {
             console.log('[Renderer] "Export Failed Samples" button clicked.');
-            updateStatusMessage('Preparing to export failed samples...');
-            setButtonsState(true, exportFailedSamplesButton);
+            uiUtils.updateStatusMessage(translate('controlPanel.feedback.exportButtonPreparing'));
+            uiUtils.setButtonsState(true, exportFailedSamplesButton);
             window.electronAPI.exportFailedSamples();
         });
     }
@@ -688,25 +514,24 @@ if (window.electronAPI) {
     if (systemThemeCheckbox) {
         systemThemeCheckbox.addEventListener('change', () => {
             if (systemThemeCheckbox.checked) {
-                saveUserPreference(THEMES.SYSTEM);
+                themeManager.saveUserPreference(themeManager.THEMES.SYSTEM);
             } else {
-                // When unchecking "Use System", switch to manual mode based on current light/dark toggle state
-                saveUserPreference(lightDarkToggle.checked ? THEMES.DARK : THEMES.LIGHT);
+                // Switch to manual mode based on current light/dark toggle state
+                themeManager.saveUserPreference(lightDarkToggle.checked ? themeManager.THEMES.DARK : themeManager.THEMES.LIGHT);
             }
-            applyEffectiveTheme();
+            themeManager.applyEffectiveTheme();
         });
     }
 
     if (lightDarkToggle) {
         lightDarkToggle.addEventListener('click', () => { // Listen to click for immediate visual feedback before change fires
-            if (lightDarkToggle.disabled) return; // Should not happen if UI state is correct but good safeguard
+            if (lightDarkToggle.disabled) return;
 
-            // If system preference was active, clicking this means user wants manual control
-            if (currentUserPreference === THEMES.SYSTEM) {
+            if (themeManager.isUsingSystemTheme()) {
                 if (systemThemeCheckbox) systemThemeCheckbox.checked = false; // Uncheck system pref
             }
-            saveUserPreference(lightDarkToggle.checked ? THEMES.DARK : THEMES.LIGHT);
-            applyEffectiveTheme();
+            themeManager.saveUserPreference(lightDarkToggle.checked ? themeManager.THEMES.DARK : themeManager.THEMES.LIGHT);
+            themeManager.applyEffectiveTheme();
         });
     }
 
@@ -719,16 +544,11 @@ if (window.electronAPI) {
                 try { currentResInfo = await window.electronAPI.getSystemDisplayInfo(); systemDisplayInfo = currentResInfo; }
                 catch (e) { console.error("Failed to get system info for confirmation", e); }
             }
-            const resolutionString = currentResInfo ? `${currentResInfo.width}x${currentResInfo.height}` : "your current resolution";
-            const scaleFactorString = currentResInfo ? `(Display Scale: ${Math.round(currentResInfo.scaleFactor * 100)}%)` : "";
+            const resolutionString = currentResInfo ? `${currentResInfo.width}x${currentResInfo.height}` : translate('terms.yourCurrentResolution');
+            const scaleFactorString = currentResInfo ? translate('terms.displayScale', { scale: Math.round(currentResInfo.scaleFactor * 100) }) : "";
 
-            const confirmed = confirm(
-                `This will take a full-screen snapshot for ${resolutionString} ${scaleFactorString} to submit your current screen layout.\n\n` +
-                "Please ensure:\n" +
-                "1. Dota 2 is running in the Ability Draft phase.\n" +
-                `2. The game is at the resolution you want to add (${resolutionString}).\n\n` +
-                "Move mouse aside after clicking OK for a clean snapshot.\n\n" +
-                "Proceed with snapshot and submission?"
+            const confirmed = confirm(translate('controlPanel.newResolution.submitConfirm',
+                { resolutionString, scaleFactorString })
             );
 
             if (confirmed) {
@@ -737,8 +557,7 @@ if (window.electronAPI) {
                     newResolutionStatusElement.style.display = 'block';
                     newResolutionStatusElement.classList.remove('error-message');
                 }
-                setButtonsState(true, submitNewResolutionButton);
-                // Request the screenshot from the main process
+                uiUtils.setButtonsState(true, submitNewResolutionButton);
                 window.electronAPI.requestNewLayoutScreenshot();
             } else {
                 if (newResolutionStatusElement) {
@@ -752,11 +571,10 @@ if (window.electronAPI) {
 
     if (screenshotRetakeBtn) {
         screenshotRetakeBtn.addEventListener('click', () => {
-            if (screenshotPreviewPopup) screenshotPreviewPopup.classList.remove('visible'); // Use the .visible class
+            if (screenshotPreviewPopup) screenshotPreviewPopup.classList.remove('visible');
             currentScreenshotDataUrl = null; // Clear old data
 
-            if (newResolutionStatusElement) newResolutionStatusElement.textContent = 'Hiding window and taking new snapshot...';
-            // The UI is already disabled, just request a new screenshot
+            if (newResolutionStatusElement) newResolutionStatusElement.textContent = translate('controlPanel.newResolution.statusRetaking');
             window.electronAPI.requestNewLayoutScreenshot();
         });
     }
@@ -764,105 +582,46 @@ if (window.electronAPI) {
     if (screenshotSubmitBtn) {
         screenshotSubmitBtn.addEventListener('click', () => {
             if (currentScreenshotDataUrl) {
-                if (screenshotPreviewPopup) screenshotPreviewPopup.classList.remove('visible'); // Use the .visible class
+                if (screenshotPreviewPopup) screenshotPreviewPopup.classList.remove('visible');
                 if (newResolutionStatusElement) newResolutionStatusElement.textContent = translate('controlPanel.newResolution.statusSubmitting');
-                // Send the confirmed screenshot data to the main process for API submission
                 window.electronAPI.submitConfirmedLayout(currentScreenshotDataUrl);
             }
         });
     }
 
-    window.electronAPI.onSubmitNewResolutionStatus((status) => {
-        console.log('[Renderer] New Resolution Submission Status:', status);
-        // This status can come from either the modal's submit or the section's submit
-        // Update the visible status element. If the section is visible, update its status.
-        // Otherwise, update the main status message.
-        let statusElemToUse = null;
-        if (newResolutionSection && newResolutionSection.style.display !== 'none' && newResolutionStatusElement) {
-            statusElemToUse = newResolutionStatusElement;
-        } else if (statusMessageElement) { // Fallback to main status if section is hidden
-            // Prepend context to main status message
-            // statusMessageElement.textContent = `Layout Submission: ${status.message}`;
-            // statusMessageElement.classList.toggle('error-message', status.error);
-            // updateStatusMessage handles this better.
-        }
-
-        if (statusElemToUse) {
-            statusElemToUse.textContent = status.message;
-            statusElemToUse.style.display = 'block';
-            statusElemToUse.classList.toggle('error-message', status.error);
-        } else {
-            // If no specific status element is visible (e.g. section is hidden and mismatch popup initiated this)
-            // use the general updateStatusMessage
-            updateStatusMessage(`Layout Submission: ${status.message}`, status.error);
-        }
-
-        if (!status.inProgress) { // Operation finished
-            setButtonsState(false);
-            setGlobalControlsDisabledForModal(false); // Make sure to re-enable everything
-        }
-    });
-
-    checkForUpdatesButton.addEventListener('click', () => {
-        console.log('[Renderer] Check for updates clicked.');
-        updateStatusMessageElement.textContent = 'Checking for updates...';
-        updateStatusMessageElement.style.display = 'block';
-        window.electronAPI.checkForUpdates();
-    });
-
-    updatePopupDownloadBtn.addEventListener('click', () => {
-        updateAvailablePopup.classList.remove('visible');
-        updateStatusMessageElement.textContent = 'Downloading update... (0%)';
-        updateStatusMessageElement.style.display = 'block';
-        window.electronAPI.startDownloadUpdate();
-    });
-
-    updatePopupLaterBtn.addEventListener('click', () => {
-        updateAvailablePopup.classList.remove('visible');
-    });
-
-    window.electronAPI.onUpdateStatus((arg) => {
-        console.log('[Renderer] Update status from main:', arg);
-
-        switch (arg.status) {
-            case 'not-available':
-                updateStatusMessageElement.textContent = `You're up to date! Version ${arg.info.version}.`;
+    if (checkForUpdatesButton) {
+        checkForUpdatesButton.addEventListener('click', () => {
+            console.log('[Renderer] Check for updates clicked.');
+            if (updateStatusMessageElement) {
+                updateStatusMessageElement.textContent = translate('controlPanel.update.checking');
                 updateStatusMessageElement.style.display = 'block';
-                break;
+            }
+            window.electronAPI.checkForUpdates();
+        });
+    }
 
-            case 'available':
-                updatePopupVersion.textContent = `New Version: ${arg.info.version}`;
-                updatePopupReleaseDate.textContent = `Released: ${new Date(arg.info.releaseDate).toLocaleDateString()}`;
-                // electron-updater can parse markdown in release notes
-                updatePopupNotes.innerHTML = arg.info.releaseNotes || 'No release notes provided.';
-                updateAvailablePopup.classList.add('visible');
-                break;
-
-            case 'downloading':
-                updateStatusMessageElement.textContent = `Downloading... ${Math.round(arg.progress.percent)}%`;
+    if (updatePopupDownloadBtn) {
+        updatePopupDownloadBtn.addEventListener('click', () => {
+            if (updateAvailablePopup) updateAvailablePopup.classList.remove('visible');
+            if (updateStatusMessageElement) {
+                updateStatusMessageElement.textContent = translate('controlPanel.update.downloading', { percent: 0 });
                 updateStatusMessageElement.style.display = 'block';
-                break;
+            }
+            window.electronAPI.startDownloadUpdate();
+        });
+    }
 
-            case 'downloaded':
-                updateStatusMessageElement.textContent = `Update downloaded. Restart the application to install.`;
-                const confirmed = confirm('Update downloaded. Do you want to restart and install it now?');
-                if (confirmed) {
-                    window.electronAPI.quitAndInstallUpdate();
-                }
-                break;
+    if (updatePopupLaterBtn) {
+        updatePopupLaterBtn.addEventListener('click', () => {
+            if (updateAvailablePopup) updateAvailablePopup.classList.remove('visible');
+        });
+    }
 
-            case 'error':
-                updateStatusMessageElement.textContent = `Update Error: ${arg.error}`;
-                updateStatusMessageElement.style.backgroundColor = 'rgba(200,0,0,0.8)'; // Make error visible
-                updateStatusMessageElement.style.display = 'block';
-                break;
-        }
-    });
 } else {
     // Critical error: Electron API not exposed
     console.error('[Renderer] FATAL: Electron API not found. Preload script might not be configured or failed.');
-    updateStatusMessage('Error: Application setup issue. Cannot communicate with main process.', true);
-    setButtonsState(true); // Disable all controls
+    if (statusMessageElement) statusMessageElement.textContent = 'Error: Application setup issue. Cannot communicate with main process.'; // Raw message
+    uiUtils.setButtonsState(true); // Attempt to disable all controls
     if (lastUpdatedDateElement) lastUpdatedDateElement.textContent = 'Error';
     if (activateOverlayButton) activateOverlayButton.disabled = true;
     if (exportFailedSamplesButton) exportFailedSamplesButton.disabled = true;

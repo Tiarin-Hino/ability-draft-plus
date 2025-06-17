@@ -1,13 +1,15 @@
-const axios = require('axios');
-const cheerio = require('cheerio');
-const Database = require('better-sqlite3');
+const axios = require('axios'); // HTTP client for fetching data
+const cheerio = require('cheerio'); // HTML parser
+const Database = require('better-sqlite3'); // SQLite database library
 
 const AXIOS_TIMEOUT = 30000; // 30 seconds
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36';
 
 // Thresholds for determining significant synergies
-const SYNERGY_WINRATE_THRESHOLD = 0.50; // Only store pairs with a combined winrate >= 50%
-const OP_SYNERGY_THRESHOLD_PERCENTAGE = 0.13; // Synergy percentage increase to be marked as "OP" (Overpowered), e.g., +11%
+/** @type {number} Only store pairs with a combined winrate >= this threshold (0.0 - 1.0). */
+const SYNERGY_WINRATE_THRESHOLD = 0.50;
+/** @type {number} Synergy percentage increase (0.0 - 1.0) to be marked as "OP" (Overpowered). */
+const OP_SYNERGY_THRESHOLD_PERCENTAGE = 0.13;
 
 /**
  * Parses a text value representing a percentage.
@@ -17,7 +19,7 @@ const OP_SYNERGY_THRESHOLD_PERCENTAGE = 0.13; // Synergy percentage increase to 
 function parsePercentageValue(text) {
     if (text === null || typeof text === 'undefined' || text.trim() === '') return null;
     const cleanedText = text.trim().replace('%', '').replace(',', '.');
-    const parsedRate = parseFloat(cleanedText);
+    const parsedRate = parseFloat(cleanedText); // Parses "55.5" or "55,5" after cleaning
     return !isNaN(parsedRate) ? parsedRate : null;
 }
 
@@ -30,7 +32,7 @@ function parsePercentageValue(text) {
 function extractAbilityNameFromImgSrc(imgSrc) {
     if (!imgSrc) return null;
     const filename = imgSrc.split('/').pop();
-    return filename ? filename.replace(/\.png$/i, '') : null;
+    return filename ? filename.replace(/\.png$/i, '') : null; // Remove .png extension
 }
 
 /**
@@ -46,10 +48,11 @@ function extractAbilityNameFromImgSrc(imgSrc) {
 async function scrapeAndStoreAbilityPairs(dbPath, url, statusCallback) {
     let db;
 
+    statusCallback(`Fetching ability pairs data from ${url}...`);
     try {
-        statusCallback(`Fetching ability pairs data from ${url}...`);
         const { data: html } = await axios.get(url, { headers: { 'User-Agent': USER_AGENT }, timeout: AXIOS_TIMEOUT });
 
+        // --- HTML Parsing and Column Identification ---
         statusCallback('Parsing HTML and identifying table column indices...');
         const $ = cheerio.load(html);
 
@@ -65,7 +68,7 @@ async function scrapeAndStoreAbilityPairs(dbPath, url, statusCallback) {
         headerCells.each((index, element) => {
             const dataField = $(element).attr('data-field');
             if (dataField === 'ability-one-pic') colIndexAbilityOne = index;
-            else if (dataField === 'ability-two-pic') colIndexAbilityTwo = index;
+            else if (dataField === 'ability-two-pic') colIndexAbilityTwo = index; // Column for the second ability's picture
             else if (dataField === 'combined-winrate') colIndexCombinedWinrate = index;
             else if (dataField === 'synergy') colIndexSynergyPercentage = index; // This column shows the synergy *increase*
         });
@@ -75,6 +78,7 @@ async function scrapeAndStoreAbilityPairs(dbPath, url, statusCallback) {
         }
         statusCallback(`Column indices identified: Ability1=${colIndexAbilityOne}, Ability2=${colIndexAbilityTwo}, CombinedWR=${colIndexCombinedWinrate}, SynergyIncrease=${colIndexSynergyPercentage}.`);
 
+        // --- Fetching Local Ability Data ---
         statusCallback('Fetching existing ability details (ID and Hero ID) from the local database...');
         db = new Database(dbPath, { readonly: true });
         const abilitiesFromDb = db.prepare('SELECT ability_id, name, hero_id FROM Abilities').all();
@@ -87,6 +91,7 @@ async function scrapeAndStoreAbilityPairs(dbPath, url, statusCallback) {
         }
         statusCallback(`Loaded ${abilityNameToDetailsMap.size} abilities from local DB for cross-referencing.`);
 
+        // --- Processing Table Rows ---
         const rows = $('tbody tr');
         if (rows.length === 0) {
             statusCallback('No ability pair data rows found in the table body. The page might be empty or structure changed.');
@@ -102,8 +107,8 @@ async function scrapeAndStoreAbilityPairs(dbPath, url, statusCallback) {
             if (cells.length > Math.max(colIndexAbilityOne, colIndexAbilityTwo, colIndexCombinedWinrate, colIndexSynergyPercentage)) {
                 const name1 = extractAbilityNameFromImgSrc(cells.eq(colIndexAbilityOne).find('img').attr('src'));
                 const name2 = extractAbilityNameFromImgSrc(cells.eq(colIndexAbilityTwo).find('img').attr('src'));
-                const combinedWinrate = parsePercentageValue(cells.eq(colIndexCombinedWinrate).text()) / 100.0; // Convert to 0-1 scale
-                const synergyIncreasePercentage = parsePercentageValue(cells.eq(colIndexSynergyPercentage).text()) / 100.0; // Convert to 0-1 scale
+                const combinedWinrate = parsePercentageValue(cells.eq(colIndexCombinedWinrate).text()) / 100.0;
+                const synergyIncreasePercentage = parsePercentageValue(cells.eq(colIndexSynergyPercentage).text()) / 100.0;
 
                 if (name1 && name2 && combinedWinrate !== null) {
                     const details1 = abilityNameToDetailsMap.get(name1);
@@ -112,7 +117,7 @@ async function scrapeAndStoreAbilityPairs(dbPath, url, statusCallback) {
                     // Ensure both abilities exist in our DB and are not the same ability.
                     if (details1 && details2 && details1.id !== details2.id) {
                         // Filter out pairs where both abilities belong to the same hero.
-                        if (details1.heroId !== null && details2.heroId !== null && details1.heroId === details2.heroId) {
+                        if (details1.heroId !== null && details2.heroId !== null && details1.heroId === details2.heroId) { // Check if both have hero_id and they are the same
                             return; // Skip this pair, continue to next .each iteration
                         }
 
@@ -129,14 +134,13 @@ async function scrapeAndStoreAbilityPairs(dbPath, url, statusCallback) {
                                 is_op: isOp ? 1 : 0 // Store boolean as 0 or 1
                             });
                         }
-                    } else if (!details1 || !details2) {
+                    } else if (!details1 || !details2) { // One or both abilities not found in our DB
                         // Log if an ability from a pair isn't found in our DB, might indicate new/changed abilities.
                         // console.warn(`[Pair Scraper] Skipping pair: Ability "${!details1 ? name1 : name2}" not found in local Abilities table.`);
                     }
                 }
             }
         });
-
         statusCallback(`Processed all rows. Found ${pairsToInsert.length} valid synergistic pairs meeting criteria (Combined WR >= ${SYNERGY_WINRATE_THRESHOLD * 100}%, different heroes).`);
 
         // Database update part
@@ -150,7 +154,7 @@ async function scrapeAndStoreAbilityPairs(dbPath, url, statusCallback) {
         if (pairsToInsert.length === 0) {
             statusCallback('No new valid pairs to insert after filtering. Synergies table remains empty.');
             return;
-        }
+        } // No need for else, return handles the empty case
 
         statusCallback(`Inserting ${pairsToInsert.length} new synergies into the database...`);
         const insertStmt = db.prepare(`
@@ -173,7 +177,7 @@ async function scrapeAndStoreAbilityPairs(dbPath, url, statusCallback) {
         const insertedCount = insertTransaction(pairsToInsert);
         statusCallback(`Database update successful. Inserted/Updated ${insertedCount} ability synergies.`);
 
-    } catch (error) {
+    } catch (error) { // Catch any errors during fetch, parse, or DB operations
         console.error('[Pair Scraper] Error during ability pair scraping or database update:', error);
         const finalErrorMessage = `Ability pairs scraping failed: ${error.message}`;
         statusCallback(finalErrorMessage); // Report specific error
