@@ -27,6 +27,9 @@ const performanceMetrics = require('./src/main/performanceMetrics');
 // --- Debug Mode ---
 const debugMode = require('./src/main/debugMode');
 
+// --- Hot Reload (Development Only) ---
+const hotReload = require('./src/main/hotReload');
+
 // --- Local Modules ---
 const setupDatabase = require('./src/database/setupDatabase');
 const {
@@ -55,6 +58,7 @@ const { registerMemoryHandlers } = require('./src/main/ipcHandlers/memoryHandler
 const { registerCacheHandlers } = require('./src/main/ipcHandlers/cacheHandlers');
 const { registerPerformanceHandlers } = require('./src/main/ipcHandlers/performanceHandlers');
 const { registerDebugHandlers } = require('./src/main/ipcHandlers/debugHandlers');
+const { registerHotReloadHandlers } = require('./src/main/ipcHandlers/hotReloadHandlers');
 
 windowManager.setAppInstance(app);
 
@@ -281,6 +285,7 @@ app.whenReady().then(async () => {
   registerCacheHandlers();
   registerPerformanceHandlers();
   registerDebugHandlers();
+  registerHotReloadHandlers();
 
   // Enable debug mode if DEBUG environment variable is set
   if (process.env.DEBUG === 'true' || process.env.DEBUG === '1') {
@@ -288,6 +293,14 @@ app.whenReady().then(async () => {
     debugMode.enable({
       verboseLogging: true,
       operationLogging: true
+    });
+  }
+
+  // Enable hot reload if HOT_RELOAD environment variable is set
+  if (process.env.HOT_RELOAD === 'true' || process.env.HOT_RELOAD === '1') {
+    logger.info('Enabling hot reload from environment variable');
+    hotReload.enable({
+      debounceDelay: 500
     });
   }
 

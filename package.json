@@ -5,10 +5,13 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "dev": "cross-env HOT_RELOAD=true electron .",
+    "dev:debug": "cross-env HOT_RELOAD=true DEBUG=true electron .",
     "prepare-config": "node scripts/prepare-app-config.js",
     "rebuild": "electron-rebuild -f",
     "postinstall": "npm run rebuild && node scripts/fix-tfjs-node-build.js",
-    "dist": "npm run prepare-config && electron-builder"
+    "dist": "npm run prepare-config && electron-builder",
+    "generate-mock-data": "node scripts/generate-mock-data.js"
   },
   "keywords": [
     "dota2",
