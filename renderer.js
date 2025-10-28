@@ -100,7 +100,7 @@ if (window.electronAPI) {
         })
         .catch(error => {
             console.error('[Renderer] Error getting system display info:', error);
-            uiUtils.updateStatusMessage('Could not retrieve system display info. Please select resolution manually.', true); // TODO: Localize
+            uiUtils.updateStatusMessage(translate('controlPanel.status.errorDisplayInfo'), true);
             window.electronAPI.getAvailableResolutions();
         });
 
@@ -182,12 +182,10 @@ if (window.electronAPI) {
             resolutionSelect.appendChild(option);
             selectedResolution = "";
 
-            let errorMsg = "No supported resolutions found. ";
-            if (systemDisplayInfo && systemDisplayInfo.resolutionString) {
-                errorMsg += `Your system resolution ${systemDisplayInfo.resolutionString} is also not supported. `;
-            }
-            errorMsg += "Please use 'Submit Current Screen Layout'.";
-            uiUtils.updateStatusMessage(errorMsg, true); // TODO: Localize complex message
+            const errorMsg = (systemDisplayInfo && systemDisplayInfo.resolutionString)
+                ? translate('controlPanel.status.noSupportedResolutionsWithSystem', { systemRes: systemDisplayInfo.resolutionString })
+                : translate('controlPanel.status.noSupportedResolutions');
+            uiUtils.updateStatusMessage(errorMsg, true);
             resolutionEffectivelySelected = false;
         }
 
@@ -244,8 +242,12 @@ if (window.electronAPI) {
         console.log('[Renderer] Scan-related message from main:', results);
         if (results && results.error) {
             uiUtils.setButtonsState(false);
-            const errorMessage = `Overlay/Scan Error: ${results.error}\nTarget Resolution: ${results.resolution || selectedResolution || 'N/A'}`;
-            uiUtils.updateStatusMessage(errorMessage, true); // TODO: Localize complex message
+            const resolution = results.resolution || selectedResolution || 'N/A';
+            const errorMessage = translate('controlPanel.status.overlayScanErrorWithResolution', {
+                error: results.error,
+                resolution: resolution
+            });
+            uiUtils.updateStatusMessage(errorMessage, true);
         }
         // Non-error scan results are typically handled by overlayRenderer.js
     });
@@ -384,7 +386,7 @@ if (window.electronAPI) {
             uiUtils.hideResolutionMismatchPopup();
             if (resolutionSelect) {
                 resolutionSelect.focus();
-                uiUtils.updateStatusMessage('Please select a supported resolution from the dropdown.'); // TODO: Localize
+                uiUtils.updateStatusMessage(translate('controlPanel.status.selectSupportedResolution'));
             }
             if (activateOverlayButton) {
                 activateOverlayButton.disabled = !selectedResolution;
