@@ -13,7 +13,11 @@
       "Bash(git stash:*)",
       "Bash(cat:*)",
       "Bash(node:*)",
-      "Bash(npm start)"
+      "Bash(npm start)",
+      "Bash(taskkill:*)",
+      "Bash(python3:*)",
+      "Bash(timeout 15 npm start:*)",
+      "Bash(tee:*)"
     ],
     "deny": [],
     "ask": []

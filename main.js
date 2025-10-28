@@ -29,7 +29,7 @@ const debugMode = require('./src/main/debugMode');
 const hotReload = require('./src/main/hotReload');
 
 // --- Local Modules ---
-const setupDatabase = require('./src/database/setupDatabase');
+// Note: setupDatabase is loaded inside app.whenReady() to avoid accessing app too early
 const {
   BASE_RESOURCES_PATH,
   DB_FILENAME,
@@ -236,6 +236,8 @@ app.whenReady().then(async () => {
   }
 
   try {
+    // Load setupDatabase here (after app is ready) to avoid early app access
+    const setupDatabase = require('./src/database/setupDatabase');
     setupDatabase();
     logger.info('Database schema initialized successfully');
   } catch (dbSetupError) {
