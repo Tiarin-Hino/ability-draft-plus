@@ -5,6 +5,11 @@
 
 const { createLogger } = require('./logger');
 const { dialog } = require('electron');
+const {
+    NETWORK_RETRY_BASE_DELAY,
+    NETWORK_RETRY_MAX_DELAY,
+    NETWORK_MAX_RETRY_ATTEMPTS
+} = require('../constants');
 
 const logger = createLogger('GracefulDegradation');
 
@@ -138,7 +143,11 @@ function getCachedQueryResult(queryType) {
  * @param {number} maxAttempts - Maximum retry attempts
  * @returns {Promise<object>} Retry decision and user message
  */
-async function handleNetworkFailure(error, attempt = 1, maxAttempts = 3) {
+async function handleNetworkFailure(
+    error,
+    attempt = 1,
+    maxAttempts = NETWORK_MAX_RETRY_ATTEMPTS
+) {
     logger.warn('Network request failed', {
         error: error.message,
         attempt,
@@ -157,14 +166,23 @@ async function handleNetworkFailure(error, attempt = 1, maxAttempts = 3) {
 
     if (isTimeout) {
         userMessage = 'Connection timed out. Check your internet connection.';
-        retryDelay = Math.min(2000 * attempt, 5000); // Exponential backoff, max 5s
+        retryDelay = Math.min(
+            NETWORK_RETRY_BASE_DELAY * attempt,
+            NETWORK_RETRY_MAX_DELAY
+        ); // Exponential backoff
     } else if (isConnectionError) {
         userMessage =
             'Cannot reach server. Check your internet connection and firewall settings.';
-        retryDelay = Math.min(3000 * attempt, 10000); // Exponential backoff, max 10s
+        retryDelay = Math.min(
+            NETWORK_RETRY_BASE_DELAY * attempt,
+            NETWORK_RETRY_MAX_DELAY
+        ); // Exponential backoff
     } else {
         userMessage = `Network error: ${error.message}`;
-        retryDelay = Math.min(1000 * attempt, 3000);
+        retryDelay = Math.min(
+            NETWORK_RETRY_BASE_DELAY * attempt,
+            NETWORK_RETRY_MAX_DELAY
+        );
     }
 
     if (attempt >= maxAttempts) {

@@ -7,6 +7,11 @@ const winston = require('winston');
 const path = require('path');
 const { app } = require('electron');
 const fs = require('fs');
+const {
+    LOG_FILE_MAX_SIZE,
+    LOG_FILE_MAX_FILES,
+    LOG_ERROR_FILE_MAX_SIZE
+} = require('../constants');
 
 /**
  * Custom format for console output (development)
@@ -67,7 +72,7 @@ const logger = winston.createLogger({
         new winston.transports.File({
             filename: path.join(getLogDirectory(), 'error.log'),
             level: 'error',
-            maxsize: 5242880, // 5MB
+            maxsize: LOG_ERROR_FILE_MAX_SIZE,
             maxFiles: 5,
             tailable: true
         }),
@@ -75,8 +80,8 @@ const logger = winston.createLogger({
         // Combined log file: all logs
         new winston.transports.File({
             filename: path.join(getLogDirectory(), 'combined.log'),
-            maxsize: 10485760, // 10MB
-            maxFiles: 7, // Keep last 7 files (roughly 7 days)
+            maxsize: LOG_FILE_MAX_SIZE,
+            maxFiles: LOG_FILE_MAX_FILES,
             tailable: true
         })
     ],

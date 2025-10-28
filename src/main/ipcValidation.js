@@ -4,6 +4,13 @@
  * Helps prevent errors and potential security issues from malformed inputs.
  */
 
+const {
+    RESOLUTION_MIN_WIDTH,
+    RESOLUTION_MAX_WIDTH,
+    RESOLUTION_MIN_HEIGHT,
+    RESOLUTION_MAX_HEIGHT
+} = require('../constants');
+
 /**
  * Validation error class for IPC parameter validation
  */
@@ -138,9 +145,14 @@ function validateResolution(value, fieldName = 'resolution') {
     const height = parseInt(match[2], 10);
 
     // Sanity check: reasonable resolution bounds
-    if (width < 640 || width > 7680 || height < 480 || height > 4320) {
+    if (
+        width < RESOLUTION_MIN_WIDTH ||
+        width > RESOLUTION_MAX_WIDTH ||
+        height < RESOLUTION_MIN_HEIGHT ||
+        height > RESOLUTION_MAX_HEIGHT
+    ) {
         throw new ValidationError(
-            `${fieldName} dimensions out of reasonable bounds (640x480 to 7680x4320)`,
+            `${fieldName} dimensions out of reasonable bounds (${RESOLUTION_MIN_WIDTH}x${RESOLUTION_MIN_HEIGHT} to ${RESOLUTION_MAX_WIDTH}x${RESOLUTION_MAX_HEIGHT})`,
             fieldName
         );
     }

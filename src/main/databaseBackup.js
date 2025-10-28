@@ -7,12 +7,12 @@
 const fs = require('fs').promises;
 const path = require('path');
 const { app } = require('electron');
+const { DB_BACKUP_RETENTION } = require('../constants');
 const { createLogger } = require('./logger');
 
 const logger = createLogger('DatabaseBackup');
 
 const BACKUP_DIR_NAME = 'backups';
-const MAX_BACKUPS = 3; // Keep last 3 backups
 
 /**
  * Get the backup directory path

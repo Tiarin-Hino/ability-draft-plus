@@ -1,6 +1,11 @@
 const path = require('path');
 const { Worker } = require('worker_threads');
 const { BASE_RESOURCES_PATH, MODEL_DIR_NAME, MODEL_FILENAME, CLASS_NAMES_FILENAME } = require('../../config');
+const {
+    ML_WORKER_MAX_RESTART_ATTEMPTS,
+    ML_WORKER_RESTART_COOLDOWN,
+    ML_WORKER_RESTART_RESET_TIME
+} = require('../constants');
 const { createLogger } = require('./logger');
 
 const logger = createLogger('MLManager');
@@ -18,8 +23,6 @@ let initializationPromise = null; // Stores the promise for initialization
 
 // Auto-restart configuration
 let workerRestartCount = 0;
-const MAX_RESTART_ATTEMPTS = 3;
-const RESTART_COOLDOWN_MS = 5000; // Wait 5 seconds before restart
 let lastRestartTime = 0;
 
 // Store callbacks for restart functionality
@@ -39,11 +42,11 @@ async function attemptRestart(error) {
     const now = Date.now();
 
     // Reset restart count if enough time has passed since last restart
-    if (now - lastRestartTime > 60000) { // 1 minute cooldown
+    if (now - lastRestartTime > ML_WORKER_RESTART_RESET_TIME) {
         workerRestartCount = 0;
     }
 
-    if (workerRestartCount >= MAX_RESTART_ATTEMPTS) {
+    if (workerRestartCount >= ML_WORKER_MAX_RESTART_ATTEMPTS) {
         logger.error('ML Worker failed permanently after max restart attempts', {
             attempts: workerRestartCount,
             lastError: error.message
@@ -54,12 +57,15 @@ async function attemptRestart(error) {
     workerRestartCount++;
     lastRestartTime = now;
 
-    logger.warn(`Attempting to restart ML Worker (${workerRestartCount}/${MAX_RESTART_ATTEMPTS})`, {
-        reason: error.message
-    });
+    logger.warn(
+        `Attempting to restart ML Worker (${workerRestartCount}/${ML_WORKER_MAX_RESTART_ATTEMPTS})`,
+        {
+            reason: error.message
+        }
+    );
 
     // Wait for cooldown before restarting
-    await new Promise((resolve) => setTimeout(resolve, RESTART_COOLDOWN_MS));
+    await new Promise((resolve) => setTimeout(resolve, ML_WORKER_RESTART_COOLDOWN));
 
     try {
         // Terminate existing worker if any
