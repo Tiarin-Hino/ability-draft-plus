@@ -15,6 +15,9 @@ const { autoUpdater } = require('electron-updater'); // Added for automatic upda
 const { logStartup, logShutdown, flushLogs, createLogger } = require('./src/main/logger');
 const logger = createLogger('Main');
 
+// --- Memory Monitoring ---
+const memoryMonitor = require('./src/main/memoryMonitor');
+
 // --- Local Modules ---
 const setupDatabase = require('./src/database/setupDatabase');
 const {
@@ -39,6 +42,7 @@ const { registerOverlayHandlers } = require('./src/main/ipcHandlers/overlayHandl
 const { registerFeedbackHandlers } = require('./src/main/ipcHandlers/feedbackHandlers');
 const { registerLocalizationHandlers } = require('./src/main/ipcHandlers/localizationHandlers');
 const { registerBackupHandlers } = require('./src/main/ipcHandlers/backupHandlers');
+const { registerMemoryHandlers } = require('./src/main/ipcHandlers/memoryHandlers');
 
 windowManager.setAppInstance(app);
 
@@ -160,6 +164,21 @@ app.whenReady().then(async () => {
   // Log application startup
   logStartup();
 
+  // Start memory monitoring
+  memoryMonitor.startMonitoring();
+  memoryMonitor.onMemoryWarning((level, usage, status) => {
+    logger.warn(`Memory ${level} threshold exceeded`, {
+      heapUsed: memoryMonitor.formatBytes(usage.heapUsed),
+      external: memoryMonitor.formatBytes(usage.external),
+      status
+    });
+
+    // Attempt garbage collection on critical warnings
+    if (level === 'critical') {
+      memoryMonitor.forceGarbageCollection();
+    }
+  });
+
   await loadTranslations(getCurrentLang()); // Load default language on startup
   try {
     await loadClassNamesForMain();
@@ -240,6 +259,7 @@ app.whenReady().then(async () => {
   registerFeedbackHandlers();
   registerLocalizationHandlers();
   registerBackupHandlers();
+  registerMemoryHandlers();
 
   windowManager.initMainWindow(stateManager.getIsFirstAppRun(), stateManager.getActiveDbPath());
 
@@ -295,6 +315,10 @@ app.on('will-quit', async (event) => {
   logger.info('Application will quit - cleaning up resources');
   stateManager.setIsScanInProgress(false);
   mlManager.terminate(); // Clean up the worker on quit
+
+  // Log final memory stats and stop monitoring
+  logger.info(memoryMonitor.getSummary());
+  memoryMonitor.stopMonitoring();
 
   logShutdown();
   await flushLogs(); // Ensure all logs are written
