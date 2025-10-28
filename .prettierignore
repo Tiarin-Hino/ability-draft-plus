@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+*.asar
+
+# Generated files
+src/app-config.js
+coverage/
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+
+# Data directories
+training_data/
+failed-samples/
+
+# Model files
+model/
+
+# Electron builder
+.webpack/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.workspace
+
+# Misc
+*.min.js
+*.min.css
