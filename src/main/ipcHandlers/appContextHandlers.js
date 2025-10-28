@@ -5,6 +5,7 @@
  */
 
 const { ipcMain, screen, app, nativeTheme, shell } = require('electron');
+const { validateUrl, ValidationError } = require('../ipcValidation');
 
 /**
  * Registers all application context IPC handlers.
@@ -54,14 +55,22 @@ function registerAppContextHandlers() {
     /**
      * Handles the 'open-external-link' IPC call.
      * Opens the provided URL in the default system browser if it's a valid HTTP/HTTPS link.
+     * Now includes input validation to ensure only valid URLs are processed.
      * @param {Electron.IpcMainEvent} event - The IPC event.
      * @param {string} url - The URL to open.
      */
     ipcMain.on('open-external-link', (event, url) => {
-        if (url && (url.startsWith('http:') || url.startsWith('https:'))) {
-            shell.openExternal(url).catch((err) => console.error('[MainIPC] Failed to open external link:', url, err));
-        } else {
-            console.warn(`[MainIPC] Attempted to open invalid or non-HTTP(S) external link: ${url}`);
+        try {
+            validateUrl(url, 'url');
+            shell.openExternal(url).catch((err) =>
+                console.error('[MainIPC] Failed to open external link:', url, err)
+            );
+        } catch (error) {
+            if (error instanceof ValidationError) {
+                console.warn(`[MainIPC] ${error.message}: ${url}`);
+            } else {
+                throw error;
+            }
         }
     });
 }

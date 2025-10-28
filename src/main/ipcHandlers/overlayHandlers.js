@@ -13,6 +13,12 @@ const windowManager = require('../windowManager');
 const mlManager = require('../mlManager');
 const { sendStatusUpdate } = require('../utils');
 const { MIN_PREDICTION_CONFIDENCE } = require('../../../config');
+const {
+    validateResolution,
+    validateNumber,
+    validateBoolean,
+    ValidationError
+} = require('../ipcValidation');
 
 /**
  * Registers all IPC handlers related to the overlay window.
@@ -22,14 +28,24 @@ function registerOverlayHandlers() {
    * Handles the 'activate-overlay' IPC call from the renderer.
    * Hides the main window, loads necessary layout configurations,
    * resets relevant scan state, and initializes/shows the overlay window.
+   * Now includes validation to ensure resolution format is valid.
    * Sends status updates via 'scrape-status' or 'scan-results' channels to the main window.
    * @param {Electron.IpcMainEvent} event - The IPC event.
    * @param {string} selectedResolution - The resolution string (e.g., '1920x1080') for which the overlay should be configured.
    */
   ipcMain.on('activate-overlay', async (event, selectedResolution) => {
-    if (!selectedResolution) {
-      sendStatusUpdate(event.sender, 'scrape-status', { key: 'overlayActivationError', params: { error: 'No resolution selected' } });
-      return;
+    try {
+      validateResolution(selectedResolution, 'selectedResolution');
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        console.error(`[OverlayHandlers] ${error.message}`);
+        sendStatusUpdate(event.sender, 'scrape-status', {
+          key: 'overlayActivationError',
+          params: { error: error.message }
+        });
+        return;
+      }
+      throw error;
     }
     windowManager.hideMainWindow();
 
