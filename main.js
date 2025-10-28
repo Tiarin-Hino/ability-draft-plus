@@ -28,6 +28,7 @@ const {
 const { sendStatusUpdate } = require('./src/main/utils');
 const { loadTranslations, getCurrentLang } = require('./src/main/localization');
 const { setupAutoUpdater } = require('./src/main/autoUpdaterSetup');
+const { createBackup, checkDatabaseIntegrity } = require('./src/main/databaseBackup');
 const windowManager = require('./src/main/windowManager');
 const mlManager = require('./src/main/mlManager');
 const scanProcessor = require('./src/main/scanProcessor');
@@ -37,6 +38,7 @@ const { registerDataHandlers } = require('./src/main/ipcHandlers/dataHandlers');
 const { registerOverlayHandlers } = require('./src/main/ipcHandlers/overlayHandlers');
 const { registerFeedbackHandlers } = require('./src/main/ipcHandlers/feedbackHandlers');
 const { registerLocalizationHandlers } = require('./src/main/ipcHandlers/localizationHandlers');
+const { registerBackupHandlers } = require('./src/main/ipcHandlers/backupHandlers');
 
 windowManager.setAppInstance(app);
 
@@ -207,12 +209,37 @@ app.whenReady().then(async () => {
     return;
   }
 
+  // Check database integrity
+  const integrityCheck = await checkDatabaseIntegrity(stateManager.getActiveDbPath());
+  if (!integrityCheck.valid) {
+    logger.error('Database integrity check failed', { error: integrityCheck.error });
+    dialog.showErrorBox(
+      'Database Error',
+      `Database file is corrupted: ${integrityCheck.error}. Please restore from backup or reinstall.`
+    );
+    app.quit();
+    return;
+  }
+
+  // Create automatic startup backup (not on first run to avoid backing up bundled DB)
+  if (!stateManager.getIsFirstAppRun()) {
+    logger.info('Creating automatic startup backup');
+    const backupResult = await createBackup(stateManager.getActiveDbPath(), 'startup');
+    if (backupResult.success) {
+      logger.info('Automatic startup backup created', { path: backupResult.backupPath });
+    } else {
+      logger.warn('Failed to create automatic startup backup', { error: backupResult.error });
+      // Don't block app startup if backup fails
+    }
+  }
+
   // Register IPC handlers that are needed early by the main window
   // and do NOT depend on mlManager being initialized.
   registerAppContextHandlers();
   registerDataHandlers();
   registerFeedbackHandlers();
   registerLocalizationHandlers();
+  registerBackupHandlers();
 
   windowManager.initMainWindow(stateManager.getIsFirstAppRun(), stateManager.getActiveDbPath());
 
