@@ -5,10 +5,13 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "dev": "cross-env HOT_RELOAD=true electron .",
+    "dev:debug": "cross-env HOT_RELOAD=true DEBUG=true electron .",
     "prepare-config": "node scripts/prepare-app-config.js",
     "rebuild": "electron-rebuild -f",
     "postinstall": "npm run rebuild && node scripts/fix-tfjs-node-build.js",
-    "dist": "npm run prepare-config && electron-builder"
+    "dist": "npm run prepare-config && electron-builder",
+    "generate-mock-data": "node scripts/generate-mock-data.js"
   },
   "keywords": [
     "dota2",
@@ -19,6 +22,9 @@
   ],
   "author": "Tiarin Hino",
   "license": "ISC",
+  "lint-staged": {
+    "*.{js,json}": "echo 'Staged files ready for commit'"
+  },
   "devDependencies": {
     "@electron/rebuild": "^3.6.0",
     "electron": "^31.0.0",
@@ -34,7 +40,8 @@
     "electron-updater": "^6.6.2",
     "nvm": "^0.0.4",
     "screenshot-desktop": "^1.15.1",
-    "sharp": "^0.34.1"
+    "sharp": "^0.34.1",
+    "winston": "^3.18.3"
   },
   "build": {
     "appId": "com.tiarinhino.dota2abilitydraftplus",

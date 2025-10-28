@@ -18,6 +18,7 @@ const stateManager = require('../stateManager');
 const windowManager = require('../windowManager');
 const { delay, generateHmacSignature, sendStatusUpdate } = require('../utils');
 const { API_ENDPOINT_URL, CLIENT_API_KEY, CLIENT_SHARED_SECRET } = require('../../../config');
+const { validateDataUrl, ValidationError } = require('../ipcValidation');
 
 const FAILED_SAMPLES_DIR_NAME = 'failed-samples';
 
@@ -347,6 +348,7 @@ function registerFeedbackHandlers() {
      * Handles the 'submit-confirmed-layout' IPC call from the renderer.
      * Receives a screenshot (as a data URL) and metadata (resolution, scale factor),
      * and submits it to a remote server for new layout/resolution requests.
+     * Now includes validation to ensure dataUrl is properly formatted.
      * @param {Electron.IpcMainEvent} event - The IPC event.
      * @param {string} dataUrl - The screenshot image as a base64 data URL.
      */
@@ -354,12 +356,16 @@ function registerFeedbackHandlers() {
         const sendSubmissionStatus = (message, error = false, inProgress = true) => {
             const mainWindow = windowManager.getMainWindow();
             if (mainWindow?.webContents && !mainWindow.webContents.isDestroyed()) {
-                sendStatusUpdate(mainWindow.webContents, 'submit-new-resolution-status', { message, error, inProgress });
+                sendStatusUpdate(
+                    mainWindow.webContents,
+                    'submit-new-resolution-status',
+                    { message, error, inProgress }
+                );
             }
         };
 
         try {
-            if (!dataUrl) throw new Error("Screenshot data URL is missing for submission.");
+            validateDataUrl(dataUrl, 'dataUrl');
 
             const primaryDisplay = screen.getPrimaryDisplay();
             const { width, height } = primaryDisplay.size;

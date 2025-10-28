@@ -21,7 +21,13 @@
             "resolutionsMismatch": "Your resolution {systemRes} is not supported. Defaulting to {defaultRes}.",
             "resolutionsNone": "No supported resolutions found. Please submit your layout.",
             "errorLoadingResolutions": "Error loading resolutions: {error}",
+            "errorDisplayInfo": "Could not retrieve system display info. Please select resolution manually.",
+            "noSupportedResolutions": "No supported resolutions found. Please use 'Submit Current Screen Layout'.",
+            "noSupportedResolutionsWithSystem": "No supported resolutions found. Your system resolution {systemRes} is also not supported. Please use 'Submit Current Screen Layout'.",
             "selectResolutionFirst": "Please select a resolution first.",
+            "selectSupportedResolution": "Please select a supported resolution from the dropdown.",
+            "overlayScanError": "Overlay/Scan Error: {error}",
+            "overlayScanErrorWithResolution": "Overlay/Scan Error: {error}\nTarget Resolution: {resolution}",
             "requestingWindrunUpdate": "Requesting Windrun update"
         },
         "activation": {

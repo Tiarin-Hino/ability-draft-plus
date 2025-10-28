@@ -1,5 +1,6 @@
 const { app } = require('electron');
 const path = require('path');
+const { ML_CONFIDENCE_THRESHOLD } = require('./src/constants');
 
 /** @type {boolean} Indicates if the application is running in a packaged state (e.g., asar). */
 const IS_PACKAGED = app.isPackaged;
@@ -38,7 +39,7 @@ const ABILITY_PAIRS_URL = 'https://windrun.io/ability-pairs';
 
 // ML & Scoring Configuration
 /** @type {number} Minimum confidence threshold for ML predictions to be considered valid. */
-const MIN_PREDICTION_CONFIDENCE = 0.90;
+const MIN_PREDICTION_CONFIDENCE = ML_CONFIDENCE_THRESHOLD;
 /** @type {number} Number of top-tier ability suggestions to provide. */
 const NUM_TOP_TIER_SUGGESTIONS = 10;
 
