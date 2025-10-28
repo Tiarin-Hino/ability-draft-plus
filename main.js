@@ -9,8 +9,6 @@ const { app, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs').promises;
 
-const { autoUpdater } = require('electron-updater'); // Added for automatic update check
-
 // --- Logging Setup (must be early) ---
 const { logStartup, logShutdown, flushLogs, createLogger } = require('./src/main/logger');
 const logger = createLogger('Main');
@@ -332,6 +330,7 @@ app.whenReady().then(async () => {
   // Perform an automatic check for updates on application startup
   // This is done after the autoUpdater has been configured by setupAutoUpdater.
   logger.info('Performing automatic check for updates');
+  const { autoUpdater } = require('electron-updater');
   autoUpdater.checkForUpdates().catch((err) => {
     // This catch is primarily to prevent unhandled promise rejections.
     // The 'error' event emitted by autoUpdater (handled in autoUpdaterSetup.js)

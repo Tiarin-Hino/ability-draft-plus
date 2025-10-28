@@ -40,7 +40,9 @@ const fileFormat = winston.format.combine(
  * Creates the directory if it doesn't exist
  */
 function getLogDirectory() {
-    const logDir = path.join(app.getPath('userData'), 'logs');
+    // Use current directory if app is not ready yet
+    const baseDir = app && app.getPath ? app.getPath('userData') : process.cwd();
+    const logDir = path.join(baseDir, 'logs');
     if (!fs.existsSync(logDir)) {
         fs.mkdirSync(logDir, { recursive: true });
     }
@@ -54,10 +56,12 @@ function getLogLevel() {
     if (process.env.DEBUG === 'true') {
         return 'debug';
     }
-    if (!app.isPackaged) {
+    // Check if app is available (it might not be during initial require)
+    if (app && app.isPackaged === false) {
         return 'debug'; // Development: show everything
     }
-    return 'info'; // Production: info and above
+    // Default to debug for safety (won't miss logs during development)
+    return process.env.NODE_ENV === 'production' ? 'info' : 'debug';
 }
 
 /**
@@ -103,7 +107,7 @@ const logger = winston.createLogger({
 });
 
 // Add console transport in development or when DEBUG is enabled
-if (!app.isPackaged || process.env.DEBUG === 'true') {
+if ((app && !app.isPackaged) || process.env.DEBUG === 'true' || process.env.NODE_ENV !== 'production') {
     logger.add(
         new winston.transports.Console({
             format: consoleFormat
