@@ -34,7 +34,8 @@
     "electron-updater": "^6.6.2",
     "nvm": "^0.0.4",
     "screenshot-desktop": "^1.15.1",
-    "sharp": "^0.34.1"
+    "sharp": "^0.34.1",
+    "winston": "^3.18.3"
   },
   "build": {
     "appId": "com.tiarinhino.dota2abilitydraftplus",

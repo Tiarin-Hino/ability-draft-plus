@@ -10,6 +10,11 @@ const path = require('path');
 const fs = require('fs').promises;
 
 const { autoUpdater } = require('electron-updater'); // Added for automatic update check
+
+// --- Logging Setup (must be early) ---
+const { logStartup, logShutdown, flushLogs, createLogger } = require('./src/main/logger');
+const logger = createLogger('Main');
+
 // --- Local Modules ---
 const setupDatabase = require('./src/database/setupDatabase');
 const {
@@ -50,12 +55,13 @@ async function loadClassNamesForMain() {
       const data = await fs.readFile(classNamesJsonPath, 'utf8');
       const loadedClassNames = JSON.parse(data);
       if (!loadedClassNames || loadedClassNames.length === 0) {
-        console.error('[Main] Failed to load or parse class names from:', classNamesJsonPath);
+        logger.error('Failed to load or parse class names', { path: classNamesJsonPath });
         throw new Error('Class names are empty or invalid.');
       }
       stateManager.setClassNamesCache(loadedClassNames);
+      logger.debug('Class names loaded', { count: loadedClassNames.length });
     } catch (err) {
-      console.error('[Main] Error loading class_names.json:', err);
+      logger.error('Error loading class_names.json', { error: err.message, path: classNamesJsonPath });
       throw err;
     }
   }
@@ -71,7 +77,7 @@ async function loadClassNamesForMain() {
  */
 function handleMlWorkerMessage(result) {
   if (result.status === 'success') {
-    console.log('[Main] Received successful scan results from ML Worker.');
+    logger.debug('Received successful scan results from ML Worker');
 
     const currentMainState = {
       activeDbPath: stateManager.getActiveDbPath(),
@@ -96,7 +102,7 @@ function handleMlWorkerMessage(result) {
         stateManager.setIsScanInProgress(false); // Always reset after processing attempt
       })
       .catch(error => { // Catch errors from the promise itself, though processAndFinalizeScanData tries to handle its own
-        console.error('[Main] Critical error calling scanProcessor:', error);
+        logger.error('Critical error calling scanProcessor', { error: error.message, stack: error.stack });
         stateManager.setIsScanInProgress(false);
         if (overlayWebContents && !overlayWebContents.isDestroyed()) {
           sendStatusUpdate(overlayWebContents, 'overlay-data', {
@@ -107,7 +113,7 @@ function handleMlWorkerMessage(result) {
       });
 
   } else if (result.status === 'error') {
-    console.error('[Main] ML Worker Error:', result.error);
+    logger.error('ML Worker Error', { error: result.error });
     stateManager.setIsScanInProgress(false);
     const overlayWindow = windowManager.getOverlayWindow();
     if (overlayWindow && !overlayWindow.isDestroyed()) {
@@ -124,7 +130,7 @@ function handleMlWorkerMessage(result) {
  * @param {Error} err - The error object.
  */
 function handleMlWorkerError(err) {
-  console.error('[Main] ML Worker Unhandled Error:', err);
+  logger.error('ML Worker Unhandled Error', { error: err.message, stack: err.stack });
   stateManager.setIsScanInProgress(false); // Ensure scan progress is reset
   const overlayWindow = windowManager.getOverlayWindow();
   if (overlayWindow && !overlayWindow.isDestroyed()) {
@@ -142,20 +148,26 @@ function handleMlWorkerError(err) {
  */
 function handleMlWorkerExit(code) {
   if (code !== 0) {
-    console.error(`[Main] ML Worker stopped with exit code ${code}. This might indicate an issue.`);
+    logger.error('ML Worker stopped unexpectedly', { exitCode: code });
     // Notify the user or attempt to restart the worker if appropriate.
     // For now, errors during processing will be caught by handleMlWorkerError or handleMlWorkerMessage.
   }
 }
 
 app.whenReady().then(async () => {
+  // Log application startup
+  logStartup();
+
   await loadTranslations(getCurrentLang()); // Load default language on startup
   try {
     await loadClassNamesForMain();
-    console.log('[MainInit] Class names loaded successfully for main process.');
+    logger.info('Class names loaded successfully for main process');
   } catch (classNamesError) {
-    console.error('[MainInit] Failed to load class names for ML model:', classNamesError);
-    dialog.showErrorBox('Application Error', `Failed to load critical ML model data (class names): ${classNamesError.message}. The application will close.`);
+    logger.error('Failed to load class names for ML model', { error: classNamesError.message, stack: classNamesError.stack });
+    dialog.showErrorBox(
+      'Application Error',
+      `Failed to load critical ML model data (class names): ${classNamesError.message}. The application will close.`
+    );
     app.quit(); // Critical failure, exit app
     return; // Stop further execution if class names can't be loaded
   }
@@ -170,23 +182,27 @@ app.whenReady().then(async () => {
     await fs.access(stateManager.getActiveDbPath());
   } catch (e) {
     stateManager.setIsFirstAppRun(true);
-    console.log('[MainInit] Database not found in userData. Copying bundled database.');
+    logger.info('Database not found in userData. Copying bundled database');
     try {
       await fs.mkdir(userDataPath, { recursive: true });
       await fs.copyFile(bundledDbPathInApp, stateManager.getActiveDbPath());
-      console.log('[MainInit] Bundled database copied successfully.');
+      logger.info('Bundled database copied successfully');
     } catch (copyError) {
       stateManager.setIsFirstAppRun(false);
-      console.error('[MainInit] Failed to copy bundled database:', copyError);
+      logger.error('Failed to copy bundled database', { error: copyError.message });
       dialog.showErrorBox('Database Error', `Failed to copy local database: ${copyError.message}.`);
     }
   }
 
   try {
     setupDatabase();
+    logger.info('Database schema initialized successfully');
   } catch (dbSetupError) {
-    console.error('[MainInit] Failed to set up database schema:', dbSetupError);
-    dialog.showErrorBox('Database Setup Error', `Failed to prepare database: ${dbSetupError.message}. App will close.`);
+    logger.error('Failed to set up database schema', { error: dbSetupError.message, stack: dbSetupError.stack });
+    dialog.showErrorBox(
+      'Database Setup Error',
+      `Failed to prepare database: ${dbSetupError.message}. App will close.`
+    );
     app.quit();
     return;
   }
@@ -203,13 +219,19 @@ app.whenReady().then(async () => {
   try {
     // Initialize ML Manager and wait for the worker to be ready
     await mlManager.initialize(handleMlWorkerMessage, handleMlWorkerError, handleMlWorkerExit, __dirname);
-    console.log('[MainInit] ML Manager initialized and worker is ready.');
+    logger.info('ML Manager initialized and worker is ready');
     // Register IPC handlers that DO depend on mlManager.postMessage *after* it's ready
     registerOverlayHandlers(); // This one uses mlManager.postMessage
 
   } catch (mlInitError) {
-    console.error('[MainInit] Failed to initialize ML Manager or ML Worker:', mlInitError);
-    dialog.showErrorBox('Application Error', `Failed to initialize critical ML component: ${mlInitError.message}. The application will close.`);
+    logger.error('Failed to initialize ML Manager or ML Worker', {
+      error: mlInitError.message,
+      stack: mlInitError.stack
+    });
+    dialog.showErrorBox(
+      'Application Error',
+      `Failed to initialize critical ML component: ${mlInitError.message}. The application will close.`
+    );
     app.quit();
     return;
   }
@@ -219,12 +241,12 @@ app.whenReady().then(async () => {
 
   // Perform an automatic check for updates on application startup
   // This is done after the autoUpdater has been configured by setupAutoUpdater.
-  console.log('[MainAppStart] Performing automatic check for updates...');
-  autoUpdater.checkForUpdates().catch(err => {
+  logger.info('Performing automatic check for updates');
+  autoUpdater.checkForUpdates().catch((err) => {
     // This catch is primarily to prevent unhandled promise rejections.
     // The 'error' event emitted by autoUpdater (handled in autoUpdaterSetup.js)
     // is responsible for notifying the renderer/UI about the error.
-    console.error('[MainAppStart] Error during automatic checkForUpdates() promise:', err.message);
+    logger.error('Error during automatic checkForUpdates', { error: err.message });
   });
 
   app.on('activate', () => {
@@ -240,7 +262,15 @@ app.on('window-all-closed', () => {
   }
 });
 
-app.on('will-quit', () => {
+app.on('will-quit', async (event) => {
+  event.preventDefault(); // Prevent immediate quit to allow cleanup
+
+  logger.info('Application will quit - cleaning up resources');
   stateManager.setIsScanInProgress(false);
   mlManager.terminate(); // Clean up the worker on quit
+
+  logShutdown();
+  await flushLogs(); // Ensure all logs are written
+
+  app.exit(0); // Now quit for real
 });
