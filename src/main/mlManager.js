@@ -1,16 +1,90 @@
 const path = require('path');
 const { Worker } = require('worker_threads');
 const { BASE_RESOURCES_PATH, MODEL_DIR_NAME, MODEL_FILENAME, CLASS_NAMES_FILENAME } = require('../../config');
+const { createLogger } = require('./logger');
+
+const logger = createLogger('MLManager');
 
 /**
  * @module mlManager
  * @description Manages the Machine Learning (ML) worker thread.
  * This module is responsible for initializing, communicating with, and terminating
  * the ML worker, which handles tasks like model inference.
+ * Includes automatic restart capability for improved reliability.
  */
 let mlWorker = null;
 let isManagerReady = false; // Tracks if the worker has signaled it's ready
 let initializationPromise = null; // Stores the promise for initialization
+
+// Auto-restart configuration
+let workerRestartCount = 0;
+const MAX_RESTART_ATTEMPTS = 3;
+const RESTART_COOLDOWN_MS = 5000; // Wait 5 seconds before restart
+let lastRestartTime = 0;
+
+// Store callbacks for restart functionality
+let storedCallbacks = {
+    onMessage: null,
+    onError: null,
+    onExit: null,
+    mainProcessDirname: null
+};
+
+/**
+ * Attempts to restart the ML Worker after a failure
+ * @param {Error} error - The error that caused the restart need
+ * @returns {Promise<boolean>} True if restart succeeded, false if max attempts reached
+ */
+async function attemptRestart(error) {
+    const now = Date.now();
+
+    // Reset restart count if enough time has passed since last restart
+    if (now - lastRestartTime > 60000) { // 1 minute cooldown
+        workerRestartCount = 0;
+    }
+
+    if (workerRestartCount >= MAX_RESTART_ATTEMPTS) {
+        logger.error('ML Worker failed permanently after max restart attempts', {
+            attempts: workerRestartCount,
+            lastError: error.message
+        });
+        return false;
+    }
+
+    workerRestartCount++;
+    lastRestartTime = now;
+
+    logger.warn(`Attempting to restart ML Worker (${workerRestartCount}/${MAX_RESTART_ATTEMPTS})`, {
+        reason: error.message
+    });
+
+    // Wait for cooldown before restarting
+    await new Promise((resolve) => setTimeout(resolve, RESTART_COOLDOWN_MS));
+
+    try {
+        // Terminate existing worker if any
+        if (mlWorker) {
+            await terminate();
+        }
+
+        // Reinitialize with stored callbacks
+        await initialize(
+            storedCallbacks.onMessage,
+            storedCallbacks.onError,
+            storedCallbacks.onExit,
+            storedCallbacks.mainProcessDirname
+        );
+
+        logger.info('ML Worker restarted successfully', { attempt: workerRestartCount });
+        return true;
+    } catch (restartError) {
+        logger.error('Failed to restart ML Worker', {
+            attempt: workerRestartCount,
+            error: restartError.message
+        });
+        return false;
+    }
+}
 
 /**
  * Initializes the ML Worker.
@@ -21,8 +95,16 @@ let initializationPromise = null; // Stores the promise for initialization
  * @returns {Promise<void>} A promise that resolves when the worker is ready, or rejects on initialization error.
  */
 function initialize(onMessageCallback, onErrorCallback, onExitCallback, mainProcessDirname) {
+    // Store callbacks for potential restart
+    storedCallbacks = {
+        onMessage: onMessageCallback,
+        onError: onErrorCallback,
+        onExit: onExitCallback,
+        mainProcessDirname: mainProcessDirname
+    };
+
     if (mlWorker) {
-        console.warn('[MLManager] Worker already initialized. Returning existing initialization promise.');
+        logger.warn('Worker already initialized. Returning existing initialization promise');
         return initializationPromise || Promise.resolve(); // Return existing or resolved promise
     }
     isManagerReady = false; // Reset ready state for new initialization
@@ -34,7 +116,7 @@ function initialize(onMessageCallback, onErrorCallback, onExitCallback, mainProc
         try {
             mlWorker = new Worker(workerPath);
         } catch (error) {
-            console.error(`[MLManager] Failed to create ML Worker at ${workerPath}:`, error);
+            logger.error('Failed to create ML Worker', { path: workerPath, error: error.message });
             if (typeof onErrorCallback === 'function') {
                 onErrorCallback(error); // Notify via original callback
             }
@@ -44,14 +126,14 @@ function initialize(onMessageCallback, onErrorCallback, onExitCallback, mainProc
 
         const handleInitialMessage = (message) => {
             if (message && message.status === 'ready') {
-                console.log('[MLManager] ML Worker signaled ready.');
+                logger.info('ML Worker signaled ready');
                 isManagerReady = true;
                 mlWorker.off('message', handleInitialMessage); // Stop listening for init message
                 mlWorker.off('error', handleInitialError);   // Stop listening for init error
                 mlWorker.on('message', onMessageCallback); // Attach the regular message handler
                 resolve();
             } else if (message && message.status === 'error' && message.type === 'init-error') {
-                console.error('[MLManager] ML Worker signaled initialization error:', message.error);
+                logger.error('ML Worker signaled initialization error', { error: message.error });
                 isManagerReady = false;
                 if (typeof onErrorCallback === 'function') {
                     onErrorCallback(message.error);
@@ -67,7 +149,7 @@ function initialize(onMessageCallback, onErrorCallback, onExitCallback, mainProc
         };
 
         const handleInitialError = (err) => {
-            console.error('[MLManager] ML Worker error during initialization phase:', err);
+            logger.error('ML Worker error during initialization phase', { error: err.message });
             isManagerReady = false;
             if (typeof onErrorCallback === 'function') {
                 onErrorCallback(err);
@@ -83,7 +165,7 @@ function initialize(onMessageCallback, onErrorCallback, onExitCallback, mainProc
             onExitCallback(code); // Call original exit callback
             if (!isManagerReady) { // If exited before becoming ready
                 const exitError = new Error(`ML Worker exited with code ${code} during initialization.`);
-                console.error(`[MLManager] ${exitError.message}`);
+                logger.error('ML Worker exited during initialization', { exitCode: code });
                 isManagerReady = false;
                 reject(exitError);
             }
@@ -99,7 +181,7 @@ function initialize(onMessageCallback, onErrorCallback, onExitCallback, mainProc
             type: 'init',
             payload: { modelPath: modelFileUrl, classNamesPath: classNamesJsonPath }
         });
-        console.log('[MLManager] ML Worker instance created and init message sent. Waiting for ready signal...');
+        logger.debug('ML Worker instance created and init message sent. Waiting for ready signal');
     });
     return initializationPromise;
 }
@@ -110,7 +192,7 @@ function initialize(onMessageCallback, onErrorCallback, onExitCallback, mainProc
  */
 function postMessage(message) {
     if (!isManagerReady) {
-        console.error('[MLManager] Worker not ready. Cannot send message:', message);
+        logger.error('Worker not ready. Cannot send message', { messageType: message?.type });
         // Depending on desired behavior, could throw an error or queue the message.
         // For now, logging and returning to prevent further issues.
         return;
@@ -118,7 +200,7 @@ function postMessage(message) {
     if (mlWorker && typeof mlWorker.postMessage === 'function') {
         mlWorker.postMessage(message);
     } else {
-        console.error('[MLManager] Worker not initialized or postMessage not available. Cannot send message:', message);
+        logger.error('Worker not initialized or postMessage not available', { messageType: message?.type });
     }
 }
 
@@ -130,12 +212,12 @@ function postMessage(message) {
 async function terminate() {
     let exitCodeToReturn = null;
     if (mlWorker) {
-        console.log('[MLManager] Terminating ML Worker.');
+        logger.info('Terminating ML Worker');
         try {
             exitCodeToReturn = await mlWorker.terminate();
-            console.log(`[MLManager] ML Worker terminated with exit code: ${exitCodeToReturn}.`);
+            logger.info('ML Worker terminated', { exitCode: exitCodeToReturn });
         } catch (error) {
-            console.error('[MLManager] Error terminating ML Worker:', error);
+            logger.error('Error terminating ML Worker', { error: error.message });
             // exitCodeToReturn remains null or its previous value
         } finally {
             mlWorker = null;
@@ -143,7 +225,7 @@ async function terminate() {
             initializationPromise = null;
         }
     } else {
-        console.log('[MLManager] Terminate called but worker was not running.');
+        logger.debug('Terminate called but worker was not running');
         // Ensure state is reset even if worker was already null
         isManagerReady = false;
         initializationPromise = null;
@@ -151,8 +233,29 @@ async function terminate() {
     return exitCodeToReturn;
 }
 
+/**
+ * Resets the restart counter (useful after successful operations)
+ */
+function resetRestartCount() {
+    if (workerRestartCount > 0) {
+        logger.info('Resetting ML Worker restart counter', { previousCount: workerRestartCount });
+    }
+    workerRestartCount = 0;
+}
+
+/**
+ * Gets the current restart attempt count
+ * @returns {number} Current restart count
+ */
+function getRestartCount() {
+    return workerRestartCount;
+}
+
 module.exports = {
     initialize,
     postMessage,
     terminate,
+    attemptRestart,
+    resetRestartCount,
+    getRestartCount
 };
