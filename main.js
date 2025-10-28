@@ -24,6 +24,9 @@ const { cacheManager } = require('./src/main/cacheManager');
 // --- Performance Metrics ---
 const performanceMetrics = require('./src/main/performanceMetrics');
 
+// --- Debug Mode ---
+const debugMode = require('./src/main/debugMode');
+
 // --- Local Modules ---
 const setupDatabase = require('./src/database/setupDatabase');
 const {
@@ -51,6 +54,7 @@ const { registerBackupHandlers } = require('./src/main/ipcHandlers/backupHandler
 const { registerMemoryHandlers } = require('./src/main/ipcHandlers/memoryHandlers');
 const { registerCacheHandlers } = require('./src/main/ipcHandlers/cacheHandlers');
 const { registerPerformanceHandlers } = require('./src/main/ipcHandlers/performanceHandlers');
+const { registerDebugHandlers } = require('./src/main/ipcHandlers/debugHandlers');
 
 windowManager.setAppInstance(app);
 
@@ -276,6 +280,16 @@ app.whenReady().then(async () => {
   registerMemoryHandlers();
   registerCacheHandlers();
   registerPerformanceHandlers();
+  registerDebugHandlers();
+
+  // Enable debug mode if DEBUG environment variable is set
+  if (process.env.DEBUG === 'true' || process.env.DEBUG === '1') {
+    logger.info('Enabling debug mode from environment variable');
+    debugMode.enable({
+      verboseLogging: true,
+      operationLogging: true
+    });
+  }
 
   windowManager.initMainWindow(stateManager.getIsFirstAppRun(), stateManager.getActiveDbPath());
 
@@ -343,6 +357,12 @@ app.on('will-quit', async (event) => {
   // Log performance metrics and stop reporting
   logger.info(performanceMetrics.getSummary());
   performanceMetrics.stopPeriodicReporting();
+
+  // Log debug mode report if enabled
+  if (debugMode.isEnabled()) {
+    logger.info('Debug mode was enabled during session');
+    logger.info(debugMode.getDebugReport());
+  }
 
   logShutdown();
   await flushLogs(); // Ensure all logs are written
