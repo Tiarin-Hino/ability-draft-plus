@@ -21,6 +21,9 @@ const memoryMonitor = require('./src/main/memoryMonitor');
 // --- Cache Management ---
 const { cacheManager } = require('./src/main/cacheManager');
 
+// --- Performance Metrics ---
+const performanceMetrics = require('./src/main/performanceMetrics');
+
 // --- Local Modules ---
 const setupDatabase = require('./src/database/setupDatabase');
 const {
@@ -47,6 +50,7 @@ const { registerLocalizationHandlers } = require('./src/main/ipcHandlers/localiz
 const { registerBackupHandlers } = require('./src/main/ipcHandlers/backupHandlers');
 const { registerMemoryHandlers } = require('./src/main/ipcHandlers/memoryHandlers');
 const { registerCacheHandlers } = require('./src/main/ipcHandlers/cacheHandlers');
+const { registerPerformanceHandlers } = require('./src/main/ipcHandlers/performanceHandlers');
 
 windowManager.setAppInstance(app);
 
@@ -186,6 +190,9 @@ app.whenReady().then(async () => {
   // Start cache periodic cleanup
   cacheManager.startPeriodicCleanup();
 
+  // Start performance metrics reporting
+  performanceMetrics.startPeriodicReporting();
+
   await loadTranslations(getCurrentLang()); // Load default language on startup
   try {
     await loadClassNamesForMain();
@@ -268,6 +275,7 @@ app.whenReady().then(async () => {
   registerBackupHandlers();
   registerMemoryHandlers();
   registerCacheHandlers();
+  registerPerformanceHandlers();
 
   windowManager.initMainWindow(stateManager.getIsFirstAppRun(), stateManager.getActiveDbPath());
 
@@ -331,6 +339,10 @@ app.on('will-quit', async (event) => {
   // Log cache stats and stop cleanup
   logger.info(cacheManager.getSummary());
   cacheManager.stopPeriodicCleanup();
+
+  // Log performance metrics and stop reporting
+  logger.info(performanceMetrics.getSummary());
+  performanceMetrics.stopPeriodicReporting();
 
   logShutdown();
   await flushLogs(); // Ensure all logs are written
