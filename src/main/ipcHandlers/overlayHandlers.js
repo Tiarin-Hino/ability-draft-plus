@@ -20,6 +20,9 @@ const {
     ValidationError
 } = require('../ipcValidation');
 
+// Import performance optimization modules
+const { screenshotCache } = require('../../imageProcessor');
+
 /**
  * Registers all IPC handlers related to the overlay window.
  */
@@ -89,6 +92,11 @@ function registerOverlayHandlers() {
         stateManager.getMySelectedModelScreenOrder(),
         resetScanStateForOverlay
       );
+
+      // Start screenshot prefetching for faster scans
+      console.log('[OverlayHandlers] Starting screenshot prefetch');
+      screenshotCache.startPrefetch();
+
       sendStatusUpdate(event.sender, 'scrape-status', { key: 'ipcMessages.overlayActivated', params: { res: selectedResolution } });
     } catch (error) {
       console.error('[OverlayHandlers] Overlay Activation Error:', error);
@@ -170,7 +178,8 @@ function registerOverlayHandlers() {
     stateManager.setMySelectedSpotOriginalOrder(selectedHeroOriginalOrderFromOverlay);
 
     try {
-      const screenshotBuffer = await screenshotDesktop({ format: 'png' });
+      // Use cached screenshot for faster scan initiation
+      const screenshotBuffer = await screenshotCache.getScreenshot();
       mlManager.postMessage({
         type: 'scan',
         payload: {
@@ -192,7 +201,14 @@ function registerOverlayHandlers() {
    * Handles the 'close-overlay' IPC call.
    * Closes the overlay window.
    */
-  ipcMain.on('close-overlay', () => windowManager.closeOverlay());
+  ipcMain.on('close-overlay', () => {
+    // Stop screenshot prefetching to save resources
+    console.log('[OverlayHandlers] Stopping screenshot prefetch');
+    screenshotCache.stopPrefetch();
+    screenshotCache.clearCache();
+
+    windowManager.closeOverlay();
+  });
 
   /**
    * Handles the 'set-overlay-mouse-ignore' IPC call.
