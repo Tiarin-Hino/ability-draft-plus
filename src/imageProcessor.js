@@ -2,6 +2,9 @@ const fs = require('fs').promises;
 const screenshot = require('screenshot-desktop');
 const sharp = require('sharp');
 const tf = require('@tensorflow/tfjs-node');
+const mlPerformanceMetrics = require('./mlPerformanceMetrics');
+const smartScanning = require('./smartScanning');
+const screenshotCache = require('./screenshotCache');
 
 /**
  * @file Manages image processing tasks, including loading a TensorFlow.js model,
@@ -15,6 +18,28 @@ const tf = require('@tensorflow/tfjs-node');
 /** Image dimensions the model was trained on. */
 const IMG_HEIGHT = 96;
 const IMG_WIDTH = 96;
+
+/** TensorFlow.js backend type */
+let tfBackend = 'tensorflow'; // Default to tfjs-node backend
+
+/** Performance tracking flag - set to true to enable detailed metrics */
+const ENABLE_PERFORMANCE_TRACKING = process.env.TRACK_ML_PERFORMANCE === 'true' || false;
+
+/**
+ * Conditionally starts a performance timer
+ * @param {string} category - Metric category
+ * @returns {object} Timer object with end() method
+ */
+function conditionalStartTimer(category) {
+    if (ENABLE_PERFORMANCE_TRACKING) {
+        return mlPerformanceMetrics.startTimer(category);
+    }
+    // Return a no-op timer that returns elapsed time without tracking
+    const start = performance.now();
+    return {
+        end: () => performance.now() - start
+    };
+}
 
 // --- Module State ---
 /** Absolute path to the TensorFlow.js Graph Model JSON file. Set during initialization. */
@@ -83,12 +108,17 @@ function initializeImageProcessor(modelPath, classNamesPath) {
     modelPromise = tf.loadGraphModel(absoluteModelPath)
         .then(model => {
             console.log('[ImageProcessor] TFJS Graph Model loaded successfully.');
+            tfBackend = tf.getBackend();
+            console.log(`[ImageProcessor] Using TensorFlow.js backend: ${tfBackend}`);
+
             // Warm up the model with a dummy input to potentially speed up the first real prediction.
             try {
+                const warmupStart = performance.now();
                 const dummyInput = tf.zeros([1, IMG_HEIGHT, IMG_WIDTH, 3]); // Batch size 1
                 const warmupResult = model.predict(dummyInput);
                 tf.dispose([dummyInput, warmupResult]); // Dispose tensors to free memory
-                console.log('[ImageProcessor] Model warmed up successfully.');
+                const warmupTime = performance.now() - warmupStart;
+                console.log(`[ImageProcessor] Model warmed up successfully in ${warmupTime.toFixed(2)}ms`);
             } catch (warmupErr) {
                 console.error('[ImageProcessor] Error during model warmup:', warmupErr);
                 // Non-fatal, but log it.
@@ -162,7 +192,7 @@ async function initializeImageProcessorIfNeeded() {
  * @property {SlotCoordinate} coord - The coordinates of the processed slot.
  */
 async function identifySlots(slotDataArray, screenBuffer, currentClassNames, confidenceThreshold, previouslyPickedNames = new Set()) {
-    const identifySlotsStart = performance.now();
+    const totalTimer = conditionalStartTimer('totalScan');
     // Assumes initializeImageProcessorIfNeeded has been called or promises are awaited by caller context
 
     const model = await modelPromise;
@@ -219,27 +249,31 @@ async function identifySlots(slotDataArray, screenBuffer, currentClassNames, con
         return slotDataArray.map(defaultSlotResult);
     }
 
-    const imageTensors = [];
-    for (const buffer of croppedBuffers) {
-        let tensor = tf.node.decodeImage(buffer, 3);
-        let resizedTensor = tf.image.resizeBilinear(tensor, [IMG_HEIGHT, IMG_WIDTH]);
-        imageTensors.push(resizedTensor);
-        tf.dispose(tensor);
-    }
+    // Optimize: Use tf.tidy to automatically dispose intermediate tensors
+    const preprocessTimer = conditionalStartTimer('preprocessing');
+    const batchTensor = tf.tidy(() => {
+        const imageTensors = croppedBuffers.map(buffer => {
+            const tensor = tf.node.decodeImage(buffer, 3);
+            const resizedTensor = tf.image.resizeBilinear(tensor, [IMG_HEIGHT, IMG_WIDTH]);
+            return resizedTensor;
+        });
+        return tf.stack(imageTensors);
+    });
+    preprocessTimer.end({ slotCount: croppedBuffers.length });
 
-    const batchTensor = tf.stack(imageTensors);
-    tf.dispose(imageTensors);
-
+    const inferenceTimer = conditionalStartTimer('inference');
     let predictionTensor;
     try {
         predictionTensor = model.predict(batchTensor);
     } catch (err) {
         console.error(`[ImageProcessor] Error during batch prediction: ${err.message}`);
         tf.dispose(batchTensor);
+        totalTimer.end({ success: false });
         return slotDataArray.map(defaultSlotResult);
     }
     const probabilities = await predictionTensor.array();
     tf.dispose([batchTensor, predictionTensor]);
+    inferenceTimer.end({ slotCount: croppedBuffers.length });
 
     const identifiedResults = Array(slotDataArray.length).fill(null);
 
@@ -281,7 +315,13 @@ async function identifySlots(slotDataArray, screenBuffer, currentClassNames, con
             identifiedResults[i] = defaultSlotResult(slotDataArray[i]);
         }
     }
-    console.log(`[ImageProcessor] identifySlots completed in ${performance.now() - identifySlotsStart}ms.`);
+
+    const totalDuration = totalTimer.end({
+        success: true,
+        slotCount: slotDataArray.length,
+        identifiedCount: identifiedResults.filter(r => r.name !== null).length
+    });
+    console.log(`[ImageProcessor] identifySlots completed in ${totalDuration.toFixed(2)}ms.`);
     return identifiedResults;
 }
 
@@ -373,19 +413,20 @@ async function identifySlotsFromCache(cachedPoolAbilities, screenBuffer, current
         return [];
     }
 
-    let preprocessingStartTime = performance.now();
-    const imageTensors = [];
-    for (const buffer of croppedBuffers) {
-        let tensor = tf.node.decodeImage(buffer, 3);
-        let resizedTensor = tf.image.resizeBilinear(tensor, [IMG_HEIGHT, IMG_WIDTH]);
-        imageTensors.push(resizedTensor);
-        tf.dispose(tensor);
-    }
-    const batchTensor = tf.stack(imageTensors);
-    tf.dispose(imageTensors);
-    console.log(`[identifySlotsFromCache] Preprocessed (decode/resize/stack) ${batchTensor.shape[0]} images in ${performance.now() - preprocessingStartTime}ms.`);
+    // Optimize: Use tf.tidy to automatically dispose intermediate tensors
+    const preprocessTimer = conditionalStartTimer('preprocessing');
+    const batchTensor = tf.tidy(() => {
+        const imageTensors = croppedBuffers.map(buffer => {
+            const tensor = tf.node.decodeImage(buffer, 3);
+            const resizedTensor = tf.image.resizeBilinear(tensor, [IMG_HEIGHT, IMG_WIDTH]);
+            return resizedTensor;
+        });
+        return tf.stack(imageTensors);
+    });
+    const preprocessDuration = preprocessTimer.end({ slotCount: croppedBuffers.length });
+    console.log(`[identifySlotsFromCache] Preprocessed (decode/resize/stack) ${batchTensor.shape[0]} images in ${preprocessDuration.toFixed(2)}ms.`);
 
-    let predictionStartTime = performance.now();
+    const inferenceTimer = conditionalStartTimer('inference');
     let predictionTensor;
     try {
         predictionTensor = model.predict(batchTensor);
@@ -396,7 +437,8 @@ async function identifySlotsFromCache(cachedPoolAbilities, screenBuffer, current
     }
     const probabilities = await predictionTensor.array();
     tf.dispose([batchTensor, predictionTensor]);
-    console.log(`[identifySlotsFromCache] Performed batch prediction from cache for ${probabilities.length} images in ${performance.now() - predictionStartTime}ms.`);
+    const inferenceDuration = inferenceTimer.end({ slotCount: probabilities.length });
+    console.log(`[identifySlotsFromCache] Performed batch prediction from cache for ${probabilities.length} images in ${inferenceDuration.toFixed(2)}ms.`);
 
     for (let i = 0; i < probabilities.length; i++) {
         const originalCacheIndex = validCacheIndexes[i];
@@ -513,5 +555,9 @@ module.exports = {
     performInitialScan,
     performSelectedAbilitiesScan,
     identifySlots,
-    identifySlotsFromCache
+    identifySlotsFromCache,
+    // Export new performance and optimization modules
+    mlPerformanceMetrics,
+    smartScanning,
+    screenshotCache
 };
