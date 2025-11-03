@@ -149,3 +149,6 @@ scripts/*.png
 scripts/*.PNG
 scripts/*.json
 !scripts/requirements.txt
+
+# Claude Code local settings
+.claude/settings.local.json
