@@ -140,3 +140,12 @@ package-lock.json
 
 # configuration files
 **/app-config.js
+
+# Scripts output and cache
+scripts/output/
+scripts/__pycache__/
+scripts/*.pyc
+scripts/*.png
+scripts/*.PNG
+scripts/*.json
+!scripts/requirements.txt

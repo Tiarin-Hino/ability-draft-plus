@@ -17,7 +17,10 @@
       "Bash(taskkill:*)",
       "Bash(python3:*)",
       "Bash(timeout 15 npm start:*)",
-      "Bash(tee:*)"
+      "Bash(tee:*)",
+      "Bash(python:*)",
+      "Bash(pip install:*)",
+      "Bash(dir:*)"
     ],
     "deny": [],
     "ask": []
