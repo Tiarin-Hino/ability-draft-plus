@@ -52,9 +52,12 @@
             <div>
                 <label for="resolution-select" data-i18n="controlPanel.activation.label">Select screen resolution for
                     scanning:</label>
-                <select id="resolution-select" aria-describedby="resolution-help">
-                    <option value="" data-i18n="controlPanel.status.loadingResolutions">Loading resolutions...</option>
-                </select>
+                <div class="resolution-controls">
+                    <select id="resolution-select" aria-describedby="resolution-help">
+                        <option value="" data-i18n="controlPanel.status.loadingResolutions">Loading resolutions...</option>
+                    </select>
+                    <button id="save-resolution-btn" class="save-resolution-btn" data-i18n="controlPanel.activation.saveButton" title="Save as preferred resolution">Save as Preferred</button>
+                </div>
                 <p id="resolution-help" data-i18n="controlPanel.activation.helpText">This resolution must
                     match your Dota 2 game setting.</p>
             </div>

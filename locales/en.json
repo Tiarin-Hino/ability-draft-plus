@@ -36,7 +36,9 @@
             "helpText": "This resolution must match your Dota 2 game setting.",
             "description": "Activate the overlay. You can do it before starting game or before game search. It would stay in standby mode until you click 'Initial Scan'.",
             "button": "Activate Overlay",
-            "activating": "Activating Overlay..."
+            "activating": "Activating Overlay...",
+            "saveButton": "Save as Preferred",
+            "savedMessage": "Resolution saved as preferred!"
         },
         "newResolution": {
             "title": "Submit New Layout",
