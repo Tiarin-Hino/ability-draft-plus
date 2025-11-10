@@ -528,6 +528,31 @@ input:checked+.slider:before {
 }
 
 /* Utility/Specific ID Styles */
+.resolution-controls {
+    align-items: center;
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.resolution-controls select {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+.save-resolution-btn {
+    background: linear-gradient(135deg, var(--brand-purple) 0%, var(--brand-purple-light) 100%);
+    font-size: 13px;
+    min-height: 40px;
+    padding: 8px 16px;
+    white-space: nowrap;
+}
+
+.save-resolution-btn:hover {
+    background: linear-gradient(135deg, var(--brand-purple-light) 0%, var(--brand-purple) 100%);
+    box-shadow: 0 4px 12px rgba(93, 53, 102, 0.25);
+}
+
 #resolution-help {
     color: var(--text-color-muted);
     font-size: 0.85em;

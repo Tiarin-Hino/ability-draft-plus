@@ -1,6 +1,7 @@
 const updateAllDataButton = document.getElementById('update-all-data-btn');
 const activateOverlayButton = document.getElementById('activate-overlay-btn');
 const resolutionSelect = document.getElementById('resolution-select');
+const saveResolutionButton = document.getElementById('save-resolution-btn');
 const statusMessageElement = document.getElementById('status-message');
 const lastUpdatedDateElement = document.getElementById('last-updated-date');
 const exportFailedSamplesButton = document.getElementById('export-failed-samples-btn');
@@ -157,7 +158,14 @@ if (window.electronAPI) {
                 resolutionSelect.appendChild(option);
             });
 
-            if (systemDisplayInfo && systemDisplayInfo.resolutionString) {
+            // Check for saved preferred resolution first
+            const preferredResolution = localStorage.getItem('preferredResolution');
+            if (preferredResolution && resolutions.includes(preferredResolution)) {
+                resolutionSelect.value = preferredResolution;
+                selectedResolution = preferredResolution;
+                uiUtils.updateStatusMessage({ key: 'controlPanel.status.resolutionsLoaded', params: { res: preferredResolution } });
+                resolutionEffectivelySelected = true;
+            } else if (systemDisplayInfo && systemDisplayInfo.resolutionString) {
                 const systemResString = systemDisplayInfo.resolutionString;
                 if (resolutions.includes(systemResString)) {
                     resolutionSelect.value = systemResString;
@@ -451,6 +459,31 @@ if (window.electronAPI) {
             if (activateOverlayButton) {
                 activateOverlayButton.disabled = !selectedResolution;
             }
+        });
+    }
+
+    if (saveResolutionButton) {
+        saveResolutionButton.addEventListener('click', () => {
+            if (!selectedResolution) {
+                uiUtils.updateStatusMessage(translate('controlPanel.status.selectResolutionFirst'), true);
+                return;
+            }
+
+            // Save to localStorage
+            localStorage.setItem('preferredResolution', selectedResolution);
+            console.log(`[Renderer] Saved preferred resolution: ${selectedResolution}`);
+
+            // Show visual feedback
+            const originalText = saveResolutionButton.textContent;
+            saveResolutionButton.textContent = '✓';
+            saveResolutionButton.disabled = true;
+
+            setTimeout(() => {
+                saveResolutionButton.textContent = originalText;
+                saveResolutionButton.disabled = false;
+            }, 1500);
+
+            uiUtils.updateStatusMessage(translate('controlPanel.activation.savedMessage'), false);
         });
     }
 
