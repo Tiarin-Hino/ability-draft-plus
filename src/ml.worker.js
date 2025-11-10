@@ -62,7 +62,6 @@ parentPort.on('message', async (message) => {
         }
 
         if (type === 'scan') {
-            console.log(`[ML Worker] Received scan task. isInitialScan: ${payload.isInitialScan}`);
             let results;
 
             if (payload.isInitialScan) {
@@ -88,7 +87,6 @@ parentPort.on('message', async (message) => {
                 results: results,
                 isInitialScan: payload.isInitialScan
             });
-            console.log(`[ML Worker] Scan task completed. isInitialScan: ${payload.isInitialScan}`);
         } else {
             console.warn(`[ML Worker] Received unknown message type: '${type}'. Ignoring.`);
             // Optionally, notify the main thread about the unknown message type

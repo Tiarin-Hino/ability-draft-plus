@@ -4,6 +4,8 @@ const {
     getAbilityDetails,
     getHighWinrateCombinations,
     getAllOPCombinations,
+    getAllHeroSynergies,
+    getHeroSynergiesInPool,
     getHeroDetailsByAbilityName,
     getHeroDetailsById
 } = require('../database/queries'); // Adjusted path
@@ -281,18 +283,21 @@ function determineTopTierEntities(allScoredEntities, selectedModelId, mySpotHasU
  * @param {Array<object> | null} heroModels - The array of identified hero models.
  * @param {Array<object>} topTierMarkedEntities - Entities marked as top-tier.
  * @param {Array<object>} allScoredEntities - All entities with their scores.
+ * @param {Map<string, Array<object>>} heroSynergiesMap - Map of hero internal names to their ability synergies.
  * @returns {Array<object>} The enriched hero model data.
  */
-function enrichHeroModelDataWithFlags(heroModels, topTierMarkedEntities, allScoredEntities) {
+function enrichHeroModelDataWithFlags(heroModels, topTierMarkedEntities, allScoredEntities, heroSynergiesMap = new Map()) {
     if (!heroModels) return [];
     return heroModels.map(hModel => {
         const scoredEntity = allScoredEntities.find(e => e.entityType === 'hero' && e.internalName === hModel.heroName);
         const topTierEntry = topTierMarkedEntities.find(tte => tte.entityType === 'hero' && tte.internalName === hModel.heroName && tte.isGeneralTopTier);
+        const abilitySynergies = heroSynergiesMap.get(hModel.heroName) || [];
         return {
             ...hModel,
             isGeneralTopTier: !!topTierEntry,
             isSynergySuggestionForMySpot: false, // Hero models are not synergy suggestions for a spot
             consolidatedScore: scoredEntity ? scoredEntity.consolidatedScore : 0,
+            abilitySynergies: abilitySynergies
         };
     });
 }
@@ -343,6 +348,7 @@ function formatResultsForUiWithFlags(
             is_ultimate_from_layout: isUltimateFromLayoutSlot,
             ability_order_from_db: dbDetails ? dbDetails.ability_order : null,
             highWinrateCombinations: dbDetails ? (dbDetails.highWinrateCombinations || []) : [],
+            heroSynergies: dbDetails ? (dbDetails.heroSynergies || []) : [],
             isGeneralTopTier: topTierEntry ? (topTierEntry.isGeneralTopTier || false) : false,
             isSynergySuggestionForMySpot: topTierEntry ? (topTierEntry.isSynergySuggestionForMySpot || false) : false,
             confidence: result.confidence,
@@ -474,7 +480,62 @@ async function processAndFinalizeScanData(rawScanResults, isInitialScan, mainSta
             }
         }
 
-        const allDatabaseOPCombs = await getAllOPCombinations(activeDbPath);
+        // Calculate hero synergies for abilities and hero models
+        const opThresholdPercentage = mainState.opThresholdPercentage !== undefined ? mainState.opThresholdPercentage : 0.13;
+        const allHeroSynergiesData = await getAllHeroSynergies(activeDbPath, opThresholdPercentage);
+
+        // Create a set of hero internal names that are in the pool
+        const heroesInPool = new Set();
+        if (identifiedHeroModelsCache) {
+            identifiedHeroModelsCache.forEach(heroModel => {
+                if (heroModel.heroName && heroModel.heroName !== 'Unknown Hero') {
+                    heroesInPool.add(heroModel.heroName);
+                }
+            });
+        }
+
+        // Add hero synergies to each ability (which heroes synergize with this ability)
+        // Only include heroes that are in the current pool
+        for (const abilityName of allCurrentlyRelevantAbilityNames) {
+            const details = abilityDetailsMap.get(abilityName);
+            if (details) {
+                const heroSynergiesForAbility = allHeroSynergiesData
+                    .filter(synergy => synergy.abilityInternalName === abilityName)
+                    .filter(synergy => heroesInPool.has(synergy.heroInternalName)) // Only heroes in pool
+                    .map(synergy => ({
+                        heroDisplayName: synergy.heroDisplayName,
+                        heroInternalName: synergy.heroInternalName,
+                        synergyWinrate: synergy.synergyWinrate
+                    }))
+                    .sort((a, b) => b.synergyWinrate - a.synergyWinrate)
+                    .slice(0, 5); // Limit to top 5
+
+                details.heroSynergies = heroSynergiesForAbility;
+                abilityDetailsMap.set(abilityName, details);
+            }
+        }
+
+        // Calculate ability synergies for each hero model (which abilities synergize with this hero)
+        const heroModelSynergiesMap = new Map();
+        if (identifiedHeroModelsCache) {
+            for (const heroModel of identifiedHeroModelsCache) {
+                if (heroModel.heroName) {
+                    const abilitySynergiesForHero = allHeroSynergiesData
+                        .filter(synergy => synergy.heroInternalName === heroModel.heroName)
+                        .filter(synergy => uniqueAbilityNamesInPool.has(synergy.abilityInternalName) || allPickedAbilityNames.has(synergy.abilityInternalName))
+                        .map(synergy => ({
+                            abilityDisplayName: synergy.abilityDisplayName,
+                            abilityInternalName: synergy.abilityInternalName,
+                            synergyWinrate: synergy.synergyWinrate
+                        }))
+                        .sort((a, b) => b.synergyWinrate - a.synergyWinrate)
+                        .slice(0, 5); // Limit to top 5
+
+                    heroModelSynergiesMap.set(heroModel.heroName, abilitySynergiesForHero);
+                }
+            }
+        }
+        const allDatabaseOPCombs = await getAllOPCombinations(activeDbPath, opThresholdPercentage);
         const relevantOPCombinations = allDatabaseOPCombs.filter(combo => {
             const a1InPool = uniqueAbilityNamesInPool.has(combo.ability1InternalName);
             const a2InPool = uniqueAbilityNamesInPool.has(combo.ability2InternalName);
@@ -483,12 +544,20 @@ async function processAndFinalizeScanData(rawScanResults, isInitialScan, mainSta
             return (a1InPool && a2InPool) || (a1InPool && a2Picked) || (a1Picked && a2InPool);
         }).map(combo => ({ ability1DisplayName: combo.ability1DisplayName, ability2DisplayName: combo.ability2DisplayName, synergyWinrate: combo.synergyWinrate }));
 
+        // Query hero-ability synergies (only for heroes in the pool)
+        const relevantHeroSynergies = allHeroSynergiesData.filter(synergy => {
+            const abilityInPool = uniqueAbilityNamesInPool.has(synergy.abilityInternalName);
+            const abilityPicked = allPickedAbilityNames.has(synergy.abilityInternalName);
+            const heroInPool = heroesInPool.has(synergy.heroInternalName);
+            return (abilityInPool || abilityPicked) && heroInPool;
+        }).map(synergy => ({ heroDisplayName: synergy.heroDisplayName, abilityDisplayName: synergy.abilityDisplayName, synergyWinrate: synergy.synergyWinrate }));
+
         let allEntitiesForScoring = prepareEntitiesForScoring(currentScanCycleResults, abilityDetailsMap, identifiedHeroModelsCache);
         allEntitiesForScoring = calculateConsolidatedScores(allEntitiesForScoring);
         const mySpotHasPickedUltimate = checkMySpotPickedUltimate(mySelectedSpotDbIdForDrafting, heroesForMySpotSelectionUI, currentScanCycleResults.selectedAbilities);
         const topTierMarkedEntities = determineTopTierEntities(allEntitiesForScoring, mySelectedModelDbHeroId, mySpotHasPickedUltimate, synergisticPartnersInPoolForMySpot);
 
-        const enrichedHeroModels = enrichHeroModelDataWithFlags(identifiedHeroModelsCache, topTierMarkedEntities, allEntitiesForScoring);
+        const enrichedHeroModels = enrichHeroModelDataWithFlags(identifiedHeroModelsCache, topTierMarkedEntities, allEntitiesForScoring, heroModelSynergiesMap);
         const formattedUltimates = formatResultsForUiWithFlags(currentScanCycleResults.ultimates, abilityDetailsMap, topTierMarkedEntities, 'ultimates', allEntitiesForScoring);
         const formattedStandard = formatResultsForUiWithFlags(currentScanCycleResults.standard, abilityDetailsMap, topTierMarkedEntities, 'standard', allEntitiesForScoring);
         const formattedSelectedAbilities = formatResultsForUiWithFlags(currentScanCycleResults.selectedAbilities, abilityDetailsMap, [], 'selected', allEntitiesForScoring, true);
@@ -502,6 +571,7 @@ async function processAndFinalizeScanData(rawScanResults, isInitialScan, mainSta
             heroesForMySpotUI: heroesForMySpotSelectionUI,
             targetResolution: lastScanTargetResolution,
             opCombinations: relevantOPCombinations,
+            heroSynergies: relevantHeroSynergies,
             initialSetup: false, // This flag is true only for the very first data sent to overlay upon creation
             scaleFactor: lastUsedScaleFactor,
             selectedHeroForDraftingDbId: mySelectedSpotDbIdForDrafting,

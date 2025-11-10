@@ -6,6 +6,7 @@
 
 const { ipcMain, screen, app, nativeTheme, shell } = require('electron');
 const { validateUrl, ValidationError } = require('../ipcValidation');
+const stateManager = require('../stateManager');
 
 /**
  * Registers all application context IPC handlers.
@@ -71,6 +72,27 @@ function registerAppContextHandlers() {
             } else {
                 throw error;
             }
+        }
+    });
+
+    /**
+     * Handles the 'set-op-threshold' IPC call.
+     * Sets the user-configured OP combinations threshold in the state manager.
+     * @param {Electron.IpcMainEvent} event - The IPC event.
+     * @param {number} threshold - The threshold as a decimal (e.g., 0.13 for 13%).
+     */
+    ipcMain.on('set-op-threshold', (event, threshold) => {
+        try {
+            const numThreshold = parseFloat(threshold);
+            // Validate threshold is a number and within reasonable range
+            if (isNaN(numThreshold) || numThreshold < 0 || numThreshold > 0.3) {
+                console.warn(`[MainIPC] Invalid OP threshold value: ${threshold}. Must be between 0 and 0.3.`);
+                return;
+            }
+            stateManager.setOpThresholdPercentage(numThreshold);
+            console.log(`[MainIPC] OP threshold set to: ${(numThreshold * 100).toFixed(2)}%`);
+        } catch (error) {
+            console.error('[MainIPC] Error setting OP threshold:', error);
         }
     });
 }

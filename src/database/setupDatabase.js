@@ -59,9 +59,23 @@ const initialSchemaSql = `
         UNIQUE (base_ability_id, synergy_ability_id)
     );
 
+    CREATE TABLE IF NOT EXISTS HeroAbilitySynergies (
+        synergy_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        hero_id INTEGER NOT NULL,
+        ability_id INTEGER NOT NULL,
+        synergy_winrate REAL NOT NULL,
+        synergy_increase REAL,          -- Synergy increase percentage (e.g., 0.1462 for 14.62%)
+        is_op BOOLEAN DEFAULT 0,        -- True if this is considered an "OP" combination
+        FOREIGN KEY (hero_id) REFERENCES Heroes (hero_id) ON DELETE CASCADE ON UPDATE CASCADE,
+        FOREIGN KEY (ability_id) REFERENCES Abilities (ability_id) ON DELETE CASCADE ON UPDATE CASCADE,
+        UNIQUE (hero_id, ability_id)
+    );
+
     CREATE INDEX IF NOT EXISTS idx_abilities_hero_id ON Abilities (hero_id);
     CREATE INDEX IF NOT EXISTS idx_synergy_base_ability ON AbilitySynergies (base_ability_id);
     CREATE INDEX IF NOT EXISTS idx_synergy_pair_ability ON AbilitySynergies (synergy_ability_id);
+    CREATE INDEX IF NOT EXISTS idx_hero_synergy_hero ON HeroAbilitySynergies (hero_id);
+    CREATE INDEX IF NOT EXISTS idx_hero_synergy_ability ON HeroAbilitySynergies (ability_id);
 
     CREATE TABLE IF NOT EXISTS Metadata (
         key TEXT PRIMARY KEY,
@@ -89,6 +103,7 @@ const columnsToEnsure = [
 
     // AbilitySynergies table
     { table: 'AbilitySynergies', column: 'is_op', type: 'BOOLEAN DEFAULT 0' },
+    { table: 'AbilitySynergies', column: 'synergy_increase', type: 'REAL' },
 
     // Heroes table
     { table: 'Heroes', column: 'display_name', type: 'TEXT' },
@@ -123,28 +138,23 @@ const columnsToDrop = [
 function setupDatabase() {
     let db;
     try {
-        console.log(`[DB Setup] Using database at: ${dbPath}`);
-        db = new Database(dbPath, { verbose: console.log }); // verbose logs all SQL statements
+        db = new Database(dbPath); // Removed verbose logging to reduce SQL statement spam
 
         // Execute initial schema creation (tables, indexes).
         db.exec(initialSchemaSql);
-        console.log('[DB Setup] Initial table and index setup complete or already exists.');
 
         // Perform simple migrations by adding columns if they don't exist.
         for (const { table, column, type } of columnsToEnsure) {
             try {
                 db.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${type};`).run();
-                console.log(`[DB Setup] Added column "${column}" to table "${table}".`);
             } catch (err) {
                 if (!err.message.includes('duplicate column name')) {
                     console.error(`[DB Setup] Error adding column "${column}" to "${table}": ${err.message}`);
                 }
             }
         }
-        console.log('[DB Setup] Database schema verification and column additions complete.');
 
         // New step: Clean up obsolete columns from previous versions.
-        console.log('[DB Setup] Checking for obsolete columns to drop for cleanup...');
         for (const { table, column } of columnsToDrop) {
             try {
                 // Check if the column exists before trying to drop it.
@@ -154,14 +164,12 @@ function setupDatabase() {
                 if (columnExists) {
                     // The `DROP COLUMN` syntax is supported in recent SQLite versions.
                     db.prepare(`ALTER TABLE ${table} DROP COLUMN ${column};`).run();
-                    console.log(`[DB Setup] Dropped obsolete column "${column}" from table "${table}".`);
                 }
             } catch (err) {
                 // This might fail on very old SQLite versions, but it's a non-critical cleanup task.
                 console.error(`[DB Setup] Could not drop column "${column}" from "${table}": ${err.message}.`);
             }
         }
-        console.log('[DB Setup] Obsolete column cleanup complete.');
 
     } catch (err) {
         console.error('[DB Setup] Critical error setting up database:', err.message);
@@ -169,7 +177,6 @@ function setupDatabase() {
     } finally {
         if (db && db.open) {
             db.close();
-            console.log('[DB Setup] Database connection closed.');
         }
     }
 }

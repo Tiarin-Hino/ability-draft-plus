@@ -47,27 +47,58 @@ export function showSnapshotStatus(message, isError = false) {
 }
 
 /**
- * Updates the display of "OP" (overpowered) ability combinations.
+ * Updates the display of "OP" (overpowered) ability combinations and hero synergies.
  * Shows or hides the combinations window and list based on available data.
  * @param {Array<object>} opCombinations - Array of OP combination objects.
  * Each object should have `ability1DisplayName`, `ability2DisplayName`, and `synergyWinrate`.
- * @returns {boolean} True if OP combinations are available and displayed, false otherwise.
+ * @param {Array<object>} heroSynergies - Array of hero-ability synergy objects.
+ * Each object should have `heroDisplayName`, `abilityDisplayName`, and `synergyWinrate`.
+ * @returns {boolean} True if OP combinations or hero synergies are available and displayed, false otherwise.
  */
-export function updateOPCombinationsDisplay(opCombinations) {
+export function updateOPCombinationsDisplay(opCombinations, heroSynergies = []) {
     if (!uiElements.opCombinationsWindow || !uiElements.opCombinationsListElement || !uiElements.showOpCombinationsButton) {
         return false; // Cannot update if essential elements are missing
     }
     uiElements.opCombinationsListElement.innerHTML = '';
 
-    if (opCombinations && opCombinations.length > 0) {
-        opCombinations.forEach(combo => {
-            const comboDiv = document.createElement('div');
-            const ability1Display = (combo.ability1DisplayName || 'Ability 1').replace(/_/g, ' ');
-            const ability2Display = (combo.ability2DisplayName || 'Ability 2').replace(/_/g, ' ');
-            const wrFormatted = combo.synergyWinrate ? `(${(combo.synergyWinrate * 100).toFixed(1)}%)` : '';
-            comboDiv.textContent = `${ability1Display} + ${ability2Display} ${wrFormatted}`;
-            uiElements.opCombinationsListElement.appendChild(comboDiv);
-        });
+    const hasAbilityCombos = opCombinations && opCombinations.length > 0;
+    const hasHeroSynergies = heroSynergies && heroSynergies.length > 0;
+
+    if (hasAbilityCombos || hasHeroSynergies) {
+        // Display ability-ability combinations
+        if (hasAbilityCombos) {
+            opCombinations.forEach(combo => {
+                const comboDiv = document.createElement('div');
+                const ability1Display = (combo.ability1DisplayName || 'Ability 1').replace(/_/g, ' ');
+                const ability2Display = (combo.ability2DisplayName || 'Ability 2').replace(/_/g, ' ');
+                const wrFormatted = combo.synergyWinrate ? `(${(combo.synergyWinrate * 100).toFixed(1)}%)` : '';
+                comboDiv.textContent = `${ability1Display} + ${ability2Display} ${wrFormatted}`;
+                uiElements.opCombinationsListElement.appendChild(comboDiv);
+            });
+        }
+
+        // Display hero-ability synergies
+        if (hasHeroSynergies) {
+            // Add separator if we have both types
+            if (hasAbilityCombos) {
+                const separator = document.createElement('div');
+                separator.style.borderTop = '1px solid rgba(255,255,255,0.3)';
+                separator.style.marginTop = '8px';
+                separator.style.marginBottom = '8px';
+                uiElements.opCombinationsListElement.appendChild(separator);
+            }
+
+            heroSynergies.forEach(synergy => {
+                const synergyDiv = document.createElement('div');
+                const heroDisplay = (synergy.heroDisplayName || 'Hero').replace(/_/g, ' ');
+                const abilityDisplay = (synergy.abilityDisplayName || 'Ability').replace(/_/g, ' ');
+                const wrFormatted = synergy.synergyWinrate ? `(${(synergy.synergyWinrate * 100).toFixed(1)}%)` : '';
+                synergyDiv.textContent = `${heroDisplay} + ${abilityDisplay} ${wrFormatted}`;
+                synergyDiv.style.fontStyle = 'italic'; // Distinguish hero synergies visually
+                uiElements.opCombinationsListElement.appendChild(synergyDiv);
+            });
+        }
+
         uiElements.opCombinationsWindow.style.display = 'block';
         uiElements.opCombinationsWindow.setAttribute('aria-hidden', 'false');
         uiElements.showOpCombinationsButton.style.display = 'none';

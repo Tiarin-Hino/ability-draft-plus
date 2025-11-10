@@ -291,9 +291,10 @@ function getHighWinrateCombinations(dbPath, baseAbilityInternalName, draftPoolIn
  * Fetches "OP" (overpowered) ability combinations present in the current draft pool.
  * @param {string} dbPath - Path to the SQLite database file.
  * @param {string[]} draftPoolInternalNames - An array of internal names of all abilities in the draft pool.
+ * @param {number} thresholdPercentage - The synergy increase threshold percentage (e.g., 0.13 for 13%).
  * @returns {Array<{ability1DisplayName: string, ability2DisplayName: string, synergyWinrate: number}>} An array of OP combination objects.
  */
-function getOPCombinationsInPool(dbPath, draftPoolInternalNames) {
+function getOPCombinationsInPool(dbPath, draftPoolInternalNames, thresholdPercentage = 0.13) {
     const opCombinations = [];
     if (!draftPoolInternalNames || draftPoolInternalNames.length < 2) {
         return opCombinations;
@@ -315,13 +316,13 @@ function getOPCombinationsInPool(dbPath, draftPoolInternalNames) {
             FROM AbilitySynergies s
             JOIN Abilities a1 ON s.base_ability_id = a1.ability_id
             JOIN Abilities a2 ON s.synergy_ability_id = a2.ability_id
-            WHERE s.is_op = 1
+            WHERE s.synergy_increase >= ?
               AND a1.name IN (${poolPlaceholders})
-              AND a2.name IN (${poolPlaceholders}) 
-              AND a1.name < a2.name; -- Ensures each pair is reported once in a canonical order
+              AND a2.name IN (${poolPlaceholders})
+              AND s.base_ability_id < s.synergy_ability_id; -- Ensures each pair is reported once (matches scraper ordering)
         `;
 
-        const queryParams = [...draftPoolInternalNames, ...draftPoolInternalNames];
+        const queryParams = [thresholdPercentage, ...draftPoolInternalNames, ...draftPoolInternalNames];
         const opStmt = db.prepare(opQuery);
         const opRows = opStmt.all(...queryParams);
         // The SQL query already ensures abilities are in the draft pool.
@@ -346,9 +347,10 @@ function getOPCombinationsInPool(dbPath, draftPoolInternalNames) {
 /**
  * Fetches all "OP" (overpowered) ability combinations from the database.
  * @param {string} dbPath - Path to the SQLite database file.
+ * @param {number} thresholdPercentage - The synergy increase threshold percentage (e.g., 0.13 for 13%).
  * @returns {Array<{ability1InternalName: string, ability1DisplayName: string, ability2InternalName: string, ability2DisplayName: string, synergyWinrate: number}>} An array of all OP combination objects.
  */
-function getAllOPCombinations(dbPath) {
+function getAllOPCombinations(dbPath, thresholdPercentage = 0.13) {
     let db;
     const opCombinations = [];
 
@@ -364,11 +366,11 @@ function getAllOPCombinations(dbPath) {
             FROM AbilitySynergies s
             JOIN Abilities a1 ON s.base_ability_id = a1.ability_id
             JOIN Abilities a2 ON s.synergy_ability_id = a2.ability_id
-            WHERE s.is_op = 1
-              AND a1.name < a2.name; -- Ensures each pair is reported once in a canonical order
+            WHERE s.synergy_increase >= ?
+              AND s.base_ability_id < s.synergy_ability_id; -- Ensures each pair is reported once (matches scraper ordering)
         `;
         const opStmt = db.prepare(opQuery);
-        const opRows = opStmt.all();
+        const opRows = opStmt.all(thresholdPercentage);
 
         opRows.forEach(row => {
             opCombinations.push({
@@ -389,6 +391,107 @@ function getAllOPCombinations(dbPath) {
     return opCombinations;
 }
 
+/**
+ * Fetches all "OP" (overpowered) hero-ability synergies from the database.
+ * @param {string} dbPath - Path to the SQLite database file.
+ * @param {number} thresholdPercentage - The synergy increase threshold percentage (e.g., 0.13 for 13%).
+ * @returns {Array<{heroInternalName: string, heroDisplayName: string, abilityInternalName: string, abilityDisplayName: string, synergyWinrate: number}>} An array of all OP hero-ability synergy objects.
+ */
+function getAllHeroSynergies(dbPath, thresholdPercentage = 0.13) {
+    let db;
+    const heroSynergies = [];
+
+    try {
+        db = new Database(dbPath, { readonly: true });
+        const heroSynergyQuery = `
+            SELECT
+                h.name AS hero_internal_name,
+                h.display_name AS hero_display_name,
+                a.name AS ability_internal_name,
+                a.display_name AS ability_display_name,
+                s.synergy_winrate
+            FROM HeroAbilitySynergies s
+            JOIN Heroes h ON s.hero_id = h.hero_id
+            JOIN Abilities a ON s.ability_id = a.ability_id
+            WHERE s.synergy_increase >= ?;
+        `;
+        const stmt = db.prepare(heroSynergyQuery);
+        const rows = stmt.all(thresholdPercentage);
+
+        rows.forEach(row => {
+            heroSynergies.push({
+                heroInternalName: row.hero_internal_name,
+                heroDisplayName: row.hero_display_name || row.hero_internal_name,
+                abilityInternalName: row.ability_internal_name,
+                abilityDisplayName: row.ability_display_name || row.ability_internal_name,
+                synergyWinrate: row.synergy_winrate,
+            });
+        });
+    } catch (err) {
+        console.error(`[DB Queries] Error fetching ALL hero synergies: ${err.message}`);
+    } finally {
+        if (db && db.open) {
+            db.close();
+        }
+    }
+    return heroSynergies;
+}
+
+/**
+ * Fetches "OP" (overpowered) hero-ability synergies present in the current draft pool.
+ * @param {string} dbPath - Path to the SQLite database file.
+ * @param {string[]} draftPoolInternalNames - An array of internal names of all abilities in the draft pool.
+ * @param {number} thresholdPercentage - The synergy increase threshold percentage (e.g., 0.13 for 13%).
+ * @returns {Array<{heroDisplayName: string, abilityDisplayName: string, synergyWinrate: number}>} An array of OP hero-ability synergy objects.
+ */
+function getHeroSynergiesInPool(dbPath, draftPoolInternalNames, thresholdPercentage = 0.13) {
+    const heroSynergies = [];
+    if (!draftPoolInternalNames || draftPoolInternalNames.length === 0) {
+        return heroSynergies;
+    }
+
+    let db;
+    try {
+        db = new Database(dbPath, { readonly: true });
+
+        const poolPlaceholders = draftPoolInternalNames.map(() => '?').join(',');
+
+        const heroSynergyQuery = `
+            SELECT
+                h.display_name AS hero_display_name,
+                h.name AS hero_internal_name,
+                a.display_name AS ability_display_name,
+                a.name AS ability_internal_name,
+                s.synergy_winrate
+            FROM HeroAbilitySynergies s
+            JOIN Heroes h ON s.hero_id = h.hero_id
+            JOIN Abilities a ON s.ability_id = a.ability_id
+            WHERE s.synergy_increase >= ?
+              AND a.name IN (${poolPlaceholders});
+        `;
+
+        const queryParams = [thresholdPercentage, ...draftPoolInternalNames];
+        const stmt = db.prepare(heroSynergyQuery);
+        const rows = stmt.all(...queryParams);
+
+        rows.forEach(row => {
+            heroSynergies.push({
+                heroDisplayName: row.hero_display_name || row.hero_internal_name,
+                abilityDisplayName: row.ability_display_name || row.ability_internal_name,
+                synergyWinrate: row.synergy_winrate
+            });
+        });
+
+    } catch (err) {
+        console.error(`[DB Queries] Error fetching hero synergies in pool: ${err.message}`);
+    } finally {
+        if (db && db.open) {
+            db.close();
+        }
+    }
+    return heroSynergies;
+}
+
 module.exports = {
     // Hero Queries
     getAllHeroes,
@@ -401,4 +504,6 @@ module.exports = {
     getHighWinrateCombinations,
     getOPCombinationsInPool,
     getAllOPCombinations,
+    getAllHeroSynergies,
+    getHeroSynergiesInPool,
 };

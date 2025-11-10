@@ -183,6 +183,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
    */
   activateOverlay: (resolution) => ipcRenderer.send('activate-overlay', resolution),
   /**
+   * Sends the user-configured OP threshold percentage to the main process.
+   * @param {number} threshold - The threshold as a decimal (e.g., 0.13 for 13%).
+   */
+  setOpThreshold: (threshold) => ipcRenderer.send('set-op-threshold', threshold),
+  /**
    * Registers a callback for data sent from the main process to the overlay (e.g., scan results, config).
    * @param {(data: object) => void} callback - Function to call with overlay data.
    */

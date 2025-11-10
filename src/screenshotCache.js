@@ -45,13 +45,11 @@ async function getScreenshot(forceCapture = false) {
     if (!forceCapture && cachedScreenshot && cacheTimestamp) {
         const cacheAge = now - cacheTimestamp;
         if (cacheAge < CACHE_TTL_MS) {
-            console.log(`[ScreenshotCache] Using cached screenshot (age: ${cacheAge}ms)`);
             return cachedScreenshot;
         }
     }
 
     // Cache is invalid or force capture requested, get new screenshot
-    console.log('[ScreenshotCache] Capturing new screenshot');
     return await captureAndCache();
 }
 
@@ -76,7 +74,6 @@ function startPrefetch() {
     prefetchTimer = setInterval(async () => {
         try {
             await captureAndCache();
-            console.log('[ScreenshotCache] Prefetched screenshot');
         } catch (error) {
             console.error('[ScreenshotCache] Prefetch failed:', error.message);
         }
@@ -90,7 +87,6 @@ function stopPrefetch() {
     if (prefetchTimer) {
         clearInterval(prefetchTimer);
         prefetchTimer = null;
-        console.log('[ScreenshotCache] Stopped screenshot prefetch');
     }
 }
 
@@ -100,7 +96,6 @@ function stopPrefetch() {
 function clearCache() {
     cachedScreenshot = null;
     cacheTimestamp = null;
-    console.log('[ScreenshotCache] Cache cleared');
 }
 
 /**

@@ -108,7 +108,6 @@ async function scrapeAndStoreLiquipediaData(dbPath, statusCallback, testMode = f
             // Check if this hero's abilities already have the required data
             const needsUpdateResult = checkHeroAbilitiesNeedUpdateStmt.get(hero.hero_id);
             if (needsUpdateResult.count === 0) {
-                console.log(`[Liquipedia Scraper] Skipping "${hero.display_name}": All abilities already have order and ultimate status.`);
                 processedHeroesCount++;
                 continue; // Skip API call and delay if no update is needed for this hero
             }
