@@ -1,4 +1,19 @@
 /* === Global Styles & Resets === */
+
+/* Brand Colors from icon.ico */
+:root {
+    --brand-purple: #5D3566;
+    --brand-purple-dark: #48294C;
+    --brand-purple-darker: #382039;
+    --brand-purple-light: #6A3C76;
+    --brand-green: #397F45;
+    --brand-green-light: #479556;
+    --brand-green-alt: #3B8247;
+
+    /* Performance Settings */
+    --use-backdrop-blur: blur(10px); /* Set to 'none' for better performance */
+}
+
 body {
     margin: 0;
     padding: 0;
@@ -26,18 +41,18 @@ body {
 /* === Keyframe Animations === */
 @keyframes shimmerGreen {
     0% {
-        box-shadow: 0 0 3px 0px rgba(50, 255, 50, 0.7), inset 0 0 2px 0px rgba(50, 255, 50, 0.5);
-        border-color: rgba(80, 255, 80, 0.8);
+        box-shadow: 0 0 4px 1px rgba(57, 127, 69, 0.8), inset 0 0 3px 0px rgba(57, 127, 69, 0.6);
+        border-color: rgba(57, 127, 69, 0.9);
     }
 
     50% {
-        box-shadow: 0 0 6px 2px rgba(100, 255, 100, 1), inset 0 0 4px 1px rgba(100, 255, 100, 0.8);
-        border-color: rgba(120, 255, 120, 1);
+        box-shadow: 0 0 8px 3px rgba(71, 149, 86, 1), inset 0 0 5px 2px rgba(71, 149, 86, 0.9);
+        border-color: rgba(71, 149, 86, 1);
     }
 
     100% {
-        box-shadow: 0 0 3px 0px rgba(50, 255, 50, 0.7), inset 0 0 2px 0px rgba(50, 255, 50, 0.5);
-        border-color: rgba(80, 255, 80, 0.8);
+        box-shadow: 0 0 4px 1px rgba(57, 127, 69, 0.8), inset 0 0 3px 0px rgba(57, 127, 69, 0.6);
+        border-color: rgba(57, 127, 69, 0.9);
     }
 }
 
@@ -90,21 +105,24 @@ body {
 }
 
 #controls-container {
+    align-items: flex-end;
+    backdrop-filter: var(--use-backdrop-blur);
+    background-color: rgba(56, 32, 57, 0.92);
+    border: 1px solid rgba(93, 53, 102, 0.4);
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
     display: flex;
     flex-direction: column;
     gap: 6px;
-    align-items: flex-end;
-    background-color: rgba(30, 32, 35, 0.7);
-    padding: 8px;
-    border-radius: 6px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-    opacity: 0.8;
-    transition: opacity 0.2s ease-in-out, background-color 0.2s ease-in-out;
+    opacity: 0.88;
+    padding: 10px;
+    transition: all 0.2s ease-in-out;
 }
 
 #controls-container:hover {
+    background-color: rgba(72, 41, 76, 0.92);
+    border-color: rgba(93, 53, 102, 0.6);
     opacity: 1;
-    background-color: rgba(40, 42, 45, 0.85);
 }
 
 /* --- OP Combinations Window Container --- */
@@ -136,21 +154,21 @@ body {
 
 /* === Animated Hotspot Styles === */
 .top-tier-ability {
-    border: 1px solid rgba(80, 255, 80, 0.8);
+    border: 2px solid rgba(57, 127, 69, 0.9);
     border-radius: 4px;
-    animation: shimmerGreen 1.5s infinite ease-in-out;
+    animation: shimmerGreen 1.2s infinite ease-in-out;
 }
 
 .synergy-suggestion-hotspot {
-    border: 1px solid rgba(0, 207, 255, 0.8);
+    border: 2px solid rgba(0, 207, 255, 0.8);
     border-radius: 4px;
-    animation: shimmerTeal 1.5s infinite ease-in-out;
+    animation: shimmerTeal 1.2s infinite ease-in-out;
 }
 
 .hero-model-hotspot.top-tier-hero-model {
-    border: 1px solid rgba(255, 223, 30, 0.8);
+    border: 2px solid rgba(255, 223, 30, 0.8);
     border-radius: 4px;
-    animation: shimmerGold 1.5s infinite ease-in-out;
+    animation: shimmerGold 1.2s infinite ease-in-out;
 }
 
 /* === Static Highlight Hotspot Styles === */
@@ -170,20 +188,22 @@ body {
 
 /* === Tooltip Styles === */
 .tooltip {
-    position: absolute;
-    display: none;
-    background-color: rgba(20, 22, 25, 0.95);
-    color: #dce0e4;
-    padding: 10px 15px;
+    backdrop-filter: var(--use-backdrop-blur);
+    background-color: rgba(32, 18, 34, 0.97);
+    border: 1px solid rgba(93, 53, 102, 0.6);
+    border-left: 3px solid var(--brand-purple-light);
     border-radius: 6px;
-    font-size: 13px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.8);
+    color: #e8e8e8;
+    display: none;
+    font-size: 14px;
     line-height: 1.5;
-    z-index: 10002;
+    max-width: 300px;
+    padding: 12px 16px;
     pointer-events: none;
+    position: absolute;
     white-space: pre-line;
-    border: 1px solid rgba(70, 75, 80, 0.9);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7);
-    max-width: 280px;
+    z-index: 10002;
 }
 
 .tooltip .synergy-pick-indicator {
@@ -192,7 +212,7 @@ body {
 }
 
 .tooltip .top-pick-indicator {
-    color: #66ff66;
+    color: #479556;
     font-weight: bold;
 }
 
@@ -234,88 +254,99 @@ body {
 /* === Component: Buttons === */
 /* --- General Overlay Button Styles --- */
 .overlay-button {
-    background-color: rgba(55, 60, 65, 0.8);
-    color: #dce0e4;
-    border: 1px solid rgba(80, 85, 90, 0.9);
-    padding: 6px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: 500;
-    font-size: 12px;
-    text-align: center;
-    transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, color 0.15s ease-in-out;
-    white-space: nowrap;
-    display: inline-flex;
     align-items: center;
+    background-color: rgba(93, 53, 102, 0.85);
+    border: 1px solid rgba(106, 60, 118, 0.9);
+    border-radius: 6px;
+    color: #e8e8e8;
+    cursor: pointer;
+    display: inline-flex;
+    font-size: 14px;
+    font-weight: 500;
     justify-content: center;
+    min-height: 36px;
+    padding: 7px 15px;
+    text-align: center;
+    transition: all 0.15s ease-out;
+    white-space: nowrap;
 }
 
 .overlay-button:hover {
-    background-color: rgba(70, 75, 80, 0.9);
-    border-color: rgba(100, 105, 110, 1);
+    background-color: rgba(106, 60, 118, 0.98);
+    border-color: rgba(106, 60, 118, 1);
+    box-shadow: 0 3px 12px rgba(93, 53, 102, 0.6);
     color: #ffffff;
+    transform: translateY(-2px) scale(1.02);
 }
 
 .overlay-button:active {
-    background-color: rgba(45, 50, 55, 0.9);
+    background-color: rgba(72, 41, 76, 0.95);
+    transform: translateY(0);
 }
 
 .overlay-button:disabled {
     background-color: rgba(40, 42, 45, 0.6) !important;
     border-color: rgba(60, 62, 65, 0.7) !important;
+    box-shadow: none !important;
     color: rgba(150, 155, 160, 0.7) !important;
     cursor: not-allowed;
+    transform: none !important;
 }
 
 /* --- Specific Button Color Overrides (ID-based) --- */
 #initial-scan-btn.overlay-button {
-    background-color: rgba(0, 128, 255, 0.7);
-    border-color: rgba(0, 100, 200, 0.9);
+    background-color: rgba(93, 53, 102, 0.85);
+    border-color: rgba(106, 60, 118, 0.9);
 }
 
 #initial-scan-btn.overlay-button:hover {
-    background-color: rgba(0, 128, 255, 0.9);
+    background-color: rgba(106, 60, 118, 0.95);
+    box-shadow: 0 2px 12px rgba(93, 53, 102, 0.5);
 }
 
 #rescan-btn.overlay-button {
-    background-color: rgba(0, 150, 136, 0.7);
-    border-color: rgba(0, 120, 110, 0.9);
+    background-color: rgba(57, 127, 69, 0.85);
+    border-color: rgba(71, 149, 86, 0.9);
 }
 
 #rescan-btn.overlay-button:hover {
-    background-color: rgba(0, 150, 136, 0.9);
+    background-color: rgba(71, 149, 86, 0.95);
+    box-shadow: 0 2px 12px rgba(57, 127, 69, 0.5);
 }
 
 #reset-overlay-btn.overlay-button {
-    background-color: rgba(255, 193, 7, 0.7);
+    background-color: rgba(255, 193, 7, 0.85);
     border-color: rgba(200, 150, 0, 0.9);
 }
 
 #reset-overlay-btn.overlay-button:hover {
-    background-color: rgba(255, 193, 7, 0.9);
+    background-color: rgba(255, 193, 7, 0.95);
+    box-shadow: 0 2px 12px rgba(255, 193, 7, 0.4);
 }
 
 #close-overlay-btn.overlay-button {
-    background-color: rgba(192, 57, 43, 0.7);
+    background-color: rgba(192, 57, 43, 0.85);
     border-color: rgba(160, 40, 30, 0.9);
-    padding: 4px 9px;
     font-size: 13px;
     font-weight: 600;
     line-height: 1;
+    padding: 4px 9px;
 }
 
 #close-overlay-btn.overlay-button:hover {
-    background-color: rgba(231, 76, 60, 0.9);
+    background-color: rgba(231, 76, 60, 0.95);
+    box-shadow: 0 2px 12px rgba(192, 57, 43, 0.5);
 }
 
 #take-snapshot-btn.overlay-button {
-    background-color: rgba(230, 126, 34, 0.7);
+    background-color: rgba(230, 126, 34, 0.85);
     border-color: rgba(190, 100, 25, 0.9);
     width: 100%;
 }
 
 #take-snapshot-btn.overlay-button:hover {
-    background-color: rgba(243, 156, 18, 0.9);
+    background-color: rgba(243, 156, 18, 0.95);
+    box-shadow: 0 2px 12px rgba(230, 126, 34, 0.5);
 }
 
 /* --- "My Model" & "My Spot" Button Styles --- */
@@ -363,47 +394,51 @@ body {
 
 /* Specific styling when these are also overlay buttons */
 .my-model-btn.overlay-button {
-    background-color: rgba(0, 188, 212, 0.7);
-    border-color: rgba(0, 150, 170, 0.9);
+    background-color: rgba(93, 53, 102, 0.8);
+    border-color: rgba(106, 60, 118, 0.9);
     font-size: 10px;
     padding: 3px 6px;
 }
 
 .my-model-btn.overlay-button:hover {
-    background-color: rgba(0, 188, 212, 0.9);
+    background-color: rgba(106, 60, 118, 0.95);
+    box-shadow: 0 2px 8px rgba(93, 53, 102, 0.5);
 }
 
 .change-my-model-btn.overlay-button {
-    background-color: rgba(26, 188, 156, 0.7);
-    border-color: rgba(22, 160, 133, 0.9);
+    background-color: rgba(57, 127, 69, 0.8);
+    border-color: rgba(71, 149, 86, 0.9);
     font-size: 10px;
     padding: 3px 6px;
 }
 
 .change-my-model-btn.overlay-button:hover {
-    background-color: rgba(26, 188, 156, 0.9);
+    background-color: rgba(71, 149, 86, 0.95);
+    box-shadow: 0 2px 8px rgba(57, 127, 69, 0.5);
 }
 
 .my-spot-btn-original.overlay-button {
-    background-color: rgba(52, 152, 219, 0.75);
-    border-color: rgba(41, 128, 185, 0.9);
+    background-color: rgba(97, 55, 107, 0.85);
+    border-color: rgba(106, 60, 118, 0.9);
     font-size: 11px;
     padding: 4px 8px;
 }
 
 .my-spot-btn-original.overlay-button:hover {
-    background-color: rgba(52, 152, 219, 0.95);
+    background-color: rgba(106, 60, 118, 0.95);
+    box-shadow: 0 2px 8px rgba(97, 55, 107, 0.5);
 }
 
 .change-my-spot-btn-original.overlay-button {
-    background-color: rgba(46, 204, 113, 0.8);
-    border-color: rgba(39, 174, 96, 0.9);
+    background-color: rgba(59, 130, 71, 0.85);
+    border-color: rgba(71, 149, 86, 0.9);
     font-size: 11px;
     padding: 4px 8px;
 }
 
 .change-my-spot-btn-original.overlay-button:hover {
-    background-color: rgba(46, 204, 113, 1);
+    background-color: rgba(71, 149, 86, 0.95);
+    box-shadow: 0 2px 8px rgba(59, 130, 71, 0.5);
 }
 
 /* === Component: Popups === */
@@ -429,14 +464,15 @@ body {
 }
 
 .custom-popup-content {
-    background-color: rgba(44, 47, 51, 0.95);
-    padding: 20px 25px;
-    border-radius: 8px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
-    text-align: center;
+    backdrop-filter: var(--use-backdrop-blur);
+    background-color: rgba(72, 41, 76, 0.97);
+    border: 2px solid rgba(93, 53, 102, 0.9);
+    border-radius: 10px;
+    box-shadow: 0 8px 32px rgba(93, 53, 102, 0.4), 0 0 0 1px rgba(93, 53, 102, 0.2);
+    color: #e8e8e8;
     max-width: 450px;
-    color: #dcddde;
-    border: 1px solid rgba(70, 75, 80, 0.9);
+    padding: 24px 28px;
+    text-align: center;
 }
 
 .custom-popup-message-text {
@@ -473,84 +509,91 @@ body {
 }
 
 #confirm-scan-proceed-btn {
-    background-color: rgba(0, 150, 136, 0.7);
-    /* Teal */
+    background-color: rgba(57, 127, 69, 0.85);
 }
 
 #confirm-scan-proceed-btn:hover {
-    background-color: rgba(0, 150, 136, 0.9);
+    background-color: rgba(71, 149, 86, 0.95);
+    box-shadow: 0 2px 12px rgba(57, 127, 69, 0.5);
 }
 
 #confirm-scan-dont-show-btn {
-    background-color: rgba(114, 118, 125, 0.7);
+    background-color: rgba(114, 118, 125, 0.85);
 }
 
 #confirm-scan-dont-show-btn:hover {
-    background-color: rgba(114, 118, 125, 0.9);
+    background-color: rgba(114, 118, 125, 0.95);
+    box-shadow: 0 2px 8px rgba(114, 118, 125, 0.4);
 }
 
 /* --- Status Popup (Toast Style) --- */
 .status-popup {
-    position: fixed;
+    backdrop-filter: var(--use-backdrop-blur);
+    background-color: rgba(32, 18, 34, 0.95);
+    border: 1px solid rgba(93, 53, 102, 0.8);
+    border-left: 4px solid var(--brand-purple-light);
+    border-radius: 6px;
     bottom: 15px;
-    right: 15px;
-    background-color: rgba(30, 32, 35, 0.9);
-    color: #dce0e4;
-    padding: 10px 15px;
-    border-radius: 5px;
-    font-size: 13px;
-    z-index: 10001;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+    color: #e8e8e8;
     display: none;
-    border: 1px solid rgba(70, 75, 80, 0.8);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-    max-width: 300px;
+    font-size: 14px;
+    max-width: 320px;
+    padding: 12px 16px;
+    position: fixed;
+    right: 15px;
+    z-index: 10001;
 }
 
 /* === Component: OP Combinations Alert Window === */
 .op-alert-window {
-    width: 260px;
-    background-color: rgba(45, 30, 30, 0.9);
+    backdrop-filter: var(--use-backdrop-blur);
+    background: linear-gradient(135deg, rgba(72, 41, 76, 0.95) 0%, rgba(93, 53, 102, 0.92) 100%);
+    border: 1px solid rgba(93, 53, 102, 0.8);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7);
     color: #e8e8e8;
-    padding: 12px;
-    border-radius: 6px;
-    border: 1px solid rgba(150, 50, 50, 0.8);
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.6);
-    z-index: 9999;
     font-size: 13px;
-    opacity: 0.85;
-    transition: opacity 0.2s ease-in-out, background-color 0.2s ease-in-out;
+    opacity: 0.92;
+    padding: 14px;
+    transition: all 0.2s ease-in-out;
+    width: 260px;
+    z-index: 9999;
 }
 
 .op-alert-window:hover {
+    background: linear-gradient(135deg, rgba(93, 53, 102, 0.95) 0%, rgba(106, 60, 118, 0.92) 100%);
     opacity: 1;
-    background-color: rgba(55, 40, 40, 0.95);
 }
 
 .op-alert-header {
+    align-items: center;
+    background: linear-gradient(to right, rgba(72, 41, 76, 0.5), rgba(93, 53, 102, 0.3));
+    border-bottom: 2px solid rgba(93, 53, 102, 0.6);
+    border-radius: 4px 4px 0 0;
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-    border-bottom: 1px solid rgba(120, 60, 60, 0.6);
-    padding-bottom: 8px;
+    margin: -14px -14px 10px -14px;
+    padding: 10px 12px;
 }
 
 .op-alert-title {
+    color: #E0C4E8;
     font-size: 15px;
     font-weight: 600;
-    color: #ff9a9a;
 }
 
 .op-alert-hide-btn.overlay-button {
-    background-color: rgba(100, 50, 50, 0.7);
-    border-color: rgba(150, 70, 70, 0.9);
+    background-color: rgba(72, 41, 76, 0.8);
+    border-color: rgba(93, 53, 102, 0.9);
     color: #e0e0e0;
     font-size: 11px;
     padding: 3px 7px;
 }
 
 .op-alert-hide-btn.overlay-button:hover {
-    background-color: rgba(120, 60, 60, 0.9);
+    background-color: rgba(56, 32, 57, 0.95);
+    box-shadow: 0 2px 6px rgba(72, 41, 76, 0.5);
 }
 
 #op-combinations-list div {
@@ -561,33 +604,36 @@ body {
 }
 
 #op-combinations-list div span {
-    color: #ffb380;
+    color: #B39FBD;
     font-weight: 500;
 }
 
 #show-op-combinations-btn.overlay-button {
-    background-color: rgba(120, 70, 70, 0.7);
-    border-color: rgba(150, 80, 80, 0.9);
+    background-color: rgba(72, 41, 76, 0.85);
+    border-color: rgba(93, 53, 102, 0.9);
     padding: 5px 10px;
 }
 
 #show-op-combinations-btn.overlay-button:hover {
-    background-color: rgba(140, 90, 90, 0.9);
+    background-color: rgba(93, 53, 102, 0.95);
+    box-shadow: 0 2px 8px rgba(72, 41, 76, 0.5);
 }
 
 /* --- Report Confirmation Popup Buttons --- */
 #report-confirm-submit-btn {
-    background-color: rgba(230, 126, 34, 0.7);
+    background-color: rgba(230, 126, 34, 0.85);
 }
 
 #report-confirm-submit-btn:hover {
-    background-color: rgba(243, 156, 18, 0.9);
+    background-color: rgba(243, 156, 18, 0.95);
+    box-shadow: 0 2px 12px rgba(230, 126, 34, 0.5);
 }
 
 #report-confirm-cancel-btn {
-    background-color: rgba(114, 118, 125, 0.7);
+    background-color: rgba(114, 118, 125, 0.85);
 }
 
 #report-confirm-cancel-btn:hover {
-    background-color: rgba(114, 118, 125, 0.9);
+    background-color: rgba(114, 118, 125, 0.95);
+    box-shadow: 0 2px 8px rgba(114, 118, 125, 0.4);
 }
