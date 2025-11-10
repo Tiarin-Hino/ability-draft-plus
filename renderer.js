@@ -39,6 +39,11 @@ const opThresholdInput = document.getElementById('op-threshold-input');
 const thresholdDisplay = document.getElementById('threshold-display');
 const saveThresholdButton = document.getElementById('save-threshold-btn');
 const thresholdSavedIndicator = document.getElementById('threshold-saved-indicator');
+const trapThresholdSlider = document.getElementById('trap-threshold-slider');
+const trapThresholdInput = document.getElementById('trap-threshold-input');
+const trapThresholdDisplay = document.getElementById('trap-threshold-display');
+const saveTrapThresholdButton = document.getElementById('save-trap-threshold-btn');
+const trapThresholdSavedIndicator = document.getElementById('trap-threshold-saved-indicator');
 
 import * as themeManager from './src/renderer/themeManager.js';
 import * as translationUtils from './src/renderer/translationUtils.js';
@@ -567,6 +572,84 @@ if (window.electronAPI) {
             }, 1500);
 
             uiUtils.updateStatusMessage(translate('controlPanel.opThreshold.savedMessage'), false);
+        });
+    }
+
+    // --- Trap Threshold Controls ---
+    // Load saved threshold on startup
+    if (trapThresholdSlider && trapThresholdInput && trapThresholdDisplay) {
+        const savedTrapThreshold = localStorage.getItem('trapThresholdPercentage');
+        const initialTrapThreshold = savedTrapThreshold ? parseFloat(savedTrapThreshold) : 5.0;
+
+        // Validate and clamp to range
+        const clampedTrapThreshold = Math.max(0, Math.min(30, initialTrapThreshold));
+
+        trapThresholdSlider.value = clampedTrapThreshold;
+        trapThresholdInput.value = clampedTrapThreshold.toFixed(2);
+        trapThresholdDisplay.textContent = `${clampedTrapThreshold.toFixed(2)}%`;
+
+        // Send initial threshold to main process
+        if (window.electronAPI && window.electronAPI.setTrapThreshold) {
+            window.electronAPI.setTrapThreshold(clampedTrapThreshold / 100); // Convert to decimal
+        }
+
+        // Update display and slider from slider movement
+        trapThresholdSlider.addEventListener('input', (e) => {
+            const value = parseFloat(e.target.value);
+            trapThresholdInput.value = value.toFixed(2);
+            trapThresholdDisplay.textContent = `${value.toFixed(2)}%`;
+        });
+
+        // Update display and slider only when user finishes typing
+        trapThresholdInput.addEventListener('change', (e) => {
+            const numValue = parseFloat(e.target.value);
+            if (isNaN(numValue)) {
+                // Reset to slider value if invalid
+                trapThresholdInput.value = parseFloat(trapThresholdSlider.value).toFixed(2);
+                return;
+            }
+            const clampedValue = Math.max(0, Math.min(30, numValue));
+            const formattedValue = clampedValue.toFixed(2);
+
+            trapThresholdSlider.value = formattedValue;
+            trapThresholdInput.value = formattedValue;
+            trapThresholdDisplay.textContent = `${formattedValue}%`;
+        });
+
+        // Update display while typing (but don't update slider or reformat input)
+        trapThresholdInput.addEventListener('input', (e) => {
+            const numValue = parseFloat(e.target.value);
+            if (!isNaN(numValue)) {
+                const clampedValue = Math.max(0, Math.min(30, numValue));
+                trapThresholdDisplay.textContent = `${clampedValue.toFixed(2)}%`;
+            }
+        });
+    }
+
+    if (saveTrapThresholdButton && trapThresholdInput && trapThresholdSavedIndicator) {
+        saveTrapThresholdButton.addEventListener('click', () => {
+            const thresholdValue = parseFloat(trapThresholdInput.value);
+            const clampedValue = Math.max(0, Math.min(30, thresholdValue));
+
+            // Save to localStorage (as percentage)
+            localStorage.setItem('trapThresholdPercentage', clampedValue.toString());
+            console.log(`[Renderer] Saved trap threshold: ${clampedValue}%`);
+
+            // Send to main process (as decimal)
+            if (window.electronAPI && window.electronAPI.setTrapThreshold) {
+                window.electronAPI.setTrapThreshold(clampedValue / 100);
+            }
+
+            // Show visual feedback
+            trapThresholdSavedIndicator.style.display = 'inline';
+            saveTrapThresholdButton.disabled = true;
+
+            setTimeout(() => {
+                trapThresholdSavedIndicator.style.display = 'none';
+                saveTrapThresholdButton.disabled = false;
+            }, 1500);
+
+            uiUtils.updateStatusMessage(translate('controlPanel.trapThreshold.savedMessage'), false);
         });
     }
 

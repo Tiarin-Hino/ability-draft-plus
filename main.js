@@ -110,7 +110,8 @@ function handleMlWorkerMessage(result) {
       mySelectedSpotOriginalOrder: stateManager.getMySelectedSpotOriginalOrder(),
       mySelectedModelDbHeroId: stateManager.getMySelectedModelDbHeroId(),
       mySelectedModelScreenOrder: stateManager.getMySelectedModelScreenOrder(),
-      opThresholdPercentage: stateManager.getOpThresholdPercentage()
+      opThresholdPercentage: stateManager.getOpThresholdPercentage(),
+      trapThresholdPercentage: stateManager.getTrapThresholdPercentage()
     };
     const overlayWebContents = windowManager.getOverlayWindow()?.webContents;
 

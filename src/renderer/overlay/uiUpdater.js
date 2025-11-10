@@ -114,6 +114,72 @@ export function updateOPCombinationsDisplay(opCombinations, heroSynergies = []) 
 }
 
 /**
+ * Updates and displays trap (negative synergy) combinations in the overlay.
+ * @param {Array<{ability1DisplayName: string, ability2DisplayName: string, synergyWinrate: number}>} trapCombinations - Ability-ability trap combinations.
+ * @param {Array<{heroDisplayName: string, abilityDisplayName: string, synergyWinrate: number}>} heroTraps - Hero-ability trap synergies.
+ * Each object should have `heroDisplayName`, `abilityDisplayName`, and `synergyWinrate`.
+ * @returns {boolean} True if trap combinations or hero traps are available and displayed, false otherwise.
+ */
+export function updateTrapCombinationsDisplay(trapCombinations, heroTraps = []) {
+    if (!uiElements.trapCombinationsWindow || !uiElements.trapCombinationsListElement || !uiElements.showTrapCombinationsButton) {
+        return false; // Cannot update if essential elements are missing
+    }
+    uiElements.trapCombinationsListElement.innerHTML = '';
+
+    const hasAbilityCombos = trapCombinations && trapCombinations.length > 0;
+    const hasHeroTraps = heroTraps && heroTraps.length > 0;
+
+    if (hasAbilityCombos || hasHeroTraps) {
+        // Display ability-ability trap combinations
+        if (hasAbilityCombos) {
+            trapCombinations.forEach(combo => {
+                const comboDiv = document.createElement('div');
+                const ability1Display = (combo.ability1DisplayName || 'Ability 1').replace(/_/g, ' ');
+                const ability2Display = (combo.ability2DisplayName || 'Ability 2').replace(/_/g, ' ');
+                const wrFormatted = combo.synergyWinrate ? `(${(combo.synergyWinrate * 100).toFixed(1)}%)` : '';
+                comboDiv.textContent = `${ability1Display} + ${ability2Display} ${wrFormatted}`;
+                uiElements.trapCombinationsListElement.appendChild(comboDiv);
+            });
+        }
+
+        // Display hero-ability trap synergies
+        if (hasHeroTraps) {
+            // Add separator if we have both types
+            if (hasAbilityCombos) {
+                const separator = document.createElement('div');
+                separator.style.borderTop = '1px solid rgba(255,255,255,0.3)';
+                separator.style.marginTop = '8px';
+                separator.style.marginBottom = '8px';
+                uiElements.trapCombinationsListElement.appendChild(separator);
+            }
+
+            heroTraps.forEach(synergy => {
+                const synergyDiv = document.createElement('div');
+                const heroDisplay = (synergy.heroDisplayName || 'Hero').replace(/_/g, ' ');
+                const abilityDisplay = (synergy.abilityDisplayName || 'Ability').replace(/_/g, ' ');
+                const wrFormatted = synergy.synergyWinrate ? `(${(synergy.synergyWinrate * 100).toFixed(1)}%)` : '';
+                synergyDiv.textContent = `${heroDisplay} + ${abilityDisplay} ${wrFormatted}`;
+                synergyDiv.style.fontStyle = 'italic'; // Distinguish hero traps visually
+                synergyDiv.classList.add('hero-synergy');
+                uiElements.trapCombinationsListElement.appendChild(synergyDiv);
+            });
+        }
+
+        uiElements.trapCombinationsWindow.style.display = 'block';
+        uiElements.trapCombinationsWindow.setAttribute('aria-hidden', 'false');
+        uiElements.showTrapCombinationsButton.style.display = 'none';
+        uiElements.showTrapCombinationsButton.setAttribute('aria-expanded', 'true');
+        return true;
+    } else {
+        uiElements.trapCombinationsWindow.style.display = 'none';
+        uiElements.trapCombinationsWindow.setAttribute('aria-hidden', 'true');
+        uiElements.showTrapCombinationsButton.style.display = 'none';
+        uiElements.showTrapCombinationsButton.setAttribute('aria-expanded', 'false');
+        return false;
+    }
+}
+
+/**
  * Updates visual highlights on ability and hero model hotspots based on current selections.
  * Also ensures borders are correctly displayed if the tooltip is not active.
  * @param {number | null} selectedHeroOrder - The original order of the currently selected hero spot, or null if none.

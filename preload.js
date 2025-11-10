@@ -188,6 +188,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
    */
   setOpThreshold: (threshold) => ipcRenderer.send('set-op-threshold', threshold),
   /**
+   * Sends the user-configured trap threshold percentage to the main process.
+   * @param {number} threshold - The threshold as a decimal (e.g., 0.10 for 10%).
+   */
+  setTrapThreshold: (threshold) => ipcRenderer.send('set-trap-threshold', threshold),
+  /**
    * Registers a callback for data sent from the main process to the overlay (e.g., scan results, config).
    * @param {(data: object) => void} callback - Function to call with overlay data.
    */

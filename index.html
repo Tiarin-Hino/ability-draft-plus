@@ -85,6 +85,23 @@
 
         <hr>
 
+        <section id="trap-threshold-section">
+            <h2 data-i18n="controlPanel.trapThreshold.title">It's a Trap Threshold</h2>
+            <div>
+                <label for="trap-threshold-slider" data-i18n="controlPanel.trapThreshold.label">Negative synergy threshold percentage:</label>
+                <div class="threshold-controls">
+                    <input type="range" id="trap-threshold-slider" min="0" max="30" step="0.01" value="5" aria-describedby="trap-threshold-help">
+                    <input type="number" id="trap-threshold-input" min="0" max="30" step="0.01" value="5" aria-describedby="trap-threshold-help">
+                    <span id="trap-threshold-display">5.00%</span>
+                </div>
+                <p id="trap-threshold-help" data-i18n="controlPanel.trapThreshold.helpText">Combinations with negative synergy below this threshold will be marked as traps.</p>
+                <button id="save-trap-threshold-btn" class="save-threshold-btn" data-i18n="controlPanel.trapThreshold.saveButton">Save Threshold</button>
+                <span id="trap-threshold-saved-indicator" class="saved-indicator" style="display: none;">✓</span>
+            </div>
+        </section>
+
+        <hr>
+
 
         <section id="new-resolution-request-section">
             <h2 data-i18n="controlPanel.newResolution.title">Submit New Layout</h2>

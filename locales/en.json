@@ -47,6 +47,13 @@
             "saveButton": "Save Threshold",
             "savedMessage": "Threshold saved!"
         },
+        "trapThreshold": {
+            "title": "It's a Trap Threshold",
+            "label": "Negative synergy threshold percentage:",
+            "helpText": "Combinations with negative synergy below this threshold will be marked as traps.",
+            "saveButton": "Save Threshold",
+            "savedMessage": "Trap threshold saved!"
+        },
         "newResolution": {
             "title": "Submit New Layout",
             "description": "If your screen resolution isn't listed, you can submit your current screen setup. Please ensure Dota 2 is in the Ability Draft phase, displaying the full draft interface, at the resolution you wish to add.",
@@ -132,10 +139,15 @@
             "close": "X",
             "report": "Report Failed Recognition",
             "showOP": "Show OP Combinations",
-            "hideOP": "Hide"
+            "hideOP": "Hide",
+            "showTrap": "Show Trap Combinations",
+            "hideTrap": "Hide"
         },
         "opCombinations": {
             "title": "OP Combinations"
+        },
+        "trapCombinations": {
+            "title": "It's a Trap!"
         },
         "popups": {
             "initialScanConfirm": {
@@ -160,7 +172,10 @@
             "hsPickRate": "High Skill Pick Rate",
             "synergiesTitle": "Strong Synergies (within Pool):",
             "heroSynergiesTitle": "Hero Synergies:",
-            "strongAbilitiesForHero": "Strong Abilities:"
+            "strongAbilitiesForHero": "Strong Abilities:",
+            "weakSynergiesTitle": "Weak Synergies (within Pool):",
+            "weakHeroSynergiesTitle": "Weak Hero Synergies:",
+            "weakAbilitiesForHero": "Weak Abilities:"
         },
         "dynamicButtons": {
             "mySpot": "My Spot",

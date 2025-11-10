@@ -23,6 +23,10 @@ const opCombinationsWindow = document.getElementById('op-combinations-window');
 const opCombinationsListElement = document.getElementById('op-combinations-list');
 const hideOpCombinationsButton = document.getElementById('hide-op-combinations-btn');
 const showOpCombinationsButton = document.getElementById('show-op-combinations-btn');
+const trapCombinationsWindow = document.getElementById('trap-combinations-window');
+const trapCombinationsListElement = document.getElementById('trap-combinations-list');
+const hideTrapCombinationsButton = document.getElementById('hide-trap-combinations-btn');
+const showTrapCombinationsButton = document.getElementById('show-trap-combinations-btn');
 const reportConfirmPopup = document.getElementById('report-confirm-popup');
 const reportConfirmSubmitBtn = document.getElementById('report-confirm-submit-btn');
 const reportConfirmCancelBtn = document.getElementById('report-confirm-cancel-btn');
@@ -46,6 +50,8 @@ let currentScaleFactor = 1; // Default scale factor
 let scanHasBeenPerformed = false;
 /** @type {boolean} True if "OP Combinations" data is available to be shown. */
 let opCombinationsAvailable = false;
+/** @type {boolean} True if "Trap Combinations" data is available to be shown. */
+let trapCombinationsAvailable = false;
 /** @type {boolean} User preference to hide the initial scan confirmation popup. */
 let hideInitialScanConfirm = false;
 
@@ -162,7 +168,7 @@ function getSelectedModelScreenOrder() { return selectedModelScreenOrder; }
 tooltip.initTooltip(tooltipElement);
 hotspotManager.initHotspotManager({ getScaleFactor: () => currentScaleFactor, getSelectedHeroOriginalOrder, getSelectedModelScreenOrder, translateFn: translate, tooltip });
 buttonManager.initButtonManager({ getScaleFactor: () => currentScaleFactor, getSelectedHeroOriginalOrder, getSelectedModelScreenOrder, translateFn: translate, electronAPI: window.electronAPI });
-uiUpdater.initUIUpdater({ scanStatusPopup, opCombinationsWindow, opCombinationsListElement, showOpCombinationsButton, snapshotStatusElement }, translate);
+uiUpdater.initUIUpdater({ scanStatusPopup, opCombinationsWindow, opCombinationsListElement, showOpCombinationsButton, trapCombinationsWindow, trapCombinationsListElement, showTrapCombinationsButton, snapshotStatusElement }, translate);
 
 /**
  * Resets the overlay UI to its initial state.
@@ -269,6 +275,13 @@ if (window.electronAPI) {
             const newOpCombosAvailable = hasAbilityCombos || hasHeroSynergies;
             uiUpdater.updateOPCombinationsDisplay(data.opCombinations, data.heroSynergies || []);
             opCombinationsAvailable = newOpCombosAvailable;
+        }
+        if (typeof data.trapCombinations !== 'undefined') {
+            const hasAbilityCombos = data.trapCombinations && data.trapCombinations.length > 0;
+            const hasHeroTraps = data.heroTraps && data.heroTraps.length > 0;
+            const newTrapCombosAvailable = hasAbilityCombos || hasHeroTraps;
+            uiUpdater.updateTrapCombinationsDisplay(data.trapCombinations, data.heroTraps || []);
+            trapCombinationsAvailable = newTrapCombosAvailable;
         }
         if (data.heroModels) currentHeroModelData = data.heroModels;
         if (data.heroesForMySpotUI) currentHeroesForMySpotUIData = data.heroesForMySpotUI;
@@ -422,6 +435,24 @@ if (showOpCombinationsButton && opCombinationsWindow) {
         showOpCombinationsButton.setAttribute('aria-expanded', 'true');
     });
 }
+if (hideTrapCombinationsButton && trapCombinationsWindow && showTrapCombinationsButton) {
+    hideTrapCombinationsButton.addEventListener('click', () => {
+        trapCombinationsWindow.style.display = 'none';
+        trapCombinationsWindow.setAttribute('aria-hidden', 'true');
+        if (trapCombinationsAvailable) {
+            showTrapCombinationsButton.style.display = 'block';
+            showTrapCombinationsButton.setAttribute('aria-expanded', 'false');
+        }
+    });
+}
+if (showTrapCombinationsButton && trapCombinationsWindow) {
+    showTrapCombinationsButton.addEventListener('click', () => {
+        trapCombinationsWindow.style.display = 'block';
+        trapCombinationsWindow.setAttribute('aria-hidden', 'false');
+        showTrapCombinationsButton.style.display = 'none';
+        showTrapCombinationsButton.setAttribute('aria-expanded', 'true');
+    });
+}
 if (confirmScanProceedBtn) {
     confirmScanProceedBtn.addEventListener('click', () => {
         hideModalPopup(initialScanConfirmPopup);
@@ -478,6 +509,8 @@ document.addEventListener('DOMContentLoaded', () => {
         controlsContainer,
         opCombinationsWindow,
         showOpCombinationsButton,
+        trapCombinationsWindow,
+        showTrapCombinationsButton,
         initialScanConfirmPopup,
         reportConfirmPopup
     ];

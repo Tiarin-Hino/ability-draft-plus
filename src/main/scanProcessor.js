@@ -5,7 +5,10 @@ const {
     getHighWinrateCombinations,
     getAllOPCombinations,
     getAllHeroSynergies,
+    getAllHeroAbilitySynergiesUnfiltered,
     getHeroSynergiesInPool,
+    getAllTrapCombinations,
+    getAllHeroTrapSynergies,
     getHeroDetailsByAbilityName,
     getHeroDetailsById
 } = require('../database/queries'); // Adjusted path
@@ -283,21 +286,24 @@ function determineTopTierEntities(allScoredEntities, selectedModelId, mySpotHasU
  * @param {Array<object> | null} heroModels - The array of identified hero models.
  * @param {Array<object>} topTierMarkedEntities - Entities marked as top-tier.
  * @param {Array<object>} allScoredEntities - All entities with their scores.
- * @param {Map<string, Array<object>>} heroSynergiesMap - Map of hero internal names to their ability synergies.
+ * @param {Map<string, Array<object>>} heroSynergiesMap - Map of hero internal names to their strong ability synergies.
+ * @param {Map<string, Array<object>>} heroWeakSynergiesMap - Map of hero internal names to their weak ability synergies.
  * @returns {Array<object>} The enriched hero model data.
  */
-function enrichHeroModelDataWithFlags(heroModels, topTierMarkedEntities, allScoredEntities, heroSynergiesMap = new Map()) {
+function enrichHeroModelDataWithFlags(heroModels, topTierMarkedEntities, allScoredEntities, heroSynergiesMap = new Map(), heroWeakSynergiesMap = new Map()) {
     if (!heroModels) return [];
     return heroModels.map(hModel => {
         const scoredEntity = allScoredEntities.find(e => e.entityType === 'hero' && e.internalName === hModel.heroName);
         const topTierEntry = topTierMarkedEntities.find(tte => tte.entityType === 'hero' && tte.internalName === hModel.heroName && tte.isGeneralTopTier);
         const abilitySynergies = heroSynergiesMap.get(hModel.heroName) || [];
+        const weakAbilitySynergies = heroWeakSynergiesMap.get(hModel.heroName) || [];
         return {
             ...hModel,
             isGeneralTopTier: !!topTierEntry,
             isSynergySuggestionForMySpot: false, // Hero models are not synergy suggestions for a spot
             consolidatedScore: scoredEntity ? scoredEntity.consolidatedScore : 0,
-            abilitySynergies: abilitySynergies
+            abilitySynergies: abilitySynergies,
+            weakAbilitySynergies: weakAbilitySynergies
         };
     });
 }
@@ -325,7 +331,8 @@ function formatResultsForUiWithFlags(
         if (internalName === null) {
             return {
                 internalName: null, displayName: 'Unknown Ability', winrate: null, highSkillWinrate: null,
-                pickRate: null, hsPickRate: null, highWinrateCombinations: [],
+                pickRate: null, hsPickRate: null, highWinrateCombinations: [], lowWinrateCombinations: [],
+                heroSynergies: [], weakHeroSynergies: [],
                 isGeneralTopTier: false, isSynergySuggestionForMySpot: false,
                 confidence: result.confidence, hero_order: result.hero_order, ability_order: result.ability_order,
                 is_ultimate_from_layout: isUltimateFromLayoutSlot, is_ultimate_from_db: null,
@@ -348,7 +355,9 @@ function formatResultsForUiWithFlags(
             is_ultimate_from_layout: isUltimateFromLayoutSlot,
             ability_order_from_db: dbDetails ? dbDetails.ability_order : null,
             highWinrateCombinations: dbDetails ? (dbDetails.highWinrateCombinations || []) : [],
+            lowWinrateCombinations: dbDetails ? (dbDetails.lowWinrateCombinations || []) : [],
             heroSynergies: dbDetails ? (dbDetails.heroSynergies || []) : [],
+            weakHeroSynergies: dbDetails ? (dbDetails.weakHeroSynergies || []) : [],
             isGeneralTopTier: topTierEntry ? (topTierEntry.isGeneralTopTier || false) : false,
             isSynergySuggestionForMySpot: topTierEntry ? (topTierEntry.isSynergySuggestionForMySpot || false) : false,
             confidence: result.confidence,
@@ -475,14 +484,20 @@ async function processAndFinalizeScanData(rawScanResults, isInitialScan, mainSta
         for (const abilityName of allCurrentlyRelevantAbilityNames) {
             const details = abilityDetailsMap.get(abilityName);
             if (details) {
-                details.highWinrateCombinations = await getHighWinrateCombinations(activeDbPath, abilityName, centralDraftPoolArray) || [];
+                const allCombinations = await getHighWinrateCombinations(activeDbPath, abilityName, centralDraftPoolArray) || [];
+                // Split into positive (strong) and negative (weak) synergies based on winrate > 50%
+                details.highWinrateCombinations = allCombinations.filter(combo => combo.synergyWinrate >= 0.5);
+                details.lowWinrateCombinations = allCombinations.filter(combo => combo.synergyWinrate < 0.5);
                 abilityDetailsMap.set(abilityName, details);
             }
         }
 
         // Calculate hero synergies for abilities and hero models
-        const opThresholdPercentage = mainState.opThresholdPercentage !== undefined ? mainState.opThresholdPercentage : 0.13;
-        const allHeroSynergiesData = await getAllHeroSynergies(activeDbPath, opThresholdPercentage);
+        // Get ALL hero-ability synergies (unfiltered) so we can split into strong/weak for tooltips
+        const allHeroSynergiesData = await getAllHeroAbilitySynergiesUnfiltered(activeDbPath);
+
+        // Still need OP threshold for the OP combinations window
+        const opThresholdPercentage = mainState.opThresholdPercentage;
 
         // Create a set of hero internal names that are in the pool
         const heroesInPool = new Set();
@@ -496,42 +511,66 @@ async function processAndFinalizeScanData(rawScanResults, isInitialScan, mainSta
 
         // Add hero synergies to each ability (which heroes synergize with this ability)
         // Only include heroes that are in the current pool
+        // Split into strong (>= 50% WR) and weak (< 50% WR) synergies
         for (const abilityName of allCurrentlyRelevantAbilityNames) {
             const details = abilityDetailsMap.get(abilityName);
             if (details) {
-                const heroSynergiesForAbility = allHeroSynergiesData
+                const allHeroSynergiesForAbility = allHeroSynergiesData
                     .filter(synergy => synergy.abilityInternalName === abilityName)
                     .filter(synergy => heroesInPool.has(synergy.heroInternalName)) // Only heroes in pool
                     .map(synergy => ({
                         heroDisplayName: synergy.heroDisplayName,
                         heroInternalName: synergy.heroInternalName,
                         synergyWinrate: synergy.synergyWinrate
-                    }))
-                    .sort((a, b) => b.synergyWinrate - a.synergyWinrate)
-                    .slice(0, 5); // Limit to top 5
+                    }));
 
-                details.heroSynergies = heroSynergiesForAbility;
+                // Split and sort separately
+                const strongHeroSynergies = allHeroSynergiesForAbility
+                    .filter(s => s.synergyWinrate >= 0.5)
+                    .sort((a, b) => b.synergyWinrate - a.synergyWinrate)
+                    .slice(0, 5); // Top 5 strong synergies
+
+                const weakHeroSynergies = allHeroSynergiesForAbility
+                    .filter(s => s.synergyWinrate < 0.5)
+                    .sort((a, b) => a.synergyWinrate - b.synergyWinrate) // Ascending - worst first
+                    .slice(0, 5); // Top 5 weak synergies
+
+                details.heroSynergies = strongHeroSynergies;
+                details.weakHeroSynergies = weakHeroSynergies;
                 abilityDetailsMap.set(abilityName, details);
             }
         }
 
         // Calculate ability synergies for each hero model (which abilities synergize with this hero)
+        // Split into strong (>= 50% WR) and weak (< 50% WR) synergies
         const heroModelSynergiesMap = new Map();
+        const heroModelWeakSynergiesMap = new Map();
         if (identifiedHeroModelsCache) {
             for (const heroModel of identifiedHeroModelsCache) {
                 if (heroModel.heroName) {
-                    const abilitySynergiesForHero = allHeroSynergiesData
+                    const allAbilitySynergiesForHero = allHeroSynergiesData
                         .filter(synergy => synergy.heroInternalName === heroModel.heroName)
                         .filter(synergy => uniqueAbilityNamesInPool.has(synergy.abilityInternalName) || allPickedAbilityNames.has(synergy.abilityInternalName))
                         .map(synergy => ({
                             abilityDisplayName: synergy.abilityDisplayName,
                             abilityInternalName: synergy.abilityInternalName,
                             synergyWinrate: synergy.synergyWinrate
-                        }))
-                        .sort((a, b) => b.synergyWinrate - a.synergyWinrate)
-                        .slice(0, 5); // Limit to top 5
+                        }));
 
-                    heroModelSynergiesMap.set(heroModel.heroName, abilitySynergiesForHero);
+                    // Strong synergies (>= 50% WR)
+                    const strongAbilitySynergies = allAbilitySynergiesForHero
+                        .filter(s => s.synergyWinrate >= 0.5)
+                        .sort((a, b) => b.synergyWinrate - a.synergyWinrate)
+                        .slice(0, 5); // Top 5
+
+                    // Weak synergies (< 50% WR)
+                    const weakAbilitySynergies = allAbilitySynergiesForHero
+                        .filter(s => s.synergyWinrate < 0.5)
+                        .sort((a, b) => a.synergyWinrate - b.synergyWinrate) // Ascending - worst first
+                        .slice(0, 5); // Top 5 worst
+
+                    heroModelSynergiesMap.set(heroModel.heroName, strongAbilitySynergies);
+                    heroModelWeakSynergiesMap.set(heroModel.heroName, weakAbilitySynergies);
                 }
             }
         }
@@ -544,8 +583,35 @@ async function processAndFinalizeScanData(rawScanResults, isInitialScan, mainSta
             return (a1InPool && a2InPool) || (a1InPool && a2Picked) || (a1Picked && a2InPool);
         }).map(combo => ({ ability1DisplayName: combo.ability1DisplayName, ability2DisplayName: combo.ability2DisplayName, synergyWinrate: combo.synergyWinrate }));
 
-        // Query hero-ability synergies (only for heroes in the pool)
+        // Query hero-ability synergies (only for heroes in the pool AND only OP ones for the OP window)
+        // We need to calculate synergy_increase from synergyWinrate to filter OP synergies
+        // synergy_increase = synergyWinrate - 0.5 (baseline)
         const relevantHeroSynergies = allHeroSynergiesData.filter(synergy => {
+            const abilityInPool = uniqueAbilityNamesInPool.has(synergy.abilityInternalName);
+            const abilityPicked = allPickedAbilityNames.has(synergy.abilityInternalName);
+            const heroInPool = heroesInPool.has(synergy.heroInternalName);
+            const synergyIncrease = synergy.synergyWinrate - 0.5; // Calculate increase from baseline
+            const isOP = synergyIncrease >= opThresholdPercentage; // Only include OP synergies
+            return (abilityInPool || abilityPicked) && heroInPool && isOP;
+        }).map(synergy => ({ heroDisplayName: synergy.heroDisplayName, abilityDisplayName: synergy.abilityDisplayName, synergyWinrate: synergy.synergyWinrate }));
+
+        // Query trap combinations (negative synergy)
+        const trapThresholdPercentage = mainState.trapThresholdPercentage;
+
+        const allDatabaseTrapCombs = await getAllTrapCombinations(activeDbPath, trapThresholdPercentage);
+
+        const relevantTrapCombinations = allDatabaseTrapCombs.filter(combo => {
+            const a1InPool = uniqueAbilityNamesInPool.has(combo.ability1InternalName);
+            const a2InPool = uniqueAbilityNamesInPool.has(combo.ability2InternalName);
+            const a1Picked = allPickedAbilityNames.has(combo.ability1InternalName);
+            const a2Picked = allPickedAbilityNames.has(combo.ability2InternalName);
+            return (a1InPool && a2InPool) || (a1InPool && a2Picked) || (a1Picked && a2InPool);
+        }).map(combo => ({ ability1DisplayName: combo.ability1DisplayName, ability2DisplayName: combo.ability2DisplayName, synergyWinrate: combo.synergyWinrate }));
+
+        // Query hero-ability trap synergies (only for heroes in the pool)
+        const allHeroTrapSynergiesData = await getAllHeroTrapSynergies(activeDbPath, trapThresholdPercentage);
+
+        const relevantHeroTraps = allHeroTrapSynergiesData.filter(synergy => {
             const abilityInPool = uniqueAbilityNamesInPool.has(synergy.abilityInternalName);
             const abilityPicked = allPickedAbilityNames.has(synergy.abilityInternalName);
             const heroInPool = heroesInPool.has(synergy.heroInternalName);
@@ -557,7 +623,7 @@ async function processAndFinalizeScanData(rawScanResults, isInitialScan, mainSta
         const mySpotHasPickedUltimate = checkMySpotPickedUltimate(mySelectedSpotDbIdForDrafting, heroesForMySpotSelectionUI, currentScanCycleResults.selectedAbilities);
         const topTierMarkedEntities = determineTopTierEntities(allEntitiesForScoring, mySelectedModelDbHeroId, mySpotHasPickedUltimate, synergisticPartnersInPoolForMySpot);
 
-        const enrichedHeroModels = enrichHeroModelDataWithFlags(identifiedHeroModelsCache, topTierMarkedEntities, allEntitiesForScoring, heroModelSynergiesMap);
+        const enrichedHeroModels = enrichHeroModelDataWithFlags(identifiedHeroModelsCache, topTierMarkedEntities, allEntitiesForScoring, heroModelSynergiesMap, heroModelWeakSynergiesMap);
         const formattedUltimates = formatResultsForUiWithFlags(currentScanCycleResults.ultimates, abilityDetailsMap, topTierMarkedEntities, 'ultimates', allEntitiesForScoring);
         const formattedStandard = formatResultsForUiWithFlags(currentScanCycleResults.standard, abilityDetailsMap, topTierMarkedEntities, 'standard', allEntitiesForScoring);
         const formattedSelectedAbilities = formatResultsForUiWithFlags(currentScanCycleResults.selectedAbilities, abilityDetailsMap, [], 'selected', allEntitiesForScoring, true);
@@ -572,6 +638,8 @@ async function processAndFinalizeScanData(rawScanResults, isInitialScan, mainSta
             targetResolution: lastScanTargetResolution,
             opCombinations: relevantOPCombinations,
             heroSynergies: relevantHeroSynergies,
+            trapCombinations: relevantTrapCombinations,
+            heroTraps: relevantHeroTraps,
             initialSetup: false, // This flag is true only for the very first data sent to overlay upon creation
             scaleFactor: lastUsedScaleFactor,
             selectedHeroForDraftingDbId: mySelectedSpotDbIdForDrafting,

@@ -22,6 +22,7 @@ const state = {
     mySelectedModelScreenOrder: null, // Screen order of the hero model selected by the player
     identifiedHeroModelsCache: null, // Cache of identified hero models from the initial scan
     opThresholdPercentage: 0.13, // User-configured OP combinations threshold (default 13%)
+    trapThresholdPercentage: 0.05, // User-configured trap combinations threshold (default 5%)
 };
 
 // --- Getters ---
@@ -41,6 +42,7 @@ function getMySelectedModelDbHeroId() { return state.mySelectedModelDbHeroId; }
 function getMySelectedModelScreenOrder() { return state.mySelectedModelScreenOrder; }
 function getIdentifiedHeroModelsCache() { return state.identifiedHeroModelsCache; }
 function getOpThresholdPercentage() { return state.opThresholdPercentage; }
+function getTrapThresholdPercentage() { return state.trapThresholdPercentage; }
 
 // --- Setters ---
 function setActiveDbPath(value) { state.activeDbPath = value; }
@@ -59,6 +61,7 @@ function setMySelectedModelDbHeroId(value) { state.mySelectedModelDbHeroId = val
 function setMySelectedModelScreenOrder(value) { state.mySelectedModelScreenOrder = value; }
 function setIdentifiedHeroModelsCache(value) { state.identifiedHeroModelsCache = value; }
 function setOpThresholdPercentage(value) { state.opThresholdPercentage = value; }
+function setTrapThresholdPercentage(value) { state.trapThresholdPercentage = value; }
 
 // --- Batch State Update Utility ---
 
@@ -86,7 +89,7 @@ module.exports = {
     getLastRawScanResults, getLastScanTargetResolution, getLastUsedScaleFactor,
     getIsFirstAppRun, getMySelectedSpotDbIdForDrafting, getMySelectedSpotOriginalOrder,
     getMySelectedModelDbHeroId, getMySelectedModelScreenOrder,
-    getIdentifiedHeroModelsCache, getOpThresholdPercentage,
+    getIdentifiedHeroModelsCache, getOpThresholdPercentage, getTrapThresholdPercentage,
 
     // Setters
     setActiveDbPath,
@@ -105,6 +108,7 @@ module.exports = {
     setMySelectedModelScreenOrder,
     setIdentifiedHeroModelsCache,
     setOpThresholdPercentage,
+    setTrapThresholdPercentage,
 
     // Batch update utility
     updateStateProperties,
