@@ -162,12 +162,14 @@ function handleMlWorkerError(err) {
   // Optionally, attempt to terminate and re-initialize the worker, or notify the user more prominently.
 }
 
+let isAppQuitting = false;
+
 /**
  * Handles the exit event of the ML worker thread.
  * @param {number} code - The exit code of the worker.
  */
 function handleMlWorkerExit(code) {
-  if (code !== 0) {
+  if (code !== 0 && !isAppQuitting) {
     logger.error('ML Worker stopped unexpectedly', { exitCode: code });
     // Notify the user or attempt to restart the worker if appropriate.
     // For now, errors during processing will be caught by handleMlWorkerError or handleMlWorkerMessage.
@@ -356,9 +358,10 @@ app.on('window-all-closed', () => {
 app.on('will-quit', async (event) => {
   event.preventDefault(); // Prevent immediate quit to allow cleanup
 
+  isAppQuitting = true; // Set flag to prevent logging after logger closes
   logger.info('Application will quit - cleaning up resources');
   stateManager.setIsScanInProgress(false);
-  mlManager.terminate(); // Clean up the worker on quit
+  await mlManager.terminate(); // Clean up the worker on quit - await to prevent logging after logger closes
 
   // Log final memory stats and stop monitoring
   logger.info(memoryMonitor.getSummary());

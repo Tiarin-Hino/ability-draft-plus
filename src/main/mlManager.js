@@ -169,7 +169,7 @@ function initialize(onMessageCallback, onErrorCallback, onExitCallback, mainProc
         mlWorker.on('error', handleInitialError);
         mlWorker.on('exit', (code) => {
             onExitCallback(code); // Call original exit callback
-            if (!isManagerReady) { // If exited before becoming ready
+            if (!isManagerReady && !isTerminating) { // If exited before becoming ready and not terminating
                 const exitError = new Error(`ML Worker exited with code ${code} during initialization.`);
                 logger.error('ML Worker exited during initialization', { exitCode: code });
                 isManagerReady = false;
@@ -210,6 +210,8 @@ function postMessage(message) {
     }
 }
 
+let isTerminating = false;
+
 /**
  * Terminates the ML Worker if it's running.
  * @returns {Promise<number | null>} Exit code of the worker, or null if not running.
@@ -218,6 +220,7 @@ function postMessage(message) {
 async function terminate() {
     let exitCodeToReturn = null;
     if (mlWorker) {
+        isTerminating = true;
         logger.info('Terminating ML Worker');
         try {
             exitCodeToReturn = await mlWorker.terminate();
@@ -227,6 +230,7 @@ async function terminate() {
             // exitCodeToReturn remains null or its previous value
         } finally {
             mlWorker = null;
+            isTerminating = false;
             isManagerReady = false;
             initializationPromise = null;
         }
