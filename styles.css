@@ -558,6 +558,63 @@ input:checked+.slider:before {
     font-size: 0.85em;
 }
 
+/* OP Threshold Controls */
+.threshold-controls {
+    align-items: center;
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+#op-threshold-slider {
+    flex: 2;
+    min-width: 200px;
+}
+
+#op-threshold-input {
+    flex: 0 0 80px;
+    text-align: center;
+}
+
+#threshold-display {
+    flex: 0 0 60px;
+    font-weight: 600;
+    color: var(--brand-purple);
+    text-align: center;
+}
+
+.save-threshold-btn {
+    background: linear-gradient(135deg, var(--brand-purple) 0%, var(--brand-purple-light) 100%);
+    font-size: 13px;
+    min-height: 40px;
+    padding: 8px 16px;
+    white-space: nowrap;
+}
+
+.save-threshold-btn:hover {
+    background: linear-gradient(135deg, var(--brand-purple-light) 0%, var(--brand-purple) 100%);
+    box-shadow: 0 4px 12px rgba(93, 53, 102, 0.25);
+}
+
+.saved-indicator {
+    color: var(--brand-green);
+    font-size: 20px;
+    font-weight: bold;
+    margin-left: 8px;
+    animation: fadeInOut 1.5s ease;
+}
+
+@keyframes fadeInOut {
+    0% { opacity: 0; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1.2); }
+    100% { opacity: 0; transform: scale(1); }
+}
+
+#threshold-help {
+    color: var(--text-color-muted);
+    font-size: 0.85em;
+}
+
 #new-resolution-status,
 #update-status-message {
     display: none;

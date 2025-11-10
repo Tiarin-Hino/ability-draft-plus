@@ -109,7 +109,8 @@ function handleMlWorkerMessage(result) {
       mySelectedSpotDbIdForDrafting: stateManager.getMySelectedSpotDbIdForDrafting(),
       mySelectedSpotOriginalOrder: stateManager.getMySelectedSpotOriginalOrder(),
       mySelectedModelDbHeroId: stateManager.getMySelectedModelDbHeroId(),
-      mySelectedModelScreenOrder: stateManager.getMySelectedModelScreenOrder()
+      mySelectedModelScreenOrder: stateManager.getMySelectedModelScreenOrder(),
+      opThresholdPercentage: stateManager.getOpThresholdPercentage()
     };
     const overlayWebContents = windowManager.getOverlayWindow()?.webContents;
 

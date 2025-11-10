@@ -40,6 +40,13 @@
             "saveButton": "Save as Preferred",
             "savedMessage": "Resolution saved as preferred!"
         },
+        "opThreshold": {
+            "title": "OP Combinations Threshold",
+            "label": "Synergy threshold percentage:",
+            "helpText": "Combinations with synergy increase above this threshold will be marked as OP.",
+            "saveButton": "Save Threshold",
+            "savedMessage": "Threshold saved!"
+        },
         "newResolution": {
             "title": "Submit New Layout",
             "description": "If your screen resolution isn't listed, you can submit your current screen setup. Please ensure Dota 2 is in the Ability Draft phase, displaying the full draft interface, at the resolution you wish to add.",
@@ -151,7 +158,9 @@
             "hsWinrate": "High Skill Winrate",
             "pickRate": "Pick Rate",
             "hsPickRate": "High Skill Pick Rate",
-            "synergiesTitle": "Strong Synergies (within Pool):"
+            "synergiesTitle": "Strong Synergies (within Pool):",
+            "heroSynergiesTitle": "Hero Synergies:",
+            "strongAbilitiesForHero": "Strong Abilities:"
         },
         "dynamicButtons": {
             "mySpot": "My Spot",

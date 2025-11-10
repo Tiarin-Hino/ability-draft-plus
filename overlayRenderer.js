@@ -264,8 +264,10 @@ if (window.electronAPI) {
 
         // Process discrete data updates
         if (typeof data.opCombinations !== 'undefined') {
-            const newOpCombosAvailable = data.opCombinations && data.opCombinations.length > 0;
-            uiUpdater.updateOPCombinationsDisplay(data.opCombinations, newOpCombosAvailable);
+            const hasAbilityCombos = data.opCombinations && data.opCombinations.length > 0;
+            const hasHeroSynergies = data.heroSynergies && data.heroSynergies.length > 0;
+            const newOpCombosAvailable = hasAbilityCombos || hasHeroSynergies;
+            uiUpdater.updateOPCombinationsDisplay(data.opCombinations, data.heroSynergies || []);
             opCombinationsAvailable = newOpCombosAvailable;
         }
         if (data.heroModels) currentHeroModelData = data.heroModels;

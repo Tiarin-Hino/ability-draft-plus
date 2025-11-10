@@ -68,6 +68,23 @@
 
         <hr>
 
+        <section id="op-threshold-section">
+            <h2 data-i18n="controlPanel.opThreshold.title">OP Combinations Threshold</h2>
+            <div>
+                <label for="op-threshold-slider" data-i18n="controlPanel.opThreshold.label">Synergy threshold percentage:</label>
+                <div class="threshold-controls">
+                    <input type="range" id="op-threshold-slider" min="0" max="30" step="0.01" value="13" aria-describedby="threshold-help">
+                    <input type="number" id="op-threshold-input" min="0" max="30" step="0.01" value="13" aria-describedby="threshold-help">
+                    <span id="threshold-display">13.00%</span>
+                </div>
+                <p id="threshold-help" data-i18n="controlPanel.opThreshold.helpText">Combinations with synergy increase above this threshold will be marked as OP.</p>
+                <button id="save-threshold-btn" class="save-threshold-btn" data-i18n="controlPanel.opThreshold.saveButton">Save Threshold</button>
+                <span id="threshold-saved-indicator" class="saved-indicator" style="display: none;">✓</span>
+            </div>
+        </section>
+
+        <hr>
+
 
         <section id="new-resolution-request-section">
             <h2 data-i18n="controlPanel.newResolution.title">Submit New Layout</h2>

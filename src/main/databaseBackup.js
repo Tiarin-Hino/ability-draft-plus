@@ -85,7 +85,7 @@ async function getBackupFiles() {
  * @param {number} keepCount - Number of backups to keep
  * @returns {Promise<number>} Number of backups deleted
  */
-async function cleanOldBackups(keepCount = MAX_BACKUPS) {
+async function cleanOldBackups(keepCount = DB_BACKUP_RETENTION) {
     const backups = await getBackupFiles();
 
     if (backups.length <= keepCount) {

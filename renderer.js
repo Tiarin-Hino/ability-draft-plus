@@ -34,6 +34,11 @@ const updatePopupReleaseDate = document.getElementById('update-popup-release-dat
 const updatePopupNotes = document.getElementById('update-popup-notes');
 const updatePopupDownloadBtn = document.getElementById('update-popup-download-btn');
 const updatePopupLaterBtn = document.getElementById('update-popup-later-btn');
+const opThresholdSlider = document.getElementById('op-threshold-slider');
+const opThresholdInput = document.getElementById('op-threshold-input');
+const thresholdDisplay = document.getElementById('threshold-display');
+const saveThresholdButton = document.getElementById('save-threshold-btn');
+const thresholdSavedIndicator = document.getElementById('threshold-saved-indicator');
 
 import * as themeManager from './src/renderer/themeManager.js';
 import * as translationUtils from './src/renderer/translationUtils.js';
@@ -484,6 +489,84 @@ if (window.electronAPI) {
             }, 1500);
 
             uiUtils.updateStatusMessage(translate('controlPanel.activation.savedMessage'), false);
+        });
+    }
+
+    // --- OP Threshold Controls ---
+    // Load saved threshold on startup
+    if (opThresholdSlider && opThresholdInput && thresholdDisplay) {
+        const savedThreshold = localStorage.getItem('opThresholdPercentage');
+        const initialThreshold = savedThreshold ? parseFloat(savedThreshold) : 13.0;
+
+        // Validate and clamp to range
+        const clampedThreshold = Math.max(0, Math.min(30, initialThreshold));
+
+        opThresholdSlider.value = clampedThreshold;
+        opThresholdInput.value = clampedThreshold.toFixed(2);
+        thresholdDisplay.textContent = `${clampedThreshold.toFixed(2)}%`;
+
+        // Send initial threshold to main process
+        if (window.electronAPI && window.electronAPI.setOpThreshold) {
+            window.electronAPI.setOpThreshold(clampedThreshold / 100); // Convert to decimal
+        }
+
+        // Update display and slider from slider movement
+        opThresholdSlider.addEventListener('input', (e) => {
+            const value = parseFloat(e.target.value);
+            opThresholdInput.value = value.toFixed(2);
+            thresholdDisplay.textContent = `${value.toFixed(2)}%`;
+        });
+
+        // Update display and slider only when user finishes typing
+        opThresholdInput.addEventListener('change', (e) => {
+            const numValue = parseFloat(e.target.value);
+            if (isNaN(numValue)) {
+                // Reset to slider value if invalid
+                opThresholdInput.value = parseFloat(opThresholdSlider.value).toFixed(2);
+                return;
+            }
+            const clampedValue = Math.max(0, Math.min(30, numValue));
+            const formattedValue = clampedValue.toFixed(2);
+
+            opThresholdSlider.value = formattedValue;
+            opThresholdInput.value = formattedValue;
+            thresholdDisplay.textContent = `${formattedValue}%`;
+        });
+
+        // Update display while typing (but don't update slider or reformat input)
+        opThresholdInput.addEventListener('input', (e) => {
+            const numValue = parseFloat(e.target.value);
+            if (!isNaN(numValue)) {
+                const clampedValue = Math.max(0, Math.min(30, numValue));
+                thresholdDisplay.textContent = `${clampedValue.toFixed(2)}%`;
+            }
+        });
+    }
+
+    if (saveThresholdButton && opThresholdInput && thresholdSavedIndicator) {
+        saveThresholdButton.addEventListener('click', () => {
+            const thresholdValue = parseFloat(opThresholdInput.value);
+            const clampedValue = Math.max(0, Math.min(30, thresholdValue));
+
+            // Save to localStorage (as percentage)
+            localStorage.setItem('opThresholdPercentage', clampedValue.toString());
+            console.log(`[Renderer] Saved OP threshold: ${clampedValue}%`);
+
+            // Send to main process (as decimal)
+            if (window.electronAPI && window.electronAPI.setOpThreshold) {
+                window.electronAPI.setOpThreshold(clampedValue / 100);
+            }
+
+            // Show visual feedback
+            thresholdSavedIndicator.style.display = 'inline';
+            saveThresholdButton.disabled = true;
+
+            setTimeout(() => {
+                thresholdSavedIndicator.style.display = 'none';
+                saveThresholdButton.disabled = false;
+            }, 1500);
+
+            uiUtils.updateStatusMessage(translate('controlPanel.opThreshold.savedMessage'), false);
         });
     }
 

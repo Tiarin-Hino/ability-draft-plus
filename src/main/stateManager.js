@@ -21,6 +21,7 @@ const state = {
     mySelectedModelDbHeroId: null, // DB ID of the hero model selected by the player for synergy checks
     mySelectedModelScreenOrder: null, // Screen order of the hero model selected by the player
     identifiedHeroModelsCache: null, // Cache of identified hero models from the initial scan
+    opThresholdPercentage: 0.13, // User-configured OP combinations threshold (default 13%)
 };
 
 // --- Getters ---
@@ -39,6 +40,7 @@ function getMySelectedSpotOriginalOrder() { return state.mySelectedSpotOriginalO
 function getMySelectedModelDbHeroId() { return state.mySelectedModelDbHeroId; }
 function getMySelectedModelScreenOrder() { return state.mySelectedModelScreenOrder; }
 function getIdentifiedHeroModelsCache() { return state.identifiedHeroModelsCache; }
+function getOpThresholdPercentage() { return state.opThresholdPercentage; }
 
 // --- Setters ---
 function setActiveDbPath(value) { state.activeDbPath = value; }
@@ -56,6 +58,7 @@ function setMySelectedSpotOriginalOrder(value) { state.mySelectedSpotOriginalOrd
 function setMySelectedModelDbHeroId(value) { state.mySelectedModelDbHeroId = value; }
 function setMySelectedModelScreenOrder(value) { state.mySelectedModelScreenOrder = value; }
 function setIdentifiedHeroModelsCache(value) { state.identifiedHeroModelsCache = value; }
+function setOpThresholdPercentage(value) { state.opThresholdPercentage = value; }
 
 // --- Batch State Update Utility ---
 
@@ -83,7 +86,7 @@ module.exports = {
     getLastRawScanResults, getLastScanTargetResolution, getLastUsedScaleFactor,
     getIsFirstAppRun, getMySelectedSpotDbIdForDrafting, getMySelectedSpotOriginalOrder,
     getMySelectedModelDbHeroId, getMySelectedModelScreenOrder,
-    getIdentifiedHeroModelsCache,
+    getIdentifiedHeroModelsCache, getOpThresholdPercentage,
 
     // Setters
     setActiveDbPath,
@@ -101,6 +104,7 @@ module.exports = {
     setMySelectedModelDbHeroId,
     setMySelectedModelScreenOrder,
     setIdentifiedHeroModelsCache,
+    setOpThresholdPercentage,
 
     // Batch update utility
     updateStateProperties,

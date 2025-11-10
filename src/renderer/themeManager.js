@@ -62,7 +62,6 @@ export function loadUserPreference() {
     } else {
         currentUserPreference = THEMES.SYSTEM; // Default to system
     }
-    console.log(`[ThemeManager] Loaded user preference: ${currentUserPreference}`);
     return currentUserPreference;
 }
 
@@ -74,7 +73,6 @@ export function saveUserPreference(preference) {
     if (Object.values(THEMES).includes(preference)) {
         currentUserPreference = preference;
         localStorage.setItem('themeUserChoice', preference);
-        console.log(`[ThemeManager] Saved user preference: ${currentUserPreference}`);
     } else {
         console.warn(`[ThemeManager] Attempted to save invalid preference: ${preference}`);
     }
@@ -115,7 +113,6 @@ export function applyEffectiveTheme() {
     }
 
     body.classList.toggle('dark-mode', useDarkMode);
-    console.log(`[ThemeManager] Effective theme applied: ${useDarkMode ? 'Dark' : 'Light'}. User Pref: ${currentUserPreference}, System Dark: ${currentSystemPrefersDark}`);
 }
 
 /** @returns {string} The current user's theme preference. */
