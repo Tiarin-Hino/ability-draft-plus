@@ -347,10 +347,10 @@ function getOPCombinationsInPool(dbPath, draftPoolInternalNames, thresholdPercen
 /**
  * Fetches all "OP" (overpowered) ability combinations from the database.
  * @param {string} dbPath - Path to the SQLite database file.
- * @param {number} thresholdPercentage - The synergy increase threshold percentage (e.g., 0.13 for 13%).
+ * @param {number} thresholdPercentage - The synergy increase threshold percentage (e.g., 0.13 for 13%). Required.
  * @returns {Array<{ability1InternalName: string, ability1DisplayName: string, ability2InternalName: string, ability2DisplayName: string, synergyWinrate: number}>} An array of all OP combination objects.
  */
-function getAllOPCombinations(dbPath, thresholdPercentage = 0.13) {
+function getAllOPCombinations(dbPath, thresholdPercentage) {
     let db;
     const opCombinations = [];
 
@@ -394,10 +394,10 @@ function getAllOPCombinations(dbPath, thresholdPercentage = 0.13) {
 /**
  * Fetches all "OP" (overpowered) hero-ability synergies from the database.
  * @param {string} dbPath - Path to the SQLite database file.
- * @param {number} thresholdPercentage - The synergy increase threshold percentage (e.g., 0.13 for 13%).
+ * @param {number} thresholdPercentage - The synergy increase threshold percentage (e.g., 0.13 for 13%). Required.
  * @returns {Array<{heroInternalName: string, heroDisplayName: string, abilityInternalName: string, abilityDisplayName: string, synergyWinrate: number}>} An array of all OP hero-ability synergy objects.
  */
-function getAllHeroSynergies(dbPath, thresholdPercentage = 0.13) {
+function getAllHeroSynergies(dbPath, thresholdPercentage) {
     let db;
     const heroSynergies = [];
 
@@ -429,6 +429,51 @@ function getAllHeroSynergies(dbPath, thresholdPercentage = 0.13) {
         });
     } catch (err) {
         console.error(`[DB Queries] Error fetching ALL hero synergies: ${err.message}`);
+    } finally {
+        if (db && db.open) {
+            db.close();
+        }
+    }
+    return heroSynergies;
+}
+
+/**
+ * Fetches ALL hero-ability synergies from the database without any threshold filtering.
+ * Used for tooltip display where we want to show both strong and weak synergies.
+ * @param {string} dbPath - Path to the SQLite database file.
+ * @returns {Array<{heroInternalName: string, heroDisplayName: string, abilityInternalName: string, abilityDisplayName: string, synergyWinrate: number}>} An array of all hero-ability synergy objects.
+ */
+function getAllHeroAbilitySynergiesUnfiltered(dbPath) {
+    let db;
+    const heroSynergies = [];
+
+    try {
+        db = new Database(dbPath, { readonly: true });
+        const heroSynergyQuery = `
+            SELECT
+                h.name AS hero_internal_name,
+                h.display_name AS hero_display_name,
+                a.name AS ability_internal_name,
+                a.display_name AS ability_display_name,
+                s.synergy_winrate
+            FROM HeroAbilitySynergies s
+            JOIN Heroes h ON s.hero_id = h.hero_id
+            JOIN Abilities a ON s.ability_id = a.ability_id;
+        `;
+        const stmt = db.prepare(heroSynergyQuery);
+        const rows = stmt.all();
+
+        rows.forEach(row => {
+            heroSynergies.push({
+                heroInternalName: row.hero_internal_name,
+                heroDisplayName: row.hero_display_name || row.hero_internal_name,
+                abilityInternalName: row.ability_internal_name,
+                abilityDisplayName: row.ability_display_name || row.ability_internal_name,
+                synergyWinrate: row.synergy_winrate,
+            });
+        });
+    } catch (err) {
+        console.error(`[DB Queries] Error fetching ALL unfiltered hero synergies: ${err.message}`);
     } finally {
         if (db && db.open) {
             db.close();
@@ -492,6 +537,103 @@ function getHeroSynergiesInPool(dbPath, draftPoolInternalNames, thresholdPercent
     return heroSynergies;
 }
 
+/**
+ * Fetches all "trap" (negative synergy) ability-ability combinations from the database.
+ * @param {string} dbPath - Path to the SQLite database file.
+ * @param {number} thresholdPercentage - The negative synergy decrease threshold percentage (e.g., 0.05 for -5%). Required.
+ * @returns {Array<{ability1InternalName: string, ability1DisplayName: string, ability2InternalName: string, ability2DisplayName: string, synergyWinrate: number}>} An array of all trap combination objects.
+ */
+function getAllTrapCombinations(dbPath, thresholdPercentage) {
+    let db;
+    const trapCombinations = [];
+
+    try {
+        db = new Database(dbPath, { readonly: true });
+
+        const trapQuery = `
+            SELECT
+                a1.name AS ability1_internal_name,
+                a1.display_name AS ability1_display_name,
+                a2.name AS ability2_internal_name,
+                a2.display_name AS ability2_display_name,
+                s.synergy_winrate,
+                s.synergy_increase
+            FROM AbilitySynergies s
+            JOIN Abilities a1 ON s.base_ability_id = a1.ability_id
+            JOIN Abilities a2 ON s.synergy_ability_id = a2.ability_id
+            WHERE s.synergy_increase <= ?
+              AND s.base_ability_id < s.synergy_ability_id; -- Ensures each pair is reported once (matches scraper ordering)
+        `;
+        const trapStmt = db.prepare(trapQuery);
+        const trapRows = trapStmt.all(-thresholdPercentage);
+
+        trapRows.forEach(row => {
+            trapCombinations.push({
+                ability1InternalName: row.ability1_internal_name,
+                ability1DisplayName: row.ability1_display_name || row.ability1_internal_name,
+                ability2InternalName: row.ability2_internal_name,
+                ability2DisplayName: row.ability2_display_name || row.ability2_internal_name,
+                synergyWinrate: row.synergy_winrate,
+            });
+        });
+    } catch (err) {
+        console.error(`[DB Queries] Error fetching ALL trap combinations: ${err.message}`);
+    } finally {
+        if (db && db.open) {
+            db.close();
+        }
+    }
+    return trapCombinations;
+}
+
+/**
+ * Fetches all "trap" (negative synergy) hero-ability synergies from the database.
+ * @param {string} dbPath - Path to the SQLite database file.
+ * @param {number} thresholdPercentage - The negative synergy decrease threshold percentage (e.g., 0.05 for -5%). Required.
+ * @returns {Array<{heroInternalName: string, heroDisplayName: string, abilityInternalName: string, abilityDisplayName: string, synergyWinrate: number}>} An array of all trap hero-ability synergy objects.
+ */
+function getAllHeroTrapSynergies(dbPath, thresholdPercentage) {
+    let db;
+    const heroTrapSynergies = [];
+
+    try {
+        db = new Database(dbPath, { readonly: true });
+
+        const heroTrapQuery = `
+            SELECT
+                h.name AS hero_internal_name,
+                h.display_name AS hero_display_name,
+                a.name AS ability_internal_name,
+                a.display_name AS ability_display_name,
+                s.synergy_winrate,
+                s.synergy_increase
+            FROM HeroAbilitySynergies s
+            JOIN Heroes h ON s.hero_id = h.hero_id
+            JOIN Abilities a ON s.ability_id = a.ability_id
+            WHERE s.synergy_increase <= ?;
+        `;
+        const stmt = db.prepare(heroTrapQuery);
+        const rows = stmt.all(-thresholdPercentage);
+
+        rows.forEach(row => {
+            heroTrapSynergies.push({
+                heroInternalName: row.hero_internal_name,
+                heroDisplayName: row.hero_display_name || row.hero_internal_name,
+                abilityInternalName: row.ability_internal_name,
+                abilityDisplayName: row.ability_display_name || row.ability_internal_name,
+                synergyWinrate: row.synergy_winrate,
+            });
+        });
+    } catch (err) {
+        console.error(`[DB Queries] Error fetching ALL hero trap synergies: ${err.message}`);
+    } finally {
+        if (db && db.open) {
+            db.close();
+        }
+    }
+    return heroTrapSynergies;
+}
+
 module.exports = {
     // Hero Queries
     getAllHeroes,
@@ -505,5 +647,8 @@ module.exports = {
     getOPCombinationsInPool,
     getAllOPCombinations,
     getAllHeroSynergies,
+    getAllHeroAbilitySynergiesUnfiltered,
     getHeroSynergiesInPool,
+    getAllTrapCombinations,
+    getAllHeroTrapSynergies,
 };

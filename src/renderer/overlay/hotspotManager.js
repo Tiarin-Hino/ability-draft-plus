@@ -82,7 +82,9 @@ function _createAbilityHotspotElement(coord, abilityData, uniqueIdPart, isSelect
     hotspot.dataset.pickRate = typeof abilityData.pickRate === 'number' ? abilityData.pickRate.toFixed(2) : 'N/A';
     hotspot.dataset.hsPickRate = typeof abilityData.hsPickRate === 'number' ? abilityData.hsPickRate.toFixed(2) : 'N/A';
     hotspot.dataset.combinations = JSON.stringify(abilityData.highWinrateCombinations || []);
+    hotspot.dataset.lowCombinations = JSON.stringify(abilityData.lowWinrateCombinations || []);
     hotspot.dataset.heroSynergies = JSON.stringify(abilityData.heroSynergies || []);
+    hotspot.dataset.weakHeroSynergies = JSON.stringify(abilityData.weakHeroSynergies || []);
     hotspot.dataset.confidence = typeof abilityData.confidence === 'number' ? abilityData.confidence.toFixed(2) : 'N/A';
     hotspot.dataset.isSynergySuggestion = String(abilityData.isSynergySuggestionForMySpot && !isSelectedAbilityHotspot);
     hotspot.dataset.isGeneralTopTier = String(abilityData.isGeneralTopTier && !isSelectedAbilityHotspot);
@@ -142,6 +144,26 @@ function _createAbilityHotspotElement(coord, abilityData, uniqueIdPart, isSelect
                 const heroName = (synergy.heroDisplayName || 'Hero').replace(/_/g, ' ');
                 const synergyWrFormatted = formatStatValue(synergy.synergyWinrate, { isPercentage: true, precision: 1 });
                 tooltipContent += `<div class="tooltip-combo" style="font-style: italic;">- ${heroName} (${synergyWrFormatted} WR)</div>`;
+            });
+        }
+
+        const lowCombinations = JSON.parse(hotspot.dataset.lowCombinations || '[]');
+        if (lowCombinations.length > 0) {
+            tooltipContent += `<div class="tooltip-section-title">${translateFn('overlay.tooltip.weakSynergiesTitle')}</div>`;
+            lowCombinations.slice(0, 5).forEach(combo => {
+                const comboPartnerName = (combo.partnerAbilityDisplayName || translateFn('overlay.tooltip.unknownPartner')).replace(/_/g, ' ');
+                const comboWrFormatted = formatStatValue(combo.synergyWinrate, { isPercentage: true, precision: 1 });
+                tooltipContent += `<div class="tooltip-combo" style="color: #FFB4A9;">- ${comboPartnerName} (${comboWrFormatted} WR)</div>`;
+            });
+        }
+
+        const weakHeroSynergies = JSON.parse(hotspot.dataset.weakHeroSynergies || '[]');
+        if (weakHeroSynergies.length > 0) {
+            tooltipContent += `<div class="tooltip-section-title">${translateFn('overlay.tooltip.weakHeroSynergiesTitle')}</div>`;
+            weakHeroSynergies.slice(0, 5).forEach(synergy => {
+                const heroName = (synergy.heroDisplayName || 'Hero').replace(/_/g, ' ');
+                const synergyWrFormatted = formatStatValue(synergy.synergyWinrate, { isPercentage: true, precision: 1 });
+                tooltipContent += `<div class="tooltip-combo" style="font-style: italic; color: #FFB4A9;">- ${heroName} (${synergyWrFormatted} WR)</div>`;
             });
         }
         tooltipModule.showTooltip(hotspot, tooltipContent);
@@ -204,6 +226,7 @@ export function createHeroModelHotspots(heroModelDataArray) {
         hotspot.dataset.isGeneralTopTier = String(heroData.isGeneralTopTier);
         hotspot.dataset.consolidatedScore = (typeof heroData.consolidatedScore === 'number' ? heroData.consolidatedScore.toFixed(3) : 'N/A');
         hotspot.dataset.abilitySynergies = JSON.stringify(heroData.abilitySynergies || []);
+        hotspot.dataset.weakAbilitySynergies = JSON.stringify(heroData.weakAbilitySynergies || []);
 
         // --- CSS classes based on data ---
         if (heroData.isGeneralTopTier) {
@@ -238,6 +261,16 @@ export function createHeroModelHotspots(heroModelDataArray) {
                     const abilityName = (synergy.abilityDisplayName || 'Ability').replace(/_/g, ' ');
                     const synergyWrFormatted = formatStatValue(synergy.synergyWinrate, { isPercentage: true, precision: 1 });
                     tooltipContent += `<div class="tooltip-combo" style="font-style: italic;">- ${abilityName} (${synergyWrFormatted} WR)</div>`;
+                });
+            }
+
+            const weakAbilitySynergies = JSON.parse(hotspot.dataset.weakAbilitySynergies || '[]');
+            if (weakAbilitySynergies.length > 0) {
+                tooltipContent += `<div class="tooltip-section-title">${translateFn('overlay.tooltip.weakAbilitiesForHero')}</div>`;
+                weakAbilitySynergies.slice(0, 5).forEach(synergy => {
+                    const abilityName = (synergy.abilityDisplayName || 'Ability').replace(/_/g, ' ');
+                    const synergyWrFormatted = formatStatValue(synergy.synergyWinrate, { isPercentage: true, precision: 1 });
+                    tooltipContent += `<div class="tooltip-combo" style="font-style: italic; color: #FFB4A9;">- ${abilityName} (${synergyWrFormatted} WR)</div>`;
                 });
             }
 

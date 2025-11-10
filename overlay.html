@@ -50,6 +50,24 @@
                 aria-expanded="false" data-i18n="overlay.controls.showOP" title="Show Overpowered Combinations"
                 style="display: none;">Show OP Combinations</button>
         </section>
+
+        <section id="trap-combinations-container" aria-labelledby="trap-combinations-heading">
+            <h2 id="trap-combinations-heading" class="visually-hidden">Trap Combinations</h2>
+            <div id="trap-combinations-window" class="trap-alert-window" aria-hidden="true" aria-live="polite"
+                style="display: none;">
+                <header class="trap-alert-header">
+                    <span class="trap-alert-title" id="trap-window-title" data-i18n="overlay.trapCombinations.title">It's a Trap!</span>
+                    <button id="hide-trap-combinations-btn" class="overlay-button trap-alert-hide-btn"
+                        data-i18n="overlay.controls.hideTrap" aria-controls="trap-combinations-window"
+                        aria-label="Hide Trap Combinations Window">Hide</button>
+                </header>
+                <div id="trap-combinations-list">
+                </div>
+            </div>
+            <button id="show-trap-combinations-btn" class="overlay-button" aria-controls="trap-combinations-window"
+                aria-expanded="false" data-i18n="overlay.controls.showTrap" title="Show Trap Combinations"
+                style="display: none;">Show Trap Combinations</button>
+        </section>
     </aside>
 
     <div id="status-messages-container" role="status" aria-live="assertive">

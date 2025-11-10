@@ -143,18 +143,16 @@ async function scrapeAndStoreAbilityPairs(dbPath, url, statusCallback) {
                                 return; // Skip this pair, continue to next .each iteration
                             }
 
-                            // Store hero-ability synergy if combined winrate meets the threshold
-                            if (combinedWinrate >= SYNERGY_WINRATE_THRESHOLD) {
-                                const isOp = synergyIncreasePercentage !== null && synergyIncreasePercentage >= OP_SYNERGY_THRESHOLD_PERCENTAGE;
+                            // Store all hero-ability synergies (both positive and negative)
+                            const isOp = synergyIncreasePercentage !== null && synergyIncreasePercentage >= OP_SYNERGY_THRESHOLD_PERCENTAGE;
 
-                                heroSynergiesToInsert.push({
-                                    heroId,
-                                    abilityId: abilityDetails.id,
-                                    synergy_winrate: combinedWinrate,
-                                    synergy_increase: synergyIncreasePercentage,
-                                    is_op: isOp ? 1 : 0
-                                });
-                            }
+                            heroSynergiesToInsert.push({
+                                heroId,
+                                abilityId: abilityDetails.id,
+                                synergy_winrate: combinedWinrate,
+                                synergy_increase: synergyIncreasePercentage,
+                                is_op: isOp ? 1 : 0
+                            });
                         }
                     }
                 } else {
@@ -175,26 +173,24 @@ async function scrapeAndStoreAbilityPairs(dbPath, url, statusCallback) {
                                 return; // Skip this pair, continue to next .each iteration
                             }
 
-                            // Store pair if combined winrate meets the threshold.
-                            if (combinedWinrate >= SYNERGY_WINRATE_THRESHOLD) {
-                                const baseAbilityId = Math.min(details1.id, details2.id);
-                                const synergyAbilityId = Math.max(details1.id, details2.id);
-                                const isOp = synergyIncreasePercentage !== null && synergyIncreasePercentage >= OP_SYNERGY_THRESHOLD_PERCENTAGE;
+                            // Store all ability-ability synergies (both positive and negative)
+                            const baseAbilityId = Math.min(details1.id, details2.id);
+                            const synergyAbilityId = Math.max(details1.id, details2.id);
+                            const isOp = synergyIncreasePercentage !== null && synergyIncreasePercentage >= OP_SYNERGY_THRESHOLD_PERCENTAGE;
 
-                                pairsToInsert.push({
-                                    baseAbilityId,
-                                    synergyAbilityId,
-                                    synergy_winrate: combinedWinrate,
-                                    synergy_increase: synergyIncreasePercentage,
-                                    is_op: isOp ? 1 : 0
-                                });
-                            }
+                            pairsToInsert.push({
+                                baseAbilityId,
+                                synergyAbilityId,
+                                synergy_winrate: combinedWinrate,
+                                synergy_increase: synergyIncreasePercentage,
+                                is_op: isOp ? 1 : 0
+                            });
                         }
                     }
                 }
             }
         });
-        statusCallback(`Processed all rows. Found ${pairsToInsert.length} ability-ability synergies and ${heroSynergiesToInsert.length} hero-ability synergies meeting criteria (Combined WR >= ${SYNERGY_WINRATE_THRESHOLD * 100}%, filtered by hero).`);
+        statusCallback(`Processed all rows. Found ${pairsToInsert.length} ability-ability synergies and ${heroSynergiesToInsert.length} hero-ability synergies (including both positive and negative synergies).`);
 
         // Database update part
         db = new Database(dbPath); // Open for writing
