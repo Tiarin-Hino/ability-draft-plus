@@ -36,12 +36,10 @@ const updatePopupDownloadBtn = document.getElementById('update-popup-download-bt
 const updatePopupLaterBtn = document.getElementById('update-popup-later-btn');
 const opThresholdSlider = document.getElementById('op-threshold-slider');
 const opThresholdInput = document.getElementById('op-threshold-input');
-const thresholdDisplay = document.getElementById('threshold-display');
 const saveThresholdButton = document.getElementById('save-threshold-btn');
 const thresholdSavedIndicator = document.getElementById('threshold-saved-indicator');
 const trapThresholdSlider = document.getElementById('trap-threshold-slider');
 const trapThresholdInput = document.getElementById('trap-threshold-input');
-const trapThresholdDisplay = document.getElementById('trap-threshold-display');
 const saveTrapThresholdButton = document.getElementById('save-trap-threshold-btn');
 const trapThresholdSavedIndicator = document.getElementById('trap-threshold-saved-indicator');
 
@@ -499,7 +497,7 @@ if (window.electronAPI) {
 
     // --- OP Threshold Controls ---
     // Load saved threshold on startup
-    if (opThresholdSlider && opThresholdInput && thresholdDisplay) {
+    if (opThresholdSlider && opThresholdInput) {
         const savedThreshold = localStorage.getItem('opThresholdPercentage');
         const initialThreshold = savedThreshold ? parseFloat(savedThreshold) : 13.0;
 
@@ -508,21 +506,19 @@ if (window.electronAPI) {
 
         opThresholdSlider.value = clampedThreshold;
         opThresholdInput.value = clampedThreshold.toFixed(2);
-        thresholdDisplay.textContent = `${clampedThreshold.toFixed(2)}%`;
 
         // Send initial threshold to main process
         if (window.electronAPI && window.electronAPI.setOpThreshold) {
             window.electronAPI.setOpThreshold(clampedThreshold / 100); // Convert to decimal
         }
 
-        // Update display and slider from slider movement
+        // Update input from slider movement
         opThresholdSlider.addEventListener('input', (e) => {
             const value = parseFloat(e.target.value);
             opThresholdInput.value = value.toFixed(2);
-            thresholdDisplay.textContent = `${value.toFixed(2)}%`;
         });
 
-        // Update display and slider only when user finishes typing
+        // Update slider only when user finishes typing
         opThresholdInput.addEventListener('change', (e) => {
             const numValue = parseFloat(e.target.value);
             if (isNaN(numValue)) {
@@ -535,16 +531,6 @@ if (window.electronAPI) {
 
             opThresholdSlider.value = formattedValue;
             opThresholdInput.value = formattedValue;
-            thresholdDisplay.textContent = `${formattedValue}%`;
-        });
-
-        // Update display while typing (but don't update slider or reformat input)
-        opThresholdInput.addEventListener('input', (e) => {
-            const numValue = parseFloat(e.target.value);
-            if (!isNaN(numValue)) {
-                const clampedValue = Math.max(0, Math.min(30, numValue));
-                thresholdDisplay.textContent = `${clampedValue.toFixed(2)}%`;
-            }
         });
     }
 
@@ -577,7 +563,7 @@ if (window.electronAPI) {
 
     // --- Trap Threshold Controls ---
     // Load saved threshold on startup
-    if (trapThresholdSlider && trapThresholdInput && trapThresholdDisplay) {
+    if (trapThresholdSlider && trapThresholdInput) {
         const savedTrapThreshold = localStorage.getItem('trapThresholdPercentage');
         const initialTrapThreshold = savedTrapThreshold ? parseFloat(savedTrapThreshold) : 5.0;
 
@@ -586,21 +572,19 @@ if (window.electronAPI) {
 
         trapThresholdSlider.value = clampedTrapThreshold;
         trapThresholdInput.value = clampedTrapThreshold.toFixed(2);
-        trapThresholdDisplay.textContent = `${clampedTrapThreshold.toFixed(2)}%`;
 
         // Send initial threshold to main process
         if (window.electronAPI && window.electronAPI.setTrapThreshold) {
             window.electronAPI.setTrapThreshold(clampedTrapThreshold / 100); // Convert to decimal
         }
 
-        // Update display and slider from slider movement
+        // Update input from slider movement
         trapThresholdSlider.addEventListener('input', (e) => {
             const value = parseFloat(e.target.value);
             trapThresholdInput.value = value.toFixed(2);
-            trapThresholdDisplay.textContent = `${value.toFixed(2)}%`;
         });
 
-        // Update display and slider only when user finishes typing
+        // Update slider only when user finishes typing
         trapThresholdInput.addEventListener('change', (e) => {
             const numValue = parseFloat(e.target.value);
             if (isNaN(numValue)) {
@@ -613,16 +597,6 @@ if (window.electronAPI) {
 
             trapThresholdSlider.value = formattedValue;
             trapThresholdInput.value = formattedValue;
-            trapThresholdDisplay.textContent = `${formattedValue}%`;
-        });
-
-        // Update display while typing (but don't update slider or reformat input)
-        trapThresholdInput.addEventListener('input', (e) => {
-            const numValue = parseFloat(e.target.value);
-            if (!isNaN(numValue)) {
-                const clampedValue = Math.max(0, Math.min(30, numValue));
-                trapThresholdDisplay.textContent = `${clampedValue.toFixed(2)}%`;
-            }
         });
     }
 

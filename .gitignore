@@ -150,5 +150,7 @@ scripts/*.PNG
 scripts/*.json
 !scripts/requirements.txt
 
-# Claude Code local settings
+# Claude Code local settings and AI-generated documentation
 .claude/settings.local.json
+.claude/*.md
+!.claude/git-workflow.md

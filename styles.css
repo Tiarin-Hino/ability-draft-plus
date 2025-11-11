@@ -536,7 +536,8 @@ input:checked+.slider:before {
 }
 
 .resolution-controls select {
-    flex: 1;
+    flex: 0 1 auto;
+    max-width: 400px;
     margin-bottom: 0;
 }
 
@@ -567,21 +568,47 @@ input:checked+.slider:before {
 }
 
 #op-threshold-slider {
-    flex: 2;
-    min-width: 200px;
+    max-width: 200px;
 }
 
-#op-threshold-input {
-    flex: 0 0 80px;
-    text-align: center;
+/* Input wrapper with % suffix */
+.input-with-suffix {
+    position: relative;
+    display: inline-block;
 }
 
-#threshold-display {
-    flex: 0 0 60px;
+.input-with-suffix::after {
+    content: '%';
+    position: absolute;
+    right: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: var(--text-color);
     font-weight: 600;
-    color: var(--brand-purple);
-    text-align: center;
 }
+
+#op-threshold-input,
+#trap-threshold-input {
+    background-color: var(--select-bg);
+    border: 1px solid var(--select-border);
+    border-radius: 6px;
+    color: var(--select-text);
+    width: 80px;
+    text-align: center;
+    padding: 10px;
+    padding-right: 32px;
+    font-size: 14px;
+    transition: all 0.2s ease-out;
+}
+
+#op-threshold-input:focus,
+#trap-threshold-input:focus {
+    border-color: var(--brand-purple);
+    box-shadow: 0 0 0 3px rgba(93, 53, 102, 0.2);
+    outline: none;
+}
+
 
 .save-threshold-btn {
     background: linear-gradient(135deg, var(--brand-purple) 0%, var(--brand-purple-light) 100%);
