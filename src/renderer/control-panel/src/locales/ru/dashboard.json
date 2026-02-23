@@ -1,0 +1,26 @@
+{
+  "title": "Панель",
+  "statusCards": {
+    "mlWorker": "ML-обработчик",
+    "overlay": "Оверлей",
+    "database": "База данных",
+    "dataFreshness": "Актуальность данных",
+    "neverUpdated": "Ещё не обновлялись",
+    "mlGapsBadge": "{{count}} новых"
+  },
+  "quickActions": {
+    "title": "Быстрые действия",
+    "activateOverlay": "Активировать оверлей",
+    "activating": "Активация...",
+    "overlayActive": "Оверлей активен",
+    "activationError": "Не удалось активировать оверлей.",
+    "retryMl": "Повторить ML",
+    "updateData": "Обновить данные",
+    "checkUpdates": "Проверить обновления"
+  },
+  "systemInfo": {
+    "title": "Информация о системе",
+    "version": "Версия",
+    "display": "Дисплей"
+  }
+}

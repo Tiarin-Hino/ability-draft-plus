@@ -1,0 +1,120 @@
+{
+  "abilities": {
+    "title": "Abilities",
+    "columns": {
+      "name": "Ability",
+      "hero": "Hero",
+      "winrate": "Win Rate",
+      "hsWinrate": "HS Win Rate",
+      "pickRate": "Pick Rate",
+      "ultimate": "Ultimate"
+    },
+    "filterPlaceholder": "Filter abilities...",
+    "noResults": "No abilities found."
+  },
+  "heroes": {
+    "title": "Heroes",
+    "columns": {
+      "name": "Hero",
+      "winrate": "Win Rate",
+      "hsWinrate": "HS Win Rate",
+      "pickRate": "Pick Rate",
+      "hsPickRate": "HS Pick Rate"
+    },
+    "filterPlaceholder": "Filter heroes...",
+    "noResults": "No heroes found."
+  },
+  "scraping": {
+    "title": "Data",
+    "description": "Fetch the latest ability draft statistics from Windrun.io.",
+    "updateButton": "Update Windrun Data",
+    "running": "Updating...",
+    "lastUpdated": "Last updated:",
+    "never": "Never",
+    "liquipedia": {
+      "title": "Liquipedia Enrichment",
+      "description": "Fetch ability ordering data (Q/W/E/R) from Liquipedia. Rate-limited to 1 request per 31 seconds.",
+      "updateButton": "Enrich from Liquipedia",
+      "running": "Enriching...",
+      "warning": "This takes ~67 minutes for all heroes due to Liquipedia rate limits.",
+      "lastUpdated": "Last enriched:"
+    }
+  },
+  "mapper": {
+    "title": "Resolution Mapper",
+    "devTitle": "Resolution Mapper (Dev)",
+    "description": "Map screen coordinates for custom resolutions.",
+    "capture": {
+      "title": "Capture Screenshot",
+      "description": "Take a screenshot of Dota 2's Ability Draft screen to use as a reference.",
+      "captureButton": "Capture Screenshot",
+      "capturing": "Capturing...",
+      "retake": "Retake",
+      "next": "Next",
+      "uploadButton": "Upload Image"
+    },
+    "autoDetect": {
+      "title": "Auto-Detection",
+      "description": "Your system resolution was detected.",
+      "resolution": "Detected Resolution",
+      "source": "Layout Source",
+      "sourcePreset": "Preset (built-in)",
+      "sourceAutoScaled": "Auto-scaled from 1080p",
+      "sourceCustom": "Custom (user-saved)",
+      "sourceNone": "No layout available",
+      "autoScaleWarningTitle": "Auto-scaled coordinates",
+      "autoScaleWarningDetail": "This resolution doesn't have a built-in preset. Coordinates are mathematically scaled and may be slightly off (~5px). For best accuracy, consider using a common resolution (1920x1080, 2560x1440, etc.).",
+      "useAutoScale": "Use Auto-Scaled Layout",
+      "calibrate": "Calibrate (4 clicks)",
+      "done": "Layout is ready. No calibration needed.",
+      "submitScreenshot": "Submit Screenshot",
+      "noLayoutHelp": "No layout available for this resolution. Submit your screenshot and we'll add support."
+    },
+    "report": {
+      "button": "Report Failed Mapping",
+      "submitting": "Submitting...",
+      "success": "Screenshot submitted successfully! We'll add support for this resolution.",
+      "error": "Failed to submit: {{error}}"
+    },
+    "anchor": {
+      "title": "4-Anchor Calibration",
+      "description": "Click 4 reference points to calibrate your resolution.",
+      "instruction1": "Top-left corner of first ultimate slot",
+      "instruction2": "Bottom-right corner of first ultimate slot",
+      "instruction3": "Top-left corner of hero 0 portrait",
+      "instruction4": "Top-left corner of hero 1 portrait",
+      "progress": "{{current}} / {{total}} anchors",
+      "undo": "Undo",
+      "reset": "Reset"
+    },
+    "verify": {
+      "title": "Verify Layout",
+      "description": "Review the mapped coordinates overlaid on your screenshot.",
+      "legend": "Legend",
+      "ultimates": "Ultimates",
+      "standards": "Standard Abilities",
+      "models": "Hero Models",
+      "heroes": "Hero Portraits",
+      "selected": "Selected Abilities",
+      "accept": "Accept",
+      "redo": "Redo Calibration"
+    },
+    "save": {
+      "title": "Save Layout",
+      "description": "Save this calibrated layout for future use.",
+      "resolution": "Resolution",
+      "method": "Method",
+      "saveButton": "Save Layout",
+      "saving": "Saving...",
+      "success": "Layout saved successfully!",
+      "error": "Failed to save layout.",
+      "back": "Back to Verify"
+    },
+    "common": {
+      "back": "Back",
+      "cancel": "Cancel",
+      "zoomTip": "Scroll to zoom, Ctrl+drag to pan"
+    }
+  },
+  "noResults": "No results."
+}

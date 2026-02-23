@@ -1,0 +1,585 @@
+@import 'tailwindcss';
+
+/* ============================================================
+   Colorblind-Safe Palette (Viridis/Cividis-inspired)
+   All indicator colors differ in luminance, not just hue.
+   ============================================================ */
+:root {
+  --color-top-pick: 33, 145, 128;
+  --color-top-pick-bright: 45, 170, 150;
+  --color-hero-tier: 255, 215, 0;
+  --color-hero-tier-bright: 255, 230, 50;
+  --color-synergy: 68, 120, 213;
+  --color-synergy-bright: 90, 145, 235;
+  --color-my-spot: 33, 145, 128;
+  --color-my-model: 94, 201, 98;
+  --color-wr-strong: #219180;
+  --color-wr-weak: #CF597E;
+}
+
+/* ============================================================
+   Base Reset
+   ============================================================ */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: transparent !important;
+  overflow: hidden;
+  pointer-events: none;
+  width: 100vw;
+  height: 100vh;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #e0e0e0;
+}
+
+/* ============================================================
+   Overlay Root Container
+   ============================================================ */
+.overlay-root {
+  width: 100vw;
+  height: 100vh;
+  contain: strict;
+  position: relative;
+}
+
+/* Interactive elements opt-in to pointer events */
+.overlay-interactive {
+  pointer-events: auto;
+}
+
+/* ============================================================
+   Controls Panel (top-right)
+   ============================================================ */
+.controls-panel {
+  z-index: 10000;
+  background-color: rgba(56, 32, 57, 0.92);
+  border: 1px solid rgba(93, 53, 102, 0.4);
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: 6px;
+  opacity: 0.88;
+  padding: 10px;
+  transition: all 0.2s ease-in-out;
+  will-change: transform;
+}
+
+.controls-panel:hover {
+  background-color: rgba(72, 41, 76, 0.92);
+  border-color: rgba(93, 53, 102, 0.6);
+  opacity: 1;
+}
+
+.controls-button-group {
+  display: flex;
+  gap: 6px;
+}
+
+/* ============================================================
+   Overlay Buttons
+   ============================================================ */
+.overlay-btn {
+  align-items: center;
+  border-radius: 6px;
+  color: #e8e8e8;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 14px;
+  font-weight: 500;
+  justify-content: center;
+  min-height: 36px;
+  padding: 7px 15px;
+  text-align: center;
+  transition: all 0.15s ease-out;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.overlay-btn:hover {
+  transform: translateY(-2px) scale(1.02);
+}
+
+.overlay-btn:active {
+  transform: translateY(0);
+}
+
+.overlay-btn:disabled {
+  background: rgba(40, 42, 45, 0.6) !important;
+  border-color: rgba(60, 62, 65, 0.7) !important;
+  color: rgba(150, 155, 160, 0.7) !important;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.overlay-btn-purple {
+  background-color: rgba(93, 53, 102, 0.85);
+  border-color: rgba(106, 60, 118, 0.9);
+}
+.overlay-btn-purple:hover {
+  background-color: rgba(106, 60, 118, 0.98);
+}
+
+.overlay-btn-green {
+  background-color: rgba(57, 127, 69, 0.85);
+  border-color: rgba(71, 149, 86, 0.9);
+}
+.overlay-btn-green:hover {
+  background-color: rgba(71, 149, 86, 0.98);
+}
+
+.overlay-btn-yellow {
+  background-color: rgba(255, 193, 7, 0.85);
+  border-color: rgba(200, 150, 0, 0.9);
+  color: #1a1a1a;
+}
+.overlay-btn-yellow:hover {
+  background-color: rgba(255, 210, 50, 0.98);
+}
+
+.overlay-btn-red {
+  background-color: rgba(192, 57, 43, 0.85);
+  border-color: rgba(160, 40, 30, 0.9);
+}
+.overlay-btn-red:hover {
+  background-color: rgba(210, 70, 55, 0.98);
+}
+
+.overlay-btn-orange {
+  background-color: rgba(230, 126, 34, 0.85);
+  border-color: rgba(190, 100, 25, 0.9);
+}
+.overlay-btn-orange:hover {
+  background-color: rgba(240, 140, 50, 0.98);
+}
+
+.overlay-btn-gray {
+  background-color: rgba(114, 118, 125, 0.85);
+  border-color: rgba(90, 94, 100, 0.9);
+}
+.overlay-btn-gray:hover {
+  background-color: rgba(130, 134, 140, 0.98);
+}
+
+/* ============================================================
+   Confirm Modal
+   ============================================================ */
+.confirm-modal-scrim {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.75);
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+  padding: 15px;
+  box-sizing: border-box;
+  z-index: 10005;
+}
+
+.confirm-modal-card {
+  background-color: rgba(72, 41, 76, 0.97);
+  border: 2px solid rgba(93, 53, 102, 0.9);
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(93, 53, 102, 0.4), 0 0 0 1px rgba(93, 53, 102, 0.2);
+  color: #e8e8e8;
+  max-width: 450px;
+  padding: 24px 28px;
+  text-align: center;
+}
+
+.confirm-modal-message {
+  margin-bottom: 20px;
+  line-height: 1.6;
+  font-size: 1.1em;
+}
+
+.confirm-modal-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+/* ============================================================
+   Status Toast (bottom-right)
+   ============================================================ */
+.status-toast {
+  position: fixed;
+  bottom: 15px;
+  right: 15px;
+  z-index: 10001;
+  background-color: rgba(32, 18, 34, 0.95);
+  border: 1px solid rgba(93, 53, 102, 0.8);
+  border-left: 4px solid rgba(106, 60, 118, 0.8);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+  color: #e8e8e8;
+  font-size: 14px;
+  max-width: 320px;
+  padding: 12px 16px;
+  pointer-events: none;
+  will-change: transform;
+}
+
+/* ============================================================
+   Shimmer Keyframe Animations
+   ============================================================ */
+@keyframes shimmerGreen {
+  0%, 100% {
+    box-shadow: 0 0 4px 1px rgba(var(--color-top-pick), 0.8), inset 0 0 3px 0px rgba(var(--color-top-pick), 0.6);
+    border-color: rgba(var(--color-top-pick), 0.9);
+  }
+  50% {
+    box-shadow: 0 0 8px 3px rgba(var(--color-top-pick-bright), 1), inset 0 0 5px 2px rgba(var(--color-top-pick-bright), 0.9);
+    border-color: rgba(var(--color-top-pick-bright), 1);
+  }
+}
+
+@keyframes shimmerGold {
+  0%, 100% {
+    box-shadow: 0 0 5px 1px rgba(255, 215, 0, 0.6), inset 0 0 3px 0px rgba(255, 215, 0, 0.4);
+    border-color: rgba(255, 223, 30, 0.8);
+  }
+  50% {
+    box-shadow: 0 0 12px 4px rgba(255, 215, 0, 1), inset 0 0 7px 2px rgba(255, 215, 0, 0.8);
+    border-color: rgba(255, 230, 50, 1);
+  }
+}
+
+@keyframes shimmerTeal {
+  0%, 100% {
+    box-shadow: 0 0 3px 0px rgba(var(--color-synergy), 0.65), inset 0 0 2px 0px rgba(var(--color-synergy), 0.45);
+    border-color: rgba(var(--color-synergy), 0.8);
+  }
+  50% {
+    box-shadow: 0 0 6px 2px rgba(var(--color-synergy-bright), 1), inset 0 0 4px 1px rgba(var(--color-synergy-bright), 0.8);
+    border-color: rgba(var(--color-synergy-bright), 1);
+  }
+}
+
+/* ============================================================
+   Hotspot Base Styles
+   ============================================================ */
+.ability-hotspot,
+.hero-model-hotspot {
+  position: absolute;
+  box-sizing: border-box;
+  pointer-events: auto;
+}
+
+.shimmer-green {
+  border: 2px solid rgba(var(--color-top-pick), 0.9);
+  border-radius: 4px;
+  animation: shimmerGreen 1.2s infinite ease-in-out;
+}
+
+.shimmer-gold {
+  border: 2px solid rgba(255, 223, 30, 0.8);
+  border-radius: 4px;
+  animation: shimmerGold 1.2s infinite ease-in-out;
+}
+
+.shimmer-teal {
+  border: 2px solid rgba(var(--color-synergy), 0.8);
+  border-radius: 4px;
+  animation: shimmerTeal 1.2s infinite ease-in-out;
+}
+
+/* User's selected ability - teal */
+.my-spot-selected {
+  border: 3px solid rgba(var(--color-my-spot), 1) !important;
+  box-shadow: 0 0 10px 4px rgba(var(--color-my-spot), 0.7) !important;
+  border-radius: 4px;
+}
+
+/* User's selected hero model - green */
+.is-my-model {
+  border: 3px solid rgba(var(--color-my-model), 1) !important;
+  box-shadow: 0 0 10px 3px rgba(var(--color-my-model), 0.6) !important;
+  border-radius: 4px;
+}
+
+/* Snapshot mode: hide all borders and animations */
+.snapshot-hidden-border {
+  border: none !important;
+  animation: none !important;
+  box-shadow: none !important;
+}
+
+/* ============================================================
+   Tooltip
+   ============================================================ */
+.overlay-tooltip {
+  position: absolute;
+  z-index: 10002;
+  pointer-events: none;
+  background-color: rgba(32, 18, 34, 0.97);
+  border: 1px solid rgba(93, 53, 102, 0.6);
+  border-left: 3px solid rgba(106, 60, 118, 0.8);
+  border-radius: 6px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.8);
+  color: #e8e8e8;
+  font-size: 14px;
+  line-height: 1.5;
+  max-width: 300px;
+  padding: 12px 16px;
+  white-space: pre-line;
+  will-change: transform;
+}
+
+.tooltip-badge {
+  font-weight: bold;
+  margin-bottom: 2px;
+}
+
+.tooltip-badge-top {
+  color: rgb(var(--color-top-pick));
+}
+
+.tooltip-badge-synergy {
+  color: rgb(var(--color-synergy));
+}
+
+.tooltip-badge-model {
+  color: rgb(var(--color-hero-tier));
+}
+
+.tooltip-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #ffffff;
+  font-size: 15px;
+}
+
+.tooltip-stat {
+  color: #a8b2bc;
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+.tooltip-section-title {
+  font-weight: 600;
+  margin-top: 10px;
+  margin-bottom: 5px;
+  color: #c5cdd3;
+  font-size: 13px;
+  border-bottom: 1px solid rgba(70, 75, 80, 0.5);
+  padding-bottom: 3px;
+}
+
+.tooltip-combo {
+  font-size: 12px;
+  color: #b0b9c1;
+  padding-left: 12px;
+  margin-bottom: 3px;
+}
+
+.tooltip-combo-winrate {
+  color: var(--color-wr-strong);
+}
+
+.tooltip-combo-weak {
+  color: var(--color-wr-weak);
+}
+
+.tooltip-combo-hero {
+  font-style: italic;
+}
+
+/* ============================================================
+   Combination Panels (OP/Trap)
+   ============================================================ */
+.combination-panel {
+  z-index: 9999;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7);
+  color: #e8e8e8;
+  font-size: 13px;
+  opacity: 0.92;
+  padding: 14px;
+  transition: all 0.2s ease-in-out;
+  width: 260px;
+  will-change: transform;
+}
+
+.combination-panel:hover {
+  opacity: 1;
+}
+
+.combination-panel-op {
+  background: linear-gradient(135deg, rgba(72, 41, 76, 0.95) 0%, rgba(93, 53, 102, 0.92) 100%);
+  border: 1px solid rgba(93, 53, 102, 0.8);
+}
+
+.combination-panel-trap {
+  background: linear-gradient(135deg, rgba(139, 35, 35, 0.95) 0%, rgba(184, 48, 48, 0.92) 100%);
+  border: 1px solid rgba(184, 48, 48, 0.8);
+}
+
+.combination-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: -14px -14px 10px -14px;
+  padding: 10px 12px;
+  border-radius: 4px 4px 0 0;
+  border-bottom-width: 2px;
+  border-bottom-style: solid;
+}
+
+.combination-panel-op .combination-panel-header {
+  background: linear-gradient(to right, rgba(72, 41, 76, 0.5), rgba(93, 53, 102, 0.3));
+  border-bottom-color: rgba(93, 53, 102, 0.6);
+}
+
+.combination-panel-trap .combination-panel-header {
+  background: linear-gradient(to right, rgba(139, 35, 35, 0.5), rgba(184, 48, 48, 0.3));
+  border-bottom-color: rgba(184, 48, 48, 0.6);
+}
+
+.combination-panel-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.combination-panel-op .combination-panel-title {
+  color: #E0C4E8;
+}
+
+.combination-panel-trap .combination-panel-title {
+  color: #FFB4A9;
+}
+
+.combination-panel-item {
+  margin-bottom: 5px;
+  font-size: 12px;
+  color: #d0d0d0;
+  padding-left: 5px;
+}
+
+.combination-panel-item span {
+  font-weight: 500;
+}
+
+.combination-panel-op .combination-panel-item span {
+  color: #B39FBD;
+}
+
+.combination-panel-trap .combination-panel-item span {
+  color: #FFB4A9;
+}
+
+.combination-panel-hero-synergy {
+  font-style: italic;
+}
+
+.combination-panel-third {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(147, 130, 220, 0.35);
+  font-size: 10px;
+  color: #c9b8ff;
+  cursor: default;
+}
+
+.combination-panel-trap .combination-panel-third {
+  background: rgba(220, 130, 130, 0.35);
+  color: #ffb8b8;
+}
+
+.combination-panel-inflated {
+  opacity: 0.75;
+}
+
+.combination-panel-separator {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
+  margin: 8px 0;
+}
+
+/* ============================================================
+   Dynamic Buttons (My Spot / My Model)
+   ============================================================ */
+.dynamic-btn {
+  position: absolute;
+  z-index: 9998;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  opacity: 0.75;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.2;
+  pointer-events: auto;
+}
+
+.dynamic-btn:hover {
+  opacity: 1;
+}
+
+.dynamic-btn-left {
+  transform: translateX(-100%);
+}
+
+.my-spot-btn {
+  font-size: 11px;
+  padding: 4px 8px;
+}
+
+.my-spot-btn-unselected {
+  background-color: rgba(97, 55, 107, 0.85);
+}
+
+.my-spot-btn-selected {
+  background-color: rgba(59, 130, 71, 0.85);
+}
+
+.my-model-btn {
+  font-size: 10px;
+  padding: 3px 6px;
+}
+
+.my-model-btn-unselected {
+  background-color: rgba(93, 53, 102, 0.8);
+}
+
+.my-model-btn-selected {
+  background-color: rgba(57, 127, 69, 0.8);
+}
+
+/* ============================================================
+   Top-right Column Layout
+   ============================================================ */
+.top-right-column {
+  position: fixed;
+  top: 15px;
+  right: 15px;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+  max-height: calc(100vh - 30px);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.top-right-column::-webkit-scrollbar {
+  width: 4px;
+}
+
+.top-right-column::-webkit-scrollbar-thumb {
+  background: rgba(93, 53, 102, 0.5);
+  border-radius: 2px;
+}
+
+.top-right-column::-webkit-scrollbar-track {
+  background: transparent;
+}

@@ -1,0 +1,53 @@
+{
+  "initialScan": "Начальное сканирование",
+  "rescan": "Повторное сканирование",
+  "reset": "Сброс",
+  "close": "Закрыть",
+  "reportFailed": "Сообщить об ошибке",
+  "scanConfirm": {
+    "message": "Будет выполнено сканирование текущего экрана для поиска иконок способностей. Убедитесь, что экран драфта Dota 2 полностью видим.",
+    "proceed": "Продолжить",
+    "dontShow": "Больше не показывать"
+  },
+  "reportConfirm": {
+    "message": "Будет сделан снимок текущих иконок способностей для улучшения модели. Отправить?",
+    "submit": "Отправить",
+    "cancel": "Отмена"
+  },
+  "status": {
+    "scanning": "Сканирование...",
+    "error": "Ошибка сканирования: {{message}}"
+  },
+  "snapshotTaken": "Снимок успешно сохранён",
+  "snapshotError": "Не удалось сохранить снимок",
+  "opCombinations": {
+    "title": "ОП Комбинации",
+    "show": "Показать ОП",
+    "hide": "Скрыть",
+    "tripletTooltip": "Часто пикается как тройка ({{winrate}} ВР вместе)"
+  },
+  "trapCombinations": {
+    "title": "Ловушки!",
+    "show": "Показать ловушки",
+    "hide": "Скрыть",
+    "tripletTooltip": "Часто пикается как тройка ({{winrate}} ВР вместе)"
+  },
+  "mySpot": "Мой выбор",
+  "changeMySpot": "Изменить",
+  "myModel": "Моя модель",
+  "changeMyModel": "Изменить",
+  "tooltip": {
+    "winrate": "Винрейт: {{value}}",
+    "pickRate": "Пикрейт: {{value}}",
+    "strongSynergies": "Сильные синергии",
+    "heroSynergies": "Синергии героев",
+    "weakSynergies": "Слабые синергии",
+    "weakHeroSynergies": "Слабые синергии героев",
+    "topPick": "Топ выбор",
+    "synergyPick": "Синергия",
+    "topModel": "Топ модель",
+    "yourModelPick": "Ваш выбор модели",
+    "strongAbilities": "Сильные способности для героя",
+    "weakAbilities": "Слабые способности для героя"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "appTitle": "Dota 2 Ability Draft Plus",
+  "nav": {
+    "dashboard": "Панель",
+    "abilities": "Способности",
+    "heroes": "Герои",
+    "scraping": "Данные",
+    "settings": "Настройки",
+    "mapper": "Карта",
+    "devMapper": "Маппер (Dev)",
+    "sidebar": "Основная навигация"
+  },
+  "theme": {
+    "system": "Системная",
+    "light": "Светлая",
+    "dark": "Тёмная"
+  },
+  "language": {
+    "label": "Язык",
+    "en": "Английский",
+    "ru": "Русский"
+  },
+  "status": {
+    "ready": "Готово",
+    "idle": "Ожидание",
+    "active": "Активно",
+    "error": "Ошибка",
+    "connected": "Подключено",
+    "initializing": "Инициализация",
+    "scanning": "Сканирование",
+    "running": "Выполняется"
+  },
+  "actions": {
+    "save": "Сохранить",
+    "cancel": "Отмена",
+    "confirm": "Подтвердить",
+    "close": "Закрыть",
+    "retry": "Повторить"
+  }
+}

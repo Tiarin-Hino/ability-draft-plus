@@ -1,0 +1,40 @@
+{
+  "appTitle": "Dota 2 Ability Draft Plus",
+  "nav": {
+    "dashboard": "Dashboard",
+    "abilities": "Abilities",
+    "heroes": "Heroes",
+    "scraping": "Data",
+    "settings": "Settings",
+    "mapper": "Mapper",
+    "devMapper": "Dev Mapper",
+    "sidebar": "Main navigation"
+  },
+  "theme": {
+    "system": "System",
+    "light": "Light",
+    "dark": "Dark"
+  },
+  "language": {
+    "label": "Language",
+    "en": "English",
+    "ru": "Russian"
+  },
+  "status": {
+    "ready": "Ready",
+    "idle": "Idle",
+    "active": "Active",
+    "error": "Error",
+    "connected": "Connected",
+    "initializing": "Initializing",
+    "scanning": "Scanning",
+    "running": "Running"
+  },
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "close": "Close",
+    "retry": "Retry"
+  }
+}

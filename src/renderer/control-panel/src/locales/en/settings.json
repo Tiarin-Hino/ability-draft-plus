@@ -1,0 +1,46 @@
+{
+  "title": "Settings",
+  "opThreshold": {
+    "title": "OP Combinations Threshold",
+    "label": "Synergy threshold percentage:",
+    "helpText": "Combinations with synergy increase above this threshold will be marked as OP.",
+    "saveButton": "Save Threshold",
+    "savedMessage": "Threshold saved!"
+  },
+  "trapThreshold": {
+    "title": "Trap Threshold",
+    "label": "Negative synergy threshold percentage:",
+    "helpText": "Combinations with negative synergy below this threshold will be marked as traps.",
+    "saveButton": "Save Threshold",
+    "savedMessage": "Trap threshold saved!"
+  },
+  "appearance": {
+    "title": "Appearance",
+    "themeLabel": "Theme",
+    "languageLabel": "Language"
+  },
+  "backup": {
+    "title": "Database Backup",
+    "createButton": "Create Backup",
+    "restoreButton": "Restore",
+    "noBackups": "No backups found.",
+    "columns": {
+      "name": "Name",
+      "date": "Date",
+      "size": "Size"
+    },
+    "stats": "{{count}} backups, {{size}} total",
+    "createSuccess": "Backup created successfully.",
+    "createError": "Failed to create backup: {{error}}",
+    "restoreConfirm": "Are you sure you want to restore from this backup? Current data will be overwritten.",
+    "restoreSuccess": "Backup restored successfully.",
+    "restoreError": "Failed to restore backup: {{error}}"
+  },
+  "feedback": {
+    "title": "Feedback & Diagnostics",
+    "description": "If the ML model misidentifies abilities, use 'Report Failed Recognition' in the overlay. You can then send snapshots to the developer for model improvement.",
+    "exportButton": "Export Failed Samples",
+    "uploadButton": "Send Failed Samples",
+    "feedbackButton": "Share Feedback"
+  }
+}

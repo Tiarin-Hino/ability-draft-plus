@@ -1,0 +1,39 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  release:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run prebuild
+        env:
+          API_ENDPOINT_URL: ${{ secrets.API_ENDPOINT_URL }}
+          CLIENT_API_KEY: ${{ secrets.CLIENT_API_KEY }}
+          CLIENT_SHARED_SECRET: ${{ secrets.CLIENT_SHARED_SECRET }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      - run: npm run build
+      - run: npx electron-builder --win --publish=always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload source maps to Sentry
+        if: env.SENTRY_AUTH_TOKEN != ''
+        run: npx @sentry/cli sourcemaps upload --release="ability-draft-plus@${{ github.ref_name }}" ./out
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}

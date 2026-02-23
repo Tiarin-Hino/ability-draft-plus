@@ -1,0 +1,26 @@
+{
+  "title": "Dashboard",
+  "statusCards": {
+    "mlWorker": "ML Worker",
+    "overlay": "Overlay",
+    "database": "Database",
+    "dataFreshness": "Data Freshness",
+    "neverUpdated": "Never updated",
+    "mlGapsBadge": "{{count}} new"
+  },
+  "quickActions": {
+    "title": "Quick Actions",
+    "activateOverlay": "Activate Overlay",
+    "activating": "Activating...",
+    "overlayActive": "Overlay Active",
+    "activationError": "Failed to activate overlay.",
+    "retryMl": "Retry ML",
+    "updateData": "Update Data",
+    "checkUpdates": "Check for Updates"
+  },
+  "systemInfo": {
+    "title": "System Info",
+    "version": "Version",
+    "display": "Display"
+  }
+}

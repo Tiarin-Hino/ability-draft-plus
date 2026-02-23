@@ -1,0 +1,14 @@
+{
+  "title": "Application Update",
+  "checkButton": "Check for Updates",
+  "checking": "Checking for updates...",
+  "downloading": "Downloading update...",
+  "downloadButton": "Download Update",
+  "available": "Update v{{version}} is available",
+  "readyToInstall": "Update v{{version}} is ready to install",
+  "installButton": "Restart & Install",
+  "retryButton": "Retry",
+  "error": "Update error: {{error}}",
+  "latestVersion": "You are on the latest version.",
+  "networkError": "Couldn't connect to the update server. Please check your internet connection."
+}

@@ -1,229 +1,156 @@
-# Dota 2 Ability Draft Plus Overlay
+# Dota 2 Ability Draft Plus
 
+AI-powered overlay for Dota 2's Ability Draft mode. Scans the draft board using machine learning, identifies all abilities in the pool, and displays real-time synergy recommendations directly on your game screen.
 
-![Initial Scan](/images/Initial_Scan.png "Initial Scan")
-
-**Dota 2 Ability Draft Plus** is a desktop overlay tool designed to provide players with valuable statistical insights during the Ability Draft phase of a Dota 2 game. It leverages real-time Machine Learning (ML) based image recognition and a locally stored database to display win rates for heroes and abilities, and suggests powerful ability combinations.
-
-**This project is currently focused on Windows.** macOS/Linux support may be considered in the future.
-
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/tiarinhino) 
+![License](https://img.shields.io/badge/license-ISC-blue)
+![Platform](https://img.shields.io/badge/platform-Windows-blue)
+![Electron](https://img.shields.io/badge/Electron-40+-47848F)
 
 ## Features
 
-* **Real-time Data Insights During Draft:**
-    * Displays hero and ability win rates upon hover.
-    * Suggests strong ability combinations from the current draft pool, with associated win rates.
-    * Highlights "Top Tier" abilities and hero models based on a consolidated score (winrate, value, pick order).
-    * Shows "OP Combinations" (pre-defined high-performing pairs) available in the current draft pool.
-* **ML-Powered Ability Recognition:** Utilizes a TensorFlow.js model to accurately identify ability icons from the screen.
-* **Local Statistics Database:** All statistical data (hero/ability win rates, synergy data) is stored in a local SQLite database, initially bundled with the application.
-* **Manual Data Updates:** The Control Panel allows users to scrape and update the local database from Windrun.io for the latest statistics.
-* **Hero-Specific Context:**
-    * When a user selects their hero ("My Spot"), the overlay can tailor suggestions and ability valuations.
-    * When a user selects a "My Model" hero, suggestions are filtered to focus on abilities.
-* **Feedback Mechanism:** Allows users to "Take Snapshot" of ability icons if misidentified. These snapshots can be exported and shared (e.g., via [Google Form](https://forms.gle/gkz7U3EBi1P1RHaCA) or GitHub Issues) to help improve the ML model.
-* **Standalone Operation:** Once data is updated, the overlay functions locally without needing a constant internet connection during gameplay.
-* **Non-Intrusive Design:** Runs as an overlay, processing screen information without direct interaction with the Dota 2 game client. This means it relies solely on image recognition and its local database.
-* **Free to Use:** No subscriptions or payments required.
+### Core Functionality
+- **One-click ability scanning** -- machine learning identifies all 48 abilities in the draft pool from a single screenshot
+- **Real-time overlay** -- recommendations appear directly on top of the Dota 2 game screen
+- **Synergy detection** -- highlights overpowered (OP) ability combinations and trap combinations to avoid
+- **Triplet analysis** -- suggests the best third ability to complete known strong pairs
+- **Top-tier picks** -- up to 10 ranked recommendations, prioritizing synergies with your already-picked abilities
+- **Rescan** -- update recommendations after abilities are drafted
 
-## Installation (Users)
+### Smart Overlay
+- **Click-through transparency** -- overlay sits on top of the game without blocking gameplay
+- **My Spot / My Model** -- select your hero position and model for personalized recommendations
+- **Ability tooltips** -- hover any ability for detailed stats, synergies, and win rates
+- **Hero model tooltips** -- hover hero models for hero-specific ability synergies
+- **OP & Trap panels** -- scrollable lists of the best and worst ability combinations in the current pool
 
-1.  **Download the Latest Release:**
-    * Go to the [Releases Page](https://github.com/tiarin-hino/ability-draft-plus/releases) on GitHub.
-    * Download the `.exe` installer (e.g., `Ability-Draft-Plus-Setup-X.Y.Z.exe`) for a standard installation, or the portable `.exe` (e.g., `Ability-Draft-Plus-Portable-X.Y.Z.exe`) for a standalone version. A `.zip` version might also be available for manual extraction.
-2.  **Install:**
-    * **Installer (`.exe`):** Run the installer and follow the on-screen instructions. A desktop shortcut will typically be created.
-    * **Portable Application (`.exe`):** Simply run the downloaded executable from any folder.
-    * **Portable (`.zip`):** Extract the contents of the `.zip` file to a folder of your choice. Run `Ability Draft Plus.exe` (or the similarly named main executable) from that folder.
-3.  **First Launch:**
-    * On the first launch, the application will set up necessary files, including copying the bundled local database with pre-filled statistics.
+### Data & ML
+- **Windrun.io integration** -- one-click data scraping from the premier Ability Draft statistics site
+- **524-class ML model** -- MobileNetV2 INT8 quantized, with optional DirectML GPU acceleration
+- **Automatic resolution detection** -- works out of the box for 28 common resolutions, with mathematical auto-scaling for others
+- **Calibration wizard** -- 4-anchor calibration for non-standard resolution setups
 
-## How to Use
+### Quality of Life
+- **Dark mode** -- follows your system theme, or set manually to light/dark
+- **English & Russian** -- full interface localization
+- **Auto-updater** -- in-app notifications when a new version is available
+- **Database backups** -- automatic backups on startup, manual backup/restore from Settings
+- **Windowed mode** -- automatic game window tracking for non-fullscreen setups
 
-The application has two main parts: the **Control Panel** (main window) and the **Overlay** (in-game).
+## Installation
 
-### 1. Control Panel
+### From Release (Recommended)
 
-This window appears when you start the application.
+1. Download the latest installer from [Releases](https://github.com/Tiarin-Hino/ability-draft-plus/releases)
+2. Run the installer -- choose your install directory
+3. Launch **Dota 2 Ability Draft Plus** from the Start Menu or Desktop shortcut
 
-* **Update Windrun Data (Optional but Recommended):**
-    * The app includes a pre-filled database. For the latest stats from [Windrun.io](https://windrun.io), click "**Update Windrun Data (Full)**". This can take a few minutes.
-    * The "Last updated" date shows the freshness of your local data.
-* **Select Screen Resolution:**
-    * From the dropdown, **select the screen resolution you use for Dota 2.** This is critical for accurate ability recognition by the overlay.
-* **Activate Overlay:**
-    * Once Dota 2 is running and you are in (or about to enter) the Ability Draft phase, click "**Activate Overlay**". The Control Panel will hide, and the transparent overlay will appear.
-* **Export Failed Samples:**
-    * If the ML model misidentifies abilities, use the "Take Snapshot" feature in the overlay (see below). This button lets you export these saved images as a `.zip` file, which you can then share for model improvement.
+### From Source
 
-### 2. Using the Overlay
+```bash
+git clone https://github.com/Tiarin-Hino/ability-draft-plus.git
+cd ability-draft-plus
+npm install
+npm run dev
+```
 
-The overlay provides in-game assistance once activated.
+## Usage
 
-* **Initial Scan:**
-    * Once the Ability Draft screen is fully visible in Dota 2 (showing all heroes and abilities), click the "**Initial Scan**" button on the overlay (top-right).
-    * The app will analyze the screen to identify abilities in the pool and those already picked.
-* **Tooltips & Insights:**
-    * After the scan, interactive hotspots appear over identified abilities and hero models.
-    * **Hovering** over these displays a tooltip with:
-        * Ability/Hero Name, Winrate, High Skill Winrate.
-        * ML prediction confidence (for abilities).
-        * Strong synergistic combinations (for abilities in the pool) with other available abilities.
-        * "Top Tier" abilities/models (based on a consolidated score) are highlighted with a shimmering border.
-* **Select Your Spot (Recommended):**
-    * After the initial scan, "**My Spot**" buttons appear next to each of the 10 hero portrait areas.
-    * Click the "**My Spot**" button corresponding to your hero in the draft.
-    * **Benefits:**
-        * The overlay may provide more tailored "value" or "pick order" context for abilities if this feature is expanded.
-        * Abilities you pick will be distinctly highlighted.
-        * Top-tier ultimate suggestions may be filtered if you've already picked an ultimate.
-    * If you misclick, a "**My Spot (Change)**" button appears; click it to deselect, then choose the correct one.
-* **Set Model (Optional):**
-    * After the initial scan, "**My Model**" buttons appear near the 12 hero models displayed in the center of the draft screen.
-    * Clicking this for one of the hero models will tailor "Top Tier" suggestions to focus only on *abilities* (filtering out other hero models from suggestions), assuming you want to build around that model's abilities.
-    * Click "**My Model (Change)**" to deselect.
-* **Rescan:**
-    * After selecting "My Spot", "My Model", or if the draft state changes (abilities are picked), click "**Rescan**".
-    * This re-processes the screen, updating insights based on the current context.
-* **OP Combinations Window:**
-    * If any pre-defined high-performing ("OP") two-ability combos are detected among available draft pool abilities, a window will appear (top-right). You can hide/show this.
-* **Take Snapshot (Feedback for ML):**
-    * If you notice an ability is misidentified, click "**Take Snapshot**".
-    * This saves cropped images of all ability icons currently displayed to a local `failed-samples` folder. These can be exported via the Control Panel.
-* **Close Overlay:**
-    * Press the `Esc` key or click the "X" button on the overlay to close it and return to the Control Panel.
+### First Time Setup
 
-## Screenshots
+1. Launch the application
+2. Go to the **Data** page in the sidebar
+3. Click **Update Windrun Data** to fetch the latest ability and hero statistics from Windrun.io
+4. Wait for all three phases to complete (abilities, synergy pairs, triplets)
 
-**Control Panel**
+### During a Game
 
-![Control Panel](/images/Control_Panel.png "Control Panel")
+1. Click **Activate Overlay** on the Dashboard before starting the game or after starting it but before queueing
+2. The overlay will appear on top of your game
+3. Queue for an **Ability Draft** match in Dota 2
+4. When the draft screen appears and is fully loaded click **Initial Scan** on the overlay control panel (top-right corner)
+5. Review the highlighted abilities in the pool:
+   - **Green shimmer** -- general top-tier picks (highest combined winrate + pick priority score)
+   - **Blue/teal shimmer** -- synergy suggestions (abilities that pair well with your already-picked abilities, shown after selecting My Spot)
+   - **Gold shimmer** -- top-tier hero model (on the hero model slots)
+   - **Solid teal border** -- your own picked abilities (after selecting My Spot)
+   - **Solid green border** -- your selected hero model (after selecting My Model)
+6. Hover abilities for detailed tooltips with synergy information
+7. Use the **OP Combos** and **Trap Combos** panels for combination analysis
+8. After abilities are drafted, click **Rescan** to update recommendations
+9. Click **Close** to dismiss the overlay or **Reset** to closes scan but leave overlay open
 
-**Overlay - Idle Mode**
+### Selecting Your Hero
 
-![Idle Mode](/images/Idle_Mode.png "Idle Mode")
+- Click **My Spot** on a hero position to tell the app at which position you're playing -- this personalizes recommendations to show synergies with your already-picked abilities
+- Click **My Model** on a hero model to indicate which hero model is yours
 
-**Overlay - Initial Scan Done**
+### Resolution Support
 
-![Initial Scan](/images/Initial_Scan.png "Initial Scan")
+The app automatically detects your game resolution and selects the correct coordinate layout. Pre-mapped coordinates are included for 28 common resolutions (1920x1080, 2560x1440, 3840x2160, ultrawide, and more). For resolutions without a preset, the app mathematically scales coordinates from the nearest base resolution for your aspect ratio family. No manual setup is needed in the vast majority of cases.
 
-**Overlay - Ability Winrates & Suggestions**
+## Tech Stack
 
-![Ability Winrates](/images/Ability_Winrates.png "Ability Winrates")
+| Layer | Technology |
+|-------|-----------|
+| Framework | Electron 40 |
+| Frontend | React 19 + shadcn/ui + Tailwind CSS v4 |
+| State | Zustand + @zubridge/electron |
+| Build | electron-vite |
+| Database | Drizzle ORM + sql.js (WASM) |
+| ML | ONNX Runtime + DirectML (INT8 quantized MobileNetV2) |
+| Testing | Vitest (381 tests) + Playwright |
+| Logging | electron-log v5 |
+| i18n | i18next + react-i18next |
 
-**Overlay - OP Combinations Warning Example**
-
-![OP Combinations](/images/OP_Combinations.png "OP Combinations")
-
-**Overlay - Rescan with Selected Model and abilities, synergy suggestions**
-
-![Rescan](images/Filter_Picked_Abilities.png "Rescan")
-
----
-
-## For Developers: Running from Source
-
-These instructions are primarily for **Windows**.
+## Development
 
 ### Prerequisites
 
-1.  **Node.js:** Install Node.js (includes npm). A version compatible with your project's Electron version is required (check `package.json`).
-2.  **Python:**
-    * **Crucial for native module compilation (e.g., `@tensorflow/tfjs-node`):** Install Python **3.9.x, 3.10.x, or 3.11.x**. Newer Python versions (3.12+) might cause build issues due to the removal of `distutils`.
-    * Ensure Python is added to your system's PATH or set the `PYTHON` environment variable correctly before building.
-3.  **C++ Build Tools (Windows):**
-    * **Recommended:** Install Visual Studio (e.g., Community Edition) with the "Desktop development with C++" workload selected.
-    * **Alternative:** `npm install --global --production windows-build-tools` (from an Admin PowerShell/CMD), but this might install older tools.
-4.  **Git:** For cloning the repository.
+- Node.js 20+
+- npm 10+
 
-### Setup Steps
+### Scripts
 
-1.  **Clone the Repository:**
-    ```bash
-    git clone [https://github.com/tiarin-hino/ability-draft-plus.git](https://github.com/tiarin-hino/ability-draft-plus.git)
-    cd ability-draft-plus
-    ```
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server with hot reload |
+| `npm run build` | Build all targets (main, preload, renderer) |
+| `npm run build:dist` | Build and package as Windows installer |
+| `npm start` | Run the built application |
+| `npm test` | Run all unit/integration tests |
+| `npm run test:e2e` | Run Playwright E2E tests |
+| `npm run typecheck` | TypeScript type checking |
+| `npm run lint` | ESLint linting |
+| `npm run format` | Prettier formatting |
 
-2.  **Set `PYTHON` Environment Variable (Windows - PowerShell Admin Example):**
-    Before running `npm install`, ensure `node-gyp` (used for native module compilation) targets the correct Python version.
-    ```powershell
-    # Replace with the actual path to your Python 3.9.x/3.10.x/3.11.x executable
-    $env:PYTHON = "C:\Path\To\Your\Python3.9\python.exe" 
-    # Verify (optional): node -p "process.env.PYTHON"
-    ```
-    This needs to be set for the terminal session where you run subsequent npm commands.
+### Project Structure
 
-3.  **Install Dependencies:**
-    ```bash
-    npm install
-    ```
-    This installs dependencies and should trigger `patch-package` if configured in `postinstall`.
+```
+src/
+  core/          Pure TypeScript domain logic (zero Electron imports)
+    database/    Drizzle ORM schema and repositories
+    domain/      Business logic (scoring, synergies, scan processing)
+    ml/          ONNX Runtime classifier and image preprocessing
+    resolution/  Coordinate mapping and mathematical scaling
+    scraper/     Windrun.io API client and data transformer
+  main/          Electron main process
+    ipc/         IPC handler registration
+    services/    Window management, ML, screenshots, scraping, etc.
+    store/       Zustand app store + draft store
+    workers/     ML worker thread
+  preload/       Context-isolated preload scripts
+  renderer/
+    control-panel/   Main application window (React SPA)
+    overlay/         Game overlay window (transparent, click-through)
+  shared/        Types and constants shared between processes
+```
 
-4.  **Build Native Modules & Apply Fix (Windows)**
-    Native modules must be compiled against Electron's Node.js version.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed technical documentation.
 
-    * Run the combined build script (ensure `PYTHON` environment variable is set):
-    ```bash
-    npm run build:native
-    ```
-    * This command first runs `rebuild-all` and then executes `fix-tfjs` to correct the file layout for TensorFlow.
+## License
 
-    #### **Special Note on @tensorflow/tfjs-node**
-    * **The Problem:** The build process for `@tensorflow/tfjs-node` sometimes incorrectly separates its two critical native files: `tfjs_binding.node` and its dependency, `tensorflow.dll`. They can end up in different `napi-v...` subdirectories inside    `node_modules/@tensorflow/tfjs-node/lib/`. For the module to load, both files **must** be in the same directory.
-    * **The Automated Fix (Recommended):** The `npm run build:native` command automates the solution. After rebuilding the modules, it runs the `scripts/fix-tfjs-node-build.js` script, which locates both separated files and copies `tensorflow.dll` into the same   directory as `tfjs_binding.node`. This is the recommended way to set up the project.
-    * **The Manual Fix:** If you prefer to handle this manually instead of using the `build:native` script, follow these steps after running `npm run rebuild-all`:
-        1.  Navigate to the `node_modules/@tensorflow/tfjs-node/lib/` directory.
-        2.  You will see one or more `napi-v...` folders. Find the folder that contains **`tfjs_binding.node`**.
-        3.  Find the folder that contains **`tensorflow.dll`**.
-        4.  Manually **copy** `tensorflow.dll` from its folder into the folder containing `tfjs_binding.node`.
+[ISC](LICENSE)
 
-### Running the Application (Developer Mode)
+## Author
 
-1.  **Start the Application:**
-    ```bash
-    npm start
-    ```
-
-2.  **First Run - Data Setup:**
-    * On the first launch from source, if the database doesn't exist in the user data path, the application will copy the bundled `dota_ad_data.db`.
-    * The UI will indicate "Using bundled data." You can (and should) then use the "Update Windrun Data (Full)" button in the Control Panel to get the latest statistics.
-
----
-
-## Project Structure
-
-* `main.js`: Electron main process. Handles app lifecycle, IPC, database, ML orchestration.
-* `index.html` & `renderer.js`: UI and logic for the main Control Panel.
-* `overlay.html` & `overlayRenderer.js`: UI and logic for the in-game transparent overlay.
-* `preload.js`: Securely exposes main process functionalities to renderers.
-* `src/`:
-    * `database/`: SQLite database setup (`setupDatabase.js`) and queries (`queries.js`).
-    * `scraper/`: Scripts for scraping data from Windrun.io (`heroScraper.js`, `abilityScraper.js`, `abilityPairScraper.js`).
-    * `imageProcessor.js`: Handles screen capture, icon cropping, and ML-based ability recognition.
-* `scripts/`:
-    * `fix-tfjs-node-build.js`: Post-build script to correct the file layout of the TensorFlow native module.
-    * `prepare-app-config.js`: Script to inject environment variables into the app at build time.
-* `model/tfjs_model/`: Contains the TensorFlow.js graph model (`model.json`, `.bin` files) and `class_names.json`.
-* `config/layout_coordinates.json`: Defines screen coordinates for UI elements at different resolutions.
-* `dota_ad_data.db` (root): The bundled SQLite database, copied to user data on first run.
-* `patches/`: Contains patches applied via `patch-package` (e.g., for `@tensorflow/tfjs-node`).
-* `package.json`: Project dependencies, scripts, and build configuration.
-
-## Development Notes
-
-* **Database:** The local SQLite database (`dota_ad_data.db` in your user data folder) is managed by `src/database/setupDatabase.js` and populated/updated by the scraper scripts in `src/scraper/`.
-* **ML Model:** The ability recognition model is in `model/tfjs_model/`.
-* **Coordinates:** UI element coordinates for screen scraping are in `config/layout_coordinates.json`. These may need updates if the in-game Ability Draft UI changes significantly.
-
-## Contributing & Feedback
-
-For bugs, feature requests, or other feedback:
-
-* Please open an issue on the [GitHub Issues page](https://github.com/tiarin-hino/ability-draft-plus/issues). Use the provided templates for bug reports or feature requests.
-* For submitting misidentified ability icons (after using "Take Snapshot"), you can create an issue and attach the exported `.zip` file, or use the [Google Form](https://forms.gle/gkz7U3EBi1P1RHaCA) as mentioned in the application.
-
-## Acknowledgements
-
-* Statistical data for heroes and abilities is primarily sourced from [Windrun.io](https://windrun.io).
-* This tool is a fan-made project and is not affiliated with Valve Corporation or Dota 2.
+Tiarin Hino

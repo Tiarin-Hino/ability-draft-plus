@@ -1,0 +1,49 @@
+appId: com.tiarinhino.dota2abilitydraftplus
+productName: "Dota 2 Ability Draft Plus"
+copyright: "Copyright (c) 2026 Tiarin Hino"
+directories:
+  buildResources: build
+  output: dist
+files:
+  - "out/**/*"
+  - "!out/**/*.map"
+extraResources:
+  - from: "resources/dota_ad_data.db"
+    to: "dota_ad_data.db"
+  - from: "resources/data"
+    to: "data"
+    filter:
+      - "**/*"
+  - from: "resources/model"
+    to: "model"
+    filter:
+      - "**/*"
+  - from: "resources/config"
+    to: "config"
+    filter:
+      - "**/*"
+  - from: "resources/app-config.json"
+    to: "app-config.json"
+asar: true
+asarUnpack:
+  - "**/node_modules/sharp/**"
+  - "**/node_modules/onnxruntime-node/**"
+win:
+  icon: "build/icon.ico"
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: portable
+      arch:
+        - x64
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  perMachine: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+publish:
+  provider: github
+  owner: tiarin-hino
+  repo: ability-draft-plus

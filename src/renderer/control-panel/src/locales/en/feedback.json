@@ -1,0 +1,11 @@
+{
+  "title": "Feedback & Diagnostics",
+  "description": "If the ML model misidentifies abilities, use 'Report Failed Recognition' in the overlay. You can then send snapshots to the developer for model improvement.",
+  "exportButton": "Export Failed Samples",
+  "uploadButton": "Send Failed Samples",
+  "feedbackButton": "Share Feedback",
+  "exportPreparing": "Preparing archive...",
+  "exportExporting": "Exporting archive...",
+  "uploadConfirmTitle": "Send Failed Samples",
+  "uploadConfirmBody": "This will zip all images in your failed-samples directory and upload them for model improvement analysis. Proceed?"
+}

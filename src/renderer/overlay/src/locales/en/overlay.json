@@ -1,0 +1,53 @@
+{
+  "initialScan": "Initial Scan",
+  "rescan": "Rescan",
+  "reset": "Reset",
+  "close": "Close",
+  "reportFailed": "Report Failed Recognition",
+  "scanConfirm": {
+    "message": "This will scan the current screen for ability icons. Make sure the Dota 2 draft screen is fully visible.",
+    "proceed": "Proceed",
+    "dontShow": "Don't Show Again"
+  },
+  "reportConfirm": {
+    "message": "This will take a snapshot of the current ability icons for model improvement. Submit?",
+    "submit": "Submit",
+    "cancel": "Cancel"
+  },
+  "status": {
+    "scanning": "Scanning...",
+    "error": "Scan failed: {{message}}"
+  },
+  "snapshotTaken": "Snapshot saved successfully",
+  "snapshotError": "Failed to save snapshot",
+  "opCombinations": {
+    "title": "OP Combinations",
+    "show": "Show OP",
+    "hide": "Hide",
+    "tripletTooltip": "Often drafted as a triplet ({{winrate}} WR together)"
+  },
+  "trapCombinations": {
+    "title": "It's a Trap!",
+    "show": "Show Traps",
+    "hide": "Hide",
+    "tripletTooltip": "Often drafted as a triplet ({{winrate}} WR together)"
+  },
+  "mySpot": "My Spot",
+  "changeMySpot": "Change",
+  "myModel": "My Model",
+  "changeMyModel": "Change",
+  "tooltip": {
+    "winrate": "Winrate: {{value}}",
+    "pickRate": "Pick Rate: {{value}}",
+    "strongSynergies": "Strong Synergies",
+    "heroSynergies": "Hero Synergies",
+    "weakSynergies": "Weak Synergies",
+    "weakHeroSynergies": "Weak Hero Synergies",
+    "topPick": "Top Pick",
+    "synergyPick": "Synergy Pick",
+    "topModel": "Top Model",
+    "yourModelPick": "Your Model Pick",
+    "strongAbilities": "Strong Abilities for This Hero",
+    "weakAbilities": "Weak Abilities for This Hero"
+  }
+}

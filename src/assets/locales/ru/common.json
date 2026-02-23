@@ -1,0 +1,11 @@
+{
+  "appTitle": "Ability Draft Plus",
+  "controlPanel": {
+    "header": "Панель управления",
+    "activateOverlay": "Активировать оверлей",
+    "status": "Статус"
+  },
+  "overlay": {
+    "status": "Оверлей активен"
+  }
+}
