@@ -1,6 +1,6 @@
 {
   "name": "ability-draft-plus",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "AI-powered overlay for Dota 2 Ability Draft mode",
   "main": "./out/main/index.js",
   "author": "Tiarin Hino",
