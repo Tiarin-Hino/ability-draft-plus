@@ -26,6 +26,14 @@ jobs:
           CLIENT_SHARED_SECRET: ${{ secrets.CLIENT_SHARED_SECRET }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
       - run: npm run build
+      - name: Convert pre-existing release to draft
+        # electron-builder requires the release to be a draft (or non-existent) before it can
+        # upload assets. If we pre-created a published release (e.g. via gh release create),
+        # electron-builder skips all uploads with "existing type not compatible with publishing type".
+        # Converting to draft first lets electron-builder upload and then publish it normally.
+        run: gh release edit ${{ github.ref_name }} --draft 2>$null; exit 0
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: npx electron-builder --win --publish=always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
