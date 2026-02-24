@@ -50,6 +50,7 @@
 - Back up database file before migrations (`fs.copyFileSync`)
 - Use transactions for batch operations (scraper inserts)
 - Test with in-memory SQLite (`:memory:`) for speed
+- **Column migrations:** `CREATE TABLE IF NOT EXISTS` silently skips existing tables — it never adds new columns to them. Whenever a new column is added to `SCHEMA_SQL`, also add a corresponding entry to `runColumnMigrations()` in `src/main/services/database-service.ts` AND a new test case in `tests/unit/main/services/database-migration.test.ts` that builds a database with the old schema and verifies the column is added. The test is the local validation step before shipping.
 
 ## Security
 - API credentials must never be committed to git (.env + .gitignore)

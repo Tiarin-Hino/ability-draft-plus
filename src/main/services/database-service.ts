@@ -122,6 +122,9 @@ export function createDatabaseService(): DatabaseService {
     // 4. Ensure schema exists (safe for existing databases due to IF NOT EXISTS)
     sqliteDb.run(SCHEMA_SQL)
 
+    // 4b. Run column migrations for existing databases that predate schema additions
+    runColumnMigrations(sqliteDb)
+
     // 5. Create Drizzle instance
     drizzleDb = drizzle(sqliteDb, { schema })
 
@@ -196,6 +199,28 @@ export function createDatabaseService(): DatabaseService {
     getDbPath: () => dbPath,
     isFirstRun: () => firstRun,
     reload,
+  }
+}
+
+// Adds columns that were introduced after v1 to existing user databases.
+// CREATE TABLE IF NOT EXISTS won't modify existing tables, so ALTER TABLE is required.
+// Exported for unit testing.
+export function runColumnMigrations(db: SqlJsDatabase): void {
+  const columnMigrations: Array<{ table: string; column: string; definition: string }> = [
+    { table: 'AbilitySynergies', column: 'synergy_increase', definition: 'REAL' },
+    { table: 'HeroAbilitySynergies', column: 'synergy_increase', definition: 'REAL' },
+    { table: 'AbilityTriplets', column: 'synergy_increase', definition: 'REAL' },
+    { table: 'HeroAbilityTriplets', column: 'synergy_increase', definition: 'REAL' },
+  ]
+
+  for (const { table, column, definition } of columnMigrations) {
+    const result = db.exec(`PRAGMA table_info(${table})`)
+    if (result.length === 0) continue // table doesn't exist yet (will be created by SCHEMA_SQL)
+    const existingColumns = result[0].values.map((row) => row[1] as string)
+    if (!existingColumns.includes(column)) {
+      logger.info(`Migration: adding column ${column} to ${table}`)
+      db.run(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`)
+    }
   }
 }
 
