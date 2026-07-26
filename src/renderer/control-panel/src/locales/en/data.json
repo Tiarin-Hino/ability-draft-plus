@@ -1,4 +1,23 @@
 {
+  "mlPipeline": {
+    "title": "ML Pipeline (dev)",
+    "description": "Retraining loop cockpit: gather training data for model gaps, upload the dataset to S3, dispatch the cloud retrain workflow.",
+    "gatherStep": "1. Gather training data ({{count}} missing abilities)",
+    "gatherWarning": "The gather script kills and restarts Dota 2 repeatedly and controls the mouse and keyboard for ~40 minutes. It opens in its own console window — press Ctrl+C there to abort.",
+    "dryRunButton": "Dry Run",
+    "gatherButton": "Start Gathering",
+    "gatherConfirm": "This will take over your PC (mouse, keyboard, Dota 2 restarts) for about 40 minutes. Continue?",
+    "dryRunDone": "Dry run complete — review the plan below (watch for MISSING METADATA).",
+    "gatherLaunched": "Gather script launched in a separate console window.",
+    "uploadStep": "2. Upload dataset to S3 (after seeding splits for new classes)",
+    "uploadButton": "Upload Dataset (opens console)",
+    "uploadLaunched": "Upload launched in a separate console window — note the dataset version it prints.",
+    "retrainStep": "3. Dispatch the cloud retrain workflow",
+    "versionPlaceholder": "Dataset vN",
+    "fineTuneLabel": "Fine-tune top block",
+    "retrainButton": "Dispatch Retrain",
+    "retrainDispatched": "Workflow dispatched for dataset v{{version}} — check the GitHub Actions tab. A PR with the new model and metrics will open when the gate passes."
+  },
   "abilities": {
     "title": "Abilities",
     "columns": {

@@ -27,6 +27,52 @@ import type { AppStore } from '../store/app-store'
 
 const logger = log.scope('ipc-ml')
 
+export interface ModelGapsPayload {
+  generatedAt: string
+  appVersion: string
+  staleInModel: string[]
+  missing: Array<{
+    ability: string
+    hero: string | null
+    heroDisplayName: string | null
+    isUltimate: boolean | null
+    abilityOrder: number | null
+  }>
+}
+
+/** Gap list + hero mapping from the DB, or null when the model has no gaps. */
+export function buildModelGapsPayload(
+  appStore: AppStore,
+  dbService: DatabaseService,
+): ModelGapsPayload | null {
+  const gaps = appStore.getState().mlModelGaps
+  if (!gaps || gaps.missingFromModel.length === 0) {
+    return null
+  }
+
+  const abilityByName = new Map(dbService.abilities.getAll().map((a) => [a.name, a]))
+  const heroById = new Map(dbService.heroes.getAll().map((h) => [h.heroId, h]))
+
+  const missing = gaps.missingFromModel.map((abilityName) => {
+    const ability = abilityByName.get(abilityName)
+    const hero = ability ? heroById.get(ability.heroId) : undefined
+    return {
+      ability: abilityName,
+      hero: hero?.name ?? null,
+      heroDisplayName: hero?.displayName ?? null,
+      isUltimate: ability?.isUltimate ?? null,
+      abilityOrder: ability?.abilityOrder ?? null,
+    }
+  })
+
+  return {
+    generatedAt: gaps.detectedAt,
+    appVersion: app.getVersion(),
+    staleInModel: gaps.staleInModel,
+    missing,
+  }
+}
+
 export function registerMlHandlers(
   mlService: MlService,
   layoutService: LayoutService,
@@ -46,29 +92,12 @@ export function registerMlHandlers(
   // for the training-data gather script — closes the loop between "the app knows
   // which abilities the model can't recognize" and "collect data for exactly those".
   ipcMain.handle('ml:exportModelGaps', async () => {
-    const gaps = appStore.getState().mlModelGaps
-    if (!gaps || gaps.missingFromModel.length === 0) {
+    const payload = buildModelGapsPayload(appStore, dbService)
+    if (!payload) {
       return { success: false, error: 'no-gaps' }
     }
 
     try {
-      const abilityByName = new Map(
-        dbService.abilities.getAll().map((a) => [a.name, a]),
-      )
-      const heroById = new Map(dbService.heroes.getAll().map((h) => [h.heroId, h]))
-
-      const missing = gaps.missingFromModel.map((abilityName) => {
-        const ability = abilityByName.get(abilityName)
-        const hero = ability ? heroById.get(ability.heroId) : undefined
-        return {
-          ability: abilityName,
-          hero: hero?.name ?? null,
-          heroDisplayName: hero?.displayName ?? null,
-          isUltimate: ability?.isUltimate ?? null,
-          abilityOrder: ability?.abilityOrder ?? null,
-        }
-      })
-
       const cp = windowManager.getControlPanelWindow()
       const options: Electron.SaveDialogOptions = {
         defaultPath: 'model-gaps.json',
@@ -81,22 +110,11 @@ export function registerMlHandlers(
         return { success: false, error: 'cancelled' }
       }
 
-      await writeFile(
-        result.filePath,
-        JSON.stringify(
-          {
-            generatedAt: gaps.detectedAt,
-            appVersion: app.getVersion(),
-            staleInModel: gaps.staleInModel,
-            missing,
-          },
-          null,
-          2,
-        ),
-      )
+      await writeFile(result.filePath, JSON.stringify(payload, null, 2))
 
-      logger.info('Model gaps exported', { path: result.filePath, count: missing.length })
-      return { success: true, path: result.filePath, count: missing.length }
+      const count = payload.missing.length
+      logger.info('Model gaps exported', { path: result.filePath, count })
+      return { success: true, path: result.filePath, count }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       logger.error('Model gaps export failed', { error: message })

@@ -20,6 +20,7 @@ import { registerDraftHandlers } from './draft-handlers'
 import { registerScraperHandlers } from './scraper-handlers'
 import { registerResolutionHandlers } from './resolution-handlers'
 import { registerFeedbackHandlers } from './feedback-handlers'
+import { registerDevHandlers } from './dev-handlers'
 import { loadApiConfig } from '../services/api-config'
 import { createFeedbackService } from '../services/feedback-service'
 
@@ -251,6 +252,11 @@ export function registerIpcHandlers(
 
   // Resolution domain
   registerResolutionHandlers(layoutService, screenshotService, windowTracker, windowManager, apiConfig)
+
+  // Dev-only ML pipeline cockpit (gather/upload/retrain shortcuts)
+  if (!app.isPackaged) {
+    registerDevHandlers(appStore, dbService)
+  }
 
   // Update domain
   ipcMain.on('app:checkUpdate', () => {

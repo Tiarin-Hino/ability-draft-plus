@@ -93,6 +93,19 @@ export interface IpcInvokeMap {
     response: { success: boolean; path?: string; count?: number; error?: string }
   }
   'overlay:getInitialData': { request: void; response: OverlayDataPayload | null }
+  // Dev-only ML pipeline cockpit (handlers exist only in unpackaged builds)
+  'dev:runGatherScript': {
+    request: { dryRun: boolean }
+    response: { success: boolean; output?: string; error?: string }
+  }
+  'dev:uploadDataset': {
+    request: void
+    response: { success: boolean; error?: string }
+  }
+  'dev:triggerRetrain': {
+    request: { datasetVersion: string; fineTune: boolean }
+    response: { success: boolean; output?: string; error?: string }
+  }
   'overlay:activate': {
     request: void
     response: { success: boolean; resolution?: string; source?: LayoutSource; error?: string }
