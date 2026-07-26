@@ -51,11 +51,19 @@ export function buildModelGapsPayload(
   }
 
   const abilityByName = new Map(dbService.abilities.getAll().map((a) => [a.name, a]))
-  const heroById = new Map(dbService.heroes.getAll().map((h) => [h.heroId, h]))
+  const heroes = dbService.heroes.getAll()
+  const heroById = new Map(heroes.map((h) => [h.heroId, h]))
+  // Longest-first so 'dragon_knight_...' matches dragon_knight, never a shorter hero
+  const heroesByNameLength = [...heroes].sort((a, b) => b.name.length - a.name.length)
 
   const missing = gaps.missingFromModel.map((abilityName) => {
     const ability = abilityByName.get(abilityName)
-    const hero = ability ? heroById.get(ability.heroId) : undefined
+    // Fresh Windrun data for brand-new abilities may lack the hero_id linkage —
+    // fall back to prefix matching, since ability internal names are always
+    // prefixed with the hero's internal name.
+    const hero =
+      (ability ? heroById.get(ability.heroId) : undefined) ??
+      heroesByNameLength.find((h) => abilityName.startsWith(h.name + '_'))
     return {
       ability: abilityName,
       hero: hero?.name ?? null,
