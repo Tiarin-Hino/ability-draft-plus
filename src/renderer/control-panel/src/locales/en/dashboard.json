@@ -8,6 +8,20 @@
     "neverUpdated": "Never updated",
     "mlGapsBadge": "{{count}} new"
   },
+  "resolutionSource": {
+    "preset": "Preset coordinates",
+    "custom": "Calibrated coordinates",
+    "auto-scaled": "Auto-scaled coordinates — may be slightly off; calibrate via the Mapper",
+    "none": "Unsupported resolution"
+  },
+  "firstRun": {
+    "title": "Getting Started",
+    "step1": "Download the latest winrate & synergy data from Windrun.io — the overlay shows no recommendations without it.",
+    "updateButton": "Update Windrun Data",
+    "updating": "Updating…",
+    "step2": "Click 'Activate Overlay' below before you queue for an Ability Draft match.",
+    "step3": "On the draft screen, press Ctrl+Shift+S (or click 'Initial Scan' in the top-right overlay controls)."
+  },
   "quickActions": {
     "title": "Quick Actions",
     "activateOverlay": "Activate Overlay",

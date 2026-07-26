@@ -529,7 +529,9 @@ function enrichSlots(
 function makeUnknownSlot(slot: ScanResult): EnrichedScanSlot {
   return {
     ...slot,
+    // Fallback only — renderers translate unknown slots via i18n (tooltip.unknownAbility)
     displayName: 'Unknown Ability',
+    isUnknown: true,
     winrate: null,
     pickRate: null,
     consolidatedScore: 0,

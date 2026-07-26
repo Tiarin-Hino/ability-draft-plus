@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **Global scan hotkeys** — Ctrl+Shift+S triggers a scan and Ctrl+Shift+R a rescan while the overlay is active, so no mouse travel is needed during a timed draft. The scan hotkey skips the confirmation dialog
+- **Getting Started checklist** — the Dashboard now walks new users through the three required steps (update Windrun data → activate overlay → scan) until the first data update completes
+- **Scan quality summary** — after a scan the overlay shows "N/M recognized"; unrecognized slots get a dashed amber border and an explanatory tooltip instead of rendering as silent blanks
+- **Resolution source visibility** — the overlay and the Dashboard overlay card now show whether coordinates are preset, calibrated, or auto-scaled, with an accuracy warning for auto-scaled layouts
+
 ### Fixed
 
 - **"Report Failed Recognition" now works** — the feedback pipeline (snapshot, export, upload) had no main-process implementation in v2; all three buttons were silent no-ops. Snapshots now save the exact screenshot the model classified plus its raw predictions to `feedback-samples/` in the app data folder (capped at 25), Export zips them to a user-chosen file, and Send uploads pending samples to the feedback API when configured
@@ -18,6 +25,7 @@ All notable changes to this project will be documented in this file.
 ### Changed
 
 - Feedback status messages are now localized (EN/RU) via i18n keys instead of hardcoded English strings
+- OP/Trap combination panels are capped at 40% of screen height with their own scrollbars, so they can no longer cover the draft timer area
 
 ## [2.0.0] - 2026-02-23
 

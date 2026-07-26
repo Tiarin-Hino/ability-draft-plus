@@ -31,6 +31,8 @@ export function AbilityHotspot({
     if (isMySpotHero) {
       className += ' my-spot-selected'
     }
+  } else if (slot.isUnknown) {
+    className += ' unknown-slot'
   } else if (slot.isSynergySuggestionForMySpot) {
     className += ' shimmer-teal'
   } else if (slot.isGeneralTopTier) {

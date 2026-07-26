@@ -118,6 +118,7 @@ export interface IpcSendMap {
 // Main-to-renderer event channels
 export interface IpcOnMap {
   'overlay:data': OverlayDataPayload
+  'overlay:hotkey': { action: 'scan' | 'rescan' }
   'scraper:status': string | { key: string; params?: Record<string, string> }
   'scraper:lastUpdated': string | null
   'scraper:liquipediaStatus': string

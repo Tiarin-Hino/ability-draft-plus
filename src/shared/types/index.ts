@@ -95,6 +95,8 @@ export interface EnrichedScanSlot extends ScanResult {
   isGeneralTopTier: boolean
   isSynergySuggestionForMySpot: boolean
   isUltimateFromDb: boolean
+  /** True when the ML model could not identify this slot (confidence below threshold). */
+  isUnknown?: boolean
   highWinrateCombinations: SynergyPairDisplay[]
   lowWinrateCombinations: SynergyPairDisplay[]
   strongHeroSynergies: HeroSynergyDisplay[]

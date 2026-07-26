@@ -1,4 +1,4 @@
-import { app, nativeTheme } from 'electron'
+import { app, nativeTheme, globalShortcut } from 'electron'
 import log from 'electron-log/main'
 import { createZustandBridge } from '@zubridge/electron/main'
 import { createWindowManager } from './services/window-manager'
@@ -201,6 +201,7 @@ app.whenReady().then(async () => {
 
   // Cleanup on quit
   app.on('before-quit', async () => {
+    globalShortcut.unregisterAll()
     windowTracker.stopTracking()
     bridge.destroy()
     await mlService.terminate()

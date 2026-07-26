@@ -313,6 +313,12 @@ body {
   box-shadow: none !important;
 }
 
+/* ML could not identify this slot */
+.unknown-slot {
+  border: 2px dashed rgba(230, 170, 40, 0.85);
+  border-radius: 4px;
+}
+
 /* ============================================================
    Tooltip
    ============================================================ */
@@ -407,6 +413,24 @@ body {
   transition: all 0.2s ease-in-out;
   width: 260px;
   will-change: transform;
+  /* Cap each panel so OP + Trap together can't occupy the full right edge
+     (the draft timer and pick order live there) */
+  max-height: 40vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.combination-panel::-webkit-scrollbar {
+  width: 4px;
+}
+
+.combination-panel::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+}
+
+.combination-panel::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .combination-panel:hover {
@@ -552,6 +576,29 @@ body {
 
 .my-model-btn-selected {
   background-color: rgba(57, 127, 69, 0.8);
+}
+
+/* ============================================================
+   Info Chips (resolution badge, scan summary)
+   ============================================================ */
+.resolution-badge,
+.scan-summary {
+  z-index: 10000;
+  background-color: rgba(32, 18, 34, 0.85);
+  border: 1px solid rgba(93, 53, 102, 0.6);
+  border-radius: 10px;
+  color: #c8c8c8;
+  font-size: 11px;
+  line-height: 1;
+  padding: 4px 10px;
+  pointer-events: auto;
+  white-space: nowrap;
+}
+
+.resolution-badge-warn,
+.scan-summary-warn {
+  border-color: rgba(230, 170, 40, 0.8);
+  color: #e6c063;
 }
 
 /* ============================================================

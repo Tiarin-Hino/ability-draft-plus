@@ -97,6 +97,15 @@ function AbilityTooltipContent({
   slot: EnrichedScanSlot
   t: (key: string, opts?: Record<string, string>) => string
 }): React.ReactElement {
+  if (slot.isUnknown) {
+    return (
+      <>
+        <div className="tooltip-title">{t('tooltip.unknownAbility')}</div>
+        <div className="tooltip-stat">{t('tooltip.unknownHint')}</div>
+      </>
+    )
+  }
+
   return (
     <>
       {/* Badges */}

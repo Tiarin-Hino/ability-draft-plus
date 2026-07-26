@@ -1,4 +1,4 @@
-import { ipcMain, nativeTheme, screen, app, shell } from 'electron'
+import { ipcMain, nativeTheme, screen, app, shell, globalShortcut } from 'electron'
 import log from 'electron-log/main'
 import type { WindowManager } from '../services/window-manager'
 import type { DatabaseService } from '../services/database-service'
@@ -133,6 +133,18 @@ export function registerIpcHandlers(
     bridge.subscribe([overlayWin])
     appStore.setState({ overlayActive: true, activeResolution: resolution, activeResolutionSource: source })
 
+    // Global scan hotkeys, active only while the overlay is open. The overlay never
+    // holds keyboard focus (showInactive + click-through), so in-window key handlers
+    // can't work — globalShortcut is the only way to trigger a scan from the game.
+    const sendHotkey = (action: 'scan' | 'rescan'): void => {
+      const win = windowManager.getOverlayWindow()
+      if (win && !win.isDestroyed()) {
+        win.webContents.send('overlay:hotkey', { action })
+      }
+    }
+    globalShortcut.register('Control+Shift+S', () => sendHotkey('scan'))
+    globalShortcut.register('Control+Shift+R', () => sendHotkey('rescan'))
+
     // Store initial setup data so the renderer can request it after mounting
     const scaleFactor = layoutService.getScaleFactor()
     pendingOverlayData = {
@@ -171,6 +183,8 @@ export function registerIpcHandlers(
 
     // Reset state when overlay window closes for any reason (user close, crash, etc.)
     overlayWin.on('closed', () => {
+      globalShortcut.unregister('Control+Shift+S')
+      globalShortcut.unregister('Control+Shift+R')
       windowTracker.stopTracking()
       appStore.setState({ overlayActive: false, activeResolution: null, activeResolutionSource: null })
       draftStore.getState().resetSession()
