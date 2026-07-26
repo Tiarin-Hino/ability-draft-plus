@@ -1,6 +1,6 @@
 import * as ort from 'onnxruntime-node'
 import { readFile } from 'fs/promises'
-import { MODEL_INPUT_SIZE, MODEL_NUM_CLASSES } from '@shared/constants/thresholds'
+import { MODEL_INPUT_SIZE } from '@shared/constants/thresholds'
 import type { ClassifierConfig, ClassifierResult, ImageClassifier } from './classifier'
 
 // @DEV-GUIDE: ONNX Runtime inference wrapper for ability icon classification.
@@ -20,13 +20,14 @@ export function createOnnxClassifier(): ImageClassifier {
   let activeProvider = 'cpu'
 
   async function initialize(config: ClassifierConfig): Promise<void> {
-    // Load class names
+    // Load class names. The class count is defined by class_names.json (shipped
+    // alongside the model), not by a hardcoded constant — a retrained model with
+    // more classes must not brick ML init. Consistency with the actual model
+    // output is verified against the warmup inference below.
     const classNamesData = await readFile(config.classNamesPath, 'utf-8')
     classNames = JSON.parse(classNamesData) as string[]
-    if (classNames.length !== MODEL_NUM_CLASSES) {
-      throw new Error(
-        `Expected ${MODEL_NUM_CLASSES} class names, got ${classNames.length}`,
-      )
+    if (!Array.isArray(classNames) || classNames.length === 0) {
+      throw new Error('class_names.json is empty or invalid')
     }
 
     // Configure execution providers
@@ -46,7 +47,7 @@ export function createOnnxClassifier(): ImageClassifier {
     // Detect which provider was actually used
     activeProvider = config.useDirectML ? 'dml' : 'cpu'
 
-    // Warmup inference
+    // Warmup inference; also verifies the model's output width matches class_names.json
     const dummyData = new Float32Array(MODEL_INPUT_SIZE * MODEL_INPUT_SIZE * 3)
     const dummyTensor = new ort.Tensor('float32', dummyData, [
       1,
@@ -54,7 +55,13 @@ export function createOnnxClassifier(): ImageClassifier {
       MODEL_INPUT_SIZE,
       3,
     ])
-    await session.run({ [inputName]: dummyTensor })
+    const warmup = await session.run({ [inputName]: dummyTensor })
+    const outputSize = warmup[outputName].data.length
+    if (outputSize !== classNames.length) {
+      throw new Error(
+        `Model output size ${outputSize} does not match class_names.json (${classNames.length} entries) — model and class list are out of sync`,
+      )
+    }
 
     ready = true
   }

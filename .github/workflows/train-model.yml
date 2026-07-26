@@ -1,0 +1,107 @@
+name: Retrain ML model
+
+# Manually triggered after uploading a new dataset zip to S3
+# (see ad_data_gather_script/upload_dataset.py). Trains the ability classifier,
+# converts to INT8 ONNX, runs the accuracy regression gate against the test
+# split, and opens a PR with the new model files + a minor version bump.
+#
+# Required repository secrets:
+#   AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY  – read access to the dataset bucket
+#   AWS_REGION                                  – e.g. eu-north-1
+#   DATASET_BUCKET                              – S3 bucket holding datasets/dataset-vN.zip
+
+on:
+  workflow_dispatch:
+    inputs:
+      dataset_version:
+        description: 'Dataset version (N in dataset-vN.zip)'
+        required: true
+        type: string
+      fine_tune:
+        description: 'Also fine-tune the top MobileNetV2 block'
+        required: false
+        type: boolean
+        default: false
+      min_accuracy:
+        description: 'Gate: minimum INT8 test accuracy'
+        required: false
+        type: string
+        default: '0.97'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          # TF 2.15 (pinned for tf2onnx compatibility) does not support 3.12
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: training/requirements.txt
+
+      - name: Install training dependencies
+        run: pip install -r training/requirements.txt
+
+      - name: Download dataset from S3
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
+        run: |
+          aws s3 cp "s3://${{ secrets.DATASET_BUCKET }}/datasets/dataset-v${{ inputs.dataset_version }}.zip" dataset.zip
+          mkdir -p dataset
+          unzip -q dataset.zip -d dataset
+          ls dataset
+
+      - name: Train, convert, and gate
+        run: |
+          python training/train.py \
+            --data-dir dataset \
+            --output-dir training_output \
+            --previous-class-names resources/model/class_names.json \
+            --min-accuracy "${{ inputs.min_accuracy }}" \
+            ${{ inputs.fine_tune && '--fine-tune' || '' }}
+
+      - name: Upload training artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: model-artifacts
+          path: |
+            training_output/ability_classifier_int8.onnx
+            training_output/class_names.json
+            training_output/metrics.json
+            training_output/report.md
+          retention-days: 30
+
+      - name: Stage model files and bump minor version
+        run: |
+          cp training_output/ability_classifier_int8.onnx resources/model/ability_classifier_int8.onnx
+          cp training_output/class_names.json resources/model/class_names.json
+          npm version minor --no-git-tag-version
+          NEW_VERSION=$(node -p "require('./package.json').version")
+          echo "NEW_VERSION=$NEW_VERSION" >> "$GITHUB_ENV"
+          rm -rf training_output/saved_model training_output/ability_classifier.onnx
+
+      - name: Open pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: model/dataset-v${{ inputs.dataset_version }}
+          commit-message: |
+            feat(ml): retrain model on dataset v${{ inputs.dataset_version }} (v${{ env.NEW_VERSION }})
+          title: 'ML model retrain: dataset v${{ inputs.dataset_version }} → app v${{ env.NEW_VERSION }}'
+          body-path: training_output/report.md
+          add-paths: |
+            resources/model/ability_classifier_int8.onnx
+            resources/model/class_names.json
+            package.json
+            package-lock.json
+          labels: ml-model
+          delete-branch: true

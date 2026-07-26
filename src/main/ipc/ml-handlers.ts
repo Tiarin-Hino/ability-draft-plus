@@ -1,7 +1,9 @@
-import { ipcMain } from 'electron'
+import { ipcMain, dialog, app } from 'electron'
+import { writeFile } from 'fs/promises'
 import sharp from 'sharp'
 import log from 'electron-log/main'
 import type { MlService } from '../services/ml-service'
+import type { DatabaseService } from '../services/database-service'
 import type { LayoutService } from '../services/layout-service'
 import type { ScreenshotService } from '../services/screenshot-service'
 import type { WindowManager } from '../services/window-manager'
@@ -34,9 +36,72 @@ export function registerMlHandlers(
   appStore: AppStore,
   windowTracker: WindowTrackerService,
   feedbackService: FeedbackService,
+  dbService: DatabaseService,
 ): void {
   ipcMain.handle('ml:getModelGaps', () => {
     return appStore.getState().mlModelGaps
+  })
+
+  // Exports the staleness-detector gap list (with hero mapping from the DB) as JSON
+  // for the training-data gather script — closes the loop between "the app knows
+  // which abilities the model can't recognize" and "collect data for exactly those".
+  ipcMain.handle('ml:exportModelGaps', async () => {
+    const gaps = appStore.getState().mlModelGaps
+    if (!gaps || gaps.missingFromModel.length === 0) {
+      return { success: false, error: 'no-gaps' }
+    }
+
+    try {
+      const abilityByName = new Map(
+        dbService.abilities.getAll().map((a) => [a.name, a]),
+      )
+      const heroById = new Map(dbService.heroes.getAll().map((h) => [h.heroId, h]))
+
+      const missing = gaps.missingFromModel.map((abilityName) => {
+        const ability = abilityByName.get(abilityName)
+        const hero = ability ? heroById.get(ability.heroId) : undefined
+        return {
+          ability: abilityName,
+          hero: hero?.name ?? null,
+          heroDisplayName: hero?.displayName ?? null,
+          isUltimate: ability?.isUltimate ?? null,
+          abilityOrder: ability?.abilityOrder ?? null,
+        }
+      })
+
+      const cp = windowManager.getControlPanelWindow()
+      const options: Electron.SaveDialogOptions = {
+        defaultPath: 'model-gaps.json',
+        filters: [{ name: 'JSON', extensions: ['json'] }],
+      }
+      const result = cp && !cp.isDestroyed()
+        ? await dialog.showSaveDialog(cp, options)
+        : await dialog.showSaveDialog(options)
+      if (result.canceled || !result.filePath) {
+        return { success: false, error: 'cancelled' }
+      }
+
+      await writeFile(
+        result.filePath,
+        JSON.stringify(
+          {
+            generatedAt: gaps.detectedAt,
+            appVersion: app.getVersion(),
+            staleInModel: gaps.staleInModel,
+            missing,
+          },
+          null,
+          2,
+        ),
+      )
+
+      logger.info('Model gaps exported', { path: result.filePath, count: missing.length })
+      return { success: true, path: result.filePath, count: missing.length }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      logger.error('Model gaps export failed', { error: message })
+      return { success: false, error: message }
+    }
   })
 
   ipcMain.handle('ml:init', async () => {

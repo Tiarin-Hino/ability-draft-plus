@@ -88,6 +88,10 @@ export interface IpcInvokeMap {
   }
   'ml:init': { request: void; response: { success: boolean; error?: string } }
   'ml:getModelGaps': { request: void; response: MlModelGaps | null }
+  'ml:exportModelGaps': {
+    request: void
+    response: { success: boolean; path?: string; count?: number; error?: string }
+  }
   'overlay:getInitialData': { request: void; response: OverlayDataPayload | null }
   'overlay:activate': {
     request: void

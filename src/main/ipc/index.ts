@@ -240,6 +240,7 @@ export function registerIpcHandlers(
     appStore,
     windowTracker,
     feedbackService,
+    dbService,
   )
 
   // Draft domain (My Spot, My Model)

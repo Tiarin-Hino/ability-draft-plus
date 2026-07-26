@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Semi-automated model retraining pipeline** (`docs/ML_PIPELINE.md`) — the Dashboard now has an "Export Model Gaps" button that writes the staleness-detector's missing-ability list (with hero mapping from the DB) to a JSON the data-gather script consumes directly; a new `training/train.py` replaces the 17 loose Colab cells with a seeded, class-weighted, reproducible pipeline; and a "Retrain ML model" GitHub Actions workflow trains on an S3-hosted dataset, runs an INT8 accuracy regression gate against the test split, and opens a review PR with the new model, class list, per-class metrics, and a minor version bump
+- The model's class count is now derived from `class_names.json` and validated against the model's actual output size at init — a retrained model with more classes no longer requires a code change (previously a hardcoded 524 caused a hard ML init failure)
+
 - **Global scan hotkeys** — Ctrl+Shift+S triggers a scan and Ctrl+Shift+R a rescan while the overlay is active, so no mouse travel is needed during a timed draft. The scan hotkey skips the confirmation dialog
 - **Getting Started checklist** — the Dashboard now walks new users through the three required steps (update Windrun data → activate overlay → scan) until the first data update completes
 - **Scan quality summary** — after a scan the overlay shows "N/M recognized"; unrecognized slots get a dashed amber border and an explanatory tooltip instead of rendering as silent blanks
