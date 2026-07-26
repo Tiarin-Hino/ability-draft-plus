@@ -64,12 +64,22 @@ export function buildModelGapsPayload(
     const hero =
       (ability ? heroById.get(ability.heroId) : undefined) ??
       heroesByNameLength.find((h) => abilityName.startsWith(h.name + '_'))
+    // Windrun-scraped rows default to abilityOrder 0 / isUltimate false, which is
+    // NOT real slot data (0 is the ultimate slot; standard slots are 1-3). Only
+    // export the combo when it is internally consistent, so the gather script
+    // falls back to Liquipedia instead of trusting junk defaults.
+    const order = ability?.abilityOrder ?? null
+    const isUlt = ability?.isUltimate ?? null
+    const slotValid =
+      isUlt !== null &&
+      order !== null &&
+      ((isUlt && order === 0) || (!isUlt && order >= 1 && order <= 3))
     return {
       ability: abilityName,
       hero: hero?.name ?? null,
       heroDisplayName: hero?.displayName ?? null,
-      isUltimate: ability?.isUltimate ?? null,
-      abilityOrder: ability?.abilityOrder ?? null,
+      isUltimate: slotValid ? isUlt : null,
+      abilityOrder: slotValid ? order : null,
     }
   })
 
