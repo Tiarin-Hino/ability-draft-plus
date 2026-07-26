@@ -1,7 +1,7 @@
 import { ipcMain, app } from 'electron'
 import { spawn, execFile } from 'child_process'
 import { writeFile } from 'fs/promises'
-import { existsSync } from 'fs'
+import { existsSync, readFileSync } from 'fs'
 import { join, resolve } from 'path'
 import log from 'electron-log/main'
 import type { AppStore } from '../store/app-store'
@@ -33,9 +33,32 @@ function getGatherDir(): string {
   return resolve(app.getAppPath(), '..', 'ad_data_gather_script')
 }
 
+/** A venv whose base interpreter was uninstalled fails with a confusing
+ *  "did not find executable" error — validate pyvenv.cfg's home before trusting it. */
+function isVenvHealthy(venvDir: string): boolean {
+  const python = join(venvDir, 'Scripts', 'python.exe')
+  const cfg = join(venvDir, 'pyvenv.cfg')
+  if (!existsSync(python) || !existsSync(cfg)) return false
+  try {
+    const home = readFileSync(cfg, 'utf-8')
+      .split(/\r?\n/)
+      .find((line) => line.startsWith('home'))
+      ?.split('=')[1]
+      ?.trim()
+    return home !== undefined && existsSync(home)
+  } catch {
+    return false
+  }
+}
+
 function getPython(gatherDir: string): string {
-  const venvPython = join(gatherDir, 'venv', 'Scripts', 'python.exe')
-  return existsSync(venvPython) ? venvPython : 'python'
+  for (const venvName of ['venv', 'venv_stable']) {
+    const venvDir = join(gatherDir, venvName)
+    if (isVenvHealthy(venvDir)) {
+      return join(venvDir, 'Scripts', 'python.exe')
+    }
+  }
+  return 'python'
 }
 
 /** Launch a console-visible, detached process the user can watch and Ctrl+C. */
