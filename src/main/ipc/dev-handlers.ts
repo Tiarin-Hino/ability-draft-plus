@@ -106,19 +106,27 @@ export function registerDevHandlers(
       const args = [GATHER_SCRIPT, '--gaps-file', 'model-gaps.json']
 
       if (data.dryRun) {
-        // Capture dry-run output for in-app display (a console would close instantly)
+        // Capture dry-run output for in-app display (a console would close instantly).
+        // Generous timeout: unresolved abilities trigger a Liquipedia scrape at
+        // 31s per hero page, so a legitimate dry run can take several minutes.
         return new Promise((resolvePromise) => {
           execFile(
             python,
             [...args, '--dry-run'],
-            { cwd: gatherDir, timeout: 120_000 },
+            { cwd: gatherDir, timeout: 600_000, maxBuffer: 10 * 1024 * 1024 },
             (error, stdout, stderr) => {
               if (error) {
-                logger.error('Gather dry run failed', { error: error.message })
+                const output = `${stdout}\n${stderr}`.trim()
+                logger.error('Gather dry run failed', {
+                  error: error.message,
+                  outputTail: output.slice(-2000),
+                })
                 resolvePromise({
                   success: false,
-                  error: error.message,
-                  output: `${stdout}\n${stderr}`.trim(),
+                  error: error.killed
+                    ? 'Dry run timed out after 10 minutes'
+                    : error.message,
+                  output,
                 })
               } else {
                 resolvePromise({ success: true, output: stdout.trim() })

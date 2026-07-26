@@ -5,6 +5,7 @@
     "gatherStep": "1. Gather training data ({{count}} missing abilities)",
     "gatherWarning": "The gather script kills and restarts Dota 2 repeatedly and controls the mouse and keyboard for ~40 minutes. It opens in its own console window — press Ctrl+C there to abort.",
     "dryRunButton": "Dry Run",
+    "dryRunRunning": "Dry run in progress — can take several minutes if slot metadata needs a Liquipedia scrape (31s per hero page)…",
     "gatherButton": "Start Gathering",
     "gatherConfirm": "This will take over your PC (mouse, keyboard, Dota 2 restarts) for about 40 minutes. Continue?",
     "dryRunDone": "Dry run complete — review the plan below (watch for MISSING METADATA).",

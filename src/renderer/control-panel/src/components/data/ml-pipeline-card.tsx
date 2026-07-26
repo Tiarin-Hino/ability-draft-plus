@@ -37,7 +37,7 @@ export function MlPipelineCard() {
   const runGather = async (dryRun: boolean) => {
     if (!dryRun && !window.confirm(t('mlPipeline.gatherConfirm'))) return
     setBusy(true)
-    setMessage(null)
+    setMessage(dryRun ? { text: t('mlPipeline.dryRunRunning'), error: false } : null)
     if (dryRun) setDryRunOutput(null)
     try {
       const result = await window.electronApi.invoke('dev:runGatherScript', { dryRun })
