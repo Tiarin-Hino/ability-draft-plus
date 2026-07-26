@@ -7,6 +7,7 @@ import type { ScreenshotService } from '../services/screenshot-service'
 import type { WindowManager } from '../services/window-manager'
 import type { ScanProcessingService } from '../services/scan-processing-service'
 import type { WindowTrackerService } from '../services/window-tracker-service'
+import type { FeedbackService } from '../services/feedback-service'
 import type { ScanResult } from '@shared/types'
 import type { InitialScanResults } from '@shared/types/ml'
 import type { AppStore } from '../store/app-store'
@@ -32,6 +33,7 @@ export function registerMlHandlers(
   scanProcessingService: ScanProcessingService,
   appStore: AppStore,
   windowTracker: WindowTrackerService,
+  feedbackService: FeedbackService,
 ): void {
   ipcMain.handle('ml:getModelGaps', () => {
     return appStore.getState().mlModelGaps
@@ -125,6 +127,15 @@ export function registerMlHandlers(
         )
 
         appStore.setState({ mlStatus: 'ready' })
+
+        // Remember exactly what the model saw so "Report Failed Recognition"
+        // snapshots the misclassified screenshot, not a fresh capture
+        feedbackService.recordScanContext({
+          screenshot: screenshotBuffer,
+          resolution,
+          isInitialScan: data.isInitialScan,
+          results: result.results,
+        })
 
         // Broadcast raw results for status/debug display in control panel
         sendScanResults(windowManager, {

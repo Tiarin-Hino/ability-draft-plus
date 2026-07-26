@@ -1,4 +1,4 @@
-import { useReducer } from 'react'
+import { useReducer, useEffect } from 'react'
 import type { ResolutionLayout } from '@shared/types'
 import { StepCapture } from './step-capture'
 import { StepAutoDetect } from './step-auto-detect'
@@ -89,6 +89,11 @@ interface MapperWizardProps {
 export function MapperWizard({ mode, onDone }: MapperWizardProps) {
   const [state, dispatch] = useReducer(reducer, initialState)
 
+  // Notify the parent from an effect, not during render
+  useEffect(() => {
+    if (state.step === 'done') onDone()
+  }, [state.step, onDone])
+
   switch (state.step) {
     case 'capture':
       return (
@@ -158,7 +163,6 @@ export function MapperWizard({ mode, onDone }: MapperWizardProps) {
       )
 
     case 'done':
-      onDone()
       return null
   }
 }

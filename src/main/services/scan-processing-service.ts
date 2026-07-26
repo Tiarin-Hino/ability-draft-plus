@@ -36,6 +36,20 @@ export function createScanProcessingService(
   layoutService: LayoutService,
   windowManager: WindowManager,
 ): ScanProcessingService {
+  // Enrichment failures must reach the overlay: without this broadcast the renderer's
+  // scanState stays pinned at 'scanning' with every button disabled.
+  function broadcastError(message: string): void {
+    const payload = { error: message }
+    const overlay = windowManager.getOverlayWindow()
+    if (overlay && !overlay.isDestroyed()) {
+      overlay.webContents.send('ml:scanResults', payload)
+    }
+    const cp = windowManager.getControlPanelWindow()
+    if (cp && !cp.isDestroyed()) {
+      cp.webContents.send('ml:scanResults', payload)
+    }
+  }
+
   return {
     handleScanResults(results, isInitialScan, resolution, scaleFactor) {
       const start = performance.now()
@@ -46,6 +60,7 @@ export function createScanProcessingService(
         const coords = layoutService.getLayout(resolution)
         if (!coords) {
           logger.error('No layout coordinates for resolution', { resolution })
+          broadcastError(`No layout coordinates for resolution: ${resolution}`)
           return
         }
 
@@ -103,6 +118,7 @@ export function createScanProcessingService(
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
         logger.error('Scan processing failed', { error: message })
+        broadcastError(`Scan processing failed: ${message}`)
       }
     },
   }

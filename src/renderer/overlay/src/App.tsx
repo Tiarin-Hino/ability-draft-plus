@@ -179,10 +179,10 @@ function App(): React.ReactElement {
         open={showScanConfirm}
         message={t('scanConfirm.message')}
         confirmLabel={t('scanConfirm.proceed')}
-        cancelLabel={t('scanConfirm.dontShow')}
+        cancelLabel={t('scanConfirm.cancel')}
         onConfirm={handleScanConfirmProceed}
         onCancel={() => setShowScanConfirm(false)}
-        showDontShowAgain
+        dontShowLabel={t('scanConfirm.dontShow')}
         onDontShowAgain={handleScanConfirmDontShow}
       />
 

@@ -1,5 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { OverlayDataPayload } from '@shared/types'
+import i18n from '../i18n'
+
+// Safety net: if main never responds (hung enrichment, dead worker), unstick the UI.
+// Generous because a scan may include a lazy ML re-init (up to ~30s worst case).
+const SCAN_TIMEOUT_MS = 30_000
 
 // @DEV-GUIDE: Central state hook for the overlay. Manages all overlay-related state:
 // - overlayData: Enriched scan results (OverlayDataPayload) from main process
@@ -36,6 +41,14 @@ export function useOverlayData(): OverlayState & {
   const [scanError, setScanError] = useState<string | null>(null)
   const [snapshotMessage, setSnapshotMessage] = useState<string | null>(null)
   const [snapshotIsError, setSnapshotIsError] = useState(false)
+  const scanTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const clearScanTimeout = (): void => {
+    if (scanTimeoutRef.current) {
+      clearTimeout(scanTimeoutRef.current)
+      scanTimeoutRef.current = null
+    }
+  }
 
   useEffect(() => {
     // Request initial data from main process (avoids did-finish-load timing race)
@@ -46,6 +59,7 @@ export function useOverlayData(): OverlayState & {
     const unsubOverlayData = window.electronApi.on('overlay:data', (data) => {
       setOverlayData(data)
       if (data.scanData) {
+        clearScanTimeout()
         setScanState('scanned')
         setScanError(null)
       }
@@ -76,17 +90,19 @@ export function useOverlayData(): OverlayState & {
 
     const unsubScanResults = window.electronApi.on('ml:scanResults', (data) => {
       if (data.error) {
+        clearScanTimeout()
         setScanState('error')
         setScanError(data.error)
       }
     })
 
     const unsubSnapshot = window.electronApi.on('feedback:snapshotStatus', (data) => {
-      setSnapshotMessage(data.message)
+      setSnapshotMessage(i18n.t(data.messageKey, data.params))
       setSnapshotIsError(data.error ?? false)
     })
 
     return () => {
+      clearScanTimeout()
       unsubOverlayData()
       unsubSpot()
       unsubModel()
@@ -102,6 +118,12 @@ export function useOverlayData(): OverlayState & {
     }
     setScanState('scanning')
     setScanError(null)
+    clearScanTimeout()
+    scanTimeoutRef.current = setTimeout(() => {
+      scanTimeoutRef.current = null
+      setScanState('error')
+      setScanError(i18n.t('status.timeoutMessage'))
+    }, SCAN_TIMEOUT_MS)
     window.electronApi.send('ml:scan', {
       heroOrder: selectedSpotHeroOrder ?? 0,
       isInitialScan,
@@ -109,11 +131,15 @@ export function useOverlayData(): OverlayState & {
   }
 
   const resetOverlay = (): void => {
+    clearScanTimeout()
     setScanState('idle')
     setScanError(null)
     setSelectedSpotHeroOrder(null)
     setSelectedModelHeroOrder(null)
     setOverlayData((prev) => prev ? { ...prev, scanData: null, opCombinations: [], trapCombinations: [], heroSynergies: [], heroTraps: [], heroModels: [], heroesForMySpotUI: [] } : null)
+    // Clear the main-process draft session too, so a later Rescan doesn't diff
+    // against this draft's cached pool.
+    window.electronApi.send('overlay:reset')
   }
 
   return {

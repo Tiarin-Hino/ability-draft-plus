@@ -147,12 +147,10 @@ export function StepAutoDetect({
           </Button>
         )}
 
-        {mode === 'dev' && (
-          <Button variant="outline" onClick={onCalibrate}>
-            <Crosshair className="h-4 w-4 mr-2" />
-            {t('mapper.autoDetect.calibrate')}
-          </Button>
-        )}
+        <Button variant="outline" onClick={onCalibrate}>
+          <Crosshair className="h-4 w-4 mr-2" />
+          {t('mapper.autoDetect.calibrate')}
+        </Button>
 
         {source === 'none' && mode === 'user' && (
           <Button onClick={handleSubmitScreenshot} disabled={submitting}>

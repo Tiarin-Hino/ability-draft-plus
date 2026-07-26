@@ -26,6 +26,7 @@ export function DashboardPage() {
   const { t: tc } = useTranslation()
 
   const mlStatus = useAppStore((s) => s.mlStatus)
+  const mlError = useAppStore((s) => s.mlError)
   const mlModelGaps = useAppStore((s) => s.mlModelGaps)
   const overlayActive = useAppStore((s) => s.overlayActive)
   const activeResolution = useAppStore((s) => s.activeResolution)
@@ -45,6 +46,7 @@ export function DashboardPage() {
           label={t('statusCards.mlWorker')}
           value={tc(`status.${mlStatus}`)}
           color={mlStatusColor(mlStatus)}
+          detail={mlStatus === 'error' && mlError ? mlError : undefined}
           badge={
             mlModelGaps?.missingFromModel.length
               ? t('statusCards.mlGapsBadge', { count: mlModelGaps.missingFromModel.length })

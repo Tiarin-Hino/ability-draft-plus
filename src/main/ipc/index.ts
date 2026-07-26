@@ -19,7 +19,9 @@ import { registerMlHandlers } from './ml-handlers'
 import { registerDraftHandlers } from './draft-handlers'
 import { registerScraperHandlers } from './scraper-handlers'
 import { registerResolutionHandlers } from './resolution-handlers'
+import { registerFeedbackHandlers } from './feedback-handlers'
 import { loadApiConfig } from '../services/api-config'
+import { createFeedbackService } from '../services/feedback-service'
 
 // @DEV-GUIDE: Central IPC handler registration. All renderer↔main communication goes through
 // typed IPC channels following the domain:action naming convention (e.g. 'ml:scan', 'hero:getAll').
@@ -171,6 +173,7 @@ export function registerIpcHandlers(
     overlayWin.on('closed', () => {
       windowTracker.stopTracking()
       appStore.setState({ overlayActive: false, activeResolution: null, activeResolutionSource: null })
+      draftStore.getState().resetSession()
       pendingOverlayData = null
 
       const cp = windowManager.getControlPanelWindow()
@@ -190,6 +193,12 @@ export function registerIpcHandlers(
     appStore.setState({ overlayActive: false, activeResolution: null, activeResolutionSource: null })
   })
 
+  // Overlay Reset button: clear the main-process draft session (pool caches + selections).
+  // Without this, a Reset followed by a Rescan diffs against the previous draft's pool.
+  ipcMain.on('overlay:reset', () => {
+    draftStore.getState().resetSession()
+  })
+
   ipcMain.on(
     'overlay:setMouseIgnore',
     (_event, data: { ignore: boolean; forward?: boolean }) => {
@@ -200,6 +209,13 @@ export function registerIpcHandlers(
   // Database domain (hero, ability, settings, backup)
   registerDatabaseHandlers(dbService, backupService)
 
+  // API config is shared by the resolution and feedback domains
+  const apiConfig = loadApiConfig()
+
+  // Feedback domain (Report Failed Recognition → export/upload samples)
+  const feedbackService = createFeedbackService(apiConfig)
+  registerFeedbackHandlers(feedbackService, windowManager)
+
   // ML domain
   registerMlHandlers(
     mlService,
@@ -209,6 +225,7 @@ export function registerIpcHandlers(
     scanProcessingService,
     appStore,
     windowTracker,
+    feedbackService,
   )
 
   // Draft domain (My Spot, My Model)
@@ -218,7 +235,6 @@ export function registerIpcHandlers(
   registerScraperHandlers(scraperService)
 
   // Resolution domain
-  const apiConfig = loadApiConfig()
   registerResolutionHandlers(layoutService, screenshotService, windowTracker, windowManager, apiConfig)
 
   // Update domain

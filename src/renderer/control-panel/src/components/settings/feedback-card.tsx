@@ -9,19 +9,16 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import type { FeedbackStatus } from '@shared/ipc/api'
 
 export function FeedbackCard() {
   const { t } = useTranslation('settings')
-  const [exportStatus, setExportStatus] = useState<string | null>(null)
-  const [uploadStatus, setUploadStatus] = useState<string | null>(null)
+  const [exportStatus, setExportStatus] = useState<FeedbackStatus | null>(null)
+  const [uploadStatus, setUploadStatus] = useState<FeedbackStatus | null>(null)
 
   useEffect(() => {
-    const unsub1 = window.electronApi.on('feedback:exportStatus', (data) => {
-      setExportStatus(data.message)
-    })
-    const unsub2 = window.electronApi.on('feedback:uploadStatus', (data) => {
-      setUploadStatus(data.message)
-    })
+    const unsub1 = window.electronApi.on('feedback:exportStatus', setExportStatus)
+    const unsub2 = window.electronApi.on('feedback:uploadStatus', setUploadStatus)
     return () => {
       unsub1()
       unsub2()
@@ -57,10 +54,14 @@ export function FeedbackCard() {
           </Button>
         </div>
         {exportStatus && (
-          <p className="text-sm text-muted-foreground">{exportStatus}</p>
+          <p className={exportStatus.error ? 'text-sm text-destructive' : 'text-sm text-muted-foreground'}>
+            {t(exportStatus.messageKey, exportStatus.params)}
+          </p>
         )}
         {uploadStatus && (
-          <p className="text-sm text-muted-foreground">{uploadStatus}</p>
+          <p className={uploadStatus.error ? 'text-sm text-destructive' : 'text-sm text-muted-foreground'}>
+            {t(uploadStatus.messageKey, uploadStatus.params)}
+          </p>
         )}
       </CardContent>
     </Card>
