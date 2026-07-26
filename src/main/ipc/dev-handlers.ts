@@ -61,18 +61,29 @@ function getPython(gatherDir: string): string {
   return 'python'
 }
 
-/** Launch a console-visible, detached process the user can watch and Ctrl+C. */
+/** Launch a process in a VISIBLE console the user can watch and Ctrl+C.
+ *
+ * A detached child of a GUI app gets NO console on Windows (DETACHED_PROCESS),
+ * so a plain spawn runs the script invisibly — dangerous for a script that
+ * takes over the mouse. Route through `cmd /c start`, which explicitly
+ * allocates a console window; the inner `cmd /k` keeps the window open after
+ * the script exits so its final output stays readable. */
 function launchInConsole(exe: string, args: string[], cwd: string): void {
-  const child = spawn(exe, args, {
-    cwd,
-    detached: true,
-    stdio: 'ignore',
-    windowsHide: false,
-    env: {
-      ...process.env,
-      AD_DATASET_BUCKET: process.env.AD_DATASET_BUCKET ?? DEFAULT_DATASET_BUCKET,
+  const quotedArgs = args.map((a) => `"${a}"`).join(' ')
+  const child = spawn(
+    'cmd.exe',
+    ['/d', '/s', '/c', `start "ADP ML pipeline" cmd /d /k ""${exe}" ${quotedArgs}"`],
+    {
+      cwd,
+      detached: true,
+      stdio: 'ignore',
+      windowsVerbatimArguments: true,
+      env: {
+        ...process.env,
+        AD_DATASET_BUCKET: process.env.AD_DATASET_BUCKET ?? DEFAULT_DATASET_BUCKET,
+      },
     },
-  })
+  )
   child.unref()
 }
 
