@@ -6,7 +6,6 @@ interface AbilityHotspotProps {
   scaleFactor: number
   isSelectedAbility: boolean
   isMySpotHero: boolean
-  tooltipVisible: boolean
   onHover: (slot: EnrichedScanSlot, rect: DOMRect) => void
   onLeave: () => void
 }
@@ -16,7 +15,6 @@ export function AbilityHotspot({
   scaleFactor,
   isSelectedAbility,
   isMySpotHero,
-  tooltipVisible,
   onHover,
   onLeave,
 }: AbilityHotspotProps): React.ReactElement {
@@ -33,14 +31,12 @@ export function AbilityHotspot({
     if (isMySpotHero) {
       className += ' my-spot-selected'
     }
+  } else if (slot.isUnknown) {
+    className += ' unknown-slot'
   } else if (slot.isSynergySuggestionForMySpot) {
     className += ' shimmer-teal'
   } else if (slot.isGeneralTopTier) {
     className += ' shimmer-green'
-  }
-
-  if (tooltipVisible) {
-    className += ' snapshot-hidden-border'
   }
 
   const handleMouseEnter = useCallback(

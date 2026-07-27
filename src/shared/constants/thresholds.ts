@@ -18,8 +18,9 @@ export const DEFAULT_OP_THRESHOLD = 0.13
 export const DEFAULT_TRAP_THRESHOLD = 0.05
 
 // Model
+// The class count is NOT a constant — it is defined by resources/model/class_names.json
+// and validated against the model's output width at classifier init.
 export const MODEL_INPUT_SIZE = 96
-export const MODEL_NUM_CLASSES = 524
 
 // Screenshot Cache
 export const SCREENSHOT_CACHE_TTL = 2_000

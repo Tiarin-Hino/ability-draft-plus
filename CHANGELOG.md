@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- **Semi-automated model retraining pipeline** (`docs/ML_PIPELINE.md`) — the Dashboard now has an "Export Model Gaps" button that writes the staleness-detector's missing-ability list (with hero mapping from the DB) to a JSON the data-gather script consumes directly; a new `training/train.py` replaces the 17 loose Colab cells with a seeded, class-weighted, reproducible pipeline; and a "Retrain ML model" GitHub Actions workflow trains on an S3-hosted dataset, runs an INT8 accuracy regression gate against the test split, and opens a review PR with the new model, class list, per-class metrics, and a minor version bump
+- The model's class count is now derived from `class_names.json` and validated against the model's actual output size at init — a retrained model with more classes no longer requires a code change (previously a hardcoded 524 caused a hard ML init failure)
+
+- **Global scan hotkeys** — Ctrl+Shift+S triggers a scan and Ctrl+Shift+R a rescan while the overlay is active, so no mouse travel is needed during a timed draft. The scan hotkey skips the confirmation dialog
+- **Getting Started checklist** — the Dashboard now walks new users through the three required steps (update Windrun data → activate overlay → scan) until the first data update completes
+- **Scan quality summary** — after a scan the overlay shows "N/M recognized"; unrecognized slots get a dashed amber border and an explanatory tooltip instead of rendering as silent blanks
+- **Resolution source visibility** — the overlay and the Dashboard overlay card now show whether coordinates are preset, calibrated, or auto-scaled, with an accuracy warning for auto-scaled layouts
+
+### Fixed
+
+- **"Report Failed Recognition" now works** — the feedback pipeline (snapshot, export, upload) had no main-process implementation in v2; all three buttons were silent no-ops. Snapshots now save the exact screenshot the model classified plus its raw predictions to `feedback-samples/` in the app data folder (capped at 25), Export zips them to a user-chosen file, and Send uploads pending samples to the feedback API when configured
+- **Scan confirmation dialog has a real Cancel button** — previously "Don't Show Again" replaced Cancel and both buttons started a scan
+- **Recommendation highlights stay visible while hovering** — opening any tooltip no longer strips the shimmer borders from every hotspot
+- **Overlay no longer gets stuck on "Scanning…"** — scan-processing errors are now reported to the overlay, and a 30-second client-side timeout recovers the UI if the main process never responds
+- **Reset fully resets the draft session** — the overlay Reset button now also clears the main-process ability-pool caches and My Spot / My Model selections (previously a Rescan after Reset diffed against the stale previous pool); the session is also cleared when the overlay closes
+- **Calibration wizard is reachable by users** — the 4-anchor calibration advertised in the README was gated to dev builds; the Calibrate button is now always available in the Mapper
+- **ML errors are visible** — the Dashboard ML status card now shows the actual error message instead of just "Error"
+- Mapper wizard no longer triggers a React setState-during-render warning on completion
+
+### Changed
+
+- Feedback status messages are now localized (EN/RU) via i18n keys instead of hardcoded English strings
+- OP/Trap combination panels are capped at 40% of screen height with their own scrollbars, so they can no longer cover the draft timer area
+
 ## [2.0.0] - 2026-02-23
 
 ### Complete Rewrite

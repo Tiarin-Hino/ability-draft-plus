@@ -18,8 +18,6 @@ export function HotspotLayer({
   const [tooltipData, setTooltipData] = useState<TooltipData | null>(null)
   const [tooltipAnchor, setTooltipAnchor] = useState<DOMRect | null>(null)
 
-  const tooltipVisible = tooltipData !== null
-
   const handleAbilityHover = useCallback(
     (slot: EnrichedScanSlot, rect: DOMRect) => {
       setTooltipData({ type: 'ability', slot })
@@ -55,7 +53,6 @@ export function HotspotLayer({
           scaleFactor={scaleFactor}
           isSelectedAbility={false}
           isMySpotHero={false}
-          tooltipVisible={tooltipVisible}
           onHover={handleAbilityHover}
           onLeave={handleLeave}
         />
@@ -69,7 +66,6 @@ export function HotspotLayer({
           scaleFactor={scaleFactor}
           isSelectedAbility={false}
           isMySpotHero={false}
-          tooltipVisible={tooltipVisible}
           onHover={handleAbilityHover}
           onLeave={handleLeave}
         />
@@ -83,7 +79,6 @@ export function HotspotLayer({
           scaleFactor={scaleFactor}
           isSelectedAbility
           isMySpotHero={slot.hero_order === selectedSpotHeroOrder}
-          tooltipVisible={tooltipVisible}
           onHover={handleAbilityHover}
           onLeave={handleLeave}
         />
@@ -100,7 +95,6 @@ export function HotspotLayer({
             coord={coord}
             scaleFactor={scaleFactor}
             isMyModel={model.heroOrder === selectedModelHeroOrder}
-            tooltipVisible={tooltipVisible}
             onHover={handleHeroHover}
             onLeave={handleLeave}
           />

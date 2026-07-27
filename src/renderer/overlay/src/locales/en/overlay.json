@@ -5,8 +5,9 @@
   "close": "Close",
   "reportFailed": "Report Failed Recognition",
   "scanConfirm": {
-    "message": "This will scan the current screen for ability icons. Make sure the Dota 2 draft screen is fully visible.",
+    "message": "This will scan the current screen for ability icons. Make sure the Dota 2 draft screen is fully visible. Tip: Ctrl+Shift+S scans instantly without this dialog.",
     "proceed": "Proceed",
+    "cancel": "Cancel",
     "dontShow": "Don't Show Again"
   },
   "reportConfirm": {
@@ -16,10 +17,14 @@
   },
   "status": {
     "scanning": "Scanning...",
-    "error": "Scan failed: {{message}}"
+    "error": "Scan failed: {{message}}",
+    "timeoutMessage": "Scan timed out — please try again"
   },
-  "snapshotTaken": "Snapshot saved successfully",
-  "snapshotError": "Failed to save snapshot",
+  "snapshot": {
+    "saved": "Snapshot saved ({{count}} stored) — send it via Settings → Feedback",
+    "noScan": "No scan data to report — run a scan first",
+    "error": "Failed to save snapshot: {{error}}"
+  },
   "opCombinations": {
     "title": "OP Combinations",
     "show": "Show OP",
@@ -31,6 +36,16 @@
     "show": "Show Traps",
     "hide": "Hide",
     "tripletTooltip": "Often drafted as a triplet ({{winrate}} WR together)"
+  },
+  "scanSummary": "{{recognized}}/{{total}} recognized",
+  "resolution": {
+    "autoScaledWarning": "Coordinates are mathematically scaled for this resolution and may be slightly off. Use the Mapper in the Control Panel to calibrate.",
+    "source": {
+      "preset": "preset",
+      "custom": "calibrated",
+      "auto-scaled": "auto-scaled",
+      "none": "unsupported"
+    }
   },
   "mySpot": "My Spot",
   "changeMySpot": "Change",
@@ -48,6 +63,8 @@
     "topModel": "Top Model",
     "yourModelPick": "Your Model Pick",
     "strongAbilities": "Strong Abilities for This Hero",
-    "weakAbilities": "Weak Abilities for This Hero"
+    "weakAbilities": "Weak Abilities for This Hero",
+    "unknownAbility": "Unknown Ability",
+    "unknownHint": "The model could not identify this icon — consider using 'Report Failed Recognition'"
   }
 }

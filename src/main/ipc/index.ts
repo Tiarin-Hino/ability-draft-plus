@@ -1,4 +1,4 @@
-import { ipcMain, nativeTheme, screen, app, shell } from 'electron'
+import { ipcMain, nativeTheme, screen, app, shell, globalShortcut } from 'electron'
 import log from 'electron-log/main'
 import type { WindowManager } from '../services/window-manager'
 import type { DatabaseService } from '../services/database-service'
@@ -19,7 +19,10 @@ import { registerMlHandlers } from './ml-handlers'
 import { registerDraftHandlers } from './draft-handlers'
 import { registerScraperHandlers } from './scraper-handlers'
 import { registerResolutionHandlers } from './resolution-handlers'
+import { registerFeedbackHandlers } from './feedback-handlers'
+import { registerDevHandlers } from './dev-handlers'
 import { loadApiConfig } from '../services/api-config'
+import { createFeedbackService } from '../services/feedback-service'
 
 // @DEV-GUIDE: Central IPC handler registration. All renderer↔main communication goes through
 // typed IPC channels following the domain:action naming convention (e.g. 'ml:scan', 'hero:getAll').
@@ -131,6 +134,18 @@ export function registerIpcHandlers(
     bridge.subscribe([overlayWin])
     appStore.setState({ overlayActive: true, activeResolution: resolution, activeResolutionSource: source })
 
+    // Global scan hotkeys, active only while the overlay is open. The overlay never
+    // holds keyboard focus (showInactive + click-through), so in-window key handlers
+    // can't work — globalShortcut is the only way to trigger a scan from the game.
+    const sendHotkey = (action: 'scan' | 'rescan'): void => {
+      const win = windowManager.getOverlayWindow()
+      if (win && !win.isDestroyed()) {
+        win.webContents.send('overlay:hotkey', { action })
+      }
+    }
+    globalShortcut.register('Control+Shift+S', () => sendHotkey('scan'))
+    globalShortcut.register('Control+Shift+R', () => sendHotkey('rescan'))
+
     // Store initial setup data so the renderer can request it after mounting
     const scaleFactor = layoutService.getScaleFactor()
     pendingOverlayData = {
@@ -169,8 +184,11 @@ export function registerIpcHandlers(
 
     // Reset state when overlay window closes for any reason (user close, crash, etc.)
     overlayWin.on('closed', () => {
+      globalShortcut.unregister('Control+Shift+S')
+      globalShortcut.unregister('Control+Shift+R')
       windowTracker.stopTracking()
       appStore.setState({ overlayActive: false, activeResolution: null, activeResolutionSource: null })
+      draftStore.getState().resetSession()
       pendingOverlayData = null
 
       const cp = windowManager.getControlPanelWindow()
@@ -190,6 +208,12 @@ export function registerIpcHandlers(
     appStore.setState({ overlayActive: false, activeResolution: null, activeResolutionSource: null })
   })
 
+  // Overlay Reset button: clear the main-process draft session (pool caches + selections).
+  // Without this, a Reset followed by a Rescan diffs against the previous draft's pool.
+  ipcMain.on('overlay:reset', () => {
+    draftStore.getState().resetSession()
+  })
+
   ipcMain.on(
     'overlay:setMouseIgnore',
     (_event, data: { ignore: boolean; forward?: boolean }) => {
@@ -200,6 +224,13 @@ export function registerIpcHandlers(
   // Database domain (hero, ability, settings, backup)
   registerDatabaseHandlers(dbService, backupService)
 
+  // API config is shared by the resolution and feedback domains
+  const apiConfig = loadApiConfig()
+
+  // Feedback domain (Report Failed Recognition → export/upload samples)
+  const feedbackService = createFeedbackService(apiConfig)
+  registerFeedbackHandlers(feedbackService, windowManager)
+
   // ML domain
   registerMlHandlers(
     mlService,
@@ -209,6 +240,8 @@ export function registerIpcHandlers(
     scanProcessingService,
     appStore,
     windowTracker,
+    feedbackService,
+    dbService,
   )
 
   // Draft domain (My Spot, My Model)
@@ -218,8 +251,12 @@ export function registerIpcHandlers(
   registerScraperHandlers(scraperService)
 
   // Resolution domain
-  const apiConfig = loadApiConfig()
   registerResolutionHandlers(layoutService, screenshotService, windowTracker, windowManager, apiConfig)
+
+  // Dev-only ML pipeline cockpit (gather/upload/retrain shortcuts)
+  if (!app.isPackaged) {
+    registerDevHandlers(appStore, dbService)
+  }
 
   // Update domain
   ipcMain.on('app:checkUpdate', () => {

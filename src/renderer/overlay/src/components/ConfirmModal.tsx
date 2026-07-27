@@ -8,7 +8,7 @@ interface ConfirmModalProps {
   cancelLabel: string
   onConfirm: () => void
   onCancel: () => void
-  showDontShowAgain?: boolean
+  dontShowLabel?: string
   onDontShowAgain?: () => void
 }
 
@@ -19,7 +19,7 @@ export function ConfirmModal({
   cancelLabel,
   onConfirm,
   onCancel,
-  showDontShowAgain,
+  dontShowLabel,
   onDontShowAgain,
 }: ConfirmModalProps): React.ReactElement | null {
   const { onMouseEnter, onMouseLeave } = useMousePassthrough()
@@ -56,16 +56,14 @@ export function ConfirmModal({
           <button className="overlay-btn overlay-btn-green" onClick={onConfirm}>
             {confirmLabel}
           </button>
-          {showDontShowAgain && onDontShowAgain && (
+          {dontShowLabel && onDontShowAgain && (
             <button className="overlay-btn overlay-btn-gray" onClick={onDontShowAgain}>
-              {cancelLabel}
+              {dontShowLabel}
             </button>
           )}
-          {!showDontShowAgain && (
-            <button className="overlay-btn overlay-btn-gray" onClick={onCancel}>
-              {cancelLabel}
-            </button>
-          )}
+          <button className="overlay-btn overlay-btn-gray" onClick={onCancel}>
+            {cancelLabel}
+          </button>
         </div>
       </div>
     </div>

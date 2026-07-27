@@ -3,6 +3,7 @@ import { Brain, Monitor, Database, Calendar } from 'lucide-react'
 import { StatusCard } from '@/components/dashboard/status-card'
 import { QuickActions } from '@/components/dashboard/quick-actions'
 import { SystemInfoCard } from '@/components/dashboard/system-info-card'
+import { FirstRunChecklist } from '@/components/dashboard/first-run-checklist'
 import { useAppStore } from '@/hooks/use-app-store'
 
 type StatusColor = 'green' | 'yellow' | 'red' | 'gray'
@@ -26,9 +27,11 @@ export function DashboardPage() {
   const { t: tc } = useTranslation()
 
   const mlStatus = useAppStore((s) => s.mlStatus)
+  const mlError = useAppStore((s) => s.mlError)
   const mlModelGaps = useAppStore((s) => s.mlModelGaps)
   const overlayActive = useAppStore((s) => s.overlayActive)
   const activeResolution = useAppStore((s) => s.activeResolution)
+  const activeResolutionSource = useAppStore((s) => s.activeResolutionSource)
   const scraperLastUpdated = useAppStore((s) => s.scraperLastUpdated)
 
   const overlayValue = overlayActive && activeResolution
@@ -39,12 +42,14 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      <FirstRunChecklist />
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatusCard
           icon={Brain}
           label={t('statusCards.mlWorker')}
           value={tc(`status.${mlStatus}`)}
           color={mlStatusColor(mlStatus)}
+          detail={mlStatus === 'error' && mlError ? mlError : undefined}
           badge={
             mlModelGaps?.missingFromModel.length
               ? t('statusCards.mlGapsBadge', { count: mlModelGaps.missingFromModel.length })
@@ -56,6 +61,11 @@ export function DashboardPage() {
           label={t('statusCards.overlay')}
           value={overlayValue}
           color={overlayActive ? 'green' : 'gray'}
+          detail={
+            overlayActive && activeResolutionSource
+              ? t(`resolutionSource.${activeResolutionSource}`)
+              : undefined
+          }
         />
         <StatusCard
           icon={Database}

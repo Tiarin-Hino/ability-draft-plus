@@ -26,6 +26,12 @@ import type { MlModelGaps } from '@core/ml/staleness-detector'
 
 export type LayoutSource = 'preset' | 'custom' | 'auto-scaled' | 'none'
 
+export interface FeedbackStatus {
+  messageKey: string
+  params?: Record<string, string | number>
+  error?: boolean
+}
+
 // Request/Response type mapping for invoke (two-way) channels
 export interface IpcInvokeMap {
   'hero:getAll': { request: void; response: Hero[] }
@@ -82,7 +88,24 @@ export interface IpcInvokeMap {
   }
   'ml:init': { request: void; response: { success: boolean; error?: string } }
   'ml:getModelGaps': { request: void; response: MlModelGaps | null }
+  'ml:exportModelGaps': {
+    request: void
+    response: { success: boolean; path?: string; count?: number; error?: string }
+  }
   'overlay:getInitialData': { request: void; response: OverlayDataPayload | null }
+  // Dev-only ML pipeline cockpit (handlers exist only in unpackaged builds)
+  'dev:runGatherScript': {
+    request: { dryRun: boolean }
+    response: { success: boolean; output?: string; error?: string }
+  }
+  'dev:uploadDataset': {
+    request: void
+    response: { success: boolean; error?: string }
+  }
+  'dev:triggerRetrain': {
+    request: { datasetVersion: string; fineTune: boolean }
+    response: { success: boolean; output?: string; error?: string }
+  }
   'overlay:activate': {
     request: void
     response: { success: boolean; resolution?: string; source?: LayoutSource; error?: string }
@@ -94,6 +117,7 @@ export interface IpcSendMap {
   'scraper:start': void
   'scraper:startLiquipedia': void
   'overlay:close': void
+  'overlay:reset': void
   'overlay:setMouseIgnore': { ignore: boolean; forward?: boolean }
   'ml:scan': { heroOrder: number; isInitialScan: boolean }
   'draft:selectMySpot': { heroOrder: number; dbHeroId: number }
@@ -111,6 +135,7 @@ export interface IpcSendMap {
 // Main-to-renderer event channels
 export interface IpcOnMap {
   'overlay:data': OverlayDataPayload
+  'overlay:hotkey': { action: 'scan' | 'rescan' }
   'scraper:status': string | { key: string; params?: Record<string, string> }
   'scraper:lastUpdated': string | null
   'scraper:liquipediaStatus': string
@@ -124,9 +149,11 @@ export interface IpcOnMap {
   }
   'draft:selectMySpot': { selectedHeroOrderForDrafting: number | null }
   'draft:selectMyModel': { selectedModelHeroOrder: number | null }
-  'feedback:snapshotStatus': { message: string; error?: boolean; allowRetry?: boolean }
-  'feedback:exportStatus': { message: string; error?: boolean }
-  'feedback:uploadStatus': { message: string; error?: boolean }
+  // Feedback statuses carry i18n keys (resolved in the receiving renderer's namespace)
+  // so main-process code never hardcodes display language.
+  'feedback:snapshotStatus': FeedbackStatus
+  'feedback:exportStatus': FeedbackStatus
+  'feedback:uploadStatus': FeedbackStatus
 }
 
 // The typed API exposed to renderers via contextBridge

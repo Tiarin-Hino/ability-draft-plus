@@ -39,6 +39,7 @@ export function ControlsPanel({
             className="overlay-btn overlay-btn-purple"
             onClick={onInitialScan}
             disabled={isScanning}
+            title="Ctrl+Shift+S"
           >
             {t('initialScan')}
           </button>
@@ -50,6 +51,7 @@ export function ControlsPanel({
               className="overlay-btn overlay-btn-green"
               onClick={onRescan}
               disabled={isScanning}
+              title="Ctrl+Shift+R"
             >
               {t('rescan')}
             </button>

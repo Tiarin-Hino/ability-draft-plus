@@ -41,6 +41,14 @@
     "description": "If the ML model misidentifies abilities, use 'Report Failed Recognition' in the overlay. You can then send snapshots to the developer for model improvement.",
     "exportButton": "Export Failed Samples",
     "uploadButton": "Send Failed Samples",
-    "feedbackButton": "Share Feedback"
+    "feedbackButton": "Share Feedback",
+    "exportNone": "No snapshots to export yet — use 'Report Failed Recognition' in the overlay first.",
+    "exportSuccess": "Exported {{count}} snapshot(s) to {{path}}",
+    "exportError": "Export failed: {{error}}",
+    "uploadNone": "No new snapshots to upload.",
+    "uploadSuccess": "Uploaded {{count}} snapshot(s). Thank you!",
+    "uploadPartial": "Uploaded {{count}} of {{total}} snapshot(s); {{failed}} failed. Will retry the rest next time.",
+    "uploadError": "Upload failed: {{error}}",
+    "apiNotConfigured": "The upload service is not configured in this build — use Export and attach the file to a GitHub issue."
   }
 }

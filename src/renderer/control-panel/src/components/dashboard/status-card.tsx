@@ -10,6 +10,7 @@ interface StatusCardProps {
   value: string
   color: StatusColor
   badge?: string
+  detail?: string
 }
 
 const colorMap: Record<StatusColor, string> = {
@@ -26,7 +27,7 @@ const dotMap: Record<StatusColor, string> = {
   gray: 'bg-muted-foreground',
 }
 
-export function StatusCard({ icon: Icon, label, value, color, badge }: StatusCardProps) {
+export function StatusCard({ icon: Icon, label, value, color, badge, detail }: StatusCardProps) {
   return (
     <Card>
       <CardContent className="flex items-center gap-3 p-4">
@@ -44,6 +45,11 @@ export function StatusCard({ icon: Icon, label, value, color, badge }: StatusCar
             <span className={cn('h-2 w-2 rounded-full shrink-0', dotMap[color])} aria-hidden="true" />
             <p className={cn('text-sm truncate', colorMap[color])}>{value}</p>
           </div>
+          {detail && (
+            <p className="text-xs text-muted-foreground line-clamp-2 mt-1" title={detail}>
+              {detail}
+            </p>
+          )}
         </div>
       </CardContent>
     </Card>

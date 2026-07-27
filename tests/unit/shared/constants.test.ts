@@ -9,7 +9,6 @@ import {
   MIN_PICK_ORDER_FOR_NORMALIZATION,
   MAX_PICK_ORDER_FOR_NORMALIZATION,
   MODEL_INPUT_SIZE,
-  MODEL_NUM_CLASSES,
   ML_WORKER_MAX_RESTART_ATTEMPTS,
 } from '@shared/constants/thresholds'
 
@@ -39,9 +38,10 @@ describe('Business logic constants', () => {
     expect(MAX_PICK_ORDER_FOR_NORMALIZATION).toBe(50.0)
   })
 
-  it('model input is 96x96 with 524 classes', () => {
+  it('model input is 96x96', () => {
+    // Class count is intentionally NOT a constant — it is defined by
+    // class_names.json and validated against the model at init.
     expect(MODEL_INPUT_SIZE).toBe(96)
-    expect(MODEL_NUM_CLASSES).toBe(524)
   })
 
   it('worker max restart attempts is 3', () => {

@@ -6,7 +6,6 @@ interface HeroModelHotspotProps {
   coord: SlotCoordinate
   scaleFactor: number
   isMyModel: boolean
-  tooltipVisible: boolean
   onHover: (model: HeroModelDisplay, rect: DOMRect) => void
   onLeave: () => void
 }
@@ -16,7 +15,6 @@ export function HeroModelHotspot({
   coord,
   scaleFactor,
   isMyModel,
-  tooltipVisible,
   onHover,
   onLeave,
 }: HeroModelHotspotProps): React.ReactElement {
@@ -33,10 +31,6 @@ export function HeroModelHotspot({
     className += ' is-my-model'
   } else if (model.isGeneralTopTier) {
     className += ' shimmer-gold'
-  }
-
-  if (tooltipVisible) {
-    className += ' snapshot-hidden-border'
   }
 
   const handleMouseEnter = useCallback(

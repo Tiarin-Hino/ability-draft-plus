@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Download, AlertCircle, CheckCircle2, Loader2, BookOpen, AlertTriangle } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { MlPipelineCard } from '@/components/data/ml-pipeline-card'
 import { useAppStore } from '@/hooks/use-app-store'
 
 export function ScrapingPage() {
@@ -130,6 +131,9 @@ export function ScrapingPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* ML Pipeline cockpit (dev mode only) */}
+      {isDevMode && <MlPipelineCard />}
     </div>
   )
 }

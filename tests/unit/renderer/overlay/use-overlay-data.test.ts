@@ -278,14 +278,18 @@ describe('useOverlayData', () => {
   })
 
   describe('feedback:snapshotStatus listener', () => {
-    it('updates snapshot message', () => {
+    it('resolves the messageKey to a translated snapshot message', () => {
       const { result } = renderHook(() => useOverlayData())
 
       act(() =>
-        emit('feedback:snapshotStatus', { message: 'Snapshot saved!' }),
+        emit('feedback:snapshotStatus', {
+          messageKey: 'snapshot.saved',
+          params: { count: 3 },
+        }),
       )
 
-      expect(result.current.snapshotMessage).toBe('Snapshot saved!')
+      expect(result.current.snapshotMessage).toContain('3')
+      expect(result.current.snapshotMessage).not.toContain('snapshot.saved')
       expect(result.current.snapshotIsError).toBe(false)
     })
 
@@ -294,12 +298,13 @@ describe('useOverlayData', () => {
 
       act(() =>
         emit('feedback:snapshotStatus', {
-          message: 'Failed to save',
+          messageKey: 'snapshot.noScan',
           error: true,
         }),
       )
 
-      expect(result.current.snapshotMessage).toBe('Failed to save')
+      expect(result.current.snapshotMessage).toBeTruthy()
+      expect(result.current.snapshotMessage).not.toContain('snapshot.noScan')
       expect(result.current.snapshotIsError).toBe(true)
     })
   })

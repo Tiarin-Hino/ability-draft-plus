@@ -106,7 +106,8 @@ describe('OnnxClassifier', () => {
       })
     })
 
-    it('throws if class names count is wrong', async () => {
+    it('throws if class names count does not match the model output size', async () => {
+      // Model warmup output is 524 wide (mock default) but class list has 100 entries
       mockReadFile.mockResolvedValueOnce(JSON.stringify(makeClassNames(100)))
 
       const classifier = createOnnxClassifier()
@@ -116,7 +117,34 @@ describe('OnnxClassifier', () => {
           classNamesPath: '/path/to/class_names.json',
           useDirectML: false,
         }),
-      ).rejects.toThrow('Expected 524 class names, got 100')
+      ).rejects.toThrow('does not match class_names.json')
+    })
+
+    it('accepts any class count that matches the model output size', async () => {
+      // A retrained model with more classes must initialize without code changes
+      mockReadFile.mockResolvedValueOnce(JSON.stringify(makeClassNames(530)))
+      mockRun.mockResolvedValueOnce({ Identity: { data: new Float32Array(530) } })
+
+      const classifier = createOnnxClassifier()
+      await classifier.initialize({
+        modelPath: '/path/to/model.onnx',
+        classNamesPath: '/path/to/class_names.json',
+        useDirectML: false,
+      })
+      expect(classifier.isReady()).toBe(true)
+    })
+
+    it('throws on an empty class list', async () => {
+      mockReadFile.mockResolvedValueOnce(JSON.stringify([]))
+
+      const classifier = createOnnxClassifier()
+      await expect(
+        classifier.initialize({
+          modelPath: '/path/to/model.onnx',
+          classNamesPath: '/path/to/class_names.json',
+          useDirectML: false,
+        }),
+      ).rejects.toThrow('empty or invalid')
     })
 
     it('runs warmup inference during init', async () => {

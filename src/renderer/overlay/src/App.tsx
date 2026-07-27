@@ -64,6 +64,23 @@ function App(): React.ReactElement {
     }
   }, [language])
 
+  const activeResolution = useAppStore((s) => s.activeResolution)
+  const activeResolutionSource = useAppStore((s) => s.activeResolutionSource)
+
+  // Global hotkeys (registered in main while the overlay is open). Scan skips the
+  // confirmation dialog — pressing the hotkey is already an explicit intent.
+  useEffect(() => {
+    const unsub = window.electronApi.on('overlay:hotkey', ({ action }) => {
+      if (scanState === 'scanning') return
+      if (action === 'scan') {
+        triggerScan(true)
+      } else if (scanState === 'scanned' || scanState === 'error') {
+        triggerScan(false)
+      }
+    })
+    return unsub
+  })
+
   const handleInitialScan = useCallback((): void => {
     const hide = localStorage.getItem(HIDE_SCAN_CONFIRM_KEY) === 'true'
     if (hide) {
@@ -100,6 +117,13 @@ function App(): React.ReactElement {
     setShowReportConfirm(false)
     window.electronApi.send('feedback:takeSnapshot')
   }, [])
+
+  // Scan quality summary over the initial pool (ultimates + standard)
+  const poolSlots = overlayData?.scanData
+    ? [...overlayData.scanData.ultimates, ...overlayData.scanData.standard]
+    : []
+  const unknownCount = poolSlots.filter((s) => s.isUnknown).length
+  const recognizedCount = poolSlots.length - unknownCount
 
   // Status message for scan state
   const statusMessage =
@@ -144,6 +168,27 @@ function App(): React.ReactElement {
           onReportFailed={handleReportFailed}
         />
 
+        {/* Resolution + layout source badge */}
+        {activeResolution && activeResolutionSource && (
+          <div
+            className={`resolution-badge${activeResolutionSource === 'auto-scaled' ? ' resolution-badge-warn' : ''}`}
+            title={
+              activeResolutionSource === 'auto-scaled'
+                ? t('resolution.autoScaledWarning')
+                : undefined
+            }
+          >
+            {activeResolution} · {t(`resolution.source.${activeResolutionSource}`)}
+          </div>
+        )}
+
+        {/* Scan quality summary */}
+        {overlayData?.scanData && poolSlots.length > 0 && (
+          <div className={`scan-summary${unknownCount > 0 ? ' scan-summary-warn' : ''}`}>
+            {t('scanSummary', { recognized: recognizedCount, total: poolSlots.length })}
+          </div>
+        )}
+
         {/* OP Combinations Panel - z-index 9999 */}
         {overlayData && (
           <CombinationPanel
@@ -179,10 +224,10 @@ function App(): React.ReactElement {
         open={showScanConfirm}
         message={t('scanConfirm.message')}
         confirmLabel={t('scanConfirm.proceed')}
-        cancelLabel={t('scanConfirm.dontShow')}
+        cancelLabel={t('scanConfirm.cancel')}
         onConfirm={handleScanConfirmProceed}
         onCancel={() => setShowScanConfirm(false)}
-        showDontShowAgain
+        dontShowLabel={t('scanConfirm.dontShow')}
         onDontShowAgain={handleScanConfirmDontShow}
       />
 

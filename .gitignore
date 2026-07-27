@@ -48,3 +48,6 @@ test-results/
 
 # Colab
 colab/**
+
+# Python bytecode (training pipeline)
+__pycache__/
