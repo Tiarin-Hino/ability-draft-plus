@@ -11,7 +11,10 @@
   --color-hero-tier-bright: 255, 230, 50;
   --color-synergy: 68, 120, 213;
   --color-synergy-bright: 90, 145, 235;
-  --color-my-spot: 33, 145, 128;
+  /* my-spot is deliberately DISTINCT from top-pick (they were identical, making
+     "recommended" and "yours" indistinguishable) — warm amber vs teal differs in
+     both hue and luminance, keeping the colorblind-safe intent */
+  --color-my-spot: 226, 149, 58;
   --color-my-model: 94, 201, 98;
   --color-wr-strong: #219180;
   --color-wr-weak: #CF597E;
@@ -64,7 +67,6 @@ body {
   flex-direction: column;
   flex-shrink: 0;
   gap: 6px;
-  opacity: 0.88;
   padding: 10px;
   transition: all 0.2s ease-in-out;
   will-change: transform;
@@ -73,7 +75,6 @@ body {
 .controls-panel:hover {
   background-color: rgba(72, 41, 76, 0.92);
   border-color: rgba(93, 53, 102, 0.6);
-  opacity: 1;
 }
 
 .controls-button-group {
@@ -408,13 +409,14 @@ body {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7);
   color: #e8e8e8;
   font-size: 13px;
-  opacity: 0.92;
   padding: 14px;
   transition: all 0.2s ease-in-out;
   width: 260px;
   will-change: transform;
   /* Cap each panel so OP + Trap together can't occupy the full right edge
-     (the draft timer and pick order live there) */
+     (the draft timer and pick order live there). No extra opacity multiplier —
+     panel transparency is a user setting applied on the parent column, and
+     stacked multipliers washed the 12px text out over bright footage. */
   max-height: 40vh;
   overflow-y: auto;
   overflow-x: hidden;
@@ -431,10 +433,6 @@ body {
 
 .combination-panel::-webkit-scrollbar-track {
   background: transparent;
-}
-
-.combination-panel:hover {
-  opacity: 1;
 }
 
 .combination-panel-op {
@@ -607,7 +605,7 @@ body {
 .top-right-column {
   position: fixed;
   top: 15px;
-  right: 15px;
+  /* horizontal side (left/right) and opacity are set inline from user settings */
   z-index: 10000;
   display: flex;
   flex-direction: column;
@@ -616,6 +614,10 @@ body {
   max-height: calc(100vh - 30px);
   overflow-y: auto;
   overflow-x: hidden;
+}
+
+.top-right-column-left {
+  align-items: flex-start;
 }
 
 .top-right-column::-webkit-scrollbar {

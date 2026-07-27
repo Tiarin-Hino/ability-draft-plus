@@ -66,6 +66,8 @@ function App(): React.ReactElement {
 
   const activeResolution = useAppStore((s) => s.activeResolution)
   const activeResolutionSource = useAppStore((s) => s.activeResolutionSource)
+  const overlayOpacity = useAppStore((s) => s.overlayOpacity)
+  const overlayAnchor = useAppStore((s) => s.overlayAnchor)
 
   // Global hotkeys (registered in main while the overlay is open). Scan skips the
   // confirmation dialog — pressing the hotkey is already an explicit intent.
@@ -156,8 +158,14 @@ function App(): React.ReactElement {
         />
       )}
 
-      {/* Top-right column: controls + OP/Trap panels */}
-      <div className="top-right-column">
+      {/* Controls + OP/Trap panels column; side and opacity are user settings */}
+      <div
+        className={`top-right-column${overlayAnchor === 'left' ? ' top-right-column-left' : ''}`}
+        style={{
+          opacity: overlayOpacity ?? 1,
+          ...(overlayAnchor === 'left' ? { left: 15 } : { right: 15 }),
+        }}
+      >
         {/* Controls Panel - z-index 10000 */}
         <ControlsPanel
           scanState={scanState}

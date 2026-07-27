@@ -29,7 +29,7 @@ export function ControlsPanel({
     <div
       className="controls-panel overlay-interactive"
       role="toolbar"
-      aria-label="Overlay Controls"
+      aria-label={t('controlsAria')}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >

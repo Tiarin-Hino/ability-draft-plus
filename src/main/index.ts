@@ -140,6 +140,8 @@ app.whenReady().then(async () => {
     themeMode: resolvedThemeMode,
     resolvedDarkMode: nativeTheme.shouldUseDarkColors,
     language: (settings.language as 'en' | 'ru') ?? 'en',
+    overlayOpacity: settings.overlayOpacity,
+    overlayAnchor: settings.overlayAnchor,
   })
 
   // Sync nativeTheme changes to app store
@@ -150,6 +152,8 @@ app.whenReady().then(async () => {
   // Sync app store changes to nativeTheme + persist to database
   let prevThemeMode = appStore.getState().themeMode
   let prevLanguage = appStore.getState().language
+  let prevOverlayOpacity = appStore.getState().overlayOpacity
+  let prevOverlayAnchor = appStore.getState().overlayAnchor
   appStore.subscribe((state) => {
     if (nativeTheme.themeSource !== state.themeMode) {
       nativeTheme.themeSource = state.themeMode
@@ -167,6 +171,16 @@ app.whenReady().then(async () => {
     if (state.language !== prevLanguage) {
       prevLanguage = state.language
       dbService.metadata.setSettings({ language: state.language })
+      dbService.persist()
+    }
+    if (state.overlayOpacity !== prevOverlayOpacity) {
+      prevOverlayOpacity = state.overlayOpacity
+      dbService.metadata.setSettings({ overlayOpacity: state.overlayOpacity })
+      dbService.persist()
+    }
+    if (state.overlayAnchor !== prevOverlayAnchor) {
+      prevOverlayAnchor = state.overlayAnchor
+      dbService.metadata.setSettings({ overlayAnchor: state.overlayAnchor })
       dbService.persist()
     }
   })

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Check } from 'lucide-react'
+import { Check, RotateCcw } from 'lucide-react'
 import {
   Card,
   CardContent,
@@ -56,6 +56,12 @@ export function ThresholdCard({
   }
 
   const displayPercent = Math.round(value * 10000) / 100
+  const defaultPercent = Math.round(defaultValue * 10000) / 100
+  const isDefault = Math.abs(value - defaultValue) < 1e-9
+
+  const handleResetToDefault = () => {
+    setLocalValue(defaultValue)
+  }
 
   return (
     <Card>
@@ -65,7 +71,12 @@ export function ThresholdCard({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <label className="text-sm font-medium">{t(`${ns}.label`)}</label>
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium">{t(`${ns}.label`)}</label>
+            <span className="text-xs text-muted-foreground">
+              {t('thresholdCommon.defaultLabel', { value: defaultPercent })}
+            </span>
+          </div>
           <div className="flex items-center gap-4">
             <Slider
               value={[displayPercent]}
@@ -89,16 +100,27 @@ export function ThresholdCard({
             </div>
           </div>
         </div>
-        <Button onClick={handleSave} disabled={!dirty} size="sm">
-          {saveSuccess ? (
-            <>
-              <Check className="h-4 w-4 text-green-500" />
-              {t(`${ns}.savedMessage`)}
-            </>
-          ) : (
-            t(`${ns}.saveButton`)
-          )}
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={handleSave} disabled={!dirty} size="sm">
+            {saveSuccess ? (
+              <>
+                <Check className="h-4 w-4 text-green-500" />
+                {t(`${ns}.savedMessage`)}
+              </>
+            ) : (
+              t(`${ns}.saveButton`)
+            )}
+          </Button>
+          <Button
+            onClick={handleResetToDefault}
+            disabled={isDefault}
+            variant="outline"
+            size="sm"
+          >
+            <RotateCcw className="h-4 w-4 mr-1" aria-hidden="true" />
+            {t('thresholdCommon.resetButton')}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   )
