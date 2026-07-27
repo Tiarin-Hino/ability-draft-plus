@@ -6,13 +6,13 @@ implementation for ConvInteger"). The gate therefore runs in its own minimal
 environment (requirements-gate.txt: modern onnxruntime + numpy) and consumes
 artifacts produced by train.py in --output-dir:
 
-    ability_classifier_int8.onnx   the artifact being judged
+    ability_classifier_fp16.onnx   the artifact being judged
     class_names.json               class order
     test_data.npz                  exact test tensors (raw 0-255 float32) + labels
     train_summary.json             training context (keras accuracy, dataset, ...)
 
 Outputs metrics.json + report.md and exits 1 when the gate fails:
-INT8 accuracy < --min-accuracy, or quantization drop > --max-quant-drop.
+FP16 accuracy < --min-accuracy, or conversion drop > --max-quant-drop.
 """
 
 import argparse
@@ -32,9 +32,9 @@ def parse_args():
     p.add_argument("--output-dir", default="training_output",
                    help="Directory holding train.py's artifacts; reports go here too")
     p.add_argument("--min-accuracy", type=float, default=0.97,
-                   help="Gate: minimum INT8 test accuracy")
+                   help="Gate: minimum converted-model test accuracy")
     p.add_argument("--max-quant-drop", type=float, default=0.01,
-                   help="Gate: maximum accuracy drop from Keras to INT8")
+                   help="Gate: maximum accuracy drop from Keras to the converted model")
     p.add_argument("--no-gate", action="store_true",
                    help="Report metrics but never fail (experiments)")
     return p.parse_args()
@@ -55,7 +55,7 @@ def main():
     print(f"Test tensors: {images.shape[0]} images, {len(class_names)} classes")
 
     session = ort.InferenceSession(
-        os.path.join(out, "ability_classifier_int8.onnx"),
+        os.path.join(out, "ability_classifier_fp16.onnx"),
         providers=["CPUExecutionProvider"],
     )
     input_name = session.get_inputs()[0].name
@@ -68,10 +68,10 @@ def main():
     y_pred = np.array(y_pred)
     y_true = labels
 
-    int8_acc = float((y_true == y_pred).mean())
+    model_acc = float((y_true == y_pred).mean())
     keras_acc = summary["kerasTestAccuracy"]
-    quant_drop = keras_acc - int8_acc
-    print(f"INT8 test accuracy: {int8_acc:.4f} (drop vs Keras: {quant_drop:+.4f})")
+    quant_drop = keras_acc - model_acc
+    print(f"FP16 test accuracy: {model_acc:.4f} (drop vs Keras: {quant_drop:+.4f})")
 
     per_class_recall = {}
     confusions = Counter()
@@ -84,14 +84,14 @@ def main():
         if t != p:
             confusions[(class_names[t], class_names[p])] += 1
 
-    gate_passed = int8_acc >= args.min_accuracy and quant_drop <= args.max_quant_drop
+    gate_passed = model_acc >= args.min_accuracy and quant_drop <= args.max_quant_drop
     worst_classes = sorted(per_class_recall.items(), key=lambda kv: kv[1])[:15]
     top_confusions = confusions.most_common(10)
 
     metrics = {
         **summary,
-        "int8TestAccuracy": round(int8_acc, 5),
-        "quantizationDrop": round(float(quant_drop), 5),
+        "fp16TestAccuracy": round(model_acc, 5),
+        "conversionDrop": round(float(quant_drop), 5),
         "gate": {
             "minAccuracy": args.min_accuracy,
             "maxQuantDrop": args.max_quant_drop,
@@ -114,11 +114,11 @@ def main():
         f"- Dataset: v{summary.get('datasetVersion', '?')} ({summary.get('datasetCreatedAt', 'unknown date')})",
         f"- Classes: **{summary['numClasses']}** ({summary['trainImages']} training images, seed {summary['seed']})",
         f"- Keras test accuracy: **{keras_acc:.2%}**",
-        f"- INT8 ONNX test accuracy: **{int8_acc:.2%}** (quantization drop {quant_drop:+.2%})",
+        f"- FP16 ONNX test accuracy: **{model_acc:.2%}** (conversion drop {quant_drop:+.2%})",
         f"- Gate (≥{args.min_accuracy:.0%}, drop ≤{args.max_quant_drop:.0%}): "
         + ("**PASSED** ✅" if gate_passed else "**FAILED** ❌"),
         f"- Fine-tuned top block: {'yes' if summary.get('fineTuned') else 'no'}",
-        f"- INT8 size: {summary.get('int8SizeMb', '?')} MB",
+        f"- FP16 size: {summary.get('modelSizeMb', '?')} MB",
     ]
     if added:
         lines += ["", f"### New classes ({len(added)})", ""]

@@ -76,7 +76,7 @@ describe('MlService', () => {
       expect(mockWorkerInstance.postMessage).toHaveBeenCalledWith({
         type: 'init',
         payload: {
-          modelPath: expect.stringContaining('ability_classifier_int8.onnx'),
+          modelPath: expect.stringContaining('ability_classifier_fp16.onnx'),
           classNamesPath: expect.stringContaining('class_names.json'),
           useDirectML: false,
         },

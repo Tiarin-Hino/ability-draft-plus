@@ -64,7 +64,7 @@ export function createMlService(): MlService {
     const basePath = app.isPackaged
       ? process.resourcesPath
       : join(app.getAppPath(), 'resources')
-    return join(basePath, 'model', 'ability_classifier_int8.onnx')
+    return join(basePath, 'model', 'ability_classifier_fp16.onnx')
   }
 
   function getClassNamesPath(): string {

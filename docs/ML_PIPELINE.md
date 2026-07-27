@@ -21,8 +21,7 @@ uploaded" is automated with one click and one PR review.
 ┌─ GitHub ─────────────────────────────────────────────────────────────────┐
 │ 5. Actions → "Retrain ML model" → dataset_version = N                    │
 │    - trains MobileNetV2 head (seeded, class-weighted, early stopping)    │
-│    - converts SavedModel → ONNX (opset 18) → static QDQ INT8             │
-│      (per-channel, calibrated on validation images)                      │
+│    - converts SavedModel → ONNX (opset 18) → FP16 (~5.6 MB)              │
 │    - REGRESSION GATE: evaluates the actual INT8 artifact on the test     │
 │      split; fails below --min-accuracy (default 97%) or if quantization  │
 │      costs more than 1% accuracy                                         │
@@ -60,13 +59,16 @@ access for `upload_dataset.py`.
   classes have as few as 8 images), EarlyStopping with best-weights restore,
   horizontal flip removed from augmentation (icons never appear mirrored),
   optional `--fine-tune` of the top MobileNetV2 block at lr=1e-5.
-- The gate exists because quantization has silently destroyed accuracy twice in
-  this project's history (UINT8 in the TFJS era; per-tensor dynamic quantization
-  of the TF 2.15 graph collapsed 99% → 0.1% in the first CI run) — the INT8
-  artifact itself is evaluated on the test split, not the Keras model.
-- Quantization is static QDQ, per-channel, calibrated on a seeded sample of
-  validation images. QDQ ops run on every ORT version and provider (including
-  DirectML), unlike the ConvInteger ops dynamic quantization emits.
+- The shipped model is **FP16**, not INT8 — a deliberate decision after INT8
+  failed twice: dynamic quantization collapsed accuracy to random (99% → 0.1%),
+  and static per-channel QDQ proved weight-distribution-sensitive (98.8% on one
+  converged model, 92.2% on another with identical code — training is not
+  bit-reproducible across platforms). FP16 matches FP32 accuracy exactly, needs
+  no calibration, is deterministic on every run, and runs on all ORT providers
+  (DirectML natively prefers it). ~5.6 MB vs ~3.2 MB INT8 is irrelevant on
+  desktop; pipeline reliability is not.
+- The gate still evaluates the actual shipped FP16 artifact on the test split
+  (never the Keras model) — it has caught two real would-be-shipped disasters.
 
 Run locally (Python 3.11):
 
