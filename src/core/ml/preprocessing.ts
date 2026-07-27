@@ -21,7 +21,12 @@ export async function preprocessSlot(
 ): Promise<Buffer> {
   return sharp(screenshotBuffer)
     .extract({ left: slot.x, top: slot.y, width: slot.width, height: slot.height })
-    .resize(MODEL_INPUT_SIZE, MODEL_INPUT_SIZE)
+    // kernel MUST be 'linear' (bilinear): the training pipeline resizes with TF's
+    // bilinear interpolation, and sharp's default lanczos3 produces sharpening
+    // artifacts the model never saw — verified on a real capture to drop
+    // borderline classes from ~0.7-0.9 confidence to ~0.26-0.72 (below the 0.9
+    // threshold → rendered as Unknown). Train/serve resize kernels must match.
+    .resize(MODEL_INPUT_SIZE, MODEL_INPUT_SIZE, { kernel: 'linear' })
     .removeAlpha()
     .raw()
     .toBuffer()
