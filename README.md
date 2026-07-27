@@ -1,5 +1,13 @@
 # Dota 2 Ability Draft Plus
 
+> [!IMPORTANT]
+> **Updating from 2.0.0, 2.0.1, or 2.0.2? Click "Check for Updates" manually.**
+> Those versions do not look for new releases on their own — a feature from the 1.x
+> series that was accidentally lost in the v2 rewrite and is restored in **2.1.0**.
+> Open the app, go to the **Dashboard**, and press **Check for Updates** to receive
+> 2.1.0; from then on, the app checks automatically again. This notice will also be
+> published on the [website](https://tiarinhino.com) after its upcoming rehaul.
+
 AI-powered overlay for Dota 2's Ability Draft mode. Scans the draft board using machine learning, identifies all abilities in the pool, and displays real-time synergy recommendations directly on your game screen.
 
 ![License](https://img.shields.io/badge/license-ISC-blue)

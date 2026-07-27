@@ -30,7 +30,11 @@
     "activationError": "Failed to activate overlay.",
     "retryMl": "Retry ML",
     "updateData": "Update Data",
+    "updatingData": "Updating…",
     "checkUpdates": "Check for Updates",
+    "checking": "Checking…",
+    "upToDate": "You're on the latest version.",
+    "updateFound": "Update v{{version}} available — see the banner above.",
     "exportGaps": "Export Model Gaps ({{count}})",
     "exportGapsSuccess": "Exported {{count}} missing abilities to {{path}} — feed this to the data-gather script.",
     "exportGapsError": "Export failed: {{error}}"
