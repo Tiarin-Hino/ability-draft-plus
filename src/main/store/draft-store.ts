@@ -11,9 +11,10 @@ import type { IdentifiedHeroModel } from '@core/domain/types'
 // - mySelectedSpotDbId/HeroOrder: The hero slot the user clicked "My Spot" on.
 // - mySelectedModelDbHeroId/HeroOrder: The hero model the user clicked "My Model" on.
 //
-// resetSession() clears everything when the overlay closes. The store is accessed by
-// ScanProcessingService (reads caches) and DraftHandlers (user spot/model selection).
-// Renderers read this state indirectly via enriched overlay:data payloads, not via direct sync.
+// resetSession() clears everything when the overlay closes or the user presses Reset.
+// Caches/selections are written by ScanProcessingService via store.setState() and by
+// DraftHandlers (user spot/model selection). Renderers read this state indirectly via
+// enriched overlay:data payloads, not via direct sync.
 
 export interface DraftSessionSlice {
   initialPoolAbilitiesCache: { ultimates: ScanResult[]; standard: ScanResult[] }
@@ -26,11 +27,6 @@ export interface DraftSessionSlice {
 
 export interface DraftStoreActions {
   resetSession(): void
-  setPoolCache(cache: {
-    ultimates: ScanResult[]
-    standard: ScanResult[]
-  }): void
-  setHeroModelsCache(models: IdentifiedHeroModel[]): void
   selectMySpot(dbHeroId: number | null, heroOrder: number | null): void
   selectMyModel(dbHeroId: number | null, heroOrder: number | null): void
 }
@@ -57,11 +53,6 @@ export function createDraftStore() {
         mySelectedModelDbHeroId: null,
         mySelectedModelHeroOrder: null,
       }),
-
-    setPoolCache: (cache) => set({ initialPoolAbilitiesCache: cache }),
-
-    setHeroModelsCache: (models) =>
-      set({ identifiedHeroModelsCache: models }),
 
     selectMySpot: (dbHeroId, heroOrder) =>
       set({

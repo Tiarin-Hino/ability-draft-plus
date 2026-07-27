@@ -1,93 +1,99 @@
-# Claude Code Rules for Ability Draft Plus v2
+# Claude Code Rules for Ability Draft Plus
 
-## Project Rules
-- This is a NEW project being built from scratch in this folder
-- The v1 reference code is at `../ability-draft-plus/` - read it but don't modify it
-- All 21 v1 features must be preserved - check `docs/V1_FEATURE_INVENTORY.md` before removing anything
-- Two new features must be added - see `docs/V2_REQUIREMENTS.md`
-- Implementation phases are in `docs/IMPLEMENTATION_PLAN.md` - follow the order
+Shipped, actively maintained Electron app (v2 architecture, released). This file is the
+maintenance spec — the authoritative map of what IS, not a build plan.
 
-## Technology Stack (Decided)
-- **Framework:** Electron 40+ with electron-vite build system
-- **Frontend:** React + shadcn/ui + Tailwind CSS v4
-- **State:** Zustand + @zubridge/electron (main process = single source of truth)
-- **Database:** Drizzle ORM + sql.js (NO native modules - avoids node-gyp/electron-rebuild)
-- **ML:** ONNX Runtime Node (onnxruntime-node) + DirectML, INT8 quantized model
-- **IPC:** Typed domain-grouped channels (`domain:action` pattern)
-- **Testing:** Vitest (unit/integration) + Playwright (E2E)
-- **Logging:** electron-log v5 (scoped loggers)
-- **i18n:** i18next + react-i18next with TypeScript module augmentation
-- **Installer:** NSIS via electron-builder, electron-updater for auto-updates
+## Stack (as shipped)
+- **Framework:** Electron + electron-vite (three build targets: main, preload, renderer×2)
+- **Frontend:** React 19 + shadcn/ui + Tailwind CSS v4 (control panel); hand-written CSS (overlay)
+- **State:** Zustand + @zubridge/electron — main-process AppStore is the single source of truth,
+  synced to renderers; DraftStore is main-only session state
+- **Database:** Drizzle ORM + sql.js (WASM, in-memory, explicit `persist()`; NO native modules)
+- **ML:** onnxruntime-node, **FP16** MobileNetV2 in a `worker_threads` worker (NOT UtilityProcess).
+  CPU execution provider; DirectML plumbing exists but is disabled pending validation
+- **Screen capture:** Electron `desktopCapturer` (native — never reintroduce child-process capture)
+- **IPC:** typed maps in `src/shared/ipc/api.ts` (`IpcInvokeMap`/`IpcSendMap`/`IpcOnMap`).
+  That file IS the channel inventory; there is no constants registry
+- **Testing:** Vitest unit suite (runs without Electron thanks to core purity) + one Playwright
+  E2E smoke test executed in CI after build
+- **i18n:** i18next, EN + RU. Every user-visible string goes through locales — including
+  strings originating in the main process (send i18n keys + params, translate in the renderer;
+  see `FeedbackStatus` for the pattern)
+- **Release:** NSIS via electron-builder; publish is TAG-triggered (`v*`); electron-updater
+  checks automatically (30s after start + 4h interval), download/install are manual
 
-## Architecture Rules
-- `src/core/` must have ZERO Electron imports - pure TypeScript domain logic
-- `src/shared/` for types and constants shared between processes
-- ML inference runs in UtilityProcess or worker_threads, NEVER in main or renderer
-- Database access only through Drizzle repositories in main process
-- Renderers communicate only via typed IPC (contextBridge)
-- Overlay window: `pointer-events: none` on body, `pointer-events: auto` only on interactive elements
-- Overlay CSS: use `contain: strict`, `will-change: transform`, NO `backdrop-filter: blur()`
-- Use `rgba()` semi-transparent backgrounds instead of blur for overlay tooltips
+## Architecture invariants
+- `src/core/` has ZERO Electron imports — pure TypeScript. This is why the unit suite is fast;
+  never break it
+- Database access only through repositories; renderers only via typed IPC (contextBridge,
+  context isolation on, nodeIntegration off, CSP on both HTML entries)
+- Overlay window: transparent, frameless, `alwaysOnTop('screen-saver')`, `showInactive()`,
+  click-through via `setIgnoreMouseEvents(true, {forward:true})` + per-element hover opt-in.
+  The 1px width-shrink in window-manager is a REAL Windows fix — do not "clean it up"
+- The overlay never holds keyboard focus — in-window key handlers don't work; use
+  `globalShortcut` (registered on overlay activation, unregistered on close)
+- Overlay CSS: `contain: strict`, `will-change: transform`, NO `backdrop-filter: blur()`;
+  `rgba()` backgrounds instead
 
-## Code Quality
-- TypeScript strict mode, no `any` types unless absolutely necessary
-- ESLint + Prettier
-- Write tests for: ML pipeline, coordinate calculations, database queries, scoring logic, scrapers
-- Meaningful error messages for all user-facing errors
-- Use electron-log v5 scoped loggers (not console.log in production code)
-
-## Git Workflow
-- Branch from main for all work
-- Never commit directly to main
-- Do not push or create PRs unless user explicitly says "wrap it up"
-- Commit messages: conventional commits format (feat:, fix:, refactor:, docs:, test:, chore:)
+## ML pipeline (see docs/ML_PIPELINE.md for the full loop)
+- Model + `class_names.json` ship in `resources/model/` and MUST stay in sync; the classifier
+  validates class count against the model's output width at init. There is NO hardcoded class count
+- Preprocessing feeds RAW 0–255 float32 — the graph's Rescaling layer normalizes internally.
+  Do not add normalization
+- Retraining: `training/train.py` (+ isolated `training/gate.py`) via the "Retrain ML model"
+  workflow → opens a model PR. FP16 only; INT8 collapsed accuracy twice (documented) — do not
+  reintroduce quantization without beating the gate across multiple training runs
+- The gate's twin detector flags renamed abilities whose legacy class still exists in the
+  dataset (Windrun keeps serving legacy entries, so staleness detection can't catch renames).
+  Treat twin warnings in model PRs as action items: verify in-game, merge legacy images into
+  the new class (same art) or purge them
+- Dev-only ML Pipeline cockpit lives on the Data page (unpackaged builds only); it shells out
+  to local tooling (`../ad_data_gather_script`, `gh`) — no credentials in the app
 
 ## Database
-- Schema defined in Drizzle (schema-as-code in `src/core/database/`)
-- Use sql.js (WASM) driver - no native modules
-- Migrations via Drizzle Kit (plain SQL files, version-controlled)
-- Run `migrate()` programmatically on app startup in main process
-- Back up database file before migrations (`fs.copyFileSync`)
-- Use transactions for batch operations (scraper inserts)
-- Test with in-memory SQLite (`:memory:`) for speed
-- **Column migrations:** `CREATE TABLE IF NOT EXISTS` silently skips existing tables — it never adds new columns to them. Whenever a new column is added to `SCHEMA_SQL`, also add a corresponding entry to `runColumnMigrations()` in `src/main/services/database-service.ts` AND a new test case in `tests/unit/main/services/database-migration.test.ts` that builds a database with the old schema and verifies the column is added. The test is the local validation step before shipping.
+- Schema: `SCHEMA_SQL` in `src/core/database/schema.ts` (raw SQL, `CREATE TABLE IF NOT EXISTS`)
+  + Drizzle schema-as-code for types. Drizzle Kit migrations are NOT used
+- **Column migrations are automatic**: `runColumnMigrations()` diffs every Drizzle table against
+  the live DB and adds missing nullable columns, then normalizes text-typed values in REAL
+  columns. Adding a nullable column to the schema needs no migration entry. NOT NULL additions
+  DO need manual handling (the function logs and skips them). Keep the 1.0-schema tests in
+  `database-migration.test.ts` passing
+- sql.js gotcha: `run()` returns the Database, so `result.changes` is undefined —
+  use SELECT-before-UPDATE or `db.getRowsModified()`
+
+## Business logic constants (do not change casually)
+- Scoring: `0.4 * winrate_normalized + 0.6 * inverted_pick_order_normalized`;
+  pick-order normalization range 1.0–50.0
+- ML confidence threshold 0.9; below it a slot renders as Unknown (localized, amber dashed)
+- Default OP threshold 13%, trap threshold 5%; top-tier suggestions max 10
+- Hero identification uses the `ability_order === 2` slot — one W-slot misread mislabels the
+  whole hero row (known fragility)
+- Slot metadata convention: `ability_order` 0 = ultimate, 1–3 = Q/W/E
+
+## Code quality
+- TypeScript strict; no `any`, no `@ts-ignore`; ESLint 9 flat config + Prettier
+- `@DEV-GUIDE` header comments on non-trivial files — keep them TRUE when changing behavior
+  (stale dev-guides caused real bugs; if code and comment disagree, fix the comment in the
+  same commit)
+- electron-log scoped loggers; meaningful user-facing error messages
+
+## Git / release workflow
+- Branch from main; PRs squash-merged (stacked branches need a rebase after the base merges)
+- Conventional commits (feat:, fix:, chore:, docs:, test:)
+- Model PRs come from the retrain workflow with a metrics report — review per-class recall
+  and twin warnings before merging
+- Releasing: merge → set version → `git tag vX.Y.Z && git push origin vX.Y.Z` (release.yml
+  is tag-triggered; nothing releases on merge alone)
 
 ## Security
-- API credentials must never be committed to git (.env + .gitignore)
-- Validate all IPC inputs from renderer processes (Zod for complex operations)
-- Content Security Policy on all HTML pages
-- Context isolation enabled, nodeIntegration disabled
-- Validate URLs before opening in external browser
+- API credentials via `.env` (dev) / `resources/app-config.json` (packaged, generated at build).
+  Never commit them. Note: the client "shared secret" is distributed with the installer —
+  treat the API as public + rate-limited, not authenticated
+- Validate URLs before `shell.openExternal` (http/https only)
 
-## Important Constraints
-- Windows-only target (for now)
-- Must support transparent, always-on-top, click-through overlay windows
-- Use `electron-overlay-window` npm package for overlay (proven by Awakened PoE Trade)
-- Use `setIgnoreMouseEvents(true, { forward: true })` for click-through
-- ML model: convert v1's Keras MobileNetV2 to ONNX (tf2onnx, opset 18) + INT8 quantization
-- Model input: [1, 96, 96, 3] float32, 512 output classes
-- Resolution coordinates stored in layout_coordinates.json (v1 format preserved)
-- Windrun.io is a React SPA - primary approach is API endpoint reverse-engineering
-
-## Key Business Logic to Preserve (from v1)
-- Scoring formula: `0.4 * winrate_normalized + 0.6 * inverted_pick_order_normalized`
-- Pick order normalization range: min=1.0, max=50.0
-- ML confidence threshold: 0.9 (90%)
-- Default OP threshold: 13%, Default trap threshold: 5%
-- Top tier suggestions: 10 max, prioritizing user's picked ability synergies
-- Synergy filtering: exclude same-hero ability pairs
-- Hero identification: uses ability_order === 2 as "hero-defining ability"
-- Worker auto-restart: max 3 attempts, 5s cooldown (port from mlManager.js)
-
-## Resolution Mapping (v2 New Feature)
-- Mathematical scaling: `scaleFactor = targetHeight / 1080`, `horizontalOffset = (targetWidth - 1920 * scaleFactor) / 2`
-- Ship pre-computed mappings for common resolutions (zero clicks for ~90% of users)
-- 4-anchor calibration wizard for custom resolutions (bilinear interpolation)
-- Full 68-click advanced mode preserved as option
-- Use Konva.js (react-konva) for the calibration canvas
-
-## Scraping (v2 New Feature)
-- Primary: reverse-engineer Windrun.io API endpoints (React SPA fetches JSON)
-- Fallback: hidden BrowserWindow + monkey-patched window.fetch to intercept API responses
-- Secondary data source: Stratz GraphQL API (2000 req/hr free with Steam login)
-- Do NOT bundle Puppeteer/Playwright (Chromium conflicts, 300-500MB overhead)
+## Known intentional decisions (don't "fix" without reading history)
+- Control panel minimizes on overlay activation — a restored window overlapping a windowed
+  game would contaminate scan screenshots
+- `autoDownload` off for updates — checking is automatic, downloading is the user's choice
+- Scan hotkey skips the confirmation dialog — pressing it is explicit intent
+- FP16 model, CPU provider, no INT8 — see docs/ML_PIPELINE.md

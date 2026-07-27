@@ -1,7 +1,18 @@
 import { resolve } from 'path'
-import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
+import { defineConfig } from 'electron-vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import pkg from './package.json'
+
+// Every runtime dependency is externalized EXCEPT electron-log (bundled on purpose).
+// 'electron' itself must also be external: electron-log requires it, and if the
+// bundler resolves that to the electron npm package it inlines the launcher shim,
+// which throws "Electron failed to install correctly" at app load. A function
+// matcher (not an array) so subpath imports like 'drizzle-orm/sql-js' match too.
+const BUNDLED_DEPS = ['electron-log']
+const externalDeps = ['electron', ...Object.keys(pkg.dependencies).filter((d) => !BUNDLED_DEPS.includes(d))]
+const isExternal = (id: string): boolean =>
+  externalDeps.some((dep) => id === dep || id.startsWith(`${dep}/`))
 
 // @DEV-GUIDE: electron-vite configuration for the 3-target build system:
 // 1. main: Electron main process (CJS). electron-log bundled; drizzle-orm, sql.js,
@@ -15,9 +26,9 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin({ exclude: ['electron-log'] })],
     build: {
       rollupOptions: {
+        external: isExternal,
         input: {
           index: resolve(__dirname, 'src/main/index.ts'),
           'workers/ml-worker': resolve(__dirname, 'src/main/workers/ml-worker.ts'),
@@ -35,9 +46,9 @@ export default defineConfig({
     },
   },
   preload: {
-    plugins: [externalizeDepsPlugin({ exclude: ['electron-log'] })],
     build: {
       rollupOptions: {
+        external: isExternal,
         input: {
           'control-panel': resolve(__dirname, 'src/preload/control-panel.ts'),
           overlay: resolve(__dirname, 'src/preload/overlay.ts'),

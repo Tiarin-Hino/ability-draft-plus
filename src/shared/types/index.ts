@@ -165,10 +165,3 @@ export interface HeroSpotDisplay {
   heroName: string
   dbHeroId: number
 }
-
-export interface UpdateNotification {
-  status: 'not-available' | 'available' | 'downloading' | 'downloaded' | 'error'
-  info?: Record<string, unknown>
-  error?: string
-  progress?: { percent: number; transferred: number; total: number }
-}

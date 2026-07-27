@@ -241,12 +241,12 @@ consolidatedScore = 0.4 * normalizedWinrate + 0.6 * normalizedPickOrder
 
 ## ML Model
 
-- **Architecture**: MobileNetV2 (transfer learning)
-- **Input**: `[batch, 96, 96, 3]` float32 images (RGB, normalized to [0, 1])
-- **Output**: `[batch, 524]` class probabilities (524 ability classes)
-- **Quantization**: INT8 (ONNX opset 18) for reduced memory and faster inference
-- **Execution provider**: DirectML (GPU) with CPU fallback
-- **Confidence threshold**: 0.9 (90%) -- below this, classification returns null
+- **Architecture**: MobileNetV2 (transfer learning; pipeline in `training/train.py`, see `docs/ML_PIPELINE.md`)
+- **Input**: `[batch, 96, 96, 3]` float32 images, RAW 0–255 (the graph's internal Rescaling layer maps to [-1, 1] — do not normalize in preprocessing)
+- **Output**: `[batch, N]` class probabilities; N is defined by `resources/model/class_names.json` and validated against the model's output width at init (no hardcoded class count)
+- **Precision**: FP16 (ONNX opset 18). INT8 was abandoned after two accuracy-collapse incidents — see `docs/ML_PIPELINE.md`
+- **Execution provider**: CPU. DirectML plumbing exists behind `config.useDirectML` but is disabled pending validation
+- **Confidence threshold**: 0.9 (90%) -- below this, classification returns null (rendered as an Unknown slot)
 - **Worker management**: Max 3 auto-restart attempts with 5-second cooldown. 30-second init timeout, 10-second scan timeout.
 
 ## Resolution System
@@ -342,7 +342,7 @@ Each table has a repository in `src/core/database/repositories/` providing domai
 - **Unit tests** (Vitest): Core domain logic, database repositories, ML preprocessing, resolution scaling, scraper transforms. Use in-memory sql.js databases and mock data.
 - **Component tests** (jsdom + @testing-library/react): Overlay hooks, renderer state management. Use `// @vitest-environment jsdom` pragma per test file.
 - **E2E smoke test** (Playwright): Launches the full Electron app and verifies the control panel window opens.
-- **381 total tests** across 26 test files in `tests/unit/`.
+- Unit tests live in `tests/unit/` (390+ tests; run `npm test` for the current count — this doc no longer tracks the number).
 
 ## Build Configuration
 
@@ -350,7 +350,7 @@ Each table has a repository in `src/core/database/repositories/` providing domai
 
 | Target | Entry | Output | Notes |
 |--------|-------|--------|-------|
-| main | `src/main/index.ts` + `workers/ml-worker.ts` | CJS | electron-log bundled; drizzle-orm, sql.js, onnxruntime-node, sharp, screenshot-desktop, koffi externalized |
+| main | `src/main/index.ts` + `workers/ml-worker.ts` | CJS | electron-log bundled; drizzle-orm, sql.js, onnxruntime-node, sharp, koffi externalized |
 | preload | `src/preload/control-panel.ts` + `overlay.ts` | CJS | Sandboxed context |
 | renderer | `control-panel/index.html` + `overlay/index.html` | ESM | React + Tailwind CSS v4 plugin |
 
@@ -377,7 +377,9 @@ Each table has a repository in `src/core/database/repositories/` providing domai
 | Decision | Rationale |
 |----------|-----------|
 | sql.js (WASM) over better-sqlite3 | No native module compilation. No node-gyp, no electron-rebuild. Works identically in all environments. |
-| ONNX Runtime over TensorFlow.js | ~50% less memory, DirectML GPU support, INT8 quantization support |
+| ONNX Runtime over TensorFlow.js | ~50% less memory, DirectML-capable, small FP16 model (~5.6 MB) |
+| FP16 over INT8 quantization | INT8 collapsed accuracy twice (dynamic: ConvInteger; static QDQ: run-to-run weight sensitivity); FP16 matches FP32 exactly and is deterministic |
+| desktopCapturer over screenshot-desktop | No child processes/.bat, no ASAR unpacking, fixed both scan ENOENT bug classes (#74, #76) |
 | @zubridge over custom IPC | Automatic state sync between processes. Zustand-native API. Reduces IPC boilerplate. |
 | Worker thread over UtilityProcess | Better debugging support in development. Same isolation guarantees. |
 | Domain layer (src/core/) with no Electron imports | Testable with plain Vitest, no Electron test harness needed. Clean dependency boundaries. |
