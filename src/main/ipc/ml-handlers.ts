@@ -188,7 +188,7 @@ export function registerMlHandlers(
         }
 
         appStore.setState({ mlStatus: 'scanning' })
-        let screenshotBuffer = await screenshotService.capture(true)
+        let screenshotBuffer = await screenshotService.capture()
 
         const layout = layoutService.getLayout(resolution)
         if (!layout) {

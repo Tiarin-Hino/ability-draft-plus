@@ -205,7 +205,6 @@ app.whenReady().then(async () => {
     windowTracker.stopTracking()
     bridge.destroy()
     await mlService.terminate()
-    screenshotService.stopPrefetch()
     dbService.close()
   })
 

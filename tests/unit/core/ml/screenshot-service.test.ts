@@ -1,12 +1,17 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-// Mock screenshot-desktop
-const mockScreenshot = vi.fn()
-vi.mock('screenshot-desktop', () => ({
-  default: (...args: unknown[]) => mockScreenshot(...args),
+// Mock electron's desktopCapturer + screen
+const mockGetSources = vi.fn()
+const mockGetPrimaryDisplay = vi.fn()
+vi.mock('electron', () => ({
+  desktopCapturer: {
+    getSources: (...args: unknown[]) => mockGetSources(...args),
+  },
+  screen: {
+    getPrimaryDisplay: () => mockGetPrimaryDisplay(),
+  },
 }))
 
-// Mock electron-log
 vi.mock('electron-log/main', () => ({
   default: {
     scope: () => ({
@@ -18,114 +23,83 @@ vi.mock('electron-log/main', () => ({
 
 import { createScreenshotService } from '../../../../src/main/services/screenshot-service'
 
-describe('ScreenshotService', () => {
+function makeSource(id: string, displayId: string, png: Buffer) {
+  return {
+    id,
+    display_id: displayId,
+    thumbnail: { toPNG: () => png },
+  }
+}
+
+describe('ScreenshotService (desktopCapturer)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.useFakeTimers()
-    mockScreenshot.mockResolvedValue(Buffer.from('screenshot-data'))
+    mockGetPrimaryDisplay.mockReturnValue({
+      id: 42,
+      size: { width: 2560, height: 1440 },
+      scaleFactor: 1,
+    })
+    mockGetSources.mockResolvedValue([
+      makeSource('screen:42', '42', Buffer.from('primary-png')),
+    ])
   })
 
-  afterEach(() => {
-    vi.useRealTimers()
-  })
-
-  describe('capture', () => {
-    it('captures a screenshot on first call', async () => {
-      const service = createScreenshotService()
-      const result = await service.capture()
-
-      expect(mockScreenshot).toHaveBeenCalledWith({ format: 'png' })
-      expect(result).toEqual(Buffer.from('screenshot-data'))
+  it('requests screen sources at the primary display physical resolution', async () => {
+    mockGetPrimaryDisplay.mockReturnValue({
+      id: 42,
+      size: { width: 1707, height: 1067 }, // logical points at 150% scaling
+      scaleFactor: 1.5,
     })
 
-    it('returns cached screenshot within TTL', async () => {
-      const service = createScreenshotService()
+    const service = createScreenshotService()
+    await service.capture()
 
-      await service.capture()
-      vi.advanceTimersByTime(1000) // Within 2s TTL
-      const result = await service.capture()
-
-      expect(mockScreenshot).toHaveBeenCalledTimes(1) // Only one actual capture
-      expect(result).toEqual(Buffer.from('screenshot-data'))
-    })
-
-    it('captures new screenshot after TTL expires', async () => {
-      const service = createScreenshotService()
-
-      await service.capture()
-      vi.advanceTimersByTime(2100) // Past 2s TTL
-
-      const newBuffer = Buffer.from('new-screenshot')
-      mockScreenshot.mockResolvedValueOnce(newBuffer)
-      const result = await service.capture()
-
-      expect(mockScreenshot).toHaveBeenCalledTimes(2)
-      expect(result).toEqual(newBuffer)
-    })
-
-    it('bypasses cache when forceCapture is true', async () => {
-      const service = createScreenshotService()
-
-      await service.capture()
-      const result = await service.capture(true)
-
-      expect(mockScreenshot).toHaveBeenCalledTimes(2)
-      expect(result).toBeDefined()
+    expect(mockGetSources).toHaveBeenCalledWith({
+      types: ['screen'],
+      thumbnailSize: { width: 2561, height: 1601 }, // rounded physical pixels
     })
   })
 
-  describe('prefetch', () => {
-    it('starts background capture interval', async () => {
-      const service = createScreenshotService()
-      service.startPrefetch()
-
-      // Initial capture + interval
-      await vi.advanceTimersByTimeAsync(0)
-      expect(mockScreenshot).toHaveBeenCalledTimes(1)
-
-      await vi.advanceTimersByTimeAsync(1500)
-      expect(mockScreenshot).toHaveBeenCalledTimes(2)
-
-      await vi.advanceTimersByTimeAsync(1500)
-      expect(mockScreenshot).toHaveBeenCalledTimes(3)
-
-      service.stopPrefetch()
-    })
-
-    it('does not start multiple prefetch timers', async () => {
-      const service = createScreenshotService()
-      service.startPrefetch()
-      service.startPrefetch() // Second call should be no-op
-
-      await vi.advanceTimersByTimeAsync(0)
-      expect(mockScreenshot).toHaveBeenCalledTimes(1)
-
-      service.stopPrefetch()
-    })
-
-    it('stops prefetch cleanly', async () => {
-      const service = createScreenshotService()
-      service.startPrefetch()
-
-      await vi.advanceTimersByTimeAsync(0)
-      expect(mockScreenshot).toHaveBeenCalledTimes(1)
-
-      service.stopPrefetch()
-
-      await vi.advanceTimersByTimeAsync(3000)
-      expect(mockScreenshot).toHaveBeenCalledTimes(1) // No more captures
-    })
+  it('returns the PNG buffer of the primary display source', async () => {
+    const service = createScreenshotService()
+    const result = await service.capture()
+    expect(result).toEqual(Buffer.from('primary-png'))
   })
 
-  describe('clearCache', () => {
-    it('clears cached screenshot', async () => {
-      const service = createScreenshotService()
+  it('selects the source matching the primary display id among several', async () => {
+    mockGetSources.mockResolvedValue([
+      makeSource('screen:7', '7', Buffer.from('secondary-png')),
+      makeSource('screen:42', '42', Buffer.from('primary-png')),
+    ])
 
-      await service.capture()
-      service.clearCache()
+    const service = createScreenshotService()
+    const result = await service.capture()
+    expect(result).toEqual(Buffer.from('primary-png'))
+  })
 
-      await service.capture()
-      expect(mockScreenshot).toHaveBeenCalledTimes(2)
-    })
+  it('falls back to the first source when no display id matches', async () => {
+    mockGetSources.mockResolvedValue([
+      makeSource('screen:7', '', Buffer.from('only-png')),
+    ])
+
+    const service = createScreenshotService()
+    const result = await service.capture()
+    expect(result).toEqual(Buffer.from('only-png'))
+  })
+
+  it('throws when no screen sources are available', async () => {
+    mockGetSources.mockResolvedValue([])
+
+    const service = createScreenshotService()
+    await expect(service.capture()).rejects.toThrow('No screen sources')
+  })
+
+  it('throws when the capture produces an empty image', async () => {
+    mockGetSources.mockResolvedValue([
+      makeSource('screen:42', '42', Buffer.alloc(0)),
+    ])
+
+    const service = createScreenshotService()
+    await expect(service.capture()).rejects.toThrow('empty image')
   })
 })
