@@ -11,7 +11,9 @@ interface CombinationPanelProps {
 }
 
 function formatWr(wr: number): string {
-  return `${(wr * 100).toFixed(1)}%`
+  const n = typeof wr === 'number' ? wr : Number(wr)
+  if (Number.isNaN(n)) return 'N/A'
+  return `${(n * 100).toFixed(1)}%`
 }
 
 export function CombinationPanel({

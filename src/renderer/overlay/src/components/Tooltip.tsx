@@ -14,18 +14,23 @@ interface TooltipProps {
 const MARGIN = 10
 const MAX_SYNERGIES = 5
 
+// Coerced defensively — v1-era databases can hold text-typed numerics (#77)
 function formatWinrate(value: number | null): string {
-  if (value === null) return 'N/A'
-  return `${(value * 100).toFixed(1)}%`
+  const n = typeof value === 'number' ? value : Number(value)
+  if (value == null || Number.isNaN(n)) return 'N/A'
+  return `${(n * 100).toFixed(1)}%`
 }
 
 function formatPickRate(value: number | null): string {
-  if (value === null) return 'N/A'
-  return value.toFixed(2)
+  const n = typeof value === 'number' ? value : Number(value)
+  if (value == null || Number.isNaN(n)) return 'N/A'
+  return n.toFixed(2)
 }
 
 function formatSynergyWr(wr: number): string {
-  return `${(wr * 100).toFixed(1)}%`
+  const n = typeof wr === 'number' ? wr : Number(wr)
+  if (Number.isNaN(n)) return 'N/A'
+  return `${(n * 100).toFixed(1)}%`
 }
 
 function positionTooltip(el: HTMLDivElement, anchorRect: DOMRect): void {

@@ -2,14 +2,18 @@ import type { ColumnDef } from '@tanstack/react-table'
 import type { Hero } from '@shared/types'
 import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header'
 
+// Coerce defensively: v1-era databases stored some numerics as text, and a
+// string here crashed the whole table ("val.toFixed is not a function", #77)
 function pct(val: number | null): string {
-  if (val === null) return '—'
-  return `${(val * 100).toFixed(1)}%`
+  const n = typeof val === 'number' ? val : Number(val)
+  if (val == null || Number.isNaN(n)) return '—'
+  return `${(n * 100).toFixed(1)}%`
 }
 
 function rate(val: number | null): string {
-  if (val === null) return '—'
-  return val.toFixed(2)
+  const n = typeof val === 'number' ? val : Number(val)
+  if (val == null || Number.isNaN(n)) return '—'
+  return n.toFixed(2)
 }
 
 export const heroColumns: ColumnDef<Hero>[] = [

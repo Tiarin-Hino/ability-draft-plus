@@ -4,8 +4,13 @@ node_modules/
 # Build output
 out/
 dist/
-build/
+# build/* (not build/) so negations below can re-include files — git cannot
+# re-include anything under an excluded directory
+build/*
 !build/.gitkeep
+# The app icon must ship with the repo — CI release builds have no other source
+# (losing this to the build ignore is how v2 releases shipped the default icon)
+!build/icon.ico
 
 # TypeScript build cache
 *.tsbuildinfo
