@@ -11,7 +11,7 @@ Replaces the 17 loose Colab cells (colab/step*.py) with one reproducible script:
         ▼
     clean inference graph (augmentation stripped, head weights copied)
         ▼
-    SavedModel ──tf2onnx──▶ FP32 ONNX ──quantize_dynamic──▶ INT8 ONNX
+    SavedModel ──tf2onnx──▶ FP32 ONNX ──static QDQ (per-channel, calibrated)──▶ INT8 ONNX
         ▼
     REGRESSION GATE: the actual INT8 artifact is evaluated on the test split.
     Fails (exit 1) if accuracy < --min-accuracy or the INT8 model drops more than
@@ -163,6 +163,51 @@ def build_inference_model(tf, base_model, trained_model, num_classes):
     return inference_model
 
 
+def quantize_int8_static(fp32_path, int8_path, calib_images):
+    """Static per-channel QDQ INT8 quantization, calibrated on validation images.
+
+    Dynamic quantization (the original Colab recipe) is NOT used: on the graph
+    tf2onnx produces from TF 2.15, per-tensor dynamic quantization of the
+    depthwise convolutions collapses accuracy to random (99% → 0.1%, verified).
+    Static QDQ with per-channel weight scales keeps accuracy within ~0.7% of
+    FP32, and QDQ ops run on every ORT version/provider (including DirectML),
+    unlike the s8 ConvInteger that dynamic quantization emits.
+    """
+    from onnxruntime.quantization import (
+        CalibrationDataReader, QuantFormat, QuantType, quantize_static,
+    )
+    from onnxruntime.quantization.shape_inference import quant_pre_process
+    import onnxruntime as ort_rt
+
+    # Fuse/optimize before quantization. Symbolic shape inference is skipped —
+    # it crashes on this graph in the pinned ORT (NoneType MatMul shape).
+    pre_path = fp32_path.replace(".onnx", "_pre.onnx")
+    quant_pre_process(fp32_path, pre_path, skip_symbolic_shape=True)
+
+    session = ort_rt.InferenceSession(pre_path, providers=["CPUExecutionProvider"])
+    input_name = session.get_inputs()[0].name
+    del session
+
+    class Reader(CalibrationDataReader):
+        def __init__(self):
+            self.it = iter([
+                {input_name: calib_images[i:i + 16]}
+                for i in range(0, len(calib_images), 16)
+            ])
+
+        def get_next(self):
+            return next(self.it, None)
+
+    quantize_static(
+        pre_path, int8_path, Reader(),
+        quant_format=QuantFormat.QDQ,
+        per_channel=True,
+        weight_type=QuantType.QInt8,
+        activation_type=QuantType.QUInt8,
+    )
+    os.remove(pre_path)
+
+
 def export_test_tensors(test_ds, output_dir):
     """Dump the exact test tensors (raw 0-255 float32) for the isolated gate step.
 
@@ -280,10 +325,16 @@ def main():
         print(result.stderr)
         raise RuntimeError("tf2onnx conversion failed")
 
-    print("=== INT8 dynamic quantization ===")
-    from onnxruntime.quantization import quantize_dynamic, QuantType
-    quantize_dynamic(model_input=fp32_path, model_output=int8_path,
-                     weight_type=QuantType.QInt8)
+    print("=== INT8 static QDQ quantization (per-channel, calibrated) ===")
+    # Calibration set: seeded sample of validation images (never the test split —
+    # the gate judges on test and must stay untouched by the quantizer)
+    val_images = np.concatenate([
+        batch.numpy().astype(np.float32) for batch, _ in val_ds
+    ])
+    rng = np.random.default_rng(args.seed)
+    calib = val_images[rng.choice(
+        len(val_images), size=min(256, len(val_images)), replace=False)]
+    quantize_int8_static(fp32_path, int8_path, calib)
     int8_mb = os.path.getsize(int8_path) / (1024 * 1024)
     print(f"INT8 model: {int8_mb:.1f} MB")
 

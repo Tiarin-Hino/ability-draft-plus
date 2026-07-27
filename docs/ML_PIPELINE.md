@@ -21,7 +21,8 @@ uploaded" is automated with one click and one PR review.
 ┌─ GitHub ─────────────────────────────────────────────────────────────────┐
 │ 5. Actions → "Retrain ML model" → dataset_version = N                    │
 │    - trains MobileNetV2 head (seeded, class-weighted, early stopping)    │
-│    - converts SavedModel → ONNX (opset 18) → INT8 dynamic quantization   │
+│    - converts SavedModel → ONNX (opset 18) → static QDQ INT8             │
+│      (per-channel, calibrated on validation images)                      │
 │    - REGRESSION GATE: evaluates the actual INT8 artifact on the test     │
 │      split; fails below --min-accuracy (default 97%) or if quantization  │
 │      costs more than 1% accuracy                                         │
@@ -59,8 +60,13 @@ access for `upload_dataset.py`.
   classes have as few as 8 images), EarlyStopping with best-weights restore,
   horizontal flip removed from augmentation (icons never appear mirrored),
   optional `--fine-tune` of the top MobileNetV2 block at lr=1e-5.
-- The gate exists because UINT8 quantization once silently destroyed accuracy —
-  the INT8 artifact itself is evaluated, not the Keras model.
+- The gate exists because quantization has silently destroyed accuracy twice in
+  this project's history (UINT8 in the TFJS era; per-tensor dynamic quantization
+  of the TF 2.15 graph collapsed 99% → 0.1% in the first CI run) — the INT8
+  artifact itself is evaluated on the test split, not the Keras model.
+- Quantization is static QDQ, per-channel, calibrated on a seeded sample of
+  validation images. QDQ ops run on every ORT version and provider (including
+  DirectML), unlike the ConvInteger ops dynamic quantization emits.
 
 Run locally (Python 3.11):
 
