@@ -40,6 +40,9 @@ export function createMetadataRepository(db: SQLJsDatabase): MetadataRepository 
       const opThreshold = get('op_threshold')
       const trapThreshold = get('trap_threshold')
       const language = get('language')
+      const themeMode = get('theme_mode')
+      const overlayOpacity = get('overlay_opacity')
+      const overlayAnchor = get('overlay_anchor')
 
       return {
         opThreshold:
@@ -51,6 +54,18 @@ export function createMetadataRepository(db: SQLJsDatabase): MetadataRepository 
             ? parseFloat(trapThreshold)
             : DEFAULT_SETTINGS.trapThreshold,
         language: language ?? DEFAULT_SETTINGS.language,
+        themeMode:
+          themeMode === 'light' || themeMode === 'dark' || themeMode === 'system'
+            ? themeMode
+            : DEFAULT_SETTINGS.themeMode,
+        overlayOpacity:
+          overlayOpacity !== null
+            ? parseFloat(overlayOpacity)
+            : DEFAULT_SETTINGS.overlayOpacity,
+        overlayAnchor:
+          overlayAnchor === 'left' || overlayAnchor === 'right'
+            ? overlayAnchor
+            : DEFAULT_SETTINGS.overlayAnchor,
       }
     },
 
@@ -63,6 +78,15 @@ export function createMetadataRepository(db: SQLJsDatabase): MetadataRepository 
       }
       if (settings.language !== undefined) {
         set('language', settings.language)
+      }
+      if (settings.themeMode !== undefined) {
+        set('theme_mode', settings.themeMode)
+      }
+      if (settings.overlayOpacity !== undefined) {
+        set('overlay_opacity', String(settings.overlayOpacity))
+      }
+      if (settings.overlayAnchor !== undefined) {
+        set('overlay_anchor', settings.overlayAnchor)
       }
     },
 

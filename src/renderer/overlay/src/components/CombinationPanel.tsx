@@ -46,7 +46,7 @@ export function CombinationPanel({
     )
   }
 
-  const ariaLabel = variant === 'op' ? 'OP Combinations' : 'Trap Combinations'
+  const ariaLabel = t(titleKey)
   const itemPrefix = variant === 'op' ? '\u2191 ' : '\u2193 '
 
   return (

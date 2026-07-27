@@ -28,6 +28,8 @@ export function createAppStore() {
     overlayActive: false,
     activeResolution: null,
     activeResolutionSource: null,
+    overlayOpacity: 1,
+    overlayAnchor: 'right',
     mlStatus: 'idle',
     mlError: null,
     mlModelGaps: null,
@@ -63,6 +65,13 @@ export function createAppStoreHandlers(store: AppStore): Record<string, Handler>
       store.setState({
         overlayActive: data.active,
         activeResolution: data.resolution ?? null,
+      })
+    },
+    [APP_ACTIONS.OVERLAY_SET_APPEARANCE]: (payload) => {
+      const data = payload as { opacity?: number; anchor?: 'left' | 'right' }
+      store.setState({
+        ...(data.opacity !== undefined ? { overlayOpacity: data.opacity } : {}),
+        ...(data.anchor !== undefined ? { overlayAnchor: data.anchor } : {}),
       })
     },
     [APP_ACTIONS.ML_SET_STATUS]: (payload) => {

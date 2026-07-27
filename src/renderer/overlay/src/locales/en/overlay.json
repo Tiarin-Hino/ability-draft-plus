@@ -1,5 +1,6 @@
 {
   "initialScan": "Initial Scan",
+  "controlsAria": "Overlay controls",
   "rescan": "Rescan",
   "reset": "Reset",
   "close": "Close",

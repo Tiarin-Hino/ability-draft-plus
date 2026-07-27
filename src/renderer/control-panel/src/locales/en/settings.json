@@ -9,15 +9,23 @@
   },
   "trapThreshold": {
     "title": "Trap Threshold",
-    "label": "Negative synergy threshold percentage:",
-    "helpText": "Combinations with negative synergy below this threshold will be marked as traps.",
+    "label": "Winrate decrease threshold percentage:",
+    "helpText": "Combinations whose winrate drops by more than this threshold are marked as traps.",
     "saveButton": "Save Threshold",
     "savedMessage": "Trap threshold saved!"
+  },
+  "thresholdCommon": {
+    "defaultLabel": "Default: {{value}}%",
+    "resetButton": "Reset to default"
   },
   "appearance": {
     "title": "Appearance",
     "themeLabel": "Theme",
-    "languageLabel": "Language"
+    "languageLabel": "Language",
+    "overlayOpacityLabel": "Overlay panels opacity",
+    "overlayAnchorLabel": "Overlay panels position",
+    "anchorLeft": "Left",
+    "anchorRight": "Right"
   },
   "backup": {
     "title": "Database Backup",
@@ -41,7 +49,6 @@
     "description": "If the ML model misidentifies abilities, use 'Report Failed Recognition' in the overlay. You can then send snapshots to the developer for model improvement.",
     "exportButton": "Export Failed Samples",
     "uploadButton": "Send Failed Samples",
-    "feedbackButton": "Share Feedback",
     "exportNone": "No snapshots to export yet — use 'Report Failed Recognition' in the overlay first.",
     "exportSuccess": "Exported {{count}} snapshot(s) to {{path}}",
     "exportError": "Export failed: {{error}}",

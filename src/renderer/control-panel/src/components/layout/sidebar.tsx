@@ -10,6 +10,7 @@ import {
   Wrench,
   Sun,
   Moon,
+  Monitor,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -48,7 +49,6 @@ export function Sidebar({ activePage, onNavigate }: SidebarProps) {
   const { t } = useTranslation()
   const [version, setVersion] = useState('')
   const [isPackaged, setIsPackaged] = useState(true) // Default to packaged (hide dev items)
-  const resolvedDarkMode = useAppStore((s) => s.resolvedDarkMode)
   const themeMode = useAppStore((s) => s.themeMode)
   const dispatch = useAppDispatch()
 
@@ -116,8 +116,13 @@ export function Sidebar({ activePage, onNavigate }: SidebarProps) {
           className="h-7 w-7"
           onClick={cycleTheme}
           aria-label={t(`theme.${themeMode}`)}
+          title={t(`theme.${themeMode}`)}
         >
-          {resolvedDarkMode ? (
+          {/* Icon reflects the chosen MODE (not the resolved theme), so
+              'system' is distinguishable from the mode it resolves to */}
+          {themeMode === 'system' ? (
+            <Monitor className="h-4 w-4" aria-hidden="true" />
+          ) : themeMode === 'dark' ? (
             <Moon className="h-4 w-4" aria-hidden="true" />
           ) : (
             <Sun className="h-4 w-4" aria-hidden="true" />

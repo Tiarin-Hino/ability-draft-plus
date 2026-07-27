@@ -6,6 +6,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   trapThreshold: DEFAULT_TRAP_THRESHOLD,
   language: 'en',
   themeMode: 'system',
+  overlayOpacity: 1,
+  overlayAnchor: 'right',
 }
 
 export const SUPPORTED_LANGUAGES = ['en', 'ru'] as const

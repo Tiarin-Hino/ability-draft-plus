@@ -52,6 +52,8 @@ export interface AppSettings {
   trapThreshold: number
   language: string
   themeMode: 'light' | 'dark' | 'system'
+  overlayOpacity: number
+  overlayAnchor: 'left' | 'right'
 }
 
 export interface SlotCoordinate {

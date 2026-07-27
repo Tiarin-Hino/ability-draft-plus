@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DataTable } from '@/components/data-table/data-table'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useAbilityColumns } from '@/components/abilities/ability-columns'
 import { useIpcQuery } from '@/hooks/use-ipc-query'
 
@@ -19,8 +20,8 @@ export function AbilitiesPage() {
   if (abilitiesLoading || heroesLoading) {
     return (
       <div className="space-y-4">
-        <div className="h-8 w-48 bg-muted animate-pulse rounded" />
-        <div className="h-96 bg-muted animate-pulse rounded" />
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-96" />
       </div>
     )
   }

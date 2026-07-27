@@ -20,6 +20,8 @@ export interface AppStoreState {
   overlayActive: boolean
   activeResolution: string | null
   activeResolutionSource: LayoutSource | null
+  overlayOpacity: number
+  overlayAnchor: 'left' | 'right'
 
   // ML Worker Status
   mlStatus: 'idle' | 'initializing' | 'ready' | 'scanning' | 'error'
@@ -51,6 +53,7 @@ export const APP_ACTIONS = {
   THEME_SET_RESOLVED: 'THEME:SET_RESOLVED',
   LANGUAGE_SET: 'LANGUAGE:SET',
   OVERLAY_SET_ACTIVE: 'OVERLAY:SET_ACTIVE',
+  OVERLAY_SET_APPEARANCE: 'OVERLAY:SET_APPEARANCE',
   ML_SET_STATUS: 'ML:SET_STATUS',
   ML_SET_MODEL_GAPS: 'ML:SET_MODEL_GAPS',
   SCRAPER_SET_STATUS: 'SCRAPER:SET_STATUS',
