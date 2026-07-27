@@ -115,6 +115,20 @@ def main():
             })
     twin_warnings.sort(key=lambda w: w["ownConfidence"])
 
+    # Low-margin detector: a class can have 100% recall (argmax right) while its
+    # confidence sits just above app threshold on pristine test tensors — real
+    # captures then push it under 0.9 and it renders as Unknown (crystal_nova
+    # shipped this way: 100% recall, diffuse softmax, unrecognized in-game).
+    low_margin = []
+    for cls_idx, name in enumerate(class_names):
+        mask = y_true == cls_idx
+        if mask.sum() == 0:
+            continue
+        own_mean = float(all_probs[mask, cls_idx].mean())
+        if own_mean < 0.95:
+            low_margin.append({"class": name, "meanOwnConfidence": round(own_mean, 3)})
+    low_margin.sort(key=lambda w: w["meanOwnConfidence"])
+
     metrics = {
         **summary,
         "fp16TestAccuracy": round(model_acc, 5),
@@ -130,6 +144,7 @@ def main():
             for (t, p), c in top_confusions
         ],
         "twinWarnings": twin_warnings,
+        "lowMarginClasses": low_margin,
     }
     with open(os.path.join(out, "metrics.json"), "w", encoding="utf-8") as f:
         json.dump(metrics, f, indent=2)
@@ -164,6 +179,15 @@ def main():
             f"`{w['competitor']}` ({w['competitorShare']:.0%})"
             for w in twin_warnings
         ]
+    if low_margin:
+        lines += ["", f"### ⚠️ Low-margin classes ({len(low_margin)})", "",
+                  "Recall may be perfect, but mean confidence below ~0.95 on pristine "
+                  "test tensors means real captures can dip under the app's 0.9 "
+                  "threshold and render as Unknown. Consider pruning odd-framing "
+                  "training images and topping up with fresh crops (see "
+                  "docs/ML_PIPELINE.md).", ""]
+        lines += [f"- `{w['class']}`: mean own-confidence {w['meanOwnConfidence']:.2f}"
+                  for w in low_margin]
     lines += ["", "### Worst per-class recall (test split)", ""]
     lines += [f"- `{name}`: {r:.0%}" for name, r in worst_classes]
     if top_confusions:
