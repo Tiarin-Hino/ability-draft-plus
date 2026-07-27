@@ -314,6 +314,22 @@ body {
   box-shadow: none !important;
 }
 
+/* Capture mode (active while a scan is in flight): every overlay decoration must
+   vanish from the screen, or the captured screenshot contains our own borders
+   inside the icon crops and the ML confidence collapses. The status toast stays
+   visible (bottom-right, never overlaps slots). */
+.capture-mode .ability-hotspot,
+.capture-mode .hero-model-hotspot {
+  border: none !important;
+  animation: none !important;
+  box-shadow: none !important;
+}
+
+.capture-mode .dynamic-btn,
+.capture-mode .top-right-column {
+  visibility: hidden !important;
+}
+
 /* ML could not identify this slot */
 .unknown-slot {
   border: 2px dashed rgba(230, 170, 40, 0.85);

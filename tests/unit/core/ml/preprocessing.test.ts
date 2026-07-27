@@ -79,7 +79,9 @@ describe('preprocessing', () => {
         width: 60,
         height: 70,
       })
-      expect(mockSharpChain.resize).toHaveBeenCalledWith(96, 96)
+      // bilinear kernel matches the training pipeline's TF resize — lanczos
+      // sharpening artifacts drop borderline classes below the 0.9 threshold
+      expect(mockSharpChain.resize).toHaveBeenCalledWith(96, 96, { kernel: 'linear' })
       expect(mockSharpChain.removeAlpha).toHaveBeenCalled()
       expect(mockSharpChain.raw).toHaveBeenCalled()
       expect(result).toBe(expectedOutput)
