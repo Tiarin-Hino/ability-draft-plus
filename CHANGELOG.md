@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Model update: 528 classes** — recognizes 6 new abilities (Beastmaster Summon Raptor/Razorback, Dragon Knight Wyrm's Wrath, Lifestealer Feast, Tinker Deploy Turrets, Venomancer Snakebite) and drops 2 removed ones (PA Blur, Tinker Heat-Seeking Missile). 99.47% test accuracy. Known gap: Summon Raptor is often confused with Call of the Wild Hawk (near-identical bird icons, thin training data) — improves with the next data collection round
+- **Model format switched from INT8 to FP16** (~5.6 MB) after INT8 quantization proved unreliable across training runs — FP16 matches full-precision accuracy exactly and is deterministic; see docs/ML_PIPELINE.md
+
 - **Semi-automated model retraining pipeline** (`docs/ML_PIPELINE.md`) — the Dashboard now has an "Export Model Gaps" button that writes the staleness-detector's missing-ability list (with hero mapping from the DB) to a JSON the data-gather script consumes directly; a new `training/train.py` replaces the 17 loose Colab cells with a seeded, class-weighted, reproducible pipeline; and a "Retrain ML model" GitHub Actions workflow trains on an S3-hosted dataset, runs an INT8 accuracy regression gate against the test split, and opens a review PR with the new model, class list, per-class metrics, and a minor version bump
 - The model's class count is now derived from `class_names.json` and validated against the model's actual output size at init — a retrained model with more classes no longer requires a code change (previously a hardcoded 524 caused a hard ML init failure)
 

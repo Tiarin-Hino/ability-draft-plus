@@ -1,12 +1,11 @@
 # Pinned combo known to work together (tf2onnx lags TensorFlow releases).
 # Python 3.11 required (TF 2.15 does not support 3.12).
-# NOTE: onnxruntime here is ONLY for quantize_dynamic. This old version cannot
-# RUN the resulting QInt8 model (no signed-int8 ConvInteger on CPU) — the
-# regression gate runs separately with requirements-gate.txt. Newer ORT cannot
-# be used here: tf2onnx 1.16 pins an `onnx` version that conflicts with it
-# (verified ResolutionImpossible).
+# The regression gate runs separately with requirements-gate.txt (modern ORT) —
+# tf2onnx 1.16 pins an `onnx` version that makes newer onnxruntime
+# ResolutionImpossible in this environment (verified).
 tensorflow==2.15.1
 tf2onnx==1.16.1
 onnxruntime==1.18.1
+onnxconverter-common==1.14.0
 numpy<2
 protobuf~=3.20

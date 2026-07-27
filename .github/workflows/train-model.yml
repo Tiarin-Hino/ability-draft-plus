@@ -84,7 +84,7 @@ jobs:
         with:
           name: model-artifacts
           path: |
-            training_output/ability_classifier_int8.onnx
+            training_output/ability_classifier_fp16.onnx
             training_output/class_names.json
             training_output/metrics.json
             training_output/report.md
@@ -92,7 +92,7 @@ jobs:
 
       - name: Stage model files and bump minor version
         run: |
-          cp training_output/ability_classifier_int8.onnx resources/model/ability_classifier_int8.onnx
+          cp training_output/ability_classifier_fp16.onnx resources/model/ability_classifier_fp16.onnx
           cp training_output/class_names.json resources/model/class_names.json
           npm version minor --no-git-tag-version
           NEW_VERSION=$(node -p "require('./package.json').version")
@@ -108,7 +108,7 @@ jobs:
           title: 'ML model retrain: dataset v${{ inputs.dataset_version }} → app v${{ env.NEW_VERSION }}'
           body-path: training_output/report.md
           add-paths: |
-            resources/model/ability_classifier_int8.onnx
+            resources/model/ability_classifier_fp16.onnx
             resources/model/class_names.json
             package.json
             package-lock.json
