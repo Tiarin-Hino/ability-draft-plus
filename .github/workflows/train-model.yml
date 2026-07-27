@@ -60,14 +60,23 @@ jobs:
           unzip -q dataset.zip -d dataset
           ls dataset
 
-      - name: Train, convert, and gate
+      - name: Train, convert, and quantize
         run: |
           python training/train.py \
             --data-dir dataset \
             --output-dir training_output \
             --previous-class-names resources/model/class_names.json \
-            --min-accuracy "${{ inputs.min_accuracy }}" \
             ${{ inputs.fine_tune && '--fine-tune' || '' }}
+
+      # Isolated env: modern onnxruntime can run the QInt8 model, but conflicts
+      # with tf2onnx's pinned onnx — see training/requirements-gate.txt.
+      - name: Regression gate (INT8 on test split)
+        run: |
+          python -m venv gate-env
+          gate-env/bin/pip install -r training/requirements-gate.txt
+          gate-env/bin/python training/gate.py \
+            --output-dir training_output \
+            --min-accuracy "${{ inputs.min_accuracy }}"
 
       - name: Upload training artifacts
         if: always()
