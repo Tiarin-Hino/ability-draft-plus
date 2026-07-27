@@ -163,4 +163,85 @@ describe('runColumnMigrations', () => {
     expect(getColumns(db, 'HeroAbilitySynergies')).toHaveLength(0)
     db.close()
   })
+
+  // The ORIGINAL 1.0.0 schema (from src/database/setupDatabase.js at d74cc7e).
+  // Missing Heroes.high_skill_winrate/pick_rate/hs_pick_rate and
+  // Abilities.pick_rate/hs_pick_rate — the exact upgrade path of issue #77.
+  const V1_0_SCHEMA_SQL = `
+    CREATE TABLE IF NOT EXISTS Heroes (
+      hero_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL,
+      display_name TEXT,
+      winrate REAL,
+      windrun_id INTEGER,
+      avg_pick_order REAL,
+      value_percentage REAL
+    );
+    CREATE TABLE IF NOT EXISTS Abilities (
+      ability_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL,
+      display_name TEXT,
+      hero_id INTEGER,
+      winrate REAL,
+      high_skill_winrate REAL,
+      avg_pick_order REAL,
+      value_percentage REAL,
+      is_ultimate BOOLEAN,
+      ability_order INTEGER,
+      FOREIGN KEY (hero_id) REFERENCES Heroes (hero_id) ON DELETE SET NULL ON UPDATE CASCADE
+    );
+    CREATE TABLE IF NOT EXISTS Metadata (
+      key TEXT PRIMARY KEY,
+      value TEXT
+    );
+  `
+
+  it('adds every missing nullable column to a 1.0.0-era database (issue #77)', () => {
+    const db = new SQL.Database()
+    db.run(V1_0_SCHEMA_SQL)
+
+    expect(getColumns(db, 'Heroes')).not.toContain('high_skill_winrate')
+    expect(getColumns(db, 'Abilities')).not.toContain('pick_rate')
+
+    runColumnMigrations(db)
+
+    for (const col of ['high_skill_winrate', 'pick_rate', 'hs_pick_rate']) {
+      expect(getColumns(db, 'Heroes')).toContain(col)
+    }
+    for (const col of ['pick_rate', 'hs_pick_rate']) {
+      expect(getColumns(db, 'Abilities')).toContain(col)
+    }
+    db.close()
+  })
+
+  it('allows the Windrun scraper insert path after migrating a 1.0.0 database', () => {
+    const db = new SQL.Database()
+    db.run(V1_0_SCHEMA_SQL)
+    runColumnMigrations(db)
+
+    // The insert that crashed in #77 ("table Heroes has no column named high_skill_winrate")
+    expect(() =>
+      db.run(
+        `INSERT INTO Heroes (name, winrate, high_skill_winrate, pick_rate, hs_pick_rate)
+         VALUES ('antimage', 0.52, 0.54, 12.3, 11.1)`,
+      ),
+    ).not.toThrow()
+    db.close()
+  })
+
+  it('normalizes text-typed values in REAL columns (toFixed crash, issue #77)', () => {
+    const db = new SQL.Database()
+    db.run(V1_0_SCHEMA_SQL)
+    // REAL affinity keeps non-numeric strings like '52.9%' as TEXT
+    db.run(`INSERT INTO Heroes (name, winrate) VALUES ('antimage', '52.9%')`)
+    const before = db.exec(`SELECT typeof(winrate) FROM Heroes`)
+    expect(before[0].values[0][0]).toBe('text')
+
+    runColumnMigrations(db)
+
+    const after = db.exec(`SELECT typeof(winrate), winrate FROM Heroes`)
+    expect(after[0].values[0][0]).toBe('real')
+    expect(after[0].values[0][1]).toBeCloseTo(52.9)
+    db.close()
+  })
 })
