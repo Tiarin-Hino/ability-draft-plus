@@ -1,0 +1,6 @@
+# Isolated environment for training/gate.py ONLY. Modern onnxruntime is needed
+# to execute the QInt8-quantized model (signed-int8 ConvInteger has no CPU
+# implementation in the old ORT that the training env is stuck on via tf2onnx).
+# 1.28 verified against the shipped app model; matches the app's ORT line.
+onnxruntime==1.28.0
+numpy

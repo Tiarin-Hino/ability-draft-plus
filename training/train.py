@@ -35,7 +35,6 @@ import os
 import random
 import subprocess
 import sys
-from collections import Counter
 from datetime import datetime, timezone
 
 import numpy as np
@@ -56,12 +55,6 @@ def parse_args():
                    help="After head training, unfreeze the top MobileNetV2 block "
                         "and continue at a low learning rate")
     p.add_argument("--fine-tune-epochs", type=int, default=8)
-    p.add_argument("--min-accuracy", type=float, default=0.97,
-                   help="Gate: minimum INT8 test accuracy")
-    p.add_argument("--max-quant-drop", type=float, default=0.01,
-                   help="Gate: maximum accuracy drop from Keras to INT8")
-    p.add_argument("--no-gate", action="store_true",
-                   help="Report metrics but never fail the gate (experiments)")
     p.add_argument("--previous-class-names", default=None,
                    help="Path to the currently shipped class_names.json, for the "
                         "added/removed class diff in the report")
@@ -170,37 +163,24 @@ def build_inference_model(tf, base_model, trained_model, num_classes):
     return inference_model
 
 
-def evaluate_onnx(onnx_path, test_ds, class_names):
-    """Run the shipped INT8 artifact over the test split — the honest gate."""
-    import onnxruntime as ort
+def export_test_tensors(test_ds, output_dir):
+    """Dump the exact test tensors (raw 0-255 float32) for the isolated gate step.
 
-    session = ort.InferenceSession(onnx_path, providers=["CPUExecutionProvider"])
-    input_name = session.get_inputs()[0].name
-    output_name = session.get_outputs()[0].name
-
-    y_true, y_pred = [], []
+    The gate (training/gate.py) runs in a separate environment with a modern
+    onnxruntime — tf2onnx pins an old `onnx` that conflicts with the ORT
+    versions able to execute signed-int8 ConvInteger. Handing over tensors
+    instead of re-loading images guarantees both accuracy measurements see
+    byte-identical inputs.
+    """
+    images, labels = [], []
     for batch_images, batch_labels in test_ds:
-        arr = batch_images.numpy().astype(np.float32)  # raw 0-255, as in the app
-        out = session.run([output_name], {input_name: arr})[0]
-        y_pred.extend(np.argmax(out, axis=1).tolist())
-        y_true.extend(batch_labels.numpy().tolist())
-
-    y_true = np.array(y_true)
-    y_pred = np.array(y_pred)
-    accuracy = float((y_true == y_pred).mean())
-
-    per_class_recall = {}
-    confusions = Counter()
-    for cls_idx, name in enumerate(class_names):
-        mask = y_true == cls_idx
-        if mask.sum() == 0:
-            continue
-        per_class_recall[name] = float((y_pred[mask] == cls_idx).mean())
-    for t, p in zip(y_true, y_pred):
-        if t != p:
-            confusions[(class_names[t], class_names[p])] += 1
-
-    return accuracy, per_class_recall, confusions
+        images.append(batch_images.numpy().astype(np.float32))
+        labels.append(batch_labels.numpy())
+    np.savez_compressed(
+        os.path.join(output_dir, "test_data.npz"),
+        images=np.concatenate(images),
+        labels=np.concatenate(labels),
+    )
 
 
 def main():
@@ -307,18 +287,9 @@ def main():
     int8_mb = os.path.getsize(int8_path) / (1024 * 1024)
     print(f"INT8 model: {int8_mb:.1f} MB")
 
-    print("\n=== Regression gate: INT8 ONNX on test split ===")
-    int8_acc, per_class_recall, confusions = evaluate_onnx(
-        int8_path, test_ds, class_names
-    )
-    quant_drop = keras_acc - int8_acc
-    print(f"INT8 test accuracy: {int8_acc:.4f} (drop vs Keras: {quant_drop:+.4f})")
-
-    gate_passed = int8_acc >= args.min_accuracy and quant_drop <= args.max_quant_drop
-
-    # ── Reports ───────────────────────────────────────────────────────────────
-    worst_classes = sorted(per_class_recall.items(), key=lambda kv: kv[1])[:15]
-    top_confusions = confusions.most_common(10)
+    # ── Hand-off to the isolated gate step (training/gate.py) ─────────────────
+    print("\n=== Exporting test tensors + training summary for the gate ===")
+    export_test_tensors(test_ds, args.output_dir)
 
     added, removed = [], []
     if args.previous_class_names and os.path.isfile(args.previous_class_names):
@@ -328,7 +299,7 @@ def main():
         added = sorted(current - previous)
         removed = sorted(previous - current)
 
-    metrics = {
+    summary = {
         "trainedAt": datetime.now(timezone.utc).isoformat(),
         "datasetVersion": manifest.get("version"),
         "datasetCreatedAt": manifest.get("createdAt"),
@@ -338,57 +309,15 @@ def main():
         "fineTuned": bool(args.fine_tune),
         "epochsRun": len(history.history.get("accuracy", [])),
         "kerasTestAccuracy": round(float(keras_acc), 5),
-        "int8TestAccuracy": round(int8_acc, 5),
-        "quantizationDrop": round(float(quant_drop), 5),
-        "gate": {
-            "minAccuracy": args.min_accuracy,
-            "maxQuantDrop": args.max_quant_drop,
-            "passed": gate_passed,
-        },
         "classesAdded": added,
         "classesRemoved": removed,
-        "worstClassRecall": {name: round(r, 4) for name, r in worst_classes},
-        "topConfusions": [
-            {"true": t, "predicted": p, "count": c}
-            for (t, p), c in top_confusions
-        ],
         "int8SizeMb": round(int8_mb, 2),
     }
-    with open(os.path.join(args.output_dir, "metrics.json"), "w", encoding="utf-8") as f:
-        json.dump(metrics, f, indent=2)
+    with open(os.path.join(args.output_dir, "train_summary.json"), "w", encoding="utf-8") as f:
+        json.dump(summary, f, indent=2)
 
-    lines = [
-        "## Model retrain report",
-        "",
-        f"- Dataset: v{manifest.get('version', '?')} ({manifest.get('createdAt', 'unknown date')})",
-        f"- Classes: **{num_classes}** ({int(train_counts.sum())} training images, seed {args.seed})",
-        f"- Keras test accuracy: **{keras_acc:.2%}**",
-        f"- INT8 ONNX test accuracy: **{int8_acc:.2%}** (quantization drop {quant_drop:+.2%})",
-        f"- Gate (≥{args.min_accuracy:.0%}, drop ≤{args.max_quant_drop:.0%}): "
-        + ("**PASSED** ✅" if gate_passed else "**FAILED** ❌"),
-        f"- Fine-tuned top block: {'yes' if args.fine_tune else 'no'}",
-        f"- INT8 size: {int8_mb:.1f} MB",
-    ]
-    if added:
-        lines += ["", f"### New classes ({len(added)})", ""]
-        lines += [f"- `{name}`" for name in added]
-    if removed:
-        lines += ["", f"### Removed classes ({len(removed)})", ""]
-        lines += [f"- `{name}`" for name in removed]
-    lines += ["", "### Worst per-class recall (test split)", ""]
-    lines += [f"- `{name}`: {r:.0%}" for name, r in worst_classes]
-    if top_confusions:
-        lines += ["", "### Top confusions", ""]
-        lines += [f"- `{t}` → `{p}` ({c}×)" for (t, p), c in top_confusions]
-
-    with open(os.path.join(args.output_dir, "report.md"), "w", encoding="utf-8") as f:
-        f.write("\n".join(lines) + "\n")
-
-    print("\n" + "\n".join(lines))
-
-    if not gate_passed and not args.no_gate:
-        print("\nGATE FAILED — model artifacts were produced but must not ship.")
-        sys.exit(1)
+    print("Training complete. Run training/gate.py (isolated env) for the "
+          "INT8 regression gate and report.")
 
 
 if __name__ == "__main__":
