@@ -21,7 +21,3 @@ export const DEFAULT_TRAP_THRESHOLD = 0.05
 // The class count is NOT a constant — it is defined by resources/model/class_names.json
 // and validated against the model's output width at classifier init.
 export const MODEL_INPUT_SIZE = 96
-
-// Screenshot Cache
-export const SCREENSHOT_CACHE_TTL = 2_000
-export const SCREENSHOT_PREFETCH_INTERVAL = 1_500

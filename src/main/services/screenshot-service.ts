@@ -1,78 +1,57 @@
-import screenshot from 'screenshot-desktop'
+import { desktopCapturer, screen } from 'electron'
 import log from 'electron-log/main'
-import {
-  SCREENSHOT_CACHE_TTL,
-  SCREENSHOT_PREFETCH_INTERVAL,
-} from '@shared/constants/thresholds'
 
-// @DEV-GUIDE: Captures full-screen screenshots via the screenshot-desktop npm package (PNG format).
-// Implements a simple cache with SCREENSHOT_CACHE_TTL (2s) to avoid redundant captures when
-// multiple scan requests come in rapid succession.
+// @DEV-GUIDE: Captures the primary display via Electron's native desktopCapturer.
+// The previous screenshot-desktop implementation spawned a .bat file through
+// cmd.exe, which required ASAR-unpacking and produced two classes of user-facing
+// scan failures: #74 ("ENOENT: no such file or directory" — unpacked script path)
+// and #76 ("spawn cmd.exe ENOENT" — cmd not resolvable). Native capture has no
+// child processes, no ASAR concerns, and no PATH dependency.
 //
-// Prefetch mechanism: startPrefetch() begins periodic captures at SCREENSHOT_PREFETCH_INTERVAL
-// so a fresh screenshot is always available in cache when a scan is triggered. This reduces
-// perceived latency for the user because the screenshot is already captured before they click scan.
+// Returns a PNG buffer of the full primary display at PHYSICAL resolution
+// (thumbnailSize is requested in physical pixels so layout coordinates align).
+// Windowed-mode cropping happens in ml-handlers.ts.
 //
-// The returned Buffer is the full screen; windowed-mode cropping happens in ml-handlers.ts.
+// The old TTL-cache/prefetch layer was removed with the rewrite: it was never
+// enabled (startPrefetch had no callers) and both call sites force-bypassed the
+// cache anyway. Native capture is fast enough to run per scan.
 
 const logger = log.scope('screenshot')
 
 export interface ScreenshotService {
-  capture(forceCapture?: boolean): Promise<Buffer>
-  startPrefetch(): void
-  stopPrefetch(): void
-  clearCache(): void
+  capture(): Promise<Buffer>
 }
 
 export function createScreenshotService(): ScreenshotService {
-  let cachedBuffer: Buffer | null = null
-  let cacheTimestamp = 0
-  let prefetchTimer: ReturnType<typeof setInterval> | null = null
+  return {
+    async capture(): Promise<Buffer> {
+      const primary = screen.getPrimaryDisplay()
+      const thumbnailSize = {
+        width: Math.round(primary.size.width * primary.scaleFactor),
+        height: Math.round(primary.size.height * primary.scaleFactor),
+      }
 
-  async function captureAndCache(): Promise<Buffer> {
-    const buffer = (await screenshot({ format: 'png' })) as Buffer
-    cachedBuffer = buffer
-    cacheTimestamp = Date.now()
-    return buffer
+      const sources = await desktopCapturer.getSources({
+        types: ['screen'],
+        thumbnailSize,
+      })
+
+      const source =
+        sources.find((s) => s.display_id === String(primary.id)) ?? sources[0]
+      if (!source) {
+        throw new Error('No screen sources available for capture')
+      }
+
+      const png = source.thumbnail.toPNG()
+      if (png.length === 0) {
+        throw new Error('Screen capture returned an empty image')
+      }
+
+      logger.debug('Captured primary display', {
+        sourceId: source.id,
+        ...thumbnailSize,
+      })
+      return png
+    },
   }
-
-  async function capture(forceCapture = false): Promise<Buffer> {
-    const now = Date.now()
-    if (
-      !forceCapture &&
-      cachedBuffer &&
-      now - cacheTimestamp < SCREENSHOT_CACHE_TTL
-    ) {
-      return cachedBuffer
-    }
-    return captureAndCache()
-  }
-
-  function startPrefetch(): void {
-    if (prefetchTimer) return
-    logger.debug('Starting screenshot prefetch')
-    captureAndCache().catch((err) =>
-      logger.warn('Prefetch capture failed', { error: String(err) }),
-    )
-    prefetchTimer = setInterval(() => {
-      captureAndCache().catch((err) =>
-        logger.warn('Prefetch capture failed', { error: String(err) }),
-      )
-    }, SCREENSHOT_PREFETCH_INTERVAL)
-  }
-
-  function stopPrefetch(): void {
-    if (prefetchTimer) {
-      clearInterval(prefetchTimer)
-      prefetchTimer = null
-      logger.debug('Stopped screenshot prefetch')
-    }
-  }
-
-  function clearCache(): void {
-    cachedBuffer = null
-    cacheTimestamp = 0
-  }
-
-  return { capture, startPrefetch, stopPrefetch, clearCache }
 }

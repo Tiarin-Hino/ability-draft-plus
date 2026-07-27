@@ -202,15 +202,18 @@ app.whenReady().then(async () => {
   // Cleanup on quit
   app.on('before-quit', async () => {
     globalShortcut.unregisterAll()
+    updateService.stopPeriodicChecks()
     windowTracker.stopTracking()
     bridge.destroy()
     await mlService.terminate()
-    screenshotService.stopPrefetch()
     dbService.close()
   })
 
   const cpWin = windowManager.createControlPanelWindow()
   bridge.subscribe([cpWin])
+
+  // Automatic update checks (restores v1 behavior; download/install stay manual)
+  updateService.startPeriodicChecks()
 
   // @DEV-GUIDE: ML worker init is fire-and-forget so the app window appears instantly.
   // If init fails, mlStatus becomes 'error' and the dashboard shows a retry button.

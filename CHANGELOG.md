@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed (2.1.0 release blockers)
+
+- **v1 upgrade path** (#77) — 1.0-era databases crashed "Update Windrun Data" (missing columns) and the Abilities/Heroes tables (text-typed numerics); migrations are now a generic schema diff plus data normalization
+- **Scan failures `spawn cmd.exe ENOENT` / `ENOENT: no such file`** (#74, #76) — screen capture now uses Electron's native `desktopCapturer` instead of spawning scripts via `screenshot-desktop`
+- **App icon restored** — all 2.0.x releases shipped the default Electron icon after `build/` was gitignored in the rewrite
+- **Automatic update checks restored** — the v1 startup check was lost in the rewrite; the app now checks ~30s after launch and every 4 hours (download/install remain manual). Users on 2.0.x must press "Check for Updates" once to receive this release
+- Dashboard quick actions now show progress feedback (spinners, "up to date" confirmation)
+
 ### Added
 
 - **Model update: 528 classes** — recognizes 6 new abilities (Beastmaster Summon Raptor/Razorback, Dragon Knight Wyrm's Wrath, Lifestealer Feast, Tinker Deploy Turrets, Venomancer Snakebite) and drops 2 removed ones (PA Blur, Tinker Heat-Seeking Missile). 99.47% test accuracy. Known gap: Summon Raptor is often confused with Call of the Wild Hawk (near-identical bird icons, thin training data) — improves with the next data collection round
