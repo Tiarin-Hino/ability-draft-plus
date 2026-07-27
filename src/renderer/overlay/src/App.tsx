@@ -139,7 +139,7 @@ function App(): React.ReactElement {
     scanState === 'error' ? ('error' as const) : ('info' as const)
 
   return (
-    <div className="overlay-root">
+    <div className={`overlay-root${scanState === 'scanning' ? ' capture-mode' : ''}`}>
       {/* Hotspot Layer (abilities + hero models + tooltip) */}
       {overlayData?.scanData && (
         <HotspotLayer

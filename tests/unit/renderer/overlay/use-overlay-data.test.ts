@@ -310,7 +310,12 @@ describe('useOverlayData', () => {
   })
 
   describe('triggerScan', () => {
-    it('sends ml:scan IPC and sets scanState to scanning', () => {
+    // The ml:scan send is deferred by two animation frames so the capture-mode
+    // CSS (hiding overlay decorations) is painted before main captures the screen
+    const flushAnimationFrames = () =>
+      act(() => new Promise<void>((resolve) => setTimeout(resolve, 100)))
+
+    it('sets scanState to scanning immediately and sends ml:scan after paint', async () => {
       const { result } = renderHook(() => useOverlayData())
 
       // Must have overlayData first
@@ -319,13 +324,14 @@ describe('useOverlayData', () => {
       act(() => result.current.triggerScan(true))
 
       expect(result.current.scanState).toBe('scanning')
+      await flushAnimationFrames()
       expect(mockSend).toHaveBeenCalledWith('ml:scan', {
         heroOrder: 0,
         isInitialScan: true,
       })
     })
 
-    it('uses selectedSpotHeroOrder in scan request', () => {
+    it('uses selectedSpotHeroOrder in scan request', async () => {
       const { result } = renderHook(() => useOverlayData())
 
       act(() => emit('overlay:data', makeOverlayPayload()))
@@ -334,6 +340,7 @@ describe('useOverlayData', () => {
       )
 
       act(() => result.current.triggerScan(false))
+      await flushAnimationFrames()
 
       expect(mockSend).toHaveBeenCalledWith('ml:scan', {
         heroOrder: 4,

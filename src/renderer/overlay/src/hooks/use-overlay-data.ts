@@ -124,9 +124,18 @@ export function useOverlayData(): OverlayState & {
       setScanState('error')
       setScanError(i18n.t('status.timeoutMessage'))
     }, SCAN_TIMEOUT_MS)
-    window.electronApi.send('ml:scan', {
-      heroOrder: selectedSpotHeroOrder ?? 0,
-      isInitialScan,
+    // CRITICAL: the scanning state hides all overlay decorations (capture-mode CSS).
+    // Wait two frames so the compositor has actually painted their removal before
+    // main captures the screen — otherwise shimmer borders end up INSIDE the
+    // cropped icons and borderline classes drop below the confidence threshold
+    // (this made previously-recognized top-pick abilities scan as Unknown).
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.electronApi.send('ml:scan', {
+          heroOrder: selectedSpotHeroOrder ?? 0,
+          isInitialScan,
+        })
+      })
     })
   }
 
