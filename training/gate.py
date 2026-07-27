@@ -61,11 +61,12 @@ def main():
     input_name = session.get_inputs()[0].name
     output_name = session.get_outputs()[0].name
 
-    y_pred = []
+    all_probs = []
     for i in range(0, len(images), BATCH):
-        probs = session.run([output_name], {input_name: images[i:i + BATCH]})[0]
-        y_pred.extend(np.argmax(probs, axis=1).tolist())
-    y_pred = np.array(y_pred)
+        all_probs.append(
+            session.run([output_name], {input_name: images[i:i + BATCH]})[0])
+    all_probs = np.concatenate(all_probs)
+    y_pred = np.argmax(all_probs, axis=1)
     y_true = labels
 
     model_acc = float((y_true == y_pred).mean())
@@ -88,6 +89,32 @@ def main():
     worst_classes = sorted(per_class_recall.items(), key=lambda kv: kv[1])[:15]
     top_confusions = confusions.most_common(10)
 
+    # Twin detector: a class whose probability mass is dominated by ONE other
+    # class usually means near-identical icons — the signature of a renamed
+    # ability whose legacy class is still in the dataset (Windrun keeps serving
+    # legacy entries, so the staleness detector cannot catch renames). Twins
+    # split softmax mass and push in-app confidence below the 0.9 threshold,
+    # or worse, confidently mislabel one as the other.
+    twin_warnings = []
+    for cls_idx, name in enumerate(class_names):
+        mask = y_true == cls_idx
+        if mask.sum() == 0:
+            continue
+        mean_vec = all_probs[mask].mean(axis=0)
+        own = float(mean_vec[cls_idx])
+        comp_idx = int(np.argsort(mean_vec)[-1])
+        if comp_idx == cls_idx:
+            comp_idx = int(np.argsort(mean_vec)[-2])
+        comp_share = float(mean_vec[comp_idx])
+        if own < 0.8 and comp_share > 0.15:
+            twin_warnings.append({
+                "class": name,
+                "ownConfidence": round(own, 3),
+                "competitor": class_names[comp_idx],
+                "competitorShare": round(comp_share, 3),
+            })
+    twin_warnings.sort(key=lambda w: w["ownConfidence"])
+
     metrics = {
         **summary,
         "fp16TestAccuracy": round(model_acc, 5),
@@ -102,6 +129,7 @@ def main():
             {"true": t, "predicted": p, "count": c}
             for (t, p), c in top_confusions
         ],
+        "twinWarnings": twin_warnings,
     }
     with open(os.path.join(out, "metrics.json"), "w", encoding="utf-8") as f:
         json.dump(metrics, f, indent=2)
@@ -126,6 +154,16 @@ def main():
     if removed:
         lines += ["", f"### Removed classes ({len(removed)})", ""]
         lines += [f"- `{name}`" for name in removed]
+    if twin_warnings:
+        lines += ["", f"### ⚠️ Possible renamed/duplicate classes ({len(twin_warnings)})", "",
+                  "These classes share probability mass with a single competitor — "
+                  "usually a renamed ability whose legacy class is still in the "
+                  "dataset. Verify in-game and purge the legacy class folders.", ""]
+        lines += [
+            f"- `{w['class']}` (own {w['ownConfidence']:.0%}) ↔ "
+            f"`{w['competitor']}` ({w['competitorShare']:.0%})"
+            for w in twin_warnings
+        ]
     lines += ["", "### Worst per-class recall (test split)", ""]
     lines += [f"- `{name}`: {r:.0%}" for name, r in worst_classes]
     if top_confusions:
