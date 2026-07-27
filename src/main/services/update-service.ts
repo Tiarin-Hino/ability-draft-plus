@@ -2,16 +2,11 @@ import { app } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import log from 'electron-log/main'
 import type { AppStore } from '../store/app-store'
-import type { WindowManager } from './window-manager'
-import type { UpdateNotification } from '@shared/types'
 
-// @DEV-GUIDE: Wires electron-updater's autoUpdater to the AppStore and control panel window.
+// @DEV-GUIDE: Wires electron-updater's autoUpdater to the AppStore.
 // autoUpdater checks GitHub Releases for new versions (configured in electron-builder.yml).
-//
-// Two state channels:
-// - AppStore fields (updateStatus, updateProgress, updateVersion, updateError) -- synced to
-//   renderers via @zubridge for reactive UI updates (progress bars, badges).
-// - IPC send 'app:updateNotification' -- direct messages to the control panel for toast/banner.
+// All update state flows through AppStore fields (updateStatus, updateProgress,
+// updateVersion, updateError), synced to renderers via @zubridge.
 //
 // autoDownload is disabled (user must explicitly click "Download"). autoInstallOnAppQuit is
 // enabled so the update installs silently when the user quits naturally.
@@ -34,20 +29,10 @@ export interface UpdateService {
   stopPeriodicChecks(): void
 }
 
-export function createUpdateService(
-  appStore: AppStore,
-  windowManager: WindowManager,
-): UpdateService {
+export function createUpdateService(appStore: AppStore): UpdateService {
   autoUpdater.logger = log
   autoUpdater.autoDownload = false
   autoUpdater.autoInstallOnAppQuit = true
-
-  function broadcast(notification: UpdateNotification) {
-    const cpWin = windowManager.getControlPanelWindow()
-    if (cpWin && !cpWin.isDestroyed()) {
-      cpWin.webContents.send('app:updateNotification', notification)
-    }
-  }
 
   autoUpdater.on('checking-for-update', () => {
     appStore.setState({ updateStatus: 'checking' })
@@ -59,13 +44,11 @@ export function createUpdateService(
       updateStatus: 'available',
       updateVersion: info.version,
     })
-    broadcast({ status: 'available', info: info as unknown as Record<string, unknown> })
     logger.info('Update available:', info.version)
   })
 
   autoUpdater.on('update-not-available', () => {
     appStore.setState({ updateStatus: 'idle' })
-    broadcast({ status: 'not-available' })
     logger.info('No updates available')
   })
 
@@ -73,14 +56,6 @@ export function createUpdateService(
     appStore.setState({
       updateStatus: 'downloading',
       updateProgress: progress.percent,
-    })
-    broadcast({
-      status: 'downloading',
-      progress: {
-        percent: progress.percent,
-        transferred: progress.transferred,
-        total: progress.total,
-      },
     })
   })
 
@@ -90,7 +65,6 @@ export function createUpdateService(
       updateVersion: info.version,
       updateProgress: null,
     })
-    broadcast({ status: 'downloaded', info: info as unknown as Record<string, unknown> })
     logger.info('Update downloaded:', info.version)
   })
 
@@ -100,7 +74,6 @@ export function createUpdateService(
       updateError: err.message,
       updateProgress: null,
     })
-    broadcast({ status: 'error', error: err.message })
     logger.error('Update error:', err)
   })
 

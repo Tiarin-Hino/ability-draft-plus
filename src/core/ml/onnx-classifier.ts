@@ -4,12 +4,15 @@ import { MODEL_INPUT_SIZE } from '@shared/constants/thresholds'
 import type { ClassifierConfig, ClassifierResult, ImageClassifier } from './classifier'
 
 // @DEV-GUIDE: ONNX Runtime inference wrapper for ability icon classification.
-// Model: INT8-quantized MobileNetV2 (input: [batch, 96, 96, 3] float32, output: [batch, 524] probs).
-// Execution provider priority: DirectML (GPU) -> CPU fallback.
+// Model: FP16 MobileNetV2 (input: [batch, 96, 96, 3] float32 raw 0-255; output: [batch, N]
+// probs, N defined by class_names.json and validated against the model at init).
+// Runs on the CPU execution provider. DirectML plumbing exists (config.useDirectML)
+// but is disabled pending validation — note the provider echo below is the requested
+// config, not a detected one.
 // Warmup inference runs on init to trigger JIT compilation.
 // classifyBatch() takes pre-processed float32 arrays and returns className + confidence pairs.
 // Returns null className if confidence < threshold (0.9).
-// Zero Electron imports -- runs in the ML worker thread (UtilityProcess).
+// Zero Electron imports -- runs in the ML worker (worker_threads).
 
 export function createOnnxClassifier(): ImageClassifier {
   let session: ort.InferenceSession | null = null

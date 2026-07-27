@@ -22,7 +22,8 @@ import type { ClassifierResult } from '@core/ml/classifier'
 // - Main → { type: 'dispose' } → Worker releases ONNX session
 //
 // Scan pipeline: receive screenshot buffer → extract slot images (sharp crop+resize to 96x96) →
-// normalize to float32 [0,1] → ONNX batch inference → filter by confidence → return ScanResult[].
+// convert to float32 (raw 0-255 — the model's internal Rescaling layer maps to [-1,1])
+// → ONNX batch inference → filter by confidence → return ScanResult[].
 //
 // For initial scan: processes ultimate + standard slots, extracts heroDefiningAbilities (ability_order===2).
 // For rescan: processes only selected ability slots (much faster).

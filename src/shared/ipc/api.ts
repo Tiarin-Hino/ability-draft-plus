@@ -5,7 +5,6 @@ import type {
   SystemDisplayInfo,
   AppSettings,
   OverlayDataPayload,
-  UpdateNotification,
   ResolutionLayout,
 } from '../types'
 import type { InitialScanResults } from '../types/ml'
@@ -126,22 +125,17 @@ export interface IpcSendMap {
   'app:checkUpdate': void
   'app:downloadUpdate': void
   'app:installUpdate': void
-  'i18n:changeLanguage': { language: string }
   'feedback:takeSnapshot': void
   'feedback:exportSamples': void
   'feedback:uploadSamples': void
 }
 
-// Main-to-renderer event channels
+// Main-to-renderer event channels.
+// Scraper/theme/i18n/update state intentionally has NO push channels here —
+// it flows through the @zubridge-synced AppStore.
 export interface IpcOnMap {
   'overlay:data': OverlayDataPayload
   'overlay:hotkey': { action: 'scan' | 'rescan' }
-  'scraper:status': string | { key: string; params?: Record<string, string> }
-  'scraper:lastUpdated': string | null
-  'scraper:liquipediaStatus': string
-  'theme:changed': { shouldUseDarkColors: boolean }
-  'app:updateNotification': UpdateNotification
-  'i18n:translationsLoaded': Record<string, unknown>
   'ml:scanResults': {
     error?: string
     results?: InitialScanResults | ScanResult[]

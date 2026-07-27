@@ -494,6 +494,11 @@ function enrichSlots(
   topTierLookup: Map<string, import('./types').TopTierEntity>,
   allScoredEntities: ScoredEntity[],
 ): EnrichedScanSlot[] {
+  const scoredAbilityLookup = new Map(
+    allScoredEntities
+      .filter((e) => e.entityType === 'ability')
+      .map((e) => [e.internalName, e]),
+  )
   return slots.map((slot) => {
     if (!slot.name) {
       return makeUnknownSlot(slot)
@@ -503,7 +508,7 @@ function enrichSlots(
     const synergies = abilitySynergyMap.get(slot.name)
     const heroSyn = abilityHeroSynergyMap.get(slot.name)
     const topTier = topTierLookup.get(slot.name)
-    const scored = allScoredEntities.find((e) => e.internalName === slot.name)
+    const scored = scoredAbilityLookup.get(slot.name)
 
     return {
       ...slot,
@@ -553,10 +558,13 @@ function enrichHeroModels(
   topTierLookup: Map<string, import('./types').TopTierEntity>,
   allScoredEntities: ScoredEntity[],
 ): HeroModelDisplay[] {
+  const scoredHeroLookup = new Map(
+    allScoredEntities
+      .filter((e) => e.entityType === 'hero')
+      .map((e) => [e.internalName, e]),
+  )
   return heroModels.map((model) => {
-    const scored = allScoredEntities.find(
-      (e) => e.entityType === 'hero' && e.internalName === model.heroName,
-    )
+    const scored = scoredHeroLookup.get(model.heroName)
     const topTier = topTierLookup.get(model.heroName)
     const synergies = heroModelSynergyMap.get(model.heroName)
 

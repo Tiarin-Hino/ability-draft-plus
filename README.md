@@ -75,7 +75,7 @@ npm run dev
 1. Click **Activate Overlay** on the Dashboard before starting the game or after starting it but before queueing
 2. The overlay will appear on top of your game
 3. Queue for an **Ability Draft** match in Dota 2
-4. When the draft screen appears and is fully loaded click **Initial Scan** on the overlay control panel (top-right corner)
+4. When the draft screen appears and is fully loaded, press **Ctrl+Shift+S** (or click **Initial Scan** on the overlay control panel, top-right corner)
 5. Review the highlighted abilities in the pool:
    - **Green shimmer** -- general top-tier picks (highest combined winrate + pick priority score)
    - **Blue/teal shimmer** -- synergy suggestions (abilities that pair well with your already-picked abilities, shown after selecting My Spot)
@@ -84,8 +84,17 @@ npm run dev
    - **Solid green border** -- your selected hero model (after selecting My Model)
 6. Hover abilities for detailed tooltips with synergy information
 7. Use the **OP Combos** and **Trap Combos** panels for combination analysis
-8. After abilities are drafted, click **Rescan** to update recommendations
-9. Click **Close** to dismiss the overlay or **Reset** to closes scan but leave overlay open
+8. After abilities are drafted, press **Ctrl+Shift+R** (or click **Rescan**) to update recommendations
+9. Click **Close** to dismiss the overlay, or **Reset** to clear the scan while keeping the overlay open
+
+### Hotkeys
+
+| Shortcut | Action |
+|---|---|
+| `Ctrl+Shift+S` | Initial scan (skips the confirmation dialog) |
+| `Ctrl+Shift+R` | Rescan selected abilities |
+
+Hotkeys are active only while the overlay is open.
 
 ### Selecting Your Hero
 

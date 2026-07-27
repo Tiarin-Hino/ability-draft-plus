@@ -37,6 +37,8 @@ jobs:
           CLIENT_SHARED_SECRET: ${{ secrets.CLIENT_SHARED_SECRET }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
       - run: npm run build
+      # E2E smoke test runs against the built output (out/main/index.js)
+      - run: npm run test:e2e
       - run: npx electron-builder --win --publish=never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

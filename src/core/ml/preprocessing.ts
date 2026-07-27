@@ -4,11 +4,10 @@ import type { SlotCoordinate } from '@shared/types'
 
 // @DEV-GUIDE: Image preprocessing for ML inference. Takes a raw screenshot buffer and
 // layout coordinates, crops individual ability/hero slot images using sharp, resizes each
-// to 96x96, and normalizes pixel values to float32 [0, 1] range.
+// to 96x96, and converts to float32 KEPT AT RAW 0-255 — deliberately NOT normalized.
+// The ONNX graph contains a Rescaling(1/127.5, offset=-1) layer that maps 0-255 to
+// [-1, 1] internally, matching the Keras training pipeline (training/train.py).
 // extractSlots() handles both initial scan (all slots) and rescan (selected slots only).
-//
-// Note: bufferToFloat32 keeps values as 0-255 floats because the ONNX model's internal
-// Rescaling layer handles the /255 normalization. This matches the Keras training pipeline.
 
 const PIXELS_PER_IMAGE = MODEL_INPUT_SIZE * MODEL_INPUT_SIZE * 3
 
@@ -30,7 +29,8 @@ export async function preprocessSlot(
 
 /**
  * Converts a raw uint8 RGB buffer to Float32Array.
- * Values are kept as 0-255 floats -- the model's Rescaling layer handles /255 internally.
+ * Values are kept as 0-255 floats -- the model's Rescaling layer maps them to [-1, 1]
+ * internally (x/127.5 - 1).
  */
 export function bufferToFloat32(rawBuffer: Buffer): Float32Array {
   const float32 = new Float32Array(rawBuffer.length)

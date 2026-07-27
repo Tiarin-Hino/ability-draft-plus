@@ -171,8 +171,8 @@ app.whenReady().then(async () => {
     }
   })
 
-  // Create update service (wires autoUpdater events to appStore + IPC)
-  const updateService = createUpdateService(appStore, windowManager)
+  // Create update service (wires autoUpdater events to appStore)
+  const updateService = createUpdateService(appStore)
   const windowTracker = createWindowTrackerService()
   const scraperService = createScraperService(dbService, appStore)
 
