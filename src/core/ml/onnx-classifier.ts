@@ -1,6 +1,6 @@
 import * as ort from 'onnxruntime-node'
 import { readFile } from 'fs/promises'
-import { MODEL_INPUT_SIZE } from '@shared/constants/thresholds'
+import { MODEL_INPUT_SIZE, ML_CLASS_THRESHOLD_OVERRIDES } from '@shared/constants/thresholds'
 import type { ClassifierConfig, ClassifierResult, ImageClassifier } from './classifier'
 
 // @DEV-GUIDE: ONNX Runtime inference wrapper for ability icon classification.
@@ -11,7 +11,9 @@ import type { ClassifierConfig, ClassifierResult, ImageClassifier } from './clas
 // config, not a detected one.
 // Warmup inference runs on init to trigger JIT compilation.
 // classifyBatch() takes pre-processed float32 arrays and returns className + confidence pairs.
-// Returns null className if confidence < threshold (0.9).
+// Returns null className if confidence < threshold (0.9), unless the winning class
+// has a per-class override in ML_CLASS_THRESHOLD_OVERRIDES (known hard classes
+// like Crystal Nova that legitimately score below the global threshold).
 // Class masking: classify() optionally takes the set of active class names (the abilities
 // currently in the DB, i.e. still in the draft pool). Classes outside the set are skipped
 // during argmax, so a removed-from-pool ability that is still in the model can never be
@@ -119,11 +121,13 @@ export function createOnnxClassifier(): ImageClassifier {
           maxIndex = j
         }
       }
+      const predicted = maxIndex < classNames.length ? classNames[maxIndex] : null
+      const effectiveThreshold =
+        predicted !== null
+          ? (ML_CLASS_THRESHOLD_OVERRIDES[predicted] ?? confidenceThreshold)
+          : confidenceThreshold
       results.push({
-        name:
-          maxProb >= confidenceThreshold && maxIndex < classNames.length
-            ? classNames[maxIndex]
-            : null,
+        name: predicted !== null && maxProb >= effectiveThreshold ? predicted : null,
         confidence: maxProb,
         classIndex: maxIndex,
       })
