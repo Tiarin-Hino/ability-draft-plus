@@ -248,6 +248,56 @@ describe('OnnxClassifier', () => {
       ).rejects.toThrow('Classifier not initialized')
     })
 
+    describe('per-class threshold overrides', () => {
+      // crystal_maiden_crystal_nova has a 0.5 override in ML_CLASS_THRESHOLD_OVERRIDES
+      async function createClassifierWithNova() {
+        const names = makeClassNames(524)
+        names[42] = 'crystal_maiden_crystal_nova'
+        mockReadFile.mockResolvedValueOnce(JSON.stringify(names))
+        const classifier = createOnnxClassifier()
+        await classifier.initialize({
+          modelPath: '/path/to/model.onnx',
+          classNamesPath: '/path/to/class_names.json',
+          useDirectML: false,
+        })
+        return classifier
+      }
+
+      it('accepts an overridden class below the global threshold', async () => {
+        const classifier = await createClassifierWithNova()
+
+        const output = makeOutputData(1, 524, [{ index: 42, confidence: 0.55 }])
+        mockRun.mockResolvedValueOnce({ Identity: { data: output } })
+
+        const results = await classifier.classify(new Float32Array(96 * 96 * 3), 1, 0.9)
+
+        expect(results[0].name).toBe('crystal_maiden_crystal_nova')
+        expect(results[0].confidence).toBeCloseTo(0.55)
+      })
+
+      it('still rejects an overridden class below its own threshold', async () => {
+        const classifier = await createClassifierWithNova()
+
+        const output = makeOutputData(1, 524, [{ index: 42, confidence: 0.45 }])
+        mockRun.mockResolvedValueOnce({ Identity: { data: output } })
+
+        const results = await classifier.classify(new Float32Array(96 * 96 * 3), 1, 0.9)
+
+        expect(results[0].name).toBeNull()
+      })
+
+      it('does not relax the threshold for non-overridden classes', async () => {
+        const classifier = await createClassifierWithNova()
+
+        const output = makeOutputData(1, 524, [{ index: 7, confidence: 0.55 }])
+        mockRun.mockResolvedValueOnce({ Identity: { data: output } })
+
+        const results = await classifier.classify(new Float32Array(96 * 96 * 3), 1, 0.9)
+
+        expect(results[0].name).toBeNull()
+      })
+    })
+
     describe('class masking (activeClassNames)', () => {
       it('never predicts a masked class — next-best active class wins', async () => {
         const classifier = await createInitializedClassifier()
