@@ -1,14 +1,19 @@
-import { eq, inArray, sql } from 'drizzle-orm'
+import { and, eq, inArray, notInArray, sql } from 'drizzle-orm'
 import type { SQLJsDatabase } from 'drizzle-orm/sql-js'
-import { abilities } from '../schema'
+import { abilities, heroes } from '../schema'
 import type { AbilityDetail } from '@shared/types'
 
 // @DEV-GUIDE: Ability CRUD repository. Key methods:
 // - getDetails(names[]): Batch lookup by internal name, returns Map<name, AbilityDetail>.
 //   This is the hot path during scan processing (Phase 3).
 // - upsertAbilities: Batch insert from scraper with ON CONFLICT UPDATE.
+// - deleteAbilitiesNotIn: Post-scrape prune of abilities that dropped out of Windrun data
+//   (removed/renamed in a patch). Without it, stale rows accumulate and pollute ML
+//   staleness detection. FK cascades clean up dependent synergy/triplet rows.
 // - getNameToIdMap: Returns Map<internalName, abilityId> for synergy/triplet foreign key resolution.
-// - updateAbilityMeta: Applies Liquipedia-sourced ability_order and is_ultimate updates.
+// - applyLiquipediaMeta: Applies Liquipedia-sourced ability_order and is_ultimate updates.
+//   Matches by DISPLAY name scoped to a hero (Liquipedia has no internal names), and only
+//   accepts ultimate candidates (non-Q/W/E hotkey) when Windrun data agrees is_ultimate=1.
 // Used by: scan-processor, scraper orchestrator, Liquipedia enrichment, staleness detector.
 
 export interface AbilityUpsertData {
@@ -22,14 +27,35 @@ export interface AbilityUpsertData {
   isUltimate?: boolean
 }
 
+export interface LiquipediaMetaUpdate {
+  /** Hero display name as stored in Heroes.display_name, e.g. "Drow Ranger" */
+  heroDisplayName: string
+  /** Ability display name as rendered on Liquipedia, e.g. "Shadow Step" */
+  abilityDisplayName: string
+  /** 1-3 for Q/W/E hotkeys; 0 for ultimate candidates */
+  abilityOrder: number
+  /**
+   * True when the Liquipedia hotkey is not Q/W/E (R, F, D, ...). Applied as an
+   * ultimate (order 0) only if the DB row is already is_ultimate per Windrun data —
+   * this filters out sub-abilities (e.g. Spectre's Reality) that also carry hotkeys.
+   */
+  isUltimateCandidate: boolean
+}
+
 export interface AbilityRepository {
   getAll(): AbilityDetail[]
   getDetails(names: string[]): Map<string, AbilityDetail>
   getByHeroId(heroId: number): AbilityDetail[]
   upsertAbilities(batch: AbilityUpsertData[], heroNameToIdMap: Map<string, number>): void
+  /**
+   * Delete abilities whose name is NOT in keepNames (i.e. no longer served by Windrun).
+   * No-op when keepNames is empty (a failed/empty scrape must never wipe the table).
+   * Returns the names of the deleted abilities.
+   */
+  deleteAbilitiesNotIn(keepNames: string[]): string[]
   getNameToIdMap(): Map<string, number>
   getAllNames(): string[]
-  updateAbilityMeta(updates: Array<{ name: string; abilityOrder: number; isUltimate: boolean }>): number
+  applyLiquipediaMeta(updates: LiquipediaMetaUpdate[]): number
 }
 
 function mapRow(row: typeof abilities.$inferSelect): AbilityDetail {
@@ -114,6 +140,19 @@ export function createAbilityRepository(db: SQLJsDatabase): AbilityRepository {
       }
     },
 
+    deleteAbilitiesNotIn(keepNames: string[]): string[] {
+      if (keepNames.length === 0) return []
+      const staleNames = db
+        .select({ name: abilities.name })
+        .from(abilities)
+        .where(notInArray(abilities.name, keepNames))
+        .all()
+        .map((row) => row.name)
+      if (staleNames.length === 0) return []
+      db.delete(abilities).where(inArray(abilities.name, staleNames)).run()
+      return staleNames
+    },
+
     getNameToIdMap(): Map<string, number> {
       const map = new Map<string, number>()
       const rows = db
@@ -134,25 +173,38 @@ export function createAbilityRepository(db: SQLJsDatabase): AbilityRepository {
         .map((row) => row.name)
     },
 
-    updateAbilityMeta(updates: Array<{ name: string; abilityOrder: number; isUltimate: boolean }>): number {
-      let updated = 0
+    applyLiquipediaMeta(updates: LiquipediaMetaUpdate[]): number {
+      let applied = 0
       for (const u of updates) {
-        const existing = db
-          .select({ name: abilities.name })
+        const rows = db
+          .select({ abilityId: abilities.abilityId, isUltimate: abilities.isUltimate })
           .from(abilities)
-          .where(eq(abilities.name, u.name))
+          .innerJoin(heroes, eq(abilities.heroId, heroes.heroId))
+          .where(
+            and(
+              eq(abilities.displayName, u.abilityDisplayName),
+              eq(heroes.displayName, u.heroDisplayName),
+            ),
+          )
           .all()
-        if (existing.length === 0) continue
-        db.update(abilities)
-          .set({
-            abilityOrder: u.abilityOrder,
-            isUltimate: u.isUltimate,
-          })
-          .where(eq(abilities.name, u.name))
-          .run()
-        updated += 1
+        if (rows.length === 0) continue
+        const row = rows[0]
+
+        if (u.isUltimateCandidate) {
+          if (!row.isUltimate) continue
+          db.update(abilities)
+            .set({ abilityOrder: 0, isUltimate: true })
+            .where(eq(abilities.abilityId, row.abilityId))
+            .run()
+        } else {
+          db.update(abilities)
+            .set({ abilityOrder: u.abilityOrder, isUltimate: false })
+            .where(eq(abilities.abilityId, row.abilityId))
+            .run()
+        }
+        applied += 1
       }
-      return updated
+      return applied
     },
   }
 }

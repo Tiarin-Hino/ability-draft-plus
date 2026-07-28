@@ -80,9 +80,10 @@ function createMockDeps(apiClient?: WindrunApiClient): ScraperDeps {
     } as unknown as ScraperDeps['heroes'],
     abilities: {
       upsertAbilities: vi.fn(),
+      deleteAbilitiesNotIn: vi.fn().mockReturnValue([]),
       getNameToIdMap: vi.fn().mockReturnValue(new Map([['ursa_fury_swipes', 100]])),
       getAllNames: vi.fn().mockReturnValue(['ursa_fury_swipes']),
-      updateAbilityMeta: vi.fn().mockReturnValue(1),
+      applyLiquipediaMeta: vi.fn().mockReturnValue(1),
       getAll: vi.fn().mockReturnValue([]),
       getById: vi.fn(),
       getByName: vi.fn(),
@@ -154,6 +155,25 @@ describe('performFullScrape', () => {
 
     expect(deps.heroes.upsertHeroes).toHaveBeenCalledOnce()
     expect(deps.abilities.upsertAbilities).toHaveBeenCalledOnce()
+  })
+
+  it('prunes abilities absent from the fresh scrape after upserting', async () => {
+    await performFullScrape(deps, onProgress)
+
+    expect(deps.abilities.deleteAbilitiesNotIn).toHaveBeenCalledOnce()
+    expect(deps.abilities.deleteAbilitiesNotIn).toHaveBeenCalledWith(['ursa_fury_swipes'])
+  })
+
+  it('reports pruned stale abilities via progress', async () => {
+    ;(deps.abilities.deleteAbilitiesNotIn as ReturnType<typeof vi.fn>).mockReturnValue([
+      'dragon_knight_dragon_blood',
+    ])
+
+    await performFullScrape(deps, onProgress)
+
+    const pruneMessage = progress.find((p) => p.message.includes('Pruned 1 stale abilities'))
+    expect(pruneMessage).toBeDefined()
+    expect(pruneMessage!.message).toContain('dragon_knight_dragon_blood')
   })
 
   it('persists after each phase', async () => {
@@ -263,25 +283,46 @@ describe('performLiquipediaEnrichment', () => {
     progress = []
   })
 
-  it('applies Liquipedia updates via updateAbilityMeta', async () => {
-    const updateAbilityMeta = vi.fn().mockReturnValue(2)
+  it('applies Liquipedia updates via applyLiquipediaMeta with hero display names', async () => {
+    const applyLiquipediaMeta = vi.fn().mockReturnValue(2)
     const deps: LiquipediaDeps = {
       abilities: {
-        updateAbilityMeta,
+        applyLiquipediaMeta,
       } as unknown as LiquipediaDeps['abilities'],
       persist: vi.fn(),
       enrichFromLiquipedia: vi.fn().mockResolvedValue([
-        { abilityName: 'ursa_fury_swipes', abilityOrder: 3, isUltimate: false },
-        { abilityName: 'ursa_enrage', abilityOrder: 0, isUltimate: true },
+        {
+          heroPageName: 'Drow_Ranger',
+          abilityDisplayName: 'Frost Arrows',
+          abilityOrder: 1,
+          isUltimateCandidate: false,
+        },
+        {
+          heroPageName: 'Drow_Ranger',
+          abilityDisplayName: 'Marksmanship',
+          abilityOrder: 0,
+          isUltimateCandidate: true,
+        },
       ]),
     }
 
-    const result = await performLiquipediaEnrichment(deps, ['Ursa'], onProgress)
+    const result = await performLiquipediaEnrichment(deps, ['Drow Ranger'], onProgress)
 
     expect(result.success).toBe(true)
-    expect(updateAbilityMeta).toHaveBeenCalledWith([
-      { name: 'ursa_fury_swipes', abilityOrder: 3, isUltimate: false },
-      { name: 'ursa_enrage', abilityOrder: 0, isUltimate: true },
+    // Page names ("Drow_Ranger") must be translated back to DB display names ("Drow Ranger")
+    expect(applyLiquipediaMeta).toHaveBeenCalledWith([
+      {
+        heroDisplayName: 'Drow Ranger',
+        abilityDisplayName: 'Frost Arrows',
+        abilityOrder: 1,
+        isUltimateCandidate: false,
+      },
+      {
+        heroDisplayName: 'Drow Ranger',
+        abilityDisplayName: 'Marksmanship',
+        abilityOrder: 0,
+        isUltimateCandidate: true,
+      },
     ])
     expect(deps.persist).toHaveBeenCalled()
   })
@@ -289,7 +330,7 @@ describe('performLiquipediaEnrichment', () => {
   it('handles empty updates gracefully', async () => {
     const deps: LiquipediaDeps = {
       abilities: {
-        updateAbilityMeta: vi.fn(),
+        applyLiquipediaMeta: vi.fn(),
       } as unknown as LiquipediaDeps['abilities'],
       persist: vi.fn(),
       enrichFromLiquipedia: vi.fn().mockResolvedValue([]),
@@ -298,14 +339,14 @@ describe('performLiquipediaEnrichment', () => {
     const result = await performLiquipediaEnrichment(deps, ['Ursa'], onProgress)
 
     expect(result.success).toBe(true)
-    expect(deps.abilities.updateAbilityMeta).not.toHaveBeenCalled()
+    expect(deps.abilities.applyLiquipediaMeta).not.toHaveBeenCalled()
     expect(deps.persist).not.toHaveBeenCalled()
   })
 
   it('returns error on failure', async () => {
     const deps: LiquipediaDeps = {
       abilities: {
-        updateAbilityMeta: vi.fn(),
+        applyLiquipediaMeta: vi.fn(),
       } as unknown as LiquipediaDeps['abilities'],
       persist: vi.fn(),
       enrichFromLiquipedia: vi.fn().mockRejectedValue(new Error('Rate limited')),
@@ -321,7 +362,7 @@ describe('performLiquipediaEnrichment', () => {
     const enrichFn = vi.fn().mockResolvedValue([])
     const deps: LiquipediaDeps = {
       abilities: {
-        updateAbilityMeta: vi.fn(),
+        applyLiquipediaMeta: vi.fn(),
       } as unknown as LiquipediaDeps['abilities'],
       persist: vi.fn(),
       enrichFromLiquipedia: enrichFn,

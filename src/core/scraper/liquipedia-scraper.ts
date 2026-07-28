@@ -1,7 +1,14 @@
 // @DEV-GUIDE: Dev-mode only Liquipedia HTML parser for ability_order and is_ultimate metadata.
 // Windrun.io provides winrates/synergies but NOT ability ordering within a hero's kit.
 // Liquipedia's MediaWiki API returns rendered HTML with .spellcard-wrapper elements.
-// Each card has a hotkey (Q/W/E/R) mapped to ability_order (1/2/3/0).
+// Spellcard IDs are DISPLAY names ("Shadow_Step"), not internal names — updates carry
+// display names + the hero page they came from; matching against the DB happens in
+// AbilityRepository.applyLiquipediaMeta (per-hero, by display_name).
+// Hotkeys: Q/W/E map to ability_order 1/2/3. ANY other hotkey (R, F, D, ...) marks an
+// ultimate CANDIDATE (order 0) — some ults don't sit on R (Spectre's Haunt is F), and
+// sub-abilities also carry hotkeys, so the repository confirms candidates against
+// Windrun's is_ultimate before applying. Cards without a hotkey (innates, Aghs/Shard)
+// are skipped.
 // Rate limited to 1 request per 31 seconds — a full scrape of ~130 heroes takes ~67 minutes.
 // Only needed when Liquipedia data is stale; not part of the normal user flow.
 
@@ -27,14 +34,13 @@ const USER_AGENT =
   'Dota2AbilityDraftPlusOverlay/2.0 (https://github.com/tiarin-hino/ability-draft-plus; dev@example.com)'
 
 /**
- * Maps keyboard hotkeys to ability ordering metadata.
- * Q/W/E are standard abilities (order 1-3), R is the ultimate (order 0).
+ * Standard ability hotkeys mapped to ability_order. Any OTHER non-empty hotkey
+ * (R, F, D, ...) is treated as an ultimate candidate — see the dev-guide above.
  */
-const HOTKEY_MAPPING: Record<string, { abilityOrder: number; isUltimate: boolean }> = {
-  Q: { abilityOrder: 1, isUltimate: false },
-  W: { abilityOrder: 2, isUltimate: false },
-  E: { abilityOrder: 3, isUltimate: false },
-  R: { abilityOrder: 0, isUltimate: true },
+const STANDARD_HOTKEY_ORDER: Record<string, number> = {
+  Q: 1,
+  W: 2,
+  E: 3,
 }
 
 /**
@@ -90,9 +96,14 @@ const HERO_NAME_OVERRIDES: Record<string, string> = {
 // ── Public Interface ────────────────────────────────────────────────────────────
 
 export interface LiquipediaAbilityUpdate {
-  abilityName: string
+  /** Hero page name this update came from, exactly as passed to enrichFromLiquipedia */
+  heroPageName: string
+  /** Ability display name as rendered on Liquipedia, e.g. "Shadow Step" */
+  abilityDisplayName: string
+  /** 1-3 for Q/W/E hotkeys; 0 for ultimate candidates */
   abilityOrder: number
-  isUltimate: boolean
+  /** True for any non-Q/W/E hotkey — must be confirmed against Windrun's is_ultimate */
+  isUltimateCandidate: boolean
 }
 
 // ── Core Logic ──────────────────────────────────────────────────────────────────
@@ -123,7 +134,7 @@ export async function enrichFromLiquipedia(
 
     try {
       const updates = await fetchHeroAbilities(pageTitle)
-      allUpdates.push(...updates)
+      allUpdates.push(...updates.map((u) => ({ ...u, heroPageName: heroName })))
       onProgress(
         `[${i + 1}/${heroNames.length}] Found ${updates.length} abilities for "${pageTitle}"`,
       )
@@ -152,10 +163,13 @@ export async function enrichFromLiquipedia(
 
 // ── Internal Helpers ────────────────────────────────────────────────────────────
 
+/** A spellcard parsed from one hero page, before the hero page name is attached. */
+export type ParsedSpellcard = Omit<LiquipediaAbilityUpdate, 'heroPageName'>
+
 /**
  * Fetches and parses a single hero's Liquipedia page, returning ability metadata.
  */
-async function fetchHeroAbilities(pageTitle: string): Promise<LiquipediaAbilityUpdate[]> {
+async function fetchHeroAbilities(pageTitle: string): Promise<ParsedSpellcard[]> {
   const url = `${LIQUIPEDIA_API_BASE}?action=parse&page=${encodeURIComponent(pageTitle)}&format=json`
 
   const response = await fetch(url, {
@@ -184,36 +198,39 @@ async function fetchHeroAbilities(pageTitle: string): Promise<LiquipediaAbilityU
  * Parses ability cards from Liquipedia's rendered HTML.
  *
  * Liquipedia renders each ability as a `.spellcard-wrapper` element with an ID
- * matching the ability name (underscores for spaces, no periods). Inside each
- * wrapper, a `div[title="Default Hotkey"] span` contains the hotkey character.
+ * matching the ability DISPLAY name (underscores for spaces, no periods). Inside
+ * each wrapper, a `div[title="Default Hotkey"] span` contains the hotkey character.
+ *
+ * Exported for unit testing.
  */
-function parseAbilitiesFromHtml(html: string): LiquipediaAbilityUpdate[] {
+export function parseAbilitiesFromHtml(html: string): ParsedSpellcard[] {
   const $ = cheerio.load(html)
-  const updates: LiquipediaAbilityUpdate[] = []
+  const updates: ParsedSpellcard[] = []
 
   $('.spellcard-wrapper').each((_index, element) => {
     const wrapper = $(element)
     const id = wrapper.attr('id')
     if (!id) return
 
-    // The ID is the ability name with underscores for spaces (no periods)
+    // The ID is the display name with underscores for spaces (no periods)
     // Convert back to display name: underscores → spaces
-    const abilityName = id.replace(/_/g, ' ')
+    const abilityDisplayName = id.replace(/_/g, ' ')
 
     // Find the hotkey character
     const hotkeySpan = wrapper.find('div[title="Default Hotkey"] span').first()
     const hotkeyChar = hotkeySpan.text().trim().toUpperCase()
 
-    if (!hotkeyChar || !(hotkeyChar in HOTKEY_MAPPING)) {
-      return // Skip abilities without Q/W/E/R hotkeys (innates, Aghs/Shard, etc.)
+    if (!hotkeyChar) {
+      return // No hotkey: innates, Aghs/Shard grants, hero model cards, etc.
     }
 
-    const mapping = HOTKEY_MAPPING[hotkeyChar]
-    updates.push({
-      abilityName,
-      abilityOrder: mapping.abilityOrder,
-      isUltimate: mapping.isUltimate,
-    })
+    const standardOrder = STANDARD_HOTKEY_ORDER[hotkeyChar]
+    if (standardOrder !== undefined) {
+      updates.push({ abilityDisplayName, abilityOrder: standardOrder, isUltimateCandidate: false })
+    } else {
+      // R, F, D, ... — ultimate candidate; confirmed against Windrun data at apply time
+      updates.push({ abilityDisplayName, abilityOrder: 0, isUltimateCandidate: true })
+    }
   })
 
   return updates
