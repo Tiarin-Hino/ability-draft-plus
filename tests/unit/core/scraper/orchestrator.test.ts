@@ -84,6 +84,7 @@ function createMockDeps(apiClient?: WindrunApiClient): ScraperDeps {
       getNameToIdMap: vi.fn().mockReturnValue(new Map([['ursa_fury_swipes', 100]])),
       getAllNames: vi.fn().mockReturnValue(['ursa_fury_swipes']),
       applyLiquipediaMeta: vi.fn().mockReturnValue(1),
+      setSlotMetadata: vi.fn().mockReturnValue(0),
       getAll: vi.fn().mockReturnValue([]),
       getById: vi.fn(),
       getByName: vi.fn(),
@@ -162,6 +163,25 @@ describe('performFullScrape', () => {
 
     expect(deps.abilities.deleteAbilitiesNotIn).toHaveBeenCalledOnce()
     expect(deps.abilities.deleteAbilitiesNotIn).toHaveBeenCalledWith(['ursa_fury_swipes'])
+  })
+
+  it('applies the hand-curated slot metadata overrides after the prune', async () => {
+    await performFullScrape(deps, onProgress)
+
+    expect(deps.abilities.setSlotMetadata).toHaveBeenCalledOnce()
+    const entries = (deps.abilities.setSlotMetadata as ReturnType<typeof vi.fn>).mock
+      .calls[0][0] as Array<{ name: string; abilityOrder: number; isUltimate: boolean }>
+    // Spot-check the user-verified corrections ride along with every scrape
+    expect(entries).toContainEqual({
+      name: 'juggernaut_healing_ward',
+      abilityOrder: 2,
+      isUltimate: false,
+    })
+    expect(entries).toContainEqual({
+      name: 'nevermore_dark_lord',
+      abilityOrder: 3,
+      isUltimate: false,
+    })
   })
 
   it('reports pruned stale abilities via progress', async () => {
@@ -288,6 +308,7 @@ describe('performLiquipediaEnrichment', () => {
     const deps: LiquipediaDeps = {
       abilities: {
         applyLiquipediaMeta,
+        setSlotMetadata: vi.fn().mockReturnValue(0),
       } as unknown as LiquipediaDeps['abilities'],
       persist: vi.fn(),
       enrichFromLiquipedia: vi.fn().mockResolvedValue([
@@ -309,6 +330,8 @@ describe('performLiquipediaEnrichment', () => {
     const result = await performLiquipediaEnrichment(deps, ['Drow Ranger'], onProgress)
 
     expect(result.success).toBe(true)
+    // Manual slot overrides must win over Liquipedia — re-applied after the updates
+    expect(deps.abilities.setSlotMetadata).toHaveBeenCalledOnce()
     // Page names ("Drow_Ranger") must be translated back to DB display names ("Drow Ranger")
     expect(applyLiquipediaMeta).toHaveBeenCalledWith([
       {

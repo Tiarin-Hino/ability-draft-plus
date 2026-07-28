@@ -485,7 +485,11 @@ type HeroSynergyMap = Map<
 
 // @DEV-GUIDE: Attaches all enrichment data to each scan slot for overlay rendering.
 // Merges DB details, synergy lists, top-tier flags, and consolidated scores onto each slot.
-// Unknown abilities (name === null) get a safe fallback via makeUnknownSlot().
+// Unknown abilities (name === null) get a safe fallback via makeUnknownSlot(); so do
+// predicted names with no DB row (ability removed from the pool / DB not yet scraped) —
+// rendering those as normal slots would show raw internal names with a fake neutral score.
+// (Class masking in the ML worker normally prevents removed-class predictions upstream;
+// this is the defense-in-depth net for when masking is unavailable.)
 function enrichSlots(
   slots: ScanResult[],
   abilityDetailsMap: Map<string, import('@shared/types').AbilityDetail>,
@@ -505,6 +509,9 @@ function enrichSlots(
     }
 
     const details = abilityDetailsMap.get(slot.name)
+    if (!details) {
+      return makeUnknownSlot(slot)
+    }
     const synergies = abilitySynergyMap.get(slot.name)
     const heroSyn = abilityHeroSynergyMap.get(slot.name)
     const topTier = topTierLookup.get(slot.name)
@@ -512,17 +519,17 @@ function enrichSlots(
 
     return {
       ...slot,
-      displayName: details?.displayName ?? slot.name,
-      winrate: details?.winrate ?? null,
-      pickRate: details?.pickRate ?? null,
+      displayName: details.displayName,
+      winrate: details.winrate,
+      pickRate: details.pickRate,
       consolidatedScore: scored?.consolidatedScore ?? calculateConsolidatedScore(
-        details?.winrate ?? null,
-        details?.pickRate ?? null,
+        details.winrate,
+        details.pickRate,
       ),
       isGeneralTopTier: topTier?.isGeneralTopTier ?? false,
       isSynergySuggestionForMySpot:
         topTier?.isSynergySuggestionForMySpot ?? false,
-      isUltimateFromDb: details?.isUltimate ?? false,
+      isUltimateFromDb: details.isUltimate,
       highWinrateCombinations: synergies?.high ?? [],
       lowWinrateCombinations: synergies?.low ?? [],
       strongHeroSynergies: heroSyn?.strong ?? [],

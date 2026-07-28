@@ -44,11 +44,14 @@ const STANDARD_HOTKEY_ORDER: Record<string, number> = {
 }
 
 /**
- * Special-case hero name mappings from internal snake_case names to Liquipedia page titles.
- * Most heroes can be derived algorithmically, but these have punctuation or casing quirks
- * that the simple title-case + underscore replacement cannot handle.
+ * Special-case hero name mappings to Liquipedia page titles, keyed by a normalized
+ * form of the hero name (lowercase, apostrophes stripped, spaces/hyphens → "_") so
+ * both display names ("Anti-Mage") and internal snake_case names match. Needed for
+ * punctuation quirks and for heroes whose Liquipedia page uses a different name
+ * than the data source (Outworld Devourer → Outworld Destroyer).
  */
 const HERO_NAME_OVERRIDES: Record<string, string> = {
+  outworld_devourer: 'Outworld_Destroyer',
   anti_mage: 'Anti-Mage',
   natures_prophet: "Nature's_Prophet",
   shadow_fiend: 'Shadow_Fiend',
@@ -112,7 +115,8 @@ export interface LiquipediaAbilityUpdate {
  * Fetches ability metadata (ability_order, is_ultimate) for the given heroes
  * from Liquipedia's wiki API.
  *
- * @param heroNames - Internal hero names (snake_case), e.g. ["ursa", "anti_mage"]
+ * @param heroNames - Hero names as passed by the enrichment flow: display-name-derived
+ *   page names, e.g. ["Ursa", "Anti-Mage", "Queen_of_Pain"] (internal snake_case also accepted)
  * @param onProgress - Callback invoked with human-readable status messages
  * @returns Array of ability updates found across all heroes
  */
@@ -237,25 +241,45 @@ export function parseAbilitiesFromHtml(html: string): ParsedSpellcard[] {
 }
 
 /**
- * Converts an internal hero name (snake_case) to a Liquipedia page title.
+ * Converts a hero name to a Liquipedia page title. Accepts display-name-derived
+ * page names ("Queen_of_Pain", what the enrichment flow passes) as well as
+ * internal snake_case names ("queen_of_pain").
+ *
+ * Liquipedia page titles keep natural casing ("Queen_of_Pain", NOT "Queen_Of_Pain"),
+ * so the input's casing is preserved apart from the leading capital — display names
+ * are already correctly cased. Title-casing every word here caused real misses
+ * (Queen_Of_Pain / Keeper_Of_The_Light returned 0 abilities).
  *
  * Examples:
- *   "ursa"           → "Ursa"
- *   "anti_mage"      → "Anti-Mage"     (special case)
- *   "crystal_maiden"  → "Crystal_Maiden"
- *   "natures_prophet" → "Nature's_Prophet" (special case)
+ *   "ursa"            → "Ursa"
+ *   "Anti-Mage"       → "Anti-Mage"          (override, keyed "anti_mage")
+ *   "Queen_of_Pain"   → "Queen_of_Pain"      (override, keyed "queen_of_pain")
+ *   "Outworld_Devourer" → "Outworld_Destroyer" (override — Liquipedia uses the new name)
+ *   "Nature's_Prophet" → "Nature's_Prophet"  (override, keyed "natures_prophet")
  */
-function heroNameToPageTitle(internalName: string): string {
-  // Check overrides first
-  if (internalName in HERO_NAME_OVERRIDES) {
-    return HERO_NAME_OVERRIDES[internalName]
+export function heroNameToPageTitle(name: string): string {
+  // Normalize to the override key form: lowercase, apostrophes stripped,
+  // spaces/hyphens collapsed to underscores
+  const key = name
+    .toLowerCase()
+    .replace(/['’]/g, '')
+    .replace(/[\s-]+/g, '_')
+  if (key in HERO_NAME_OVERRIDES) {
+    return HERO_NAME_OVERRIDES[key]
   }
 
-  // Default: replace underscores with spaces, title-case each word, then join with underscores
-  return internalName
-    .split('_')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join('_')
+  // All-lowercase input = internal snake_case name → title-case each word
+  // ("death_prophet" → "Death_Prophet"). Names with connector words ("of", "the")
+  // must be in the overrides — blind title-casing produces page misses.
+  if (name === name.toLowerCase()) {
+    return name
+      .split('_')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join('_')
+  }
+
+  // Display-name-derived input ("Queen_of_Pain") — already correctly cased
+  return name
 }
 
 function delay(ms: number): Promise<void> {

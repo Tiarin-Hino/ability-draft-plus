@@ -201,6 +201,34 @@ describe('MlService', () => {
       expect(response.isInitialScan).toBe(true)
     })
 
+    it('forwards activeClassNames to the worker for class masking', async () => {
+      const service = await createReadyService()
+
+      const scanPromise = service.scan(
+        Buffer.from('screenshot'),
+        {} as never,
+        true,
+        ['ursa_fury_swipes', 'sniper_shrapnel'],
+      )
+
+      expect(mockWorkerInstance.postMessage).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          type: 'scan',
+          payload: expect.objectContaining({
+            activeClassNames: ['ursa_fury_swipes', 'sniper_shrapnel'],
+          }),
+        }),
+        expect.any(Array),
+      )
+
+      mockWorkerInstance.emit('message', {
+        status: 'success',
+        results: [],
+        isInitialScan: true,
+      })
+      await scanPromise
+    })
+
     it('rejects on scan error', async () => {
       const service = await createReadyService()
 

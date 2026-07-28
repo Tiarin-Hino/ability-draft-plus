@@ -144,6 +144,55 @@ describe('transformAbilitiesAndHeroes', () => {
     expect(heroData).toHaveLength(0)
     expect(abilityData).toHaveLength(0)
   })
+
+  it('derives the hero from the shortName prefix when ownerHeroId is null', () => {
+    // 7.39-era additions shipped by Windrun with ownerHeroId: null
+    const orphanAbility: WindrunStaticAbility = {
+      valveId: 1752,
+      englishName: "Wyrm's Wrath",
+      shortName: 'dragon_knight_wyrms_wrath',
+      ownerHeroId: null,
+      hasScepter: false,
+      hasShard: false,
+    }
+    const lookup = buildAbilityLookup([...staticAbilitiesArray, orphanAbility])
+    const heroesWithDk: Record<string, WindrunStaticHero> = {
+      ...staticHeroes,
+      '49': { id: 49, englishName: 'Dragon Knight', shortName: 'dragonknight' },
+      // A hero whose name is a prefix of another's must not steal the match
+      '90': { id: 90, englishName: 'Dragon', shortName: 'dragon' },
+    }
+    const stats: WindrunAbilityStat[] = [
+      { abilityId: 1752, numPicks: 100, avgPickPosition: 3, wins: 50, ownerHero: 0, winrate: 0.5, pickRate: 0.3 },
+    ]
+
+    const { abilityData } = transformAbilitiesAndHeroes(stats, [], lookup, heroesWithDk)
+
+    expect(abilityData).toHaveLength(1)
+    expect(abilityData[0].heroName).toBe('dragonknight')
+    expect(abilityData[0].heroId).toBe(49)
+  })
+
+  it('leaves heroName null when no hero prefix matches', () => {
+    const orphanAbility: WindrunStaticAbility = {
+      valveId: 1800,
+      englishName: 'Mystery',
+      shortName: 'unknown_hero_mystery',
+      ownerHeroId: null,
+      hasScepter: false,
+      hasShard: false,
+    }
+    const lookup = buildAbilityLookup([orphanAbility])
+    const stats: WindrunAbilityStat[] = [
+      { abilityId: 1800, numPicks: 10, avgPickPosition: 1, wins: 5, ownerHero: 0, winrate: 0.5, pickRate: 0.1 },
+    ]
+
+    const { abilityData } = transformAbilitiesAndHeroes(stats, [], lookup, staticHeroes)
+
+    expect(abilityData).toHaveLength(1)
+    expect(abilityData[0].heroName).toBeNull()
+    expect(abilityData[0].heroId).toBeNull()
+  })
 })
 
 // ── transformPairs ──────────────────────────────────────────────────────────

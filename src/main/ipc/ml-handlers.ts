@@ -221,10 +221,14 @@ export function registerMlHandlers(
           }
         }
 
+        // DB ability names = classes still in the draft pool. Model classes
+        // outside this list (removed abilities kept in the model in case they
+        // return) are masked and can never be predicted.
         const result = await mlService.scan(
           screenshotBuffer,
           layout,
           data.isInitialScan,
+          dbService.abilities.getAllNames(),
         )
 
         appStore.setState({ mlStatus: 'ready' })

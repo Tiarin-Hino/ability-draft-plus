@@ -12,6 +12,12 @@ import type { ClassifierConfig, ClassifierResult, ImageClassifier } from './clas
 // Warmup inference runs on init to trigger JIT compilation.
 // classifyBatch() takes pre-processed float32 arrays and returns className + confidence pairs.
 // Returns null className if confidence < threshold (0.9).
+// Class masking: classify() optionally takes the set of active class names (the abilities
+// currently in the DB, i.e. still in the draft pool). Classes outside the set are skipped
+// during argmax, so a removed-from-pool ability that is still in the model can never be
+// predicted — the next-best active class wins, or the slot falls below the threshold and
+// renders Unknown. An ability returning to the pool re-enters the set automatically via
+// the Windrun scrape; the model keeps its trained classes either way.
 // Zero Electron imports -- runs in the ML worker (worker_threads).
 
 export function createOnnxClassifier(): ImageClassifier {
@@ -73,9 +79,19 @@ export function createOnnxClassifier(): ImageClassifier {
     batchData: Float32Array,
     batchSize: number,
     confidenceThreshold: number,
+    activeClassNames?: ReadonlySet<string>,
   ): Promise<ClassifierResult[]> {
     if (!session || !ready) {
       throw new Error('Classifier not initialized')
+    }
+
+    // Mask classes absent from the active set (abilities removed from the draft
+    // pool). If the set would exclude EVERY class (empty DB, or a DB/model naming
+    // mismatch), fall back to unmasked — a broken mask must not blind the scanner.
+    let excluded: boolean[] | null = null
+    if (activeClassNames && activeClassNames.size > 0) {
+      excluded = classNames.map((n) => !activeClassNames.has(n))
+      if (excluded.every(Boolean)) excluded = null
     }
 
     const tensor = new ort.Tensor('float32', batchData, [
@@ -96,6 +112,7 @@ export function createOnnxClassifier(): ImageClassifier {
       let maxProb = 0
       let maxIndex = 0
       for (let j = 0; j < numClasses; j++) {
+        if (excluded?.[j]) continue
         const val = outputData[offset + j]
         if (val > maxProb) {
           maxProb = val

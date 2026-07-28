@@ -8,6 +8,7 @@ import {
   buildAbilityLookup,
 } from './data-transformer'
 import { detectModelGaps } from '@core/ml/staleness-detector'
+import { SLOT_METADATA_OVERRIDES } from './slot-metadata-overrides'
 import type { LiquipediaAbilityUpdate } from './liquipedia-scraper'
 import type { HeroRepository } from '@core/database/repositories/hero-repository'
 import type { AbilityRepository } from '@core/database/repositories/ability-repository'
@@ -17,9 +18,13 @@ import type { MetadataRepository } from '@core/database/repositories/metadata-re
 
 // @DEV-GUIDE: 3-phase scrape flow controller.
 // Phase 1: Fetch static data + ability/hero stats from Windrun, transform, upsert into DB,
-// then prune ability rows absent from the fresh scrape (removed/renamed in a patch).
+// then prune ability rows absent from the fresh scrape (removed/renamed in a patch),
+// then apply hand-curated slot metadata overrides (slot-metadata-overrides.ts) — those
+// win over both Windrun and Liquipedia, and are re-applied after Liquipedia enrichment.
 // Without the prune, stale rows accumulate forever and produce false "missingFromModel"
-// warnings once a retrained model drops the legacy class names.
+// warnings once a retrained model drops the legacy class names. The prune also keeps
+// "DB ability names" === "abilities in the pool", which the scan pipeline relies on to
+// mask removed-from-pool model classes at inference (see ml-handlers / onnx-classifier).
 // Phase 2: Fetch ability pairs + triplets, calculate synergy_increase, bulk insert into DB.
 // After success: records last_scrape_date, optionally runs ML staleness detection.
 // Each phase has progress callbacks for the UI scraping page.
@@ -123,6 +128,11 @@ export async function performFullScrape(
         message: `Pruned ${prunedNames.length} stale abilities: ${prunedNames.join(', ')}`,
       })
     }
+
+    // Hand-curated slot corrections for abilities the scrapers can't get right
+    // (passives, non-QWER hotkeys, stale pre-rework rows) — authoritative.
+    applySlotOverrides(deps.abilities, onProgress, 'phase1')
+
     deps.persist()
 
     // ── Phase 2: Pairs & Triplets ──────────────────────────────────────────
@@ -218,6 +228,25 @@ export async function performFullScrape(
   }
 }
 
+function applySlotOverrides(
+  abilities: ScraperDeps['abilities'],
+  onProgress: (progress: ScraperProgress) => void,
+  phase: ScraperProgress['phase'],
+): void {
+  const entries = Object.entries(SLOT_METADATA_OVERRIDES).map(([name, o]) => ({
+    name,
+    abilityOrder: o.abilityOrder,
+    isUltimate: o.isUltimate,
+  }))
+  const applied = abilities.setSlotMetadata(entries)
+  if (applied > 0) {
+    onProgress({
+      phase,
+      message: `Applied ${applied} manual slot metadata overrides`,
+    })
+  }
+}
+
 /**
  * Separate Liquipedia enrichment — fetches ability_order and is_ultimate for
  * each hero's abilities. Rate-limited to 1 request per 31s (Liquipedia API policy).
@@ -259,6 +288,9 @@ export async function performLiquipediaEnrichment(
         phase: 'liquipedia',
         message: `Applied ${applied} of ${updates.length} Liquipedia updates`,
       })
+
+      // Re-apply hand-curated slot corrections — they win over Liquipedia too
+      applySlotOverrides(deps.abilities, onProgress, 'liquipedia')
 
       deps.persist()
     }
