@@ -8,6 +8,7 @@ import {
   buildAbilityLookup,
 } from './data-transformer'
 import { detectModelGaps } from '@core/ml/staleness-detector'
+import type { LiquipediaAbilityUpdate } from './liquipedia-scraper'
 import type { HeroRepository } from '@core/database/repositories/hero-repository'
 import type { AbilityRepository } from '@core/database/repositories/ability-repository'
 import type { SynergyRepository } from '@core/database/repositories/synergy-repository'
@@ -15,7 +16,10 @@ import type { TripletRepository } from '@core/database/repositories/triplet-repo
 import type { MetadataRepository } from '@core/database/repositories/metadata-repository'
 
 // @DEV-GUIDE: 3-phase scrape flow controller.
-// Phase 1: Fetch static data + ability/hero stats from Windrun, transform, upsert into DB.
+// Phase 1: Fetch static data + ability/hero stats from Windrun, transform, upsert into DB,
+// then prune ability rows absent from the fresh scrape (removed/renamed in a patch).
+// Without the prune, stale rows accumulate forever and produce false "missingFromModel"
+// warnings once a retrained model drops the legacy class names.
 // Phase 2: Fetch ability pairs + triplets, calculate synergy_increase, bulk insert into DB.
 // After success: records last_scrape_date, optionally runs ML staleness detection.
 // Each phase has progress callbacks for the UI scraping page.
@@ -43,7 +47,7 @@ export interface LiquipediaDeps {
   enrichFromLiquipedia: (
     heroNames: string[],
     onProgress: (msg: string) => void,
-  ) => Promise<{ abilityName: string; abilityOrder: number; isUltimate: boolean }[]>
+  ) => Promise<LiquipediaAbilityUpdate[]>
 }
 
 export async function performFullScrape(
@@ -107,6 +111,18 @@ export async function performFullScrape(
       })),
       heroNameToIdMap,
     )
+
+    // Prune abilities that dropped out of the Windrun data (removed/renamed in a patch).
+    // Must happen before phase 2 (getNameToIdMap) and before staleness detection
+    // (getAllNames), so neither sees stale rows. FK cascades remove dependent
+    // synergy/triplet rows; phase 2 rebuilds them from fresh data anyway.
+    const prunedNames = deps.abilities.deleteAbilitiesNotIn(abilityData.map((a) => a.name))
+    if (prunedNames.length > 0) {
+      onProgress({
+        phase: 'phase1',
+        message: `Pruned ${prunedNames.length} stale abilities: ${prunedNames.join(', ')}`,
+      })
+    }
     deps.persist()
 
     // ── Phase 2: Pairs & Triplets ──────────────────────────────────────────
@@ -216,6 +232,10 @@ export async function performLiquipediaEnrichment(
     onProgress({ phase: 'liquipedia', message: 'Starting Liquipedia enrichment...' })
 
     const heroPageNames = heroDisplayNames.map((name) => name.replace(/ /g, '_'))
+    // Map page names back to the DB display names for per-hero matching
+    const pageNameToDisplayName = new Map(
+      heroDisplayNames.map((name) => [name.replace(/ /g, '_'), name]),
+    )
     const updates = await deps.enrichFromLiquipedia(heroPageNames, (msg) => {
       onProgress({ phase: 'liquipedia', message: msg })
     })
@@ -226,11 +246,12 @@ export async function performLiquipediaEnrichment(
         message: `Applying ${updates.length} Liquipedia updates...`,
       })
 
-      const applied = deps.abilities.updateAbilityMeta(
+      const applied = deps.abilities.applyLiquipediaMeta(
         updates.map((u) => ({
-          name: u.abilityName,
+          heroDisplayName: pageNameToDisplayName.get(u.heroPageName) ?? u.heroPageName,
+          abilityDisplayName: u.abilityDisplayName,
           abilityOrder: u.abilityOrder,
-          isUltimate: u.isUltimate,
+          isUltimateCandidate: u.isUltimateCandidate,
         })),
       )
 
