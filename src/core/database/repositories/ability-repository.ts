@@ -56,6 +56,14 @@ export interface AbilityRepository {
   getNameToIdMap(): Map<string, number>
   getAllNames(): string[]
   applyLiquipediaMeta(updates: LiquipediaMetaUpdate[]): number
+  /**
+   * Force ability_order/is_ultimate by internal name. Used for the hand-curated
+   * slot overrides (see scraper/slot-metadata-overrides.ts) — authoritative over
+   * both Windrun and Liquipedia. Returns the number of rows that matched.
+   */
+  setSlotMetadata(
+    entries: Array<{ name: string; abilityOrder: number; isUltimate: boolean }>,
+  ): number
 }
 
 function mapRow(row: typeof abilities.$inferSelect): AbilityDetail {
@@ -171,6 +179,29 @@ export function createAbilityRepository(db: SQLJsDatabase): AbilityRepository {
         .from(abilities)
         .all()
         .map((row) => row.name)
+    },
+
+    setSlotMetadata(
+      entries: Array<{ name: string; abilityOrder: number; isUltimate: boolean }>,
+    ): number {
+      if (entries.length === 0) return 0
+      // sql.js run() doesn't report changes — count matches via SELECT first
+      const existing = new Set(
+        db
+          .select({ name: abilities.name })
+          .from(abilities)
+          .where(inArray(abilities.name, entries.map((e) => e.name)))
+          .all()
+          .map((row) => row.name),
+      )
+      for (const entry of entries) {
+        if (!existing.has(entry.name)) continue
+        db.update(abilities)
+          .set({ abilityOrder: entry.abilityOrder, isUltimate: entry.isUltimate })
+          .where(eq(abilities.name, entry.name))
+          .run()
+      }
+      return existing.size
     },
 
     applyLiquipediaMeta(updates: LiquipediaMetaUpdate[]): number {

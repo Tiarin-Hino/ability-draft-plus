@@ -36,10 +36,16 @@ const logger = log.scope('ml-service')
 
 export interface MlService {
   initialize(): Promise<void>
+  /**
+   * @param activeClassNames Ability internal names currently in the DB. Model
+   * classes outside this list (removed-from-pool abilities) are masked and can
+   * never be predicted. Omitted/empty → no masking.
+   */
   scan(
     screenshotBuffer: Buffer,
     layout: ResolutionLayout,
     isInitialScan: boolean,
+    activeClassNames?: string[],
   ): Promise<MlWorkerSuccessResponse>
   terminate(): Promise<void>
   isReady(): boolean
@@ -171,6 +177,7 @@ export function createMlService(): MlService {
     screenshotBuffer: Buffer,
     layout: ResolutionLayout,
     isInitialScan: boolean,
+    activeClassNames?: string[],
   ): Promise<MlWorkerSuccessResponse> {
     if (!worker || !ready) {
       throw new Error('ML Worker not ready')
@@ -210,6 +217,7 @@ export function createMlService(): MlService {
           layout,
           confidenceThreshold: ML_CONFIDENCE_THRESHOLD,
           isInitialScan,
+          activeClassNames,
         },
       }
 

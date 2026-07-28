@@ -17,8 +17,9 @@ import type { ClassifierResult } from '@core/ml/classifier'
 // Message protocol:
 // - Main → { type: 'init', payload: { modelPath, classNamesPath, useDirectML } }
 //   → Worker replies { status: 'ready', executionProvider } or { status: 'error', type: 'init-error' }
-// - Main → { type: 'scan', payload: { screenshotBuffer, layout, confidenceThreshold, isInitialScan } }
-//   → Worker replies { status: 'success', results } or { status: 'error' }
+// - Main → { type: 'scan', payload: { screenshotBuffer, layout, confidenceThreshold, isInitialScan,
+//   activeClassNames? } } → Worker replies { status: 'success', results } or { status: 'error' }
+//   activeClassNames (DB ability names) masks model classes for removed-from-pool abilities.
 // - Main → { type: 'dispose' } → Worker releases ONNX session
 //
 // Scan pipeline: receive screenshot buffer → extract slot images (sharp crop+resize to 96x96) →
@@ -85,6 +86,7 @@ async function handleScan(payload: {
   layout: ResolutionLayout
   confidenceThreshold: number
   isInitialScan: boolean
+  activeClassNames?: string[]
 }): Promise<void> {
   if (!classifier.isReady()) {
     throw new Error('ML Worker not initialized')
@@ -95,18 +97,30 @@ async function handleScan(payload: {
     layout: coords,
     confidenceThreshold,
     isInitialScan,
+    activeClassNames,
   } = payload
   const buffer = Buffer.from(screenshotBuffer)
+
+  const activeSet =
+    activeClassNames && activeClassNames.length > 0
+      ? new Set(activeClassNames)
+      : undefined
 
   let results: InitialScanResults | ScanResult[]
 
   if (isInitialScan) {
-    results = await performInitialScan(buffer, coords, confidenceThreshold)
+    results = await performInitialScan(
+      buffer,
+      coords,
+      confidenceThreshold,
+      activeSet,
+    )
   } else {
     results = await performSelectedAbilitiesScan(
       buffer,
       coords,
       confidenceThreshold,
+      activeSet,
     )
   }
 
@@ -126,17 +140,20 @@ async function performInitialScan(
   screenshotBuffer: Buffer,
   coords: ResolutionLayout,
   confidenceThreshold: number,
+  activeClassNames?: ReadonlySet<string>,
 ): Promise<InitialScanResults> {
   const [ultimates, standard] = await Promise.all([
     identifySlots(
       coords.ultimate_slots_coords,
       screenshotBuffer,
       confidenceThreshold,
+      activeClassNames,
     ),
     identifySlots(
       coords.standard_slots_coords,
       screenshotBuffer,
       confidenceThreshold,
+      activeClassNames,
     ),
   ])
 
@@ -156,6 +173,7 @@ async function performSelectedAbilitiesScan(
   screenshotBuffer: Buffer,
   coords: ResolutionLayout,
   confidenceThreshold: number,
+  activeClassNames?: ReadonlySet<string>,
 ): Promise<ScanResult[]> {
   const selectedCoords = coords.selected_abilities_coords
   if (!selectedCoords || selectedCoords.length === 0) return []
@@ -167,7 +185,12 @@ async function performSelectedAbilitiesScan(
     height: params?.height ?? c.height,
   }))
 
-  return identifySlots(slotsToScan, screenshotBuffer, confidenceThreshold)
+  return identifySlots(
+    slotsToScan,
+    screenshotBuffer,
+    confidenceThreshold,
+    activeClassNames,
+  )
 }
 
 // @DEV-GUIDE: Core ML pipeline for a batch of slots. preprocessBatch crops each slot from the
@@ -177,6 +200,7 @@ async function identifySlots(
   slots: SlotCoordinate[],
   screenshotBuffer: Buffer,
   confidenceThreshold: number,
+  activeClassNames?: ReadonlySet<string>,
 ): Promise<ScanResult[]> {
   if (slots.length === 0) return []
 
@@ -190,6 +214,7 @@ async function identifySlots(
     batch,
     validIndices.length,
     confidenceThreshold,
+    activeClassNames,
   )
 
   // Initialize all results to defaults

@@ -192,6 +192,52 @@ describe('AbilityRepository.applyLiquipediaMeta', () => {
   })
 })
 
+// Separate DB instance: these tests mutate ability_order/is_ultimate
+describe('AbilityRepository.setSlotMetadata', () => {
+  let testDb: TestDb
+  let repo: AbilityRepository
+
+  beforeEach(async () => {
+    testDb = await createTestDb()
+    seedTestData(testDb.db)
+    repo = createAbilityRepository(testDb.db)
+  })
+
+  afterEach(() => {
+    testDb.close()
+  })
+
+  it('forces ability_order and is_ultimate by internal name', () => {
+    const applied = repo.setSlotMetadata([
+      { name: 'antimage_mana_break', abilityOrder: 3, isUltimate: false },
+      { name: 'antimage_mana_void', abilityOrder: 0, isUltimate: true },
+    ])
+
+    expect(applied).toBe(2)
+    const details = repo.getDetails(['antimage_mana_break', 'antimage_mana_void'])
+    expect(details.get('antimage_mana_break')!.abilityOrder).toBe(3)
+    expect(details.get('antimage_mana_void')!.abilityOrder).toBe(0)
+    expect(details.get('antimage_mana_void')!.isUltimate).toBe(true)
+  })
+
+  it('overrides even rows that already hold a (wrong) value', () => {
+    // Unlike Liquipedia candidates, overrides are authoritative — they must
+    // correct rows like juggernaut_healing_ward that carry stale slot data
+    repo.setSlotMetadata([{ name: 'antimage_blink', abilityOrder: 1, isUltimate: false }])
+    const blink = repo.getDetails(['antimage_blink']).get('antimage_blink')
+    expect(blink!.abilityOrder).toBe(1) // seed had 2
+  })
+
+  it('counts only names that exist and handles empty input', () => {
+    const applied = repo.setSlotMetadata([
+      { name: 'antimage_mana_break', abilityOrder: 1, isUltimate: false },
+      { name: 'no_such_ability', abilityOrder: 2, isUltimate: false },
+    ])
+    expect(applied).toBe(1)
+    expect(repo.setSlotMetadata([])).toBe(0)
+  })
+})
+
 // Separate DB instance: these tests delete rows and would corrupt the shared fixture above
 describe('AbilityRepository.deleteAbilitiesNotIn', () => {
   let testDb: TestDb

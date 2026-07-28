@@ -85,7 +85,8 @@ export interface WindrunStaticAbility {
   valveId: number
   englishName: string
   shortName: string
-  ownerHeroId: number
+  /** Null for brand-new abilities Windrun hasn't linked yet (7.39 additions shipped this way) */
+  ownerHeroId: number | null
   hasScepter: boolean
   hasShard: boolean
   isUltimate?: boolean

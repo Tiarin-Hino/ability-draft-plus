@@ -16,6 +16,10 @@ import type {
 // Handles ID mapping (Windrun IDs -> internal DB IDs), name normalization,
 // synergy pair extraction with synergy_increase calculation, and triplet formatting.
 // Key: Windrun shortNames are single concatenated words (e.g., "drowranger" not "drow_ranger").
+// Brand-new abilities can ship with ownerHeroId: null in Windrun's static data
+// (seen with 7.39 additions like dragon_knight_wyrms_wrath) — the hero is then
+// derived from the ability shortName prefix, since ability internal names are
+// always prefixed with the hero's internal name.
 //
 // Three transform functions match the three data categories:
 // - transformAbilitiesAndHeroes: Splits stats into hero vs ability entries (negative ID = hero)
@@ -48,6 +52,25 @@ export function buildAbilityLookup(abilities: WindrunStaticAbility[]): AbilityLo
 
 // ── Abilities & Heroes ───────────────────────────────────────────────────────
 
+/**
+ * Fallback hero linkage for abilities Windrun serves with ownerHeroId: null.
+ * Ability internal names are prefixed with the hero's internal name; hero
+ * shortNames are the same words concatenated ("dragonknight"). Longest match
+ * first so e.g. a "night_stalker_..." ability can never match a hypothetical
+ * shorter hero prefix.
+ */
+function deriveOwnerHero(
+  abilityShortName: string,
+  heroesByNameLength: WindrunStaticHero[],
+): WindrunStaticHero | null {
+  const flatName = abilityShortName.replace(/_/g, '').toLowerCase()
+  return (
+    heroesByNameLength.find((h) =>
+      flatName.startsWith(h.shortName.toLowerCase()),
+    ) ?? null
+  )
+}
+
 export function transformAbilitiesAndHeroes(
   overallStats: WindrunAbilityStat[],
   hsStats: WindrunAbilityStat[],
@@ -62,6 +85,10 @@ export function transformAbilitiesAndHeroes(
 
   const heroData: TransformedHero[] = []
   const abilityData: TransformedAbility[] = []
+
+  const heroesByNameLength = Object.values(staticHeroes).sort(
+    (a, b) => b.shortName.length - a.shortName.length,
+  )
 
   for (const stat of overallStats) {
     const hs = hsMap.get(stat.abilityId)
@@ -86,13 +113,15 @@ export function transformAbilitiesAndHeroes(
       const staticAbility = abilityLookup.get(stat.abilityId)
       if (!staticAbility) continue
 
-      const heroId = staticAbility.ownerHeroId
-      const staticHero = heroId ? staticHeroes[String(heroId)] : null
+      const ownerId = staticAbility.ownerHeroId
+      const staticHero =
+        (ownerId ? staticHeroes[String(ownerId)] : null) ??
+        deriveOwnerHero(staticAbility.shortName, heroesByNameLength)
 
       abilityData.push({
         name: staticAbility.shortName,
         displayName: staticAbility.englishName,
-        heroId: heroId || null,
+        heroId: staticHero?.id ?? null,
         heroName: staticHero?.shortName ?? null,
         winrate: stat.winrate,
         highSkillWinrate: hs?.winrate ?? null,

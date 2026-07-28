@@ -247,6 +247,109 @@ describe('OnnxClassifier', () => {
         classifier.classify(new Float32Array(96 * 96 * 3), 1, 0.9),
       ).rejects.toThrow('Classifier not initialized')
     })
+
+    describe('class masking (activeClassNames)', () => {
+      it('never predicts a masked class — next-best active class wins', async () => {
+        const classifier = await createInitializedClassifier()
+
+        // Masked class 42 has the top probability; active class 7 is runner-up
+        const output = makeOutputData(1, 524, [{ index: 42, confidence: 0.95 }])
+        output[7] = 0.93
+        mockRun.mockResolvedValueOnce({ Identity: { data: output } })
+
+        const active = new Set(makeClassNames(524))
+        active.delete('ability_42')
+
+        const results = await classifier.classify(
+          new Float32Array(96 * 96 * 3),
+          1,
+          0.9,
+          active,
+        )
+
+        expect(results[0].name).toBe('ability_7')
+        expect(results[0].confidence).toBeCloseTo(0.93)
+        expect(results[0].classIndex).toBe(7)
+      })
+
+      it('returns null when the surviving best is below the threshold', async () => {
+        const classifier = await createInitializedClassifier()
+
+        const output = makeOutputData(1, 524, [{ index: 42, confidence: 0.95 }])
+        output[7] = 0.6
+        mockRun.mockResolvedValueOnce({ Identity: { data: output } })
+
+        const active = new Set(makeClassNames(524))
+        active.delete('ability_42')
+
+        const results = await classifier.classify(
+          new Float32Array(96 * 96 * 3),
+          1,
+          0.9,
+          active,
+        )
+
+        expect(results[0].name).toBeNull()
+        expect(results[0].confidence).toBeCloseTo(0.6)
+      })
+
+      it('does not mask when the active set is empty', async () => {
+        const classifier = await createInitializedClassifier()
+
+        const output = makeOutputData(1, 524, [{ index: 42, confidence: 0.95 }])
+        mockRun.mockResolvedValueOnce({ Identity: { data: output } })
+
+        const results = await classifier.classify(
+          new Float32Array(96 * 96 * 3),
+          1,
+          0.9,
+          new Set<string>(),
+        )
+
+        expect(results[0].name).toBe('ability_42')
+      })
+
+      it('falls back to unmasked when the set would exclude every class', async () => {
+        const classifier = await createInitializedClassifier()
+
+        const output = makeOutputData(1, 524, [{ index: 42, confidence: 0.95 }])
+        mockRun.mockResolvedValueOnce({ Identity: { data: output } })
+
+        // Disjoint naming (e.g. corrupt DB) must not blind the scanner
+        const results = await classifier.classify(
+          new Float32Array(96 * 96 * 3),
+          1,
+          0.9,
+          new Set(['totally_unrelated_name']),
+        )
+
+        expect(results[0].name).toBe('ability_42')
+      })
+
+      it('masks independently for each image in a batch', async () => {
+        const classifier = await createInitializedClassifier()
+
+        const output = makeOutputData(2, 524, [
+          { index: 10, confidence: 0.99 },
+          { index: 200, confidence: 0.95 },
+        ])
+        output[524 + 300] = 0.91
+        mockRun.mockResolvedValueOnce({ Identity: { data: output } })
+
+        const active = new Set(makeClassNames(524))
+        active.delete('ability_200')
+
+        const results = await classifier.classify(
+          new Float32Array(2 * 96 * 96 * 3),
+          2,
+          0.9,
+          active,
+        )
+
+        expect(results[0].name).toBe('ability_10')
+        expect(results[1].name).toBe('ability_300')
+      })
+    })
   })
 
   describe('dispose', () => {

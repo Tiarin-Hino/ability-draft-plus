@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { parseAbilitiesFromHtml } from '@core/scraper/liquipedia-scraper'
+import {
+  parseAbilitiesFromHtml,
+  heroNameToPageTitle,
+} from '@core/scraper/liquipedia-scraper'
 
 // Fixture mirrors the real structure of Liquipedia hero pages (verified against the
 // live Spectre page): spellcard IDs are DISPLAY names, hotkeys include non-R ultimates
@@ -80,5 +83,35 @@ describe('parseAbilitiesFromHtml', () => {
 
   it('returns empty array for HTML without spellcards', () => {
     expect(parseAbilitiesFromHtml('<div><p>No abilities here</p></div>')).toEqual([])
+  })
+})
+
+describe('heroNameToPageTitle', () => {
+  it('preserves natural casing of display-name-derived page names', () => {
+    // Title-casing these produced real page misses (Queen_Of_Pain → 0 abilities)
+    expect(heroNameToPageTitle('Queen_of_Pain')).toBe('Queen_of_Pain')
+    expect(heroNameToPageTitle('Keeper_of_the_Light')).toBe('Keeper_of_the_Light')
+    expect(heroNameToPageTitle('Death_Prophet')).toBe('Death_Prophet')
+  })
+
+  it('maps Outworld Devourer to the Liquipedia page name Outworld_Destroyer', () => {
+    expect(heroNameToPageTitle('Outworld_Devourer')).toBe('Outworld_Destroyer')
+    expect(heroNameToPageTitle('outworld_destroyer')).toBe('Outworld_Destroyer')
+  })
+
+  it('matches overrides from display names with punctuation', () => {
+    expect(heroNameToPageTitle('Anti-Mage')).toBe('Anti-Mage')
+    expect(heroNameToPageTitle("Nature's_Prophet")).toBe("Nature's_Prophet")
+  })
+
+  it('matches overrides from internal snake_case names', () => {
+    expect(heroNameToPageTitle('anti_mage')).toBe('Anti-Mage')
+    expect(heroNameToPageTitle('queen_of_pain')).toBe('Queen_of_Pain')
+    expect(heroNameToPageTitle('natures_prophet')).toBe("Nature's_Prophet")
+  })
+
+  it('title-cases plain internal snake_case names word by word', () => {
+    expect(heroNameToPageTitle('ursa')).toBe('Ursa')
+    expect(heroNameToPageTitle('death_prophet')).toBe('Death_Prophet')
   })
 })

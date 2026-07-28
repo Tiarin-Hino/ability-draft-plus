@@ -18,6 +18,13 @@ export interface MlWorkerScanRequest {
     layout: ResolutionLayout
     confidenceThreshold: number
     isInitialScan: boolean
+    /**
+     * Ability internal names currently in the DB (= still in the draft pool).
+     * Model classes outside this list are masked during classification, so
+     * removed-from-pool abilities kept in the model are never predicted.
+     * Omitted/empty → no masking.
+     */
+    activeClassNames?: string[]
   }
 }
 
