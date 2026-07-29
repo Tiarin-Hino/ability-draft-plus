@@ -35,6 +35,10 @@ export const STREAM_PROTOCOL_VERSION = 1
 export const DEFAULT_STREAM_PORT = 58873
 export const STREAM_TOP_WINRATE_COUNT = 8
 export const STREAM_MAX_COMBO_PANEL_ENTRIES = 8
+export const STREAM_PICK_FEED_LENGTH = 20
+
+// Experimental auto-rescan (GSI-driven draft tracking)
+export const AUTO_RESCAN_INTERVAL_MS = 5_000
 
 // Per-player draft score: score = clamp01(meanWinrate + weight * Σ clamped pair lifts).
 // MAX_PAIR_DELTA caps a single pair's contribution so one outlier synergy row

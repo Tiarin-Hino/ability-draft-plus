@@ -56,6 +56,8 @@ export interface AppSettings {
   overlayAnchor: 'left' | 'right'
   streamPort: number
   streamAutostart: boolean
+  /** EXPERIMENTAL: GSI-driven auto-rescan + pick attribution. Default off. */
+  experimentalAutoDraftTracking: boolean
 }
 
 export interface SlotCoordinate {
