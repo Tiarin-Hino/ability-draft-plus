@@ -11,6 +11,7 @@ build/*
 # The app icon must ship with the repo — CI release builds have no other source
 # (losing this to the build ignore is how v2 releases shipped the default icon)
 !build/icon.ico
+!build/icon.svg
 
 # TypeScript build cache
 *.tsbuildinfo
