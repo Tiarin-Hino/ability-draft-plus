@@ -14,27 +14,39 @@ of (or on top of) the game's own draft screen.
    The board renders the pool; rescans (**Ctrl+Shift+R**) grey out picked abilities
    and fill the player rows.
 
-Background modes via query parameter:
+Customization via query parameters:
 
-| URL suffix | Background |
+| URL suffix | Effect |
 |---|---|
-| *(none)* / `?bg=transparent` | Transparent (OBS composites it) |
-| `?bg=dark` | Solid dark panel |
+| *(none)* / `?bg=transparent` | Transparent background (OBS composites it) |
+| `?bg=dark` | Solid broadcast look with vignette |
 | `?bg=chroma` | `#00FF00` green screen |
+| `?title=My%20Tournament` | Tournament name in the top bar |
+| `?demo=1` | Fake full draft — build your OBS scene without a live game |
+
+The layout scales fluidly with the source size (720p/1080p/1440p all render
+proportionally). Two zones are intentionally left empty for your own overlays —
+top-right (sponsor logo / series score) and bottom-right (sponsor card / caster
+info); `?demo=1` outlines them so you can position your sources precisely.
 
 Recommended: press **Prefetch all icons** once (Streaming page) so every ability icon
 is cached locally before your first live draft.
 
 ## What the board shows
 
-- **12 hero rows** — portrait + Q/W/E + ultimate tiles with winrates; top-tier picks
-  get a gold border; picked abilities grey out on rescan.
-- **Stat panels** — highest-winrate abilities still in the pool, strongest (OP) and
-  worst (trap) combinations available, computed from the app's Windrun dataset.
-- **10 player rows** (Radiant / Dire) — picked abilities and a computed **draft score**
-  per player (mean normalized winrate + pair-synergy lift; confidence grows with pick
-  count).
-- Player names appear when GSI is connected (see below).
+The layout mirrors the in-game AD draft screen so viewers orient instantly:
+
+- **Central pool pedestal** — ULTIMATE ABILITIES as two rows of six and STANDARD
+  ABILITIES as six rows (each half-row is one hero's Q/W/E beside its portrait), in
+  the game's canonical tile arrangement. Winrate badges on every tile; top-tier
+  picks get a gold border; picked abilities grey out on rescan.
+- **Team columns** (Radiant left/green, Dire right/red) — five player cards per side
+  with the picked hero model portrait and name ("No Hero" until picked, like the
+  game), player name, four pick slots, and a computed **draft score** chip per
+  player plus a team average in the header.
+- **Bottom stat strip** — highest-winrate abilities still in the pool, strongest
+  (OP) and worst (trap) combinations available, from the app's Windrun dataset.
+- Player names and hero models appear when GSI is connected (see below).
 
 ## Game State Integration (GSI)
 
