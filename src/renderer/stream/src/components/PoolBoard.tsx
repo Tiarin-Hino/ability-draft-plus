@@ -56,12 +56,29 @@ function HalfRow({ row }: { row: StreamHeroRow | undefined }) {
   )
 }
 
+/** Optional bundled pedestal texture (resources/data/stream/pool-slab.png|jpg),
+ * blended faintly between the background art and the smoked-glass tint. */
+function PoolSlab() {
+  const [failed, setFailed] = useState(false)
+  if (failed) return null
+  return (
+    <img
+      className="pool-slab"
+      src={`${apiBase()}/art/pool-slab`}
+      alt=""
+      aria-hidden="true"
+      onError={() => setFailed(true)}
+    />
+  )
+}
+
 export function PoolBoard({ heroes }: { heroes: StreamHeroRow[] }) {
   const { t } = useTranslation()
   const byOrder = new Map(heroes.map((h) => [h.heroOrder, h]))
 
   return (
     <section className="pool-board" aria-label="Ability pool">
+      <PoolSlab />
       <div className="pool-section-title">
         <span>{t('pool.ultimates')}</span>
       </div>
