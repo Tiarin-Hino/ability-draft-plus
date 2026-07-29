@@ -263,9 +263,11 @@ export function createStreamServerService(
       res.end()
       return
     }
+    // __dirname convention (out/main -> project root), NOT app.getAppPath():
+    // the latter resolves to the default_app wrapper under `electron <file.js>`
     const artDir = app.isPackaged
       ? join(process.resourcesPath, 'data', 'stream')
-      : join(app.getAppPath(), 'resources', 'data', 'stream')
+      : join(__dirname, '..', '..', 'resources', 'data', 'stream')
 
     for (const ext of ['png', 'jpg'] as const) {
       try {
