@@ -428,11 +428,14 @@ export function createStreamServerService(
     }
 
     // Dev: the SPA bundle lives on the electron-vite dev server, not on disk.
+    // Preserve the caller's query params (?demo=1&bg=...&title=...) — only the
+    // api origin is appended for the split-origin SSE connection.
     const devRendererUrl = !app.isPackaged && process.env['ELECTRON_RENDERER_URL']
     if (devRendererUrl && (urlPath === '/' || urlPath === '/stream' || urlPath === '/stream/')) {
-      const api = encodeURIComponent(`http://127.0.0.1:${activePort}`)
+      const query = new URLSearchParams((req.url ?? '').split('?')[1] ?? '')
+      query.set('api', `http://127.0.0.1:${activePort}`)
       res.writeHead(302, {
-        Location: `${devRendererUrl}/stream/index.html?api=${api}`,
+        Location: `${devRendererUrl}/stream/index.html?${query.toString()}`,
       })
       res.end()
       return
