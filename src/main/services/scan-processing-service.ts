@@ -35,6 +35,10 @@ export function createScanProcessingService(
   dbService: DatabaseService,
   layoutService: LayoutService,
   windowManager: WindowManager,
+  streamService?: Pick<
+    import('./stream-server-service').StreamServerService,
+    'onScanProcessed'
+  >,
 ): ScanProcessingService {
   // Enrichment failures must reach the overlay: without this broadcast the renderer's
   // scanState stays pinned at 'scanning' with every button disabled.
@@ -112,6 +116,9 @@ export function createScanProcessingService(
         if (cp && !cp.isDestroyed()) {
           cp.webContents.send('overlay:data', output.overlayPayload)
         }
+
+        // Third consumer: the streamer-view server (caches its own last payload)
+        streamService?.onScanProcessed(output.overlayPayload, isInitialScan)
 
         const durationMs = Math.round(performance.now() - start)
         logger.info('Scan processing complete', { durationMs, isInitialScan })

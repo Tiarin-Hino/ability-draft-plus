@@ -1,4 +1,8 @@
-import { DEFAULT_OP_THRESHOLD, DEFAULT_TRAP_THRESHOLD } from './thresholds'
+import {
+  DEFAULT_OP_THRESHOLD,
+  DEFAULT_TRAP_THRESHOLD,
+  DEFAULT_STREAM_PORT,
+} from './thresholds'
 import type { AppSettings } from '../types'
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -8,6 +12,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   themeMode: 'system',
   overlayOpacity: 1,
   overlayAnchor: 'right',
+  streamPort: DEFAULT_STREAM_PORT,
+  streamAutostart: false,
 }
 
 export const SUPPORTED_LANGUAGES = ['en', 'ru'] as const

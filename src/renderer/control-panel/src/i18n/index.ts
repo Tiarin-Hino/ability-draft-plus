@@ -7,6 +7,7 @@ import enDashboard from '../locales/en/dashboard.json'
 import enData from '../locales/en/data.json'
 import enUpdate from '../locales/en/update.json'
 import enFeedback from '../locales/en/feedback.json'
+import enStreaming from '../locales/en/streaming.json'
 
 import ruCommon from '../locales/ru/common.json'
 import ruSettings from '../locales/ru/settings.json'
@@ -14,6 +15,7 @@ import ruDashboard from '../locales/ru/dashboard.json'
 import ruData from '../locales/ru/data.json'
 import ruUpdate from '../locales/ru/update.json'
 import ruFeedback from '../locales/ru/feedback.json'
+import ruStreaming from '../locales/ru/streaming.json'
 
 i18n.use(initReactI18next).init({
   resources: {
@@ -24,6 +26,7 @@ i18n.use(initReactI18next).init({
       data: enData,
       update: enUpdate,
       feedback: enFeedback,
+      streaming: enStreaming,
     },
     ru: {
       common: ruCommon,
@@ -32,6 +35,7 @@ i18n.use(initReactI18next).init({
       data: ruData,
       update: ruUpdate,
       feedback: ruFeedback,
+      streaming: ruStreaming,
     },
   },
   defaultNS: 'common',

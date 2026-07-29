@@ -1,0 +1,397 @@
+/* Stream board — hand-written CSS (overlay precedent: no Tailwind theme coupling).
+   Designed for 1920x1080 OBS browser sources; everything scales from rem so smaller
+   source sizes stay readable. High contrast over arbitrary stream backgrounds. */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --panel-bg: rgba(12, 14, 22, 0.92);
+  --tile-bg: rgba(30, 34, 48, 0.95);
+  --text: #f2f4f8;
+  --text-dim: #9aa3b5;
+  --accent: #7c6df2;
+  --top-tier: #e8b93c;
+  --picked-opacity: 0.28;
+  --radiant: #6bd06b;
+  --dire: #e05959;
+  --op: #4caf7d;
+  --trap: #d9534f;
+  --unknown: #e8b93c;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  color: var(--text);
+}
+
+.board {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  height: 100vh;
+  padding: 1rem;
+}
+
+.bg-transparent {
+  background: transparent;
+}
+.bg-chroma {
+  background: #00ff00;
+}
+.bg-dark {
+  background: #0a0c12;
+}
+
+/* Connection dot: intentionally subtle — visible to the streamer, ignorable on stream */
+.connection {
+  position: fixed;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  z-index: 10;
+}
+.connection-connected {
+  background: #3fbf6f;
+}
+.connection-connecting {
+  background: #e8b93c;
+}
+.connection-disconnected {
+  background: #d9534f;
+  animation: pulse 1.2s infinite;
+}
+@keyframes pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.waiting {
+  margin: auto;
+  padding: 1.5rem 2.5rem;
+  background: var(--panel-bg);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.75rem;
+  font-size: 1.4rem;
+  color: var(--text-dim);
+}
+
+.board-main {
+  display: flex;
+  gap: 0.75rem;
+  flex: 1;
+  min-height: 0;
+}
+
+/* --- Pool grid --- */
+.pool {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  background: var(--panel-bg);
+  border-radius: 0.75rem;
+  padding: 0.6rem;
+  overflow: hidden;
+}
+
+.pool-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 1;
+  min-height: 0;
+}
+
+.hero-portrait {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 11rem;
+  flex-shrink: 0;
+}
+
+.hero-portrait img,
+.hero-portrait-fallback {
+  height: 2.6rem;
+  width: 4.2rem;
+  object-fit: cover;
+  border-radius: 0.3rem;
+  background: var(--tile-bg);
+}
+
+.hero-portrait-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+  font-weight: 700;
+}
+
+.hero-name {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pool-abilities {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.ultimate-slot {
+  margin-left: 0.5rem;
+  padding-left: 0.75rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* --- Tiles --- */
+.tile {
+  position: relative;
+  width: 3.4rem;
+  height: 3.4rem;
+  border-radius: 0.35rem;
+  background: var(--tile-bg);
+  border: 2px solid transparent;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.tile-small {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.tile-icon {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.tile-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+.tile-winrate {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  padding: 0 0.2rem;
+  font-size: 0.62rem;
+  font-weight: 600;
+  background: rgba(0, 0, 0, 0.75);
+  border-top-left-radius: 0.25rem;
+  color: var(--text);
+}
+
+.tile-small .tile-winrate {
+  font-size: 0.55rem;
+}
+
+.tile-top-tier {
+  border-color: var(--top-tier);
+}
+
+.tile-unknown {
+  border-color: var(--unknown);
+  border-style: dashed;
+}
+
+.tile-picked {
+  opacity: var(--picked-opacity);
+  filter: grayscale(1);
+}
+
+.tile-empty {
+  background: rgba(30, 34, 48, 0.4);
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+}
+
+/* --- Side panels --- */
+.panels {
+  width: 19rem;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  overflow: hidden;
+}
+
+.panel {
+  background: var(--panel-bg);
+  border-radius: 0.75rem;
+  padding: 0.7rem;
+}
+
+.panel-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  margin-bottom: 0.5rem;
+}
+
+.panel-op .panel-title {
+  color: var(--op);
+}
+.panel-trap .panel-title {
+  color: var(--trap);
+}
+
+.panel-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.combo-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.combo-entry:last-child {
+  border-bottom: none;
+}
+
+.combo-icons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.combo-ability {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.combo-ability img {
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 0.2rem;
+  flex-shrink: 0;
+}
+
+.combo-name {
+  font-size: 0.75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.combo-winrate {
+  font-size: 0.85rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.panel-op .combo-winrate {
+  color: var(--op);
+}
+.panel-trap .combo-winrate {
+  color: var(--trap);
+}
+
+/* --- Players --- */
+.players {
+  display: flex;
+  gap: 0.75rem;
+  height: 11.5rem;
+  flex-shrink: 0;
+}
+
+.team {
+  flex: 1;
+  background: var(--panel-bg);
+  border-radius: 0.75rem;
+  padding: 0.6rem;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: auto 1fr;
+  gap: 0.5rem;
+}
+
+.team-title {
+  grid-column: 1 / -1;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.team-radiant .team-title {
+  color: var(--radiant);
+}
+.team-dire .team-title {
+  color: var(--dire);
+}
+
+.player-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.player-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.3rem;
+}
+
+.player-name {
+  font-size: 0.78rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-score {
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0 0.3rem;
+  border-radius: 0.25rem;
+  background: rgba(124, 109, 242, 0.25);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.player-score.confidence-low {
+  opacity: 0.55;
+}
+.player-score.confidence-medium {
+  opacity: 0.8;
+}
+
+.player-picks {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+}

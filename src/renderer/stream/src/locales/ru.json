@@ -1,0 +1,29 @@
+{
+  "waiting": "Ожидание драфта — запустите скан в Ability Draft Plus",
+  "connection": {
+    "connecting": "Подключение…",
+    "connected": "В эфире",
+    "disconnected": "Переподключение…"
+  },
+  "panels": {
+    "topWinrate": "Лучший винрейт",
+    "opCombos": "Сильнейшие комбинации",
+    "trapCombos": "Комбинации-ловушки",
+    "topTier": "Лучшие пики"
+  },
+  "player": "Игрок {{num}}",
+  "team": {
+    "radiant": "Свет",
+    "dire": "Тьма"
+  },
+  "unknownAbility": "Неизвестно",
+  "unknownHero": "Неизвестный герой",
+  "score": {
+    "label": "Оценка драфта",
+    "confidence": {
+      "low": "низк.",
+      "medium": "средн.",
+      "high": "высок."
+    }
+  }
+}

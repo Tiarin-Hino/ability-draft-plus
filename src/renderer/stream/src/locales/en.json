@@ -1,0 +1,29 @@
+{
+  "waiting": "Waiting for draft — scan the board in Ability Draft Plus",
+  "connection": {
+    "connecting": "Connecting…",
+    "connected": "Live",
+    "disconnected": "Reconnecting…"
+  },
+  "panels": {
+    "topWinrate": "Top Winrate",
+    "opCombos": "Strongest Combos",
+    "trapCombos": "Trap Combos",
+    "topTier": "Top Picks"
+  },
+  "player": "Player {{num}}",
+  "team": {
+    "radiant": "Radiant",
+    "dire": "Dire"
+  },
+  "unknownAbility": "Unknown",
+  "unknownHero": "Unknown hero",
+  "score": {
+    "label": "Draft score",
+    "confidence": {
+      "low": "low",
+      "medium": "med",
+      "high": "high"
+    }
+  }
+}

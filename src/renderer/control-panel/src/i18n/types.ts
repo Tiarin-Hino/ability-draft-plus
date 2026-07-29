@@ -4,6 +4,7 @@ import type enDashboard from '../locales/en/dashboard.json'
 import type enData from '../locales/en/data.json'
 import type enUpdate from '../locales/en/update.json'
 import type enFeedback from '../locales/en/feedback.json'
+import type enStreaming from '../locales/en/streaming.json'
 
 declare module 'i18next' {
   interface CustomTypeOptions {
@@ -15,6 +16,7 @@ declare module 'i18next' {
       data: typeof enData
       update: typeof enUpdate
       feedback: typeof enFeedback
+      streaming: typeof enStreaming
     }
   }
 }
