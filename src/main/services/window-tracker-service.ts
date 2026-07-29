@@ -102,7 +102,7 @@ function loadBindings(): typeof bindings {
   }
 }
 
-const GAME_WINDOW_TITLE = 'Dota 2'
+export const GAME_WINDOW_TITLE = 'Dota 2'
 
 interface RawGameWindowBounds {
   physical: GameWindowBounds

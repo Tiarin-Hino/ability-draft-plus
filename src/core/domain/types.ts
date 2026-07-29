@@ -73,6 +73,8 @@ export interface DraftSessionState {
   mySelectedModelHeroOrder: number | null
   /** Last ACCEPTED selected-abilities scan — baseline for the rescan contamination guard. */
   selectedAbilitiesCache: ScanResult[]
+  /** Consecutive contamination-guard rejections; capped so rejections can't stall forever. */
+  rescanRejectionStreak: number
 }
 
 // ---------------------------------------------------------------------------

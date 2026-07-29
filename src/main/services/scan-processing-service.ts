@@ -79,6 +79,7 @@ export function createScanProcessingService(
             mySelectedModelDbHeroId: state.mySelectedModelDbHeroId,
             mySelectedModelHeroOrder: state.mySelectedModelHeroOrder,
             selectedAbilitiesCache: state.selectedAbilitiesCache,
+            rescanRejectionStreak: state.rescanRejectionStreak,
           },
           deps: {
             heroes: dbService.heroes,
@@ -106,12 +107,18 @@ export function createScanProcessingService(
           mySelectedModelHeroOrder:
             output.updatedState.mySelectedModelHeroOrder,
           selectedAbilitiesCache: output.updatedState.selectedAbilitiesCache,
+          rescanRejectionStreak: output.updatedState.rescanRejectionStreak,
           lastRescanRejected: output.rescanRejected === true,
         })
 
         if (output.rescanRejected) {
           logger.warn(
             'Rescan discarded by contamination guard (pick slot obscured); state unchanged',
+          )
+        }
+        if (output.rescanRebaselined) {
+          logger.warn(
+            'Contamination-guard rejection cap reached — accepted scan as new baseline',
           )
         }
 

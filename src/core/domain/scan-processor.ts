@@ -27,6 +27,7 @@ import {
   filterRelevantHeroTraps,
 } from './op-trap-filter'
 import { determineTopTierEntities } from './top-tier'
+import { RESCAN_GUARD_MAX_CONSECUTIVE_REJECTIONS } from '@shared/constants/thresholds'
 
 // @DEV-GUIDE: Central business logic — transforms raw ML scan results into a fully-enriched
 // OverlayDataPayload for the overlay UI. This is pure TypeScript with ZERO Electron imports.
@@ -73,6 +74,12 @@ export interface ScanProcessorOutput {
    * callers (auto-rescan) must not treat the scan as fresh evidence.
    */
   rescanRejected?: boolean
+  /**
+   * True when the guard hit RESCAN_GUARD_MAX_CONSECUTIVE_REJECTIONS and this
+   * (still-contaminated-looking) rescan was accepted as the new baseline —
+   * escape hatch against a poisoned baseline stalling updates forever.
+   */
+  rescanRebaselined?: boolean
 }
 
 /**
@@ -113,6 +120,7 @@ export function processScanResults(
   let standard: ScanResult[]
   let selectedAbilities: ScanResult[]
   let rescanRejected = false
+  let rescanRebaselined = false
 
   if (isInitialScan) {
     const initial = rawResults as InitialScanResults
@@ -120,6 +128,7 @@ export function processScanResults(
     standard = initial.standard
     selectedAbilities = initial.selectedAbilities
     state.selectedAbilitiesCache = [...selectedAbilities]
+    state.rescanRejectionStreak = 0
 
     // Cache pool for future rescans
     state.initialPoolAbilitiesCache = {
@@ -143,12 +152,23 @@ export function processScanResults(
     // Rescan: rawResults = newly identified selected/picked abilities
     const pickedAbilities = rawResults as ScanResult[]
 
-    if (isRescanContaminated(state.selectedAbilitiesCache, pickedAbilities)) {
+    const contaminated = isRescanContaminated(
+      state.selectedAbilitiesCache,
+      pickedAbilities,
+    )
+    if (
+      contaminated &&
+      state.rescanRejectionStreak < RESCAN_GUARD_MAX_CONSECUTIVE_REJECTIONS
+    ) {
       // Discard this capture: keep state untouched and rebuild the payload from
       // the last accepted picks so consumers still get a consistent refresh.
       rescanRejected = true
+      state.rescanRejectionStreak += 1
       selectedAbilities = state.selectedAbilitiesCache
     } else {
+      // Clean scan, or the rejection cap was hit — accept and re-baseline.
+      rescanRebaselined = contaminated
+      state.rescanRejectionStreak = 0
       const pickedNames = new Set(
         pickedAbilities.map((a) => a.name).filter(Boolean) as string[],
       )
@@ -416,7 +436,7 @@ export function processScanResults(
     modelsCoords: modelCoords,
   }
 
-  return { overlayPayload, updatedState: state, rescanRejected }
+  return { overlayPayload, updatedState: state, rescanRejected, rescanRebaselined }
 }
 
 // ---------------------------------------------------------------------------
@@ -437,6 +457,7 @@ function cloneState(state: DraftSessionState): DraftSessionState {
     mySelectedModelDbHeroId: state.mySelectedModelDbHeroId,
     mySelectedModelHeroOrder: state.mySelectedModelHeroOrder,
     selectedAbilitiesCache: [...state.selectedAbilitiesCache],
+    rescanRejectionStreak: state.rescanRejectionStreak,
   }
 }
 
