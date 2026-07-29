@@ -26,8 +26,7 @@
     "badge": "Experimental",
     "description": "Rescans the draft automatically every few seconds using the GSI turn clock and attributes each pick to the player who made it. Requires the GSI config installed and an initial scan (Ctrl+Shift+S) at draft start.",
     "toggle": "Enable automatic draft tracking",
-    "cursorWarning": "While active, your mouse cursor briefly jumps to the screen corner during each automatic capture (never during your own pick turn).",
-    "mySpotNote": "When playing (not spectating), select My Spot in the overlay first — without it the tracker stays idle."
+    "guardNote": "Captures are validated before being applied: if an in-game tooltip covers the pick slots, that rescan is discarded automatically and retried a few seconds later. Your mouse is never touched."
   },
   "gsi": {
     "title": "Dota 2 Game State Integration",

@@ -58,10 +58,7 @@ function ExperimentalCard() {
           />
           <Label htmlFor="auto-draft-tracking">{t('experimental.toggle')}</Label>
         </div>
-        <div className="space-y-1 text-xs text-muted-foreground">
-          <p>{t('experimental.cursorWarning')}</p>
-          <p>{t('experimental.mySpotNote')}</p>
-        </div>
+        <p className="text-xs text-muted-foreground">{t('experimental.guardNote')}</p>
       </CardContent>
     </Card>
   )

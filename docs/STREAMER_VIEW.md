@@ -64,11 +64,10 @@ transition). This produces an ordered, attributed pick feed on the stream board.
 
 Things to know before enabling:
 
-- Your **mouse cursor briefly jumps** to the screen corner during each automatic
-  capture (hover tooltips would contaminate the screenshot). It never does this
-  during **your own** pick turn — automatic scans are suppressed then.
-- When playing (not spectating), select **My Spot** in the overlay first; without a
-  known slot the tracker stays idle by design.
+- Your mouse is **never touched**. Instead, every rescan is validated before being
+  applied: if an in-game hover tooltip covers the pick slots, that capture is
+  discarded automatically and retried a few seconds later (picks never un-pick, so
+  a previously recognized pick slot reading as unknown means the frame was obscured).
 - The initial pool scan (**Ctrl+Shift+S**) is still manual.
 - Turns where no ability left the pool are recorded as *model selection* markers —
   hero-model pick recognition is planned future work.

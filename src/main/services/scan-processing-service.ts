@@ -78,6 +78,7 @@ export function createScanProcessingService(
             mySelectedSpotHeroOrder: state.mySelectedSpotHeroOrder,
             mySelectedModelDbHeroId: state.mySelectedModelDbHeroId,
             mySelectedModelHeroOrder: state.mySelectedModelHeroOrder,
+            selectedAbilitiesCache: state.selectedAbilitiesCache,
           },
           deps: {
             heroes: dbService.heroes,
@@ -104,7 +105,15 @@ export function createScanProcessingService(
           mySelectedModelDbHeroId: output.updatedState.mySelectedModelDbHeroId,
           mySelectedModelHeroOrder:
             output.updatedState.mySelectedModelHeroOrder,
+          selectedAbilitiesCache: output.updatedState.selectedAbilitiesCache,
+          lastRescanRejected: output.rescanRejected === true,
         })
+
+        if (output.rescanRejected) {
+          logger.warn(
+            'Rescan discarded by contamination guard (pick slot obscured); state unchanged',
+          )
+        }
 
         // Broadcast enriched data to both windows
         const overlay = windowManager.getOverlayWindow()

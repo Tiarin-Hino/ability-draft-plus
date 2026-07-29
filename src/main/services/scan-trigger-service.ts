@@ -17,20 +17,15 @@ import type { InitialScanResults } from '@shared/types/ml'
 // overlay renderer (previous flow: globalShortcut -> renderer -> ml:scan -> here).
 // Pipeline: capture -> (lazy ML init) -> layout -> crop to game window -> inference ->
 // broadcast raw results -> ScanProcessingService enrichment + overlay:data fan-out.
-// The capture hooks bracket ONLY the screenshot (auto-rescan parks the mouse cursor
-// there so in-game hover tooltips don't contaminate the capture, then restores it).
-// performScan resolves after enrichment is fully dispatched, so callers can read the
-// updated DraftStore pool immediately after awaiting it.
+// Hover-tooltip contamination is handled downstream by the scan-processor's rescan
+// guard (rejected scans leave state untouched) — the pipeline itself never touches
+// the user's mouse. performScan resolves after enrichment is fully dispatched, so
+// callers can read the updated DraftStore pool immediately after awaiting it.
 
 const logger = log.scope('scan-trigger')
 
-export interface ScanCaptureHooks {
-  beforeCapture?: () => void
-  afterCapture?: () => void
-}
-
 export interface ScanTriggerService {
-  performScan(isInitialScan: boolean, hooks?: ScanCaptureHooks): Promise<void>
+  performScan(isInitialScan: boolean): Promise<void>
 }
 
 export function createScanTriggerService(
@@ -45,7 +40,7 @@ export function createScanTriggerService(
   dbService: DatabaseService,
 ): ScanTriggerService {
   return {
-    async performScan(isInitialScan, hooks): Promise<void> {
+    async performScan(isInitialScan): Promise<void> {
       try {
         // Read resolution from app store (set at overlay activation)
         const resolution = appStore.getState().activeResolution
@@ -74,13 +69,7 @@ export function createScanTriggerService(
         }
 
         appStore.setState({ mlStatus: 'scanning' })
-        let screenshotBuffer: Buffer
-        hooks?.beforeCapture?.()
-        try {
-          screenshotBuffer = await screenshotService.capture()
-        } finally {
-          hooks?.afterCapture?.()
-        }
+        let screenshotBuffer = await screenshotService.capture()
 
         const layout = layoutService.getLayout(resolution)
         if (!layout) {
