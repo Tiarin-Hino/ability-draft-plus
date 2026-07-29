@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { StreamGsiInfo } from '@shared/types/stream'
+import { apiBase } from '../hooks/use-stream-state'
 import type { StreamConnectionState } from '../hooks/use-stream-state'
 
 // @DEV-GUIDE: Broadcast top bar: ABILITY DRAFT wordmark + optional tournament title
@@ -13,6 +15,21 @@ function formatClock(clockTime: number | null): string | null {
   const minutes = Math.floor(total / 60)
   const seconds = total % 60
   return `${clockTime < 0 ? '-' : ''}${minutes}:${String(seconds).padStart(2, '0')}`
+}
+
+/** Optional bundled tournament emblem (resources/data/stream/logo.png|jpg). */
+function LogoPlate() {
+  const [failed, setFailed] = useState(false)
+  if (failed) return null
+  return (
+    <img
+      className="top-bar-logo"
+      src={`${apiBase()}/art/logo`}
+      alt=""
+      aria-hidden="true"
+      onError={() => setFailed(true)}
+    />
+  )
 }
 
 export function TopBar({
@@ -32,6 +49,7 @@ export function TopBar({
   return (
     <header className="top-bar">
       <div className="top-bar-brand">
+        <LogoPlate />
         <span className="top-bar-wordmark">{t('wordmark')}</span>
         {title && <span className="top-bar-title">{title}</span>}
         {demo && <span className="demo-badge">{t('demo')}</span>}
