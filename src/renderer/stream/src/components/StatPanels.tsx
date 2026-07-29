@@ -9,6 +9,7 @@ function ComboEntry({ combo }: { combo: StreamComboDisplay }) {
       <div className="combo-icons">
         {[combo.ability1, combo.ability2].map((ability, i) => (
           <span className="combo-ability" key={i} title={ability.displayName}>
+            {i > 0 && <span className="combo-plus">+</span>}
             {ability.iconPath ? (
               <img
                 src={`${apiBase()}${ability.iconPath}`}

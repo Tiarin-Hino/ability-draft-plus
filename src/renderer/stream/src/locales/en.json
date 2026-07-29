@@ -1,9 +1,16 @@
 {
+  "wordmark": "ABILITY DRAFT",
   "waiting": "Waiting for draft — scan the board in Ability Draft Plus",
+  "demo": "DEMO",
+  "reservedZone": "Reserved for your overlay",
   "connection": {
     "connecting": "Connecting…",
     "connected": "Live",
     "disconnected": "Reconnecting…"
+  },
+  "pool": {
+    "ultimates": "Ultimate Abilities",
+    "standard": "Standard Abilities"
   },
   "panels": {
     "topWinrate": "Top Winrate",
@@ -12,6 +19,7 @@
     "topTier": "Top Picks"
   },
   "player": "Player {{num}}",
+  "noHero": "No Hero",
   "team": {
     "radiant": "Radiant",
     "dire": "Dire"
@@ -20,6 +28,7 @@
   "unknownHero": "Unknown hero",
   "score": {
     "label": "Draft score",
+    "teamAverage": "Team draft score",
     "confidence": {
       "low": "low",
       "medium": "med",
