@@ -66,21 +66,6 @@ function PlayerCard({ player }: { player: StreamPlayerRow }) {
   )
 }
 
-/** Optional bundled banner cap (resources/data/stream/<team>-cap.png|jpg). */
-function TeamCap({ team }: { team: StreamTeam }) {
-  const [failed, setFailed] = useState(false)
-  if (failed) return null
-  return (
-    <img
-      className="team-cap"
-      src={`${apiBase()}/art/${team}-cap`}
-      alt=""
-      aria-hidden="true"
-      onError={() => setFailed(true)}
-    />
-  )
-}
-
 export function PlayerColumn({
   team,
   players,
@@ -89,6 +74,10 @@ export function PlayerColumn({
   players: StreamPlayerRow[]
 }) {
   const { t } = useTranslation()
+  // Bundled banner art (resources/data/stream/<team>-cap.png|jpg). When present
+  // the header goes box-less: the banner spans the column and the team name
+  // tucks under its long tail, beside the gem head. Boxed style is the fallback.
+  const [capOk, setCapOk] = useState(true)
   const scores = players
     .map((p) => p.draftScore?.score)
     .filter((s): s is number => s !== null && s !== undefined)
@@ -97,14 +86,24 @@ export function PlayerColumn({
 
   return (
     <section className={`team-column team-${team}`} aria-label={t(`team.${team}`)}>
-      <header className="team-header">
-        <TeamCap team={team} />
-        <h2 className="team-title">{t(`team.${team}`)}</h2>
-        {teamAverage !== null && (
-          <span className="team-score" title={t('score.teamAverage')}>
-            {(teamAverage * 100).toFixed(0)}
-          </span>
+      <header className={`team-header${capOk ? ' has-cap' : ''}`}>
+        {capOk && (
+          <img
+            className="team-cap"
+            src={`${apiBase()}/art/${team}-cap`}
+            alt=""
+            aria-hidden="true"
+            onError={() => setCapOk(false)}
+          />
         )}
+        <div className="team-heading">
+          <h2 className="team-title">{t(`team.${team}`)}</h2>
+          {teamAverage !== null && (
+            <span className="team-score" title={t('score.teamAverage')}>
+              {(teamAverage * 100).toFixed(0)}
+            </span>
+          )}
+        </div>
       </header>
       {players.map((p) => (
         <PlayerCard key={p.playerIndex} player={p} />
