@@ -151,9 +151,15 @@ body,
 
 .top-bar-brand {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 0.9rem;
   min-width: 0;
+}
+
+.top-bar-logo {
+  height: 2.4rem;
+  width: auto;
+  filter: drop-shadow(0 0 6px rgba(201, 163, 76, 0.35));
 }
 
 .top-bar-wordmark {
