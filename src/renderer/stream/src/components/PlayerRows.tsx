@@ -66,6 +66,21 @@ function PlayerCard({ player }: { player: StreamPlayerRow }) {
   )
 }
 
+/** Optional bundled banner cap (resources/data/stream/<team>-cap.png|jpg). */
+function TeamCap({ team }: { team: StreamTeam }) {
+  const [failed, setFailed] = useState(false)
+  if (failed) return null
+  return (
+    <img
+      className="team-cap"
+      src={`${apiBase()}/art/${team}-cap`}
+      alt=""
+      aria-hidden="true"
+      onError={() => setFailed(true)}
+    />
+  )
+}
+
 export function PlayerColumn({
   team,
   players,
@@ -83,6 +98,7 @@ export function PlayerColumn({
   return (
     <section className={`team-column team-${team}`} aria-label={t(`team.${team}`)}>
       <header className="team-header">
+        <TeamCap team={team} />
         <h2 className="team-title">{t(`team.${team}`)}</h2>
         {teamAverage !== null && (
           <span className="team-score" title={t('score.teamAverage')}>

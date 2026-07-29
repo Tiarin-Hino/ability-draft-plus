@@ -256,13 +256,32 @@ body,
   min-width: 0;
   overflow: hidden;
 }
-/* Trapezoid pedestal slab behind the tiles, like the in-game stone base */
+/* Layering inside the pedestal (its own stacking context): optional slab
+   texture (z -2) under the smoked-glass tint (z -1), tiles above both. */
+.pool-board {
+  z-index: 0;
+}
+
+.pool-slab {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  clip-path: polygon(3.5% 0, 96.5% 0, 100% 100%, 0 100%);
+  opacity: 0.18;
+  z-index: -2;
+}
+
+/* Trapezoid pedestal slab behind the tiles, like the in-game stone base.
+   Translucent smoked glass: dark enough for tile contrast, open enough for the
+   bundled board-bg art to breathe through. */
 .pool-board::before {
   content: '';
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(38, 45, 56, 0.97) 0%, rgba(21, 25, 32, 0.97) 45%, rgba(13, 16, 21, 0.98) 100%);
+    linear-gradient(180deg, rgba(16, 20, 26, 0.62) 0%, rgba(10, 13, 17, 0.68) 45%, rgba(6, 8, 11, 0.78) 100%);
   clip-path: polygon(3.5% 0, 96.5% 0, 100% 100%, 0 100%);
   border-bottom: 3px solid rgba(201, 163, 76, 0.35);
   z-index: -1;
@@ -456,12 +475,36 @@ body,
 }
 
 .team-header {
+  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0.35rem 0.8rem;
   border-radius: 0.45rem;
   border: 1px solid var(--panel-border);
+}
+
+/* Optional bundled banner art behind the team title */
+.team-cap {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+.team-radiant .team-cap {
+  object-position: left center;
+}
+.team-dire .team-cap {
+  object-position: right center;
+}
+.team-title,
+.team-score {
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
 .team-radiant .team-header {
   background: linear-gradient(90deg, var(--radiant-soft), transparent 80%);

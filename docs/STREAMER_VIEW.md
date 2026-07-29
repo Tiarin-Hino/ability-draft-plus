@@ -37,6 +37,8 @@ when present and silently skipped otherwise):
 | `board-bg.png\|jpg` | Live board backdrop (`?bg=dark` only) |
 | `waiting-bg.png\|jpg` | Waiting-screen backdrop (`?bg=dark` only) |
 | `logo.png\|jpg` | Tournament emblem in the top bar (trim transparent margins first) |
+| `radiant-cap.png\|jpg` / `dire-cap.png\|jpg` | Banner art behind the team headers |
+| `pool-slab.png\|jpg` | Faint stone texture inside the pool pedestal |
 
 Recommended: press **Prefetch all icons** once (Streaming page) so every ability icon
 is cached locally before your first live draft.
