@@ -34,6 +34,7 @@ describe('createAppStore', () => {
       streamServerPort: null,
       streamServerError: null,
       streamClientCount: 0,
+      gsiConnected: false,
     })
   })
 

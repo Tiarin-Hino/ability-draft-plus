@@ -7,6 +7,9 @@ import type { OverlayDataPayload } from '@shared/types'
 import type { StreamServerStatusInfo, StreamStateMessage } from '@shared/types/stream'
 import { STREAM_PROTOCOL_VERSION } from '@shared/constants/thresholds'
 import { buildStreamBoardState } from '@core/domain/stream-board'
+import { parseGsiPayload } from '@core/gsi/parser'
+import type { GsiSnapshot } from '@core/gsi/types'
+import type { StreamGsiInfo } from '@shared/types/stream'
 import type { DatabaseService } from './database-service'
 import type { AppStore } from '../store/app-store'
 import type { IconCacheService, IconKind } from './icon-cache-service'
@@ -21,7 +24,11 @@ import type { IconCacheService, IconKind } from './icon-cache-service'
 //                       Electron patches fs so readFile reads archive contents)
 // - GET /events      -> SSE: full StreamBoardState envelope on connect + on every
 //                       scan/reset/language change; comment heartbeat every 15s
-// - /icons/*, /gsi   -> added in later phases
+// - GET /icons/*     -> icon-cache-service (official art, locally cached)
+// - POST /gsi        -> Dota 2 Game State Integration ingest (cfg written by
+//                       gsi-cfg-service). Always answers 200 fast; parsed snapshots
+//                       merge player names/phase/clock into the board state with a
+//                       500ms debounced push. 30s of silence = disconnected.
 //
 // Dev quirk: with `npm run dev` the renderer bundle only exists on the electron-vite
 // dev server (ELECTRON_RENDERER_URL), so /stream redirects there with ?api=<our origin>
@@ -36,6 +43,11 @@ import type { IconCacheService, IconKind } from './icon-cache-service'
 const logger = log.scope('stream-server')
 
 const SSE_HEARTBEAT_MS = 15_000
+// GSI heartbeats arrive every 10s (cfg); 30s of silence = Dota gone/closed.
+const GSI_STALE_MS = 30_000
+const GSI_STALE_CHECK_MS = 10_000
+const GSI_BROADCAST_DEBOUNCE_MS = 500
+const GSI_MAX_BODY_BYTES = 512 * 1024
 
 const MIME_TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -75,7 +87,34 @@ export function createStreamServerService(
   let initialPayload: OverlayDataPayload | null = null
   let latestPayload: OverlayDataPayload | null = null
 
+  let gsiSnapshot: GsiSnapshot | null = null
+  let gsiLastAt: number | null = null
+  let gsiStaleTimer: NodeJS.Timeout | null = null
+  let gsiBroadcastTimer: NodeJS.Timeout | null = null
+
   const staticRoot = join(app.getAppPath(), 'out', 'renderer')
+
+  function gsiConnected(): boolean {
+    return gsiLastAt !== null && Date.now() - gsiLastAt < GSI_STALE_MS
+  }
+
+  function gsiInfo(): StreamGsiInfo {
+    const connected = gsiConnected()
+    const playerNames: (string | null)[] = Array.from({ length: 10 }, () => null)
+    if (gsiSnapshot) {
+      for (const player of gsiSnapshot.players) {
+        if (player.slotIndex >= 0 && player.slotIndex < 10) {
+          playerNames[player.slotIndex] = player.name
+        }
+      }
+    }
+    return {
+      connected,
+      gamePhase: connected ? (gsiSnapshot?.gamePhase ?? null) : null,
+      clockTime: connected ? (gsiSnapshot?.clockTime ?? null) : null,
+      playerNames,
+    }
+  }
 
   function syncStoreStatus(): void {
     appStore.setState({
@@ -90,7 +129,7 @@ export function createStreamServerService(
     const state = buildStreamBoardState({
       initialPayload,
       latestPayload,
-      gsi: null,
+      gsi: gsiInfo(),
       meta: {
         language: appStore.getState().language,
         appVersion: app.getVersion(),
@@ -190,8 +229,65 @@ export function createStreamServerService(
     res.end(data)
   }
 
+  function scheduleGsiBroadcast(): void {
+    if (gsiBroadcastTimer) return
+    gsiBroadcastTimer = setTimeout(() => {
+      gsiBroadcastTimer = null
+      broadcast()
+    }, GSI_BROADCAST_DEBOUNCE_MS)
+  }
+
+  function handleGsiPost(req: IncomingMessage, res: ServerResponse): void {
+    // Respond 200 fast no matter what — a slow/erroring endpoint makes Dota's
+    // GSI client back off and drop payloads.
+    const chunks: Buffer[] = []
+    let size = 0
+    let overflow = false
+
+    req.on('data', (chunk: Buffer) => {
+      size += chunk.length
+      if (size > GSI_MAX_BODY_BYTES) {
+        overflow = true
+        req.removeAllListeners('data')
+        return
+      }
+      chunks.push(chunk)
+    })
+
+    req.on('end', () => {
+      res.writeHead(200)
+      res.end()
+      if (overflow) {
+        logger.warn('GSI payload exceeded size cap, dropped', { size })
+        return
+      }
+      try {
+        const json: unknown = JSON.parse(Buffer.concat(chunks).toString('utf-8'))
+        const wasConnected = gsiConnected()
+        gsiSnapshot = parseGsiPayload(json)
+        gsiLastAt = Date.now()
+        if (!wasConnected) {
+          appStore.setState({ gsiConnected: true })
+          logger.info('GSI connected')
+        }
+        scheduleGsiBroadcast()
+      } catch {
+        logger.warn('Dropped malformed GSI payload')
+      }
+    })
+
+    req.on('error', () => {
+      // socket error mid-body — nothing to do, Dota retries on its throttle
+    })
+  }
+
   function handleRequest(req: IncomingMessage, res: ServerResponse): void {
     const urlPath = (req.url ?? '/').split('?')[0]
+
+    if (req.method === 'POST' && urlPath === '/gsi') {
+      handleGsiPost(req, res)
+      return
+    }
 
     if (req.method !== 'GET') {
       res.writeHead(405)
@@ -256,6 +352,13 @@ export function createStreamServerService(
               }
             }
           }, SSE_HEARTBEAT_MS)
+          gsiStaleTimer = setInterval(() => {
+            if (appStore.getState().gsiConnected && !gsiConnected()) {
+              appStore.setState({ gsiConnected: false })
+              logger.info('GSI connection stale')
+              broadcast()
+            }
+          }, GSI_STALE_CHECK_MS)
           syncStoreStatus()
           logger.info('Stream server started', { url: `http://127.0.0.1:${port}/stream` })
           resolve(true)
@@ -275,6 +378,17 @@ export function createStreamServerService(
       if (heartbeatTimer) {
         clearInterval(heartbeatTimer)
         heartbeatTimer = null
+      }
+      if (gsiStaleTimer) {
+        clearInterval(gsiStaleTimer)
+        gsiStaleTimer = null
+      }
+      if (gsiBroadcastTimer) {
+        clearTimeout(gsiBroadcastTimer)
+        gsiBroadcastTimer = null
+      }
+      if (appStore.getState().gsiConnected) {
+        appStore.setState({ gsiConnected: false })
       }
       for (const client of sseClients) {
         try {

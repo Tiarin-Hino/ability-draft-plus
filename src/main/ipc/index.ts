@@ -16,6 +16,7 @@ import type { UpdateService } from '../services/update-service'
 import type { ScraperService } from '../services/scraper-service'
 import type { StreamServerService } from '../services/stream-server-service'
 import type { IconCacheService } from '../services/icon-cache-service'
+import type { GsiCfgService } from '../services/gsi-cfg-service'
 import { registerDatabaseHandlers } from './database-handlers'
 import { registerMlHandlers } from './ml-handlers'
 import { registerDraftHandlers } from './draft-handlers'
@@ -63,6 +64,7 @@ export function registerIpcHandlers(
   scraperService: ScraperService,
   streamService: StreamServerService,
   iconCache: IconCacheService,
+  gsiCfgService: GsiCfgService,
 ): void {
   logger.info('Registering IPC handlers...')
 
@@ -258,7 +260,7 @@ export function registerIpcHandlers(
   registerScraperHandlers(scraperService)
 
   // Streamer view domain
-  registerStreamHandlers(streamService, dbService, iconCache)
+  registerStreamHandlers(streamService, dbService, iconCache, gsiCfgService, windowManager)
 
   // Resolution domain
   registerResolutionHandlers(layoutService, screenshotService, windowTracker, windowManager, apiConfig)

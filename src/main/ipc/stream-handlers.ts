@@ -1,8 +1,10 @@
-import { ipcMain } from 'electron'
+import { ipcMain, dialog } from 'electron'
 import log from 'electron-log/main'
 import type { StreamServerService } from '../services/stream-server-service'
 import type { IconCacheService } from '../services/icon-cache-service'
 import { loadAbilityClassNames } from '../services/icon-cache-service'
+import type { GsiCfgService } from '../services/gsi-cfg-service'
+import type { WindowManager } from '../services/window-manager'
 import type { DatabaseService } from '../services/database-service'
 
 // @DEV-GUIDE: Streamer-view IPC handlers. All invoke-style (renderer awaits the result).
@@ -16,6 +18,8 @@ export function registerStreamHandlers(
   streamService: StreamServerService,
   dbService: DatabaseService,
   iconCache: IconCacheService,
+  gsiCfgService: GsiCfgService,
+  windowManager: WindowManager,
 ): void {
   ipcMain.handle('stream:start', async (_event, data: { port: number }) => {
     const port = Math.floor(data.port)
@@ -57,6 +61,26 @@ export function registerStreamHandlers(
     } finally {
       prefetchInFlight = false
     }
+  })
+
+  // GSI cfg management. writeCfg uses the CURRENT stream port from settings so the
+  // cfg and server always agree; the streaming page reminds users to rewrite the cfg
+  // after changing the port.
+  ipcMain.handle('gsi:detect', () => gsiCfgService.detect())
+
+  ipcMain.handle('gsi:writeCfg', (_event, data: { dotaDir?: string }) => {
+    const { streamPort } = dbService.metadata.getSettings()
+    return gsiCfgService.writeCfg(streamPort, data?.dotaDir)
+  })
+
+  ipcMain.handle('gsi:pickDotaFolder', async (_event, data: { title: string }) => {
+    const cp = windowManager.getControlPanelWindow()
+    if (!cp || cp.isDestroyed()) return { dir: null }
+    const result = await dialog.showOpenDialog(cp, {
+      properties: ['openDirectory'],
+      title: data.title,
+    })
+    return { dir: result.canceled ? null : (result.filePaths[0] ?? null) }
   })
 
   logger.info('Stream IPC handlers registered')

@@ -21,6 +21,24 @@
     "errorGeneric": "The server failed to start. Check the logs for details.",
     "errorInvalidPort": "Invalid port. Use a number between 1024 and 65535."
   },
+  "gsi": {
+    "title": "Dota 2 Game State Integration",
+    "description": "Lets Dota send player names, game phase, and clock to the stream board. Requires a one-time config file in your Dota folder and a Dota restart.",
+    "connected": "Connected",
+    "disconnected": "Not connected",
+    "detectedPath": "Dota installation",
+    "notDetected": "Dota installation not found — pick the \"dota 2 beta\" folder manually.",
+    "cfgPresent": "Config file installed",
+    "cfgMissing": "Config file not installed yet",
+    "writeCfg": "Install config file",
+    "browse": "Browse…",
+    "pickFolderTitle": "Select the \"dota 2 beta\" folder",
+    "writeSuccess": "Config written to {{path}}. Restart Dota 2 for it to take effect.",
+    "errorDotaNotFound": "Could not locate the Dota 2 installation. Use Browse to pick the \"dota 2 beta\" folder.",
+    "errorWriteFailed": "Failed to write the config file. Check the logs for details.",
+    "portNote": "The config pins the current server port — reinstall it after changing the port.",
+    "spectatorNote": "All 10 player names are only available while spectating/casting. When playing, Dota reports only your own name."
+  },
   "icons": {
     "title": "Ability icons",
     "description": "The board uses official ability icons, downloaded once and cached locally. Prefetch them now so the first draft renders instantly even without internet access.",

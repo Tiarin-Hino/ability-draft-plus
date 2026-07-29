@@ -52,6 +52,9 @@ export interface AppStoreState {
   streamServerPort: number | null
   streamServerError: string | null
   streamClientCount: number
+
+  // Dota GSI: true while the stream server has received a POST in the last 30s
+  gsiConnected: boolean
 }
 
 // Action types for @zubridge dispatch
