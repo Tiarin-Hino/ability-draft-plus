@@ -49,6 +49,15 @@ export interface StreamHeroRow {
 
 export type StreamTeam = 'radiant' | 'dire'
 
+/** A player's picked hero model (from GSI). */
+export interface StreamPlayerModel {
+  /** Valve npc short name (e.g. "sand_king") — also the CDN portrait key. */
+  npcName: string
+  displayName: string
+  /** Server-relative portrait path. */
+  portraitPath: string
+}
+
 /** One of the 10 player rows with their picked abilities. */
 export interface StreamPlayerRow {
   /** Player index 0–9 as scanned from selected-ability tiles (0–4 radiant, 5–9 dire). */
@@ -56,6 +65,8 @@ export interface StreamPlayerRow {
   team: StreamTeam
   /** From GSI when available; null until known. */
   playerName: string | null
+  /** Picked hero model from GSI (spectating); null until picked/unknown. */
+  model: StreamPlayerModel | null
   picks: StreamAbilitySlot[]
   draftScore: PlayerDraftScore | null
 }
@@ -104,6 +115,8 @@ export interface StreamGsiInfo {
   clockTime: number | null
   /** Player names by player index 0–9; empty or sparse until GSI reports them. */
   playerNames: (string | null)[]
+  /** Picked hero models by player index 0–9 (npcName + resolved display name). */
+  playerModels: ({ npcName: string; displayName: string } | null)[]
 }
 
 /** Full board snapshot — the only message payload v1 pushes. */

@@ -15,6 +15,8 @@ export interface GsiPlayer {
   slotIndex: number
   name: string
   accountId: string | null
+  /** Picked hero model as Valve npc short name (e.g. "sand_king"); null until picked. */
+  heroNpcName: string | null
 }
 
 export interface GsiSnapshot {
@@ -27,6 +29,8 @@ export interface GsiSnapshot {
   players: GsiPlayer[]
   /** The local player when Dota reports one (playing, not spectating). */
   localPlayer: { name: string; accountId: string | null } | null
+  /** The local player's picked hero model (playing only); npc short name. */
+  localHeroNpcName: string | null
 }
 
 export const GSI_HERO_SELECTION_PHASE = 'DOTA_GAMERULES_STATE_HERO_SELECTION'

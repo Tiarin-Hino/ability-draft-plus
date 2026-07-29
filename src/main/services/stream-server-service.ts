@@ -114,13 +114,34 @@ export function createStreamServerService(
     return gsiLastAt !== null && Date.now() - gsiLastAt < GSI_STALE_MS
   }
 
+  /** npc short name -> display name via the DB (Windrun short names are the npc
+   * name without underscores, e.g. sand_king -> sandking); title-case fallback. */
+  function heroDisplayName(npcName: string): string {
+    const dbHero = dbService.heroes
+      .getAll()
+      .find((h) => h.name === npcName.replace(/_/g, ''))
+    if (dbHero) return dbHero.displayName
+    return npcName
+      .split('_')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ')
+  }
+
   function gsiInfo(): StreamGsiInfo {
     const connected = gsiConnected()
     const playerNames: (string | null)[] = Array.from({ length: 10 }, () => null)
+    const playerModels: ({ npcName: string; displayName: string } | null)[] =
+      Array.from({ length: 10 }, () => null)
     if (gsiSnapshot) {
       for (const player of gsiSnapshot.players) {
         if (player.slotIndex >= 0 && player.slotIndex < 10) {
           playerNames[player.slotIndex] = player.name
+          if (player.heroNpcName) {
+            playerModels[player.slotIndex] = {
+              npcName: player.heroNpcName,
+              displayName: heroDisplayName(player.heroNpcName),
+            }
+          }
         }
       }
     }
@@ -129,6 +150,7 @@ export function createStreamServerService(
       gamePhase: connected ? (gsiSnapshot?.gamePhase ?? null) : null,
       clockTime: connected ? (gsiSnapshot?.clockTime ?? null) : null,
       playerNames,
+      playerModels,
     }
   }
 

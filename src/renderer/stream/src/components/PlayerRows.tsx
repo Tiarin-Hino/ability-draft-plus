@@ -1,6 +1,22 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { StreamPlayerRow, StreamTeam } from '@shared/types/stream'
+import type { StreamPlayerModel, StreamPlayerRow, StreamTeam } from '@shared/types/stream'
 import { AbilityTile } from './AbilityTile'
+import { apiBase } from '../hooks/use-stream-state'
+
+function ModelPortrait({ model }: { model: StreamPlayerModel }) {
+  const [failed, setFailed] = useState(false)
+  if (failed) return null
+  return (
+    <img
+      className="player-model"
+      src={`${apiBase()}${model.portraitPath}`}
+      alt={model.displayName}
+      title={model.displayName}
+      onError={() => setFailed(true)}
+    />
+  )
+}
 
 function PlayerCard({ player }: { player: StreamPlayerRow }) {
   const { t } = useTranslation()
@@ -10,6 +26,7 @@ function PlayerCard({ player }: { player: StreamPlayerRow }) {
   return (
     <div className="player-card">
       <div className="player-head">
+        {player.model && <ModelPortrait model={player.model} />}
         <span className="player-name" title={name}>
           {name}
         </span>

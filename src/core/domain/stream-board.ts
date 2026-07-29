@@ -59,6 +59,7 @@ const EMPTY_GSI: StreamGsiInfo = {
   gamePhase: null,
   clockTime: null,
   playerNames: [],
+  playerModels: [],
 }
 
 function toStreamSlot(
@@ -145,10 +146,15 @@ function buildPlayerRows(
           )
         : null
 
+    const gsiModel = gsi.playerModels[playerIndex] ?? null
+
     rows.push({
       playerIndex,
       team: playerIndex < PLAYER_COUNT / 2 ? 'radiant' : 'dire',
       playerName: gsi.playerNames[playerIndex] ?? null,
+      model: gsiModel
+        ? { ...gsiModel, portraitPath: heroIconPath(gsiModel.npcName) }
+        : null,
       picks,
       draftScore,
     })
