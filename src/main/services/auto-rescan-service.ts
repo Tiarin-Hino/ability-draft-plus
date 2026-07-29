@@ -137,10 +137,23 @@ export function createAutoRescanService(
 
       const newPool = poolNames()
 
-      const elapsedTurns = elapsedTurnsBetween(schedule, lastAttributedS, elapsedS)
-      if (elapsedTurns.length === 0 && prevPool.length === newPool.length) {
+      // Attribution is DEPARTURE-driven: a scan without pool departures carries
+      // no pick information (picks land ~7s apart vs the 5s scan cadence), so
+      // turns simply keep accumulating until the next departure shows up.
+      // Model picks are observed directly via GSI now, so no synthetic
+      // modelSelectionMarker events are emitted from clock guesses anymore —
+      // elapsed turns are capped to the number of departures.
+      const newPoolSet = new Set(newPool)
+      const departedCount = prevPool.filter((n) => !newPoolSet.has(n)).length
+      if (departedCount === 0) {
         return
       }
+
+      const elapsedTurns = elapsedTurnsBetween(
+        schedule,
+        lastAttributedS,
+        elapsedS,
+      ).slice(0, departedCount)
 
       const { events, unattributed } = attributePicks({
         prevPoolNames: prevPool,
@@ -154,10 +167,7 @@ export function createAutoRescanService(
 
       if (events.length > 0) {
         draftStore.getState().appendPickEvents(events)
-        logger.info('Attributed picks', {
-          events: events.length,
-          markers: events.filter((e) => e.kind === 'modelSelectionMarker').length,
-        })
+        logger.info('Attributed picks', { events: events.length })
       }
       if (unattributed.length > 0) {
         logger.warn('Unattributed pool departures (attribution drift)', {

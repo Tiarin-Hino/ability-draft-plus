@@ -287,7 +287,7 @@ export function createStreamServerService(
   function logParsedPlayers(snapshot: GsiSnapshot): void {
     if (snapshot.players.length === 0) return
     const mapping = snapshot.players
-      .map((p) => `${p.slotIndex}:${p.name}`)
+      .map((p) => `${p.slotIndex}:${p.name}${p.heroNpcName ? `=${p.heroNpcName}` : ''}`)
       .join(', ')
     if (mapping !== gsiLastPlayersLog) {
       gsiLastPlayersLog = mapping

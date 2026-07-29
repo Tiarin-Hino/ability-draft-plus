@@ -34,48 +34,62 @@ function heroNpcShortName(value: unknown): string | null {
   return name.slice('npc_dota_hero_'.length)
 }
 
-/** Normalize a per-team block key to the global 0-9 slot numbering. */
-function globalSlotIndex(key: string, isDire: boolean): number | null {
+/**
+ * Global 0-9 slot for a team-block entry. Real captures carry an authoritative
+ * team_slot (0-4 within the team) — prefer it over the playerN key, whose
+ * numbering varies across GSI versions (per-team 0-4 vs global 0-9).
+ */
+function resolveSlotIndex(
+  key: string,
+  player: Record<string, unknown>,
+  isDire: boolean,
+): number | null {
+  const teamSlot = asNumber(player['team_slot'])
+  if (teamSlot !== null && teamSlot >= 0 && teamSlot <= 4) {
+    return (isDire ? 5 : 0) + teamSlot
+  }
   const rawIndex = slotIndexFromKey(key)
   if (rawIndex === null) return null
-  // Some GSI versions key each team's block player0..player4, others use the
-  // global player0..player9 numbering. Normalize dire to global slots 5-9.
   return isDire && rawIndex < 5 ? rawIndex + 5 : rawIndex
 }
 
 function parseTeamPlayers(
   team: unknown,
   into: GsiPlayer[],
+  heroesByKey: Map<number, string>,
   isDire: boolean,
 ): void {
   const teamRecord = asRecord(team)
   if (!teamRecord) return
   for (const [key, value] of Object.entries(teamRecord)) {
-    const slotIndex = globalSlotIndex(key, isDire)
     const player = asRecord(value)
-    if (slotIndex === null || !player) continue
+    const keyIndex = slotIndexFromKey(key)
+    if (!player || keyIndex === null) continue
+    const slotIndex = resolveSlotIndex(key, player, isDire)
     const name = asString(player['name'])
-    if (!name) continue
+    if (slotIndex === null || !name) continue
     into.push({
       slotIndex,
       name,
       accountId: asString(player['accountid']),
-      heroNpcName: null,
+      // Hero entries share the player block's key numbering — join by raw key,
+      // NOT by resolved slot, so team_slot reordering can't mismatch them.
+      heroNpcName: heroesByKey.get(keyIndex) ?? null,
     })
   }
 }
 
-/** Spectator hero block: { team2: { playerN: { name: "npc_dota_hero_x" } }, team3: ... } */
-function parseTeamHeroes(team: unknown, isDire: boolean): Map<number, string> {
+/** Spectator hero block team: { playerN: { name: "npc_dota_hero_x" } } — keyed by raw playerN. */
+function parseTeamHeroes(team: unknown): Map<number, string> {
   const heroes = new Map<number, string>()
   const teamRecord = asRecord(team)
   if (!teamRecord) return heroes
   for (const [key, value] of Object.entries(teamRecord)) {
-    const slotIndex = globalSlotIndex(key, isDire)
+    const keyIndex = slotIndexFromKey(key)
     const hero = asRecord(value)
-    if (slotIndex === null || !hero) continue
+    if (keyIndex === null || !hero) continue
     const npcName = heroNpcShortName(hero['name'])
-    if (npcName) heroes.set(slotIndex, npcName)
+    if (npcName) heroes.set(keyIndex, npcName)
   }
   return heroes
 }
@@ -99,21 +113,13 @@ export function parseGsiPayload(json: unknown): GsiSnapshot {
     const team2 = playerBlock['team2']
     const team3 = playerBlock['team3']
     if (asRecord(team2) || asRecord(team3)) {
-      // Spectator mode: allplayers split into team2 (radiant) / team3 (dire)
-      parseTeamPlayers(team2, players, false)
-      parseTeamPlayers(team3, players, true)
+      // Spectator mode: allplayers split into team2 (radiant) / team3 (dire);
+      // picked hero MODELS mirror the same per-team key structure in the hero block
+      const radiantHeroes = parseTeamHeroes(heroBlock?.['team2'])
+      const direHeroes = parseTeamHeroes(heroBlock?.['team3'])
+      parseTeamPlayers(team2, players, radiantHeroes, false)
+      parseTeamPlayers(team3, players, direHeroes, true)
       players.sort((a, b) => a.slotIndex - b.slotIndex)
-
-      // Picked hero MODELS mirror the same team structure in the hero block
-      if (heroBlock) {
-        const heroBySlot = new Map([
-          ...parseTeamHeroes(heroBlock['team2'], false),
-          ...parseTeamHeroes(heroBlock['team3'], true),
-        ])
-        for (const player of players) {
-          player.heroNpcName = heroBySlot.get(player.slotIndex) ?? null
-        }
-      }
     } else {
       const name = asString(playerBlock['name'])
       if (name) {
