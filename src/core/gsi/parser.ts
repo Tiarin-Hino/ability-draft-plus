@@ -27,15 +27,22 @@ function slotIndexFromKey(key: string): number | null {
   return match ? parseInt(match[1], 10) : null
 }
 
-function parseTeamPlayers(team: unknown, into: GsiPlayer[]): void {
+function parseTeamPlayers(
+  team: unknown,
+  into: GsiPlayer[],
+  isDire: boolean,
+): void {
   const teamRecord = asRecord(team)
   if (!teamRecord) return
   for (const [key, value] of Object.entries(teamRecord)) {
-    const slotIndex = slotIndexFromKey(key)
+    const rawIndex = slotIndexFromKey(key)
     const player = asRecord(value)
-    if (slotIndex === null || !player) continue
+    if (rawIndex === null || !player) continue
     const name = asString(player['name'])
     if (!name) continue
+    // Some GSI versions key each team's block player0..player4, others use the
+    // global player0..player9 numbering. Normalize dire to global slots 5-9.
+    const slotIndex = isDire && rawIndex < 5 ? rawIndex + 5 : rawIndex
     into.push({
       slotIndex,
       name,
@@ -60,9 +67,9 @@ export function parseGsiPayload(json: unknown): GsiSnapshot {
     const team2 = playerBlock['team2']
     const team3 = playerBlock['team3']
     if (asRecord(team2) || asRecord(team3)) {
-      // Spectator mode: allplayers keyed player0..player9 across the two teams
-      parseTeamPlayers(team2, players)
-      parseTeamPlayers(team3, players)
+      // Spectator mode: allplayers split into team2 (radiant) / team3 (dire)
+      parseTeamPlayers(team2, players, false)
+      parseTeamPlayers(team3, players, true)
       players.sort((a, b) => a.slotIndex - b.slotIndex)
     } else {
       const name = asString(playerBlock['name'])
@@ -75,6 +82,7 @@ export function parseGsiPayload(json: unknown): GsiSnapshot {
   return {
     gamePhase: map ? asString(map['game_state']) : null,
     clockTime: map ? asNumber(map['clock_time']) : null,
+    matchId: map ? asString(map['matchid']) : null,
     players,
     localPlayer,
   }

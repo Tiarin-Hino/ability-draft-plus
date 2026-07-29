@@ -21,6 +21,8 @@ export interface GsiSnapshot {
   /** e.g. "DOTA_GAMERULES_STATE_HERO_SELECTION"; null when the map block is absent. */
   gamePhase: string | null
   clockTime: number | null
+  /** map.matchid — distinguishes a NEW draft from phase flapping (replay seeking). */
+  matchId: string | null
   /** Empty while playing (only spectators receive allplayers data). */
   players: GsiPlayer[]
   /** The local player when Dota reports one (playing, not spectating). */

@@ -74,6 +74,26 @@ describe('parseGsiPayload', () => {
     expect(snapshot.clockTime).toBe(42)
   })
 
+  it('extracts the match id for draft-session identity', () => {
+    expect(parseGsiPayload(SPECTATOR_PAYLOAD).matchId).toBe('7000000001')
+    expect(parseGsiPayload({ map: {} }).matchId).toBeNull()
+  })
+
+  it('normalizes dire blocks keyed player0..player4 to global slots 5-9', () => {
+    const snapshot = parseGsiPayload({
+      player: {
+        team2: { player0: { name: 'R1' }, player4: { name: 'R5' } },
+        team3: { player0: { name: 'D1' }, player4: { name: 'D5' } },
+      },
+    })
+    expect(snapshot.players.map((p) => [p.slotIndex, p.name])).toEqual([
+      [0, 'R1'],
+      [4, 'R5'],
+      [5, 'D1'],
+      [9, 'D5'],
+    ])
+  })
+
   it('degrades gracefully on heartbeat payloads without map/player', () => {
     const snapshot = parseGsiPayload({
       provider: { name: 'Dota 2', appid: 570 },
@@ -81,6 +101,7 @@ describe('parseGsiPayload', () => {
     expect(snapshot).toEqual({
       gamePhase: null,
       clockTime: null,
+      matchId: null,
       players: [],
       localPlayer: null,
     })
