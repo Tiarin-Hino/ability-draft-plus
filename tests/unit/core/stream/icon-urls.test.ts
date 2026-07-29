@@ -29,6 +29,14 @@ describe('icon-urls', () => {
     expect(heroIconPath('wisp')).toBe('/icons/heroes/wisp.png')
   })
 
+  it('strips the _ad suffix from Ability Draft variant classes', () => {
+    expect(resolveAbilityIconName('invoker_sun_strike_ad')).toBe('invoker_sun_strike')
+    expect(resolveAbilityIconName('kez_falcon_rush_ad')).toBe('kez_falcon_rush')
+    expect(abilityIconPath('invoker_emp_ad')).toBe('/icons/abilities/invoker_emp.png')
+    // No false positives on names merely containing "ad"
+    expect(resolveAbilityIconName('abaddon_aphotic_shield')).toBe('abaddon_aphotic_shield')
+  })
+
   it('applies overrides in both URL and path derivation', () => {
     for (const [legacy, current] of Object.entries(ABILITY_ICON_NAME_OVERRIDES)) {
       expect(resolveAbilityIconName(legacy)).toBe(current)

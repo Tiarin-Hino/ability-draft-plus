@@ -1,6 +1,8 @@
 import { ipcMain } from 'electron'
 import log from 'electron-log/main'
 import type { StreamServerService } from '../services/stream-server-service'
+import type { IconCacheService } from '../services/icon-cache-service'
+import { loadAbilityClassNames } from '../services/icon-cache-service'
 import type { DatabaseService } from '../services/database-service'
 
 // @DEV-GUIDE: Streamer-view IPC handlers. All invoke-style (renderer awaits the result).
@@ -13,6 +15,7 @@ const logger = log.scope('ipc:stream')
 export function registerStreamHandlers(
   streamService: StreamServerService,
   dbService: DatabaseService,
+  iconCache: IconCacheService,
 ): void {
   ipcMain.handle('stream:start', async (_event, data: { port: number }) => {
     const port = Math.floor(data.port)
@@ -36,6 +39,25 @@ export function registerStreamHandlers(
   })
 
   ipcMain.handle('stream:getStatus', () => streamService.getStatus())
+
+  // One in-flight prefetch at a time; repeat clicks while running are no-ops.
+  let prefetchInFlight = false
+  ipcMain.handle('stream:prefetchIcons', async () => {
+    if (prefetchInFlight) return { success: false }
+    prefetchInFlight = true
+    try {
+      const names = await loadAbilityClassNames()
+      const summary = await iconCache.prefetchAbilities(names)
+      return { success: true, ...summary }
+    } catch (error) {
+      logger.error('Icon prefetch failed', {
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return { success: false }
+    } finally {
+      prefetchInFlight = false
+    }
+  })
 
   logger.info('Stream IPC handlers registered')
 }

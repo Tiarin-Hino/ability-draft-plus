@@ -48,6 +48,12 @@ describe('deriveHeroCdnName', () => {
     ).toBe('skeleton_king')
   })
 
+  it('applies overrides where ability prefix differs from the npc name', () => {
+    expect(
+      deriveHeroCdnName(['sandking_burrowstrike', 'sandking_epicenter']),
+    ).toBe('sand_king')
+  })
+
   it('ignores null entries from unrecognized slots', () => {
     expect(
       deriveHeroCdnName([null, 'pudge_meat_hook', 'pudge_rot', null]),

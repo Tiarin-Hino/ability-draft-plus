@@ -21,6 +21,14 @@
     "errorGeneric": "The server failed to start. Check the logs for details.",
     "errorInvalidPort": "Invalid port. Use a number between 1024 and 65535."
   },
+  "icons": {
+    "title": "Ability icons",
+    "description": "The board uses official ability icons, downloaded once and cached locally. Prefetch them now so the first draft renders instantly even without internet access.",
+    "prefetch": "Prefetch all icons",
+    "prefetching": "Downloading…",
+    "result": "Done: {{fetched}} downloaded, {{alreadyCached}} already cached, {{failed}} failed.",
+    "error": "Prefetch failed. Check the logs for details."
+  },
   "obs": {
     "title": "OBS setup",
     "step1": "Start the server and copy the board URL.",

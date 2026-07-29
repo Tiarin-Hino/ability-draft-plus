@@ -18,7 +18,12 @@ export const ABILITY_ICON_NAME_OVERRIDES: Readonly<Record<string, string>> = {}
 
 /** Resolve an ability internal name to the file name Valve's CDN uses. */
 export function resolveAbilityIconName(abilityName: string): string {
-  return ABILITY_ICON_NAME_OVERRIDES[abilityName] ?? abilityName
+  const override = ABILITY_ICON_NAME_OVERRIDES[abilityName]
+  if (override) return override
+  // Ability Draft variants (invoker_*_ad, kez_*_ad) share the base ability's art —
+  // the CDN only knows the unsuffixed name.
+  if (abilityName.endsWith('_ad')) return abilityName.slice(0, -3)
+  return abilityName
 }
 
 /** Full CDN URL for an ability icon (main-process fetch side). */
