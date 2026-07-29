@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- **New app icon** — flat vector "ability slot" mark (shimmer-gradient border + green plus) replacing the 3D AD+ render, matching the redesigned tiarinhino.com branding. Source at `build/icon.svg`, `build/icon.ico` regenerated (16–256 px). Ships with the next release; taskbar/installer/Start Menu icons update on install.
+
 ### Fixed (2.1.0 release blockers)
 
 - **v1 upgrade path** (#77) — 1.0-era databases crashed "Update Windrun Data" (missing columns) and the Abilities/Heroes tables (text-typed numerics); migrations are now a generic schema diff plus data normalization
