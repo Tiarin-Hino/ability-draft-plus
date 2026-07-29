@@ -98,7 +98,12 @@ export function createStreamServerService(
   let gsiBroadcastTimer: NodeJS.Timeout | null = null
   const gsiListeners: Array<(snapshot: GsiSnapshot) => void> = []
 
-  const staticRoot = join(app.getAppPath(), 'out', 'renderer')
+  // Same path convention as window-manager's loadWindowContent: resolve renderer
+  // output relative to the compiled main bundle (out/main -> out/renderer). Works in
+  // dev-build launches AND packaged (app.asar/out/main -> asar-aware readFile).
+  // app.getAppPath() is NOT reliable here (electron <file.js> resolves it to the
+  // default_app wrapper).
+  const staticRoot = join(__dirname, '..', 'renderer')
 
   function gsiConnected(): boolean {
     return gsiLastAt !== null && Date.now() - gsiLastAt < GSI_STALE_MS

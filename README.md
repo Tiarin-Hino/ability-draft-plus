@@ -159,10 +159,12 @@ src/
   renderer/
     control-panel/   Main application window (React SPA)
     overlay/         Game overlay window (transparent, click-through)
+    stream/          Streamer view board (served over local HTTP for OBS)
   shared/        Types and constants shared between processes
 ```
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed technical documentation.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed technical documentation
+and [docs/STREAMER_VIEW.md](docs/STREAMER_VIEW.md) for the OBS/streaming setup guide.
 
 ## License
 
