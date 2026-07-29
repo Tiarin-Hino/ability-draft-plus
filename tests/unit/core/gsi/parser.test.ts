@@ -28,6 +28,15 @@ const SPECTATOR_PAYLOAD = {
       player9: { steamid: '76561198000000010', accountid: '40000010', name: 'Judy' },
     },
   },
+  hero: {
+    team2: {
+      player0: { facet: 0, id: 28, name: 'npc_dota_hero_slardar' },
+      player1: { facet: 0, id: 0, name: '' },
+    },
+    team3: {
+      player5: { facet: 0, id: 74, name: 'npc_dota_hero_sand_king' },
+    },
+  },
 }
 
 const PLAYING_PAYLOAD = {
@@ -45,6 +54,7 @@ const PLAYING_PAYLOAD = {
     activity: 'playing',
     kills: 0,
   },
+  hero: { facet: 0, id: 56, name: 'npc_dota_hero_clinkz' },
 }
 
 describe('parseGsiPayload', () => {
@@ -72,6 +82,37 @@ describe('parseGsiPayload', () => {
     })
     expect(snapshot.gamePhase).toBe('DOTA_GAMERULES_STATE_GAME_IN_PROGRESS')
     expect(snapshot.clockTime).toBe(42)
+  })
+
+  it('attaches spectator hero models to players by slot (empty names = unpicked)', () => {
+    const snapshot = parseGsiPayload(SPECTATOR_PAYLOAD)
+    const bySlot = new Map(snapshot.players.map((p) => [p.slotIndex, p.heroNpcName]))
+    expect(bySlot.get(0)).toBe('slardar')
+    expect(bySlot.get(1)).toBeNull()
+    expect(bySlot.get(5)).toBe('sand_king')
+    expect(bySlot.get(9)).toBeNull()
+    expect(snapshot.localHeroNpcName).toBeNull()
+  })
+
+  it('extracts the local hero model while playing', () => {
+    const snapshot = parseGsiPayload(PLAYING_PAYLOAD)
+    expect(snapshot.localHeroNpcName).toBe('clinkz')
+  })
+
+  it('normalizes dire hero blocks keyed player0..player4 to slots 5-9', () => {
+    const snapshot = parseGsiPayload({
+      player: {
+        team2: { player0: { name: 'R1' } },
+        team3: { player0: { name: 'D1' } },
+      },
+      hero: {
+        team2: { player0: { name: 'npc_dota_hero_luna' } },
+        team3: { player0: { name: 'npc_dota_hero_lich' } },
+      },
+    })
+    const bySlot = new Map(snapshot.players.map((p) => [p.slotIndex, p.heroNpcName]))
+    expect(bySlot.get(0)).toBe('luna')
+    expect(bySlot.get(5)).toBe('lich')
   })
 
   it('extracts the match id for draft-session identity', () => {
@@ -104,6 +145,7 @@ describe('parseGsiPayload', () => {
       matchId: null,
       players: [],
       localPlayer: null,
+      localHeroNpcName: null,
     })
   })
 
@@ -125,7 +167,7 @@ describe('parseGsiPayload', () => {
       },
     })
     expect(snapshot.players).toEqual([
-      { slotIndex: 0, name: 'Valid', accountId: null },
+      { slotIndex: 0, name: 'Valid', accountId: null, heroNpcName: null },
     ])
   })
 

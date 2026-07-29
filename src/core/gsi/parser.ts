@@ -27,6 +27,22 @@ function slotIndexFromKey(key: string): number | null {
   return match ? parseInt(match[1], 10) : null
 }
 
+/** "npc_dota_hero_sand_king" -> "sand_king"; null for empty/absent names. */
+function heroNpcShortName(value: unknown): string | null {
+  const name = asString(value)
+  if (!name || !name.startsWith('npc_dota_hero_')) return null
+  return name.slice('npc_dota_hero_'.length)
+}
+
+/** Normalize a per-team block key to the global 0-9 slot numbering. */
+function globalSlotIndex(key: string, isDire: boolean): number | null {
+  const rawIndex = slotIndexFromKey(key)
+  if (rawIndex === null) return null
+  // Some GSI versions key each team's block player0..player4, others use the
+  // global player0..player9 numbering. Normalize dire to global slots 5-9.
+  return isDire && rawIndex < 5 ? rawIndex + 5 : rawIndex
+}
+
 function parseTeamPlayers(
   team: unknown,
   into: GsiPlayer[],
@@ -35,20 +51,33 @@ function parseTeamPlayers(
   const teamRecord = asRecord(team)
   if (!teamRecord) return
   for (const [key, value] of Object.entries(teamRecord)) {
-    const rawIndex = slotIndexFromKey(key)
+    const slotIndex = globalSlotIndex(key, isDire)
     const player = asRecord(value)
-    if (rawIndex === null || !player) continue
+    if (slotIndex === null || !player) continue
     const name = asString(player['name'])
     if (!name) continue
-    // Some GSI versions key each team's block player0..player4, others use the
-    // global player0..player9 numbering. Normalize dire to global slots 5-9.
-    const slotIndex = isDire && rawIndex < 5 ? rawIndex + 5 : rawIndex
     into.push({
       slotIndex,
       name,
       accountId: asString(player['accountid']),
+      heroNpcName: null,
     })
   }
+}
+
+/** Spectator hero block: { team2: { playerN: { name: "npc_dota_hero_x" } }, team3: ... } */
+function parseTeamHeroes(team: unknown, isDire: boolean): Map<number, string> {
+  const heroes = new Map<number, string>()
+  const teamRecord = asRecord(team)
+  if (!teamRecord) return heroes
+  for (const [key, value] of Object.entries(teamRecord)) {
+    const slotIndex = globalSlotIndex(key, isDire)
+    const hero = asRecord(value)
+    if (slotIndex === null || !hero) continue
+    const npcName = heroNpcShortName(hero['name'])
+    if (npcName) heroes.set(slotIndex, npcName)
+  }
+  return heroes
 }
 
 /**
@@ -63,6 +92,9 @@ export function parseGsiPayload(json: unknown): GsiSnapshot {
   const players: GsiPlayer[] = []
   let localPlayer: GsiSnapshot['localPlayer'] = null
 
+  const heroBlock = asRecord(root['hero'])
+  let localHeroNpcName: string | null = null
+
   if (playerBlock) {
     const team2 = playerBlock['team2']
     const team3 = playerBlock['team3']
@@ -71,11 +103,24 @@ export function parseGsiPayload(json: unknown): GsiSnapshot {
       parseTeamPlayers(team2, players, false)
       parseTeamPlayers(team3, players, true)
       players.sort((a, b) => a.slotIndex - b.slotIndex)
+
+      // Picked hero MODELS mirror the same team structure in the hero block
+      if (heroBlock) {
+        const heroBySlot = new Map([
+          ...parseTeamHeroes(heroBlock['team2'], false),
+          ...parseTeamHeroes(heroBlock['team3'], true),
+        ])
+        for (const player of players) {
+          player.heroNpcName = heroBySlot.get(player.slotIndex) ?? null
+        }
+      }
     } else {
       const name = asString(playerBlock['name'])
       if (name) {
         localPlayer = { name, accountId: asString(playerBlock['accountid']) }
       }
+      // Playing: the hero block is the local player's own model
+      localHeroNpcName = heroBlock ? heroNpcShortName(heroBlock['name']) : null
     }
   }
 
@@ -85,5 +130,6 @@ export function parseGsiPayload(json: unknown): GsiSnapshot {
     matchId: map ? asString(map['matchid']) : null,
     players,
     localPlayer,
+    localHeroNpcName,
   }
 }

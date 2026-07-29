@@ -366,6 +366,14 @@ body,
   gap: 0.3rem;
 }
 
+.player-model {
+  height: 1.3rem;
+  width: 2.1rem;
+  object-fit: cover;
+  border-radius: 0.2rem;
+  flex-shrink: 0;
+}
+
 .player-name {
   font-size: 0.78rem;
   overflow: hidden;

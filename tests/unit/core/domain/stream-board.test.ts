@@ -206,6 +206,10 @@ describe('buildStreamBoardState', () => {
           gamePhase: 'DOTA_GAMERULES_STATE_HERO_SELECTION',
           clockTime: 42,
           playerNames: ['Alice', null, null, null, null, null, null, 'Bob', null, null],
+          playerModels: [
+            { npcName: 'sand_king', displayName: 'Sand King' },
+            null, null, null, null, null, null, null, null, null,
+          ],
         },
       }),
     )
@@ -215,6 +219,12 @@ describe('buildStreamBoardState', () => {
     expect(state.players[7].team).toBe('dire')
     expect(state.players[0].playerName).toBe('Alice')
     expect(state.players[7].playerName).toBe('Bob')
+    expect(state.players[0].model).toEqual({
+      npcName: 'sand_king',
+      displayName: 'Sand King',
+      portraitPath: '/icons/heroes/sand_king.png',
+    })
+    expect(state.players[1].model).toBeNull()
     expect(state.players[0].picks.map((p) => p.name)).toEqual(['pudge_rot'])
     expect(state.players[7].picks.map((p) => p.name)).toEqual(['hero1_slot1'])
     expect(state.players[1].picks).toEqual([])
