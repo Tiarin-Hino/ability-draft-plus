@@ -24,6 +24,10 @@ export interface DraftSessionSlice {
   mySelectedSpotHeroOrder: number | null
   mySelectedModelDbHeroId: number | null
   mySelectedModelHeroOrder: number | null
+  /** Last ACCEPTED selected-abilities scan (rescan contamination guard baseline). */
+  selectedAbilitiesCache: ScanResult[]
+  /** True when the most recent rescan was discarded by the contamination guard. */
+  lastRescanRejected: boolean
   /** Attributed pick events (experimental auto-rescan); empty otherwise. */
   draftTimeline: PickEvent[]
 }
@@ -47,6 +51,8 @@ export function createDraftStore() {
     mySelectedSpotHeroOrder: null,
     mySelectedModelDbHeroId: null,
     mySelectedModelHeroOrder: null,
+    selectedAbilitiesCache: [],
+    lastRescanRejected: false,
     draftTimeline: [],
 
     // Actions
@@ -58,6 +64,8 @@ export function createDraftStore() {
         mySelectedSpotHeroOrder: null,
         mySelectedModelDbHeroId: null,
         mySelectedModelHeroOrder: null,
+        selectedAbilitiesCache: [],
+        lastRescanRejected: false,
         draftTimeline: [],
       }),
 

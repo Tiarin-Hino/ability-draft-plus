@@ -66,6 +66,36 @@ export interface ScanProcessorInput {
 export interface ScanProcessorOutput {
   overlayPayload: OverlayDataPayload
   updatedState: DraftSessionState
+  /**
+   * True when a rescan was discarded by the contamination guard (a previously
+   * confident pick slot read as unknown — an in-game hover tooltip covered the
+   * tiles). State is unchanged and the payload is rebuilt from the cached picks;
+   * callers (auto-rescan) must not treat the scan as fresh evidence.
+   */
+  rescanRejected?: boolean
+}
+
+/**
+ * Contamination guard: picks never un-pick, so a slot that previously held a
+ * confident name but now reads unknown means the capture was obscured (hover
+ * tooltip). A slot changing to a DIFFERENT confident name is allowed — that is
+ * a correction of an earlier misread, and rejecting it would deadlock.
+ */
+function isRescanContaminated(
+  previous: ScanResult[],
+  next: ScanResult[],
+): boolean {
+  for (const prev of previous) {
+    if (prev.name === null) continue
+    const match = next.find(
+      (n) =>
+        n.hero_order === prev.hero_order &&
+        n.ability_order === prev.ability_order &&
+        n.is_ultimate === prev.is_ultimate,
+    )
+    if (!match || match.name === null) return true
+  }
+  return false
 }
 
 /**
@@ -82,12 +112,14 @@ export function processScanResults(
   let ultimates: ScanResult[]
   let standard: ScanResult[]
   let selectedAbilities: ScanResult[]
+  let rescanRejected = false
 
   if (isInitialScan) {
     const initial = rawResults as InitialScanResults
     ultimates = initial.ultimates
     standard = initial.standard
     selectedAbilities = initial.selectedAbilities
+    state.selectedAbilitiesCache = [...selectedAbilities]
 
     // Cache pool for future rescans
     state.initialPoolAbilitiesCache = {
@@ -110,23 +142,32 @@ export function processScanResults(
   } else {
     // Rescan: rawResults = newly identified selected/picked abilities
     const pickedAbilities = rawResults as ScanResult[]
-    const pickedNames = new Set(
-      pickedAbilities.map((a) => a.name).filter(Boolean) as string[],
-    )
 
-    // Remove picked abilities from cached pool
-    state.initialPoolAbilitiesCache = {
-      ultimates: state.initialPoolAbilitiesCache.ultimates.filter(
-        (a) => !pickedNames.has(a.name ?? ''),
-      ),
-      standard: state.initialPoolAbilitiesCache.standard.filter(
-        (a) => !pickedNames.has(a.name ?? ''),
-      ),
+    if (isRescanContaminated(state.selectedAbilitiesCache, pickedAbilities)) {
+      // Discard this capture: keep state untouched and rebuild the payload from
+      // the last accepted picks so consumers still get a consistent refresh.
+      rescanRejected = true
+      selectedAbilities = state.selectedAbilitiesCache
+    } else {
+      const pickedNames = new Set(
+        pickedAbilities.map((a) => a.name).filter(Boolean) as string[],
+      )
+
+      // Remove picked abilities from cached pool
+      state.initialPoolAbilitiesCache = {
+        ultimates: state.initialPoolAbilitiesCache.ultimates.filter(
+          (a) => !pickedNames.has(a.name ?? ''),
+        ),
+        standard: state.initialPoolAbilitiesCache.standard.filter(
+          (a) => !pickedNames.has(a.name ?? ''),
+        ),
+      }
+      state.selectedAbilitiesCache = [...pickedAbilities]
+      selectedAbilities = pickedAbilities
     }
 
     ultimates = state.initialPoolAbilitiesCache.ultimates
     standard = state.initialPoolAbilitiesCache.standard
-    selectedAbilities = pickedAbilities
   }
 
   // --- Phase 2: Collect ability names ---
@@ -375,7 +416,7 @@ export function processScanResults(
     modelsCoords: modelCoords,
   }
 
-  return { overlayPayload, updatedState: state }
+  return { overlayPayload, updatedState: state, rescanRejected }
 }
 
 // ---------------------------------------------------------------------------
@@ -395,6 +436,7 @@ function cloneState(state: DraftSessionState): DraftSessionState {
     mySelectedSpotHeroOrder: state.mySelectedSpotHeroOrder,
     mySelectedModelDbHeroId: state.mySelectedModelDbHeroId,
     mySelectedModelHeroOrder: state.mySelectedModelHeroOrder,
+    selectedAbilitiesCache: [...state.selectedAbilitiesCache],
   }
 }
 

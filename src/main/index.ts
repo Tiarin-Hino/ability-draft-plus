@@ -13,7 +13,6 @@ import { createIconCacheService } from './services/icon-cache-service'
 import { createGsiCfgService } from './services/gsi-cfg-service'
 import { createScanTriggerService } from './services/scan-trigger-service'
 import { createAutoRescanService } from './services/auto-rescan-service'
-import { createCursorParker } from './services/cursor-parker'
 import { createUpdateService } from './services/update-service'
 import { createWindowTrackerService } from './services/window-tracker-service'
 import { createScraperService } from './services/scraper-service'
@@ -240,7 +239,6 @@ app.whenReady().then(async () => {
     dbService,
     streamService,
     scanTrigger,
-    createCursorParker(),
   )
   autoRescanService.start()
 

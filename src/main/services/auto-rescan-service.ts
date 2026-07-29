@@ -4,13 +4,10 @@ import type { DraftStore } from '../store/draft-store'
 import type { DatabaseService } from './database-service'
 import type { StreamServerService } from './stream-server-service'
 import type { ScanTriggerService } from './scan-trigger-service'
-import type { CursorParker } from './cursor-parker'
 import type { AppStore } from '../store/app-store'
-import type { GsiSnapshot } from '@core/gsi/types'
 import { GSI_HERO_SELECTION_PHASE } from '@core/gsi/types'
 import {
   buildTurnSchedule,
-  turnAt,
   elapsedTurnsBetween,
   type TurnWindow,
 } from '@core/gsi/draft-clock'
@@ -19,21 +16,20 @@ import { AUTO_RESCAN_INTERVAL_MS } from '@shared/constants/thresholds'
 
 // @DEV-GUIDE: EXPERIMENTAL GSI-driven auto-rescan + pick attribution (disabled by
 // default — experimentalAutoDraftTracking setting). Every 5s during an active draft it
-// triggers the same rescan pipeline as Ctrl+Shift+R, with the cursor parked during the
-// screenshot, then attributes pool departures to players via the draft turn clock.
+// triggers the same rescan pipeline as Ctrl+Shift+R and attributes pool departures to
+// players via the draft turn clock.
 //
 // Gates per tick (ALL must hold): setting on, overlay active, GSI connected and in
 // hero selection, an initial scan done (the pool grid is still the user's Ctrl+Shift+S),
-// ML idle, the user's slot known, and it is NOT the user's turn (cursor parking during
-// their own pick would be hostile — suppression is the no-BlockInput mitigation).
+// and ML idle. The capture is NEVER protected by moving the user's mouse — instead the
+// scan-processor's contamination guard discards any rescan where a previously
+// confident pick slot reads unknown (an in-game hover tooltip covered the tiles), and
+// this service skips attribution for that tick (DraftStore.lastRescanRejected) and
+// simply retries a few seconds later.
 //
-// User slot resolution: GSI local player matched into allplayers by accountid
-// (spectating), else the manual My Spot selection (mySelectedSpotHeroOrder IS the
-// player slot 0-9). Unknown slot -> no auto-rescan at all (fail safe).
-//
-// Draft anchor: wall clock at the GSI transition INTO hero selection. The turn
-// schedule constants are UNVALIDATED (see draft-clock.ts) — this whole service is
-// opt-in experimental until the capture spike tunes them.
+// Draft sessions are keyed by GSI matchid (replay seeking flaps game_state); the
+// anchor is wall clock at the first hero-selection entry per match. Turn schedule
+// constants are still being validated against captures (see draft-clock.ts).
 //
 // Known drift source: manual rescans between ticks shrink the pool outside our
 // prev/next diff, surfacing later as spurious model markers. Logged, accepted for v1;
@@ -52,7 +48,6 @@ export function createAutoRescanService(
   dbService: DatabaseService,
   streamService: StreamServerService,
   scanTrigger: ScanTriggerService,
-  cursorParker: CursorParker,
 ): AutoRescanService {
   let timer: NodeJS.Timeout | null = null
   let tickRunning = false
@@ -63,7 +58,6 @@ export function createAutoRescanService(
   let nextSeq = 0
   let lastPhase: string | null = null
   let draftMatchId: string | null = null
-  let warnedNoSlot = false
 
   streamService.onGsiSnapshot((snapshot) => {
     if (snapshot.gamePhase === lastPhase) return
@@ -88,7 +82,6 @@ export function createAutoRescanService(
       draftMatchId = snapshot.matchId
       lastAttributedS = 0
       nextSeq = 0
-      warnedNoSlot = false
       draftStore.getState().clearDraftTimeline()
       logger.info('Draft started (GSI hero selection)', {
         prevPhase,
@@ -108,25 +101,6 @@ export function createAutoRescanService(
       .filter((name): name is string => name !== null)
   }
 
-  /** Pure spectator: allplayers present but no local player — there is no own turn. */
-  function isSpectating(snapshot: GsiSnapshot | null): boolean {
-    return (
-      snapshot !== null &&
-      snapshot.players.length > 0 &&
-      snapshot.localPlayer === null
-    )
-  }
-
-  function resolveUserSlot(snapshot: GsiSnapshot | null): number | null {
-    if (snapshot?.localPlayer?.accountId) {
-      const match = snapshot.players.find(
-        (p) => p.accountId === snapshot.localPlayer?.accountId,
-      )
-      if (match) return match.slotIndex
-    }
-    return draftStore.getState().mySelectedSpotHeroOrder
-  }
-
   async function tick(): Promise<void> {
     if (tickRunning) return
     tickRunning = true
@@ -143,21 +117,7 @@ export function createAutoRescanService(
       // The pool grid is still the user's manual initial scan (Ctrl+Shift+S)
       if (poolNames().length === 0) return
 
-      // Spectators/casters have no pick turn to protect — scan without suppression.
-      // Only a PLAYING user with an unknown slot forces idle (cursor parking during
-      // their own pick would be hostile and we cannot tell when their turn is).
-      const spectating = isSpectating(snapshot)
-      const userSlot = spectating ? null : resolveUserSlot(snapshot)
-      if (!spectating && userSlot === null) {
-        if (!warnedNoSlot) {
-          warnedNoSlot = true
-          logger.warn('Auto-rescan idle: playing with unknown slot — select My Spot')
-        }
-        return
-      }
-
       const elapsedS = (Date.now() - draftAnchorMs) / 1000
-      const currentTurn = turnAt(elapsedS, schedule)
 
       const scheduleEndS = schedule[schedule.length - 1].endS
       if (elapsedS > scheduleEndS + 30) {
@@ -165,16 +125,16 @@ export function createAutoRescanService(
         return
       }
 
-      if (userSlot !== null && currentTurn?.playerIndex === userSlot) {
-        // Suppressed: never park the cursor during the user's own pick
+      const prevPool = poolNames()
+      await scanTrigger.performScan(false)
+
+      if (draftStore.getState().lastRescanRejected) {
+        // Contamination guard fired (hover tooltip over the pick slots) — this
+        // capture is void. Do not advance attribution; retry next tick.
+        logger.info('Rescan discarded by contamination guard; retrying next tick')
         return
       }
 
-      const prevPool = poolNames()
-      await scanTrigger.performScan(false, {
-        beforeCapture: () => cursorParker.park(),
-        afterCapture: () => cursorParker.restore(),
-      })
       const newPool = poolNames()
 
       const elapsedTurns = elapsedTurnsBetween(schedule, lastAttributedS, elapsedS)

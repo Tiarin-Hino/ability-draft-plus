@@ -136,6 +136,7 @@ function makeInitialState(): DraftSessionState {
     mySelectedSpotHeroOrder: null,
     mySelectedModelDbHeroId: null,
     mySelectedModelHeroOrder: null,
+    selectedAbilitiesCache: [],
   }
 }
 
@@ -291,6 +292,121 @@ describe('processScanResults', () => {
       const { updatedState } = processScanResults(rescanInput)
       expect(updatedState.identifiedHeroModelsCache).toHaveLength(2)
       expect(updatedState.identifiedHeroModelsCache[0].heroDisplayName).toBe('Lina')
+    })
+
+    it('caches accepted picks and reports rescanRejected=false', () => {
+      const initialResult = processScanResults(makeInitialScanInput())
+      const rescan = processScanResults({
+        rawResults: [makeScanResult('fireball', 0, 1, false)],
+        isInitialScan: false,
+        state: initialResult.updatedState,
+        deps: mockDeps,
+        modelCoords: [makeCoord(0), makeCoord(1)],
+        heroesCoords: [makeCoord(0), makeCoord(1)],
+        heroesParams: { width: 358, height: 170 },
+        targetResolution: '1920x1080',
+        scaleFactor: 1.0,
+      })
+      expect(rescan.rescanRejected).toBe(false)
+      expect(
+        rescan.updatedState.selectedAbilitiesCache.map((s) => s.name),
+      ).toEqual(['fireball'])
+    })
+
+    describe('contamination guard', () => {
+      function acceptedFirstRescan() {
+        const initialResult = processScanResults(makeInitialScanInput())
+        return processScanResults({
+          rawResults: [makeScanResult('fireball', 0, 1, false)],
+          isInitialScan: false,
+          state: initialResult.updatedState,
+          deps: mockDeps,
+          modelCoords: [makeCoord(0), makeCoord(1)],
+          heroesCoords: [makeCoord(0), makeCoord(1)],
+          heroesParams: { width: 358, height: 170 },
+          targetResolution: '1920x1080',
+          scaleFactor: 1.0,
+        })
+      }
+
+      function rescanWith(state: DraftSessionState, results: ScanResult[]) {
+        return processScanResults({
+          rawResults: results,
+          isInitialScan: false,
+          state,
+          deps: mockDeps,
+          modelCoords: [makeCoord(0), makeCoord(1)],
+          heroesCoords: [makeCoord(0), makeCoord(1)],
+          heroesParams: { width: 358, height: 170 },
+          targetResolution: '1920x1080',
+          scaleFactor: 1.0,
+        })
+      }
+
+      it('rejects a rescan where a confident pick slot reads unknown', () => {
+        const first = acceptedFirstRescan()
+        const poolBefore = first.updatedState.initialPoolAbilitiesCache
+
+        // Same slot now unrecognized (tooltip covered it) + a new "departure"
+        const contaminated = rescanWith(first.updatedState, [
+          makeScanResult(null, 0, 1, false, 0.4),
+          makeScanResult('ice_blast', 1, 1, false),
+        ])
+
+        expect(contaminated.rescanRejected).toBe(true)
+        // State untouched: pool not further subtracted, picks cache unchanged
+        expect(contaminated.updatedState.initialPoolAbilitiesCache).toEqual(poolBefore)
+        expect(
+          contaminated.updatedState.selectedAbilitiesCache.map((s) => s.name),
+        ).toEqual(['fireball'])
+        // Payload still renders the last accepted picks
+        expect(
+          contaminated.overlayPayload.scanData!.selectedAbilities.map((s) => s.name),
+        ).toEqual(['fireball'])
+      })
+
+      it('rejects a rescan where a previously seen pick tile is missing entirely', () => {
+        const first = acceptedFirstRescan()
+        const contaminated = rescanWith(first.updatedState, [
+          makeScanResult('ice_blast', 1, 1, false),
+        ])
+        expect(contaminated.rescanRejected).toBe(true)
+      })
+
+      it('accepts pick progression (new picks appear, old ones intact)', () => {
+        const first = acceptedFirstRescan()
+        const next = rescanWith(first.updatedState, [
+          makeScanResult('fireball', 0, 1, false),
+          makeScanResult('ice_blast', 1, 1, false),
+        ])
+        expect(next.rescanRejected).toBe(false)
+        expect(
+          next.updatedState.selectedAbilitiesCache.map((s) => s.name).sort(),
+        ).toEqual(['fireball', 'ice_blast'])
+        const poolNames = next.updatedState.initialPoolAbilitiesCache.standard.map(
+          (s) => s.name,
+        )
+        expect(poolNames).not.toContain('ice_blast')
+      })
+
+      it('accepts a slot changing to a different confident name (misread correction)', () => {
+        const first = acceptedFirstRescan()
+        const corrected = rescanWith(first.updatedState, [
+          makeScanResult('firestorm', 0, 1, false),
+        ])
+        expect(corrected.rescanRejected).toBe(false)
+        expect(
+          corrected.updatedState.selectedAbilitiesCache.map((s) => s.name),
+        ).toEqual(['firestorm'])
+      })
+
+      it('never rejects when there are no prior confident picks', () => {
+        const initialResult = processScanResults(makeInitialScanInput())
+        const rescan = rescanWith(initialResult.updatedState, [
+          makeScanResult(null, 2, 1, false, 0.3),
+        ])
+        expect(rescan.rescanRejected).toBe(false)
+      })
     })
 
     it('includes selected abilities in enriched output', () => {

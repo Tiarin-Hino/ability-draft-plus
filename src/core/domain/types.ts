@@ -71,6 +71,8 @@ export interface DraftSessionState {
   mySelectedSpotHeroOrder: number | null
   mySelectedModelDbHeroId: number | null
   mySelectedModelHeroOrder: number | null
+  /** Last ACCEPTED selected-abilities scan — baseline for the rescan contamination guard. */
+  selectedAbilitiesCache: ScanResult[]
 }
 
 // ---------------------------------------------------------------------------
