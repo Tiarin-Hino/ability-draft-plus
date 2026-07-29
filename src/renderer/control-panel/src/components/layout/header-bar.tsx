@@ -17,6 +17,7 @@ const pageTitleKeys: Record<PageId, { ns: string; key: string }> = {
   abilities: { ns: 'data', key: 'abilities.title' },
   heroes: { ns: 'data', key: 'heroes.title' },
   scraping: { ns: 'data', key: 'scraping.title' },
+  streaming: { ns: 'streaming', key: 'title' },
   settings: { ns: 'settings', key: 'title' },
   mapper: { ns: 'data', key: 'mapper.title' },
   'dev-mapper': { ns: 'data', key: 'mapper.devTitle' },

@@ -1,0 +1,31 @@
+{
+  "title": "Streaming",
+  "server": {
+    "title": "Stream board server",
+    "description": "Serves a clean, high-contrast draft board over local HTTP for use as an OBS browser source.",
+    "status": {
+      "stopped": "Stopped",
+      "running": "Running",
+      "error": "Error"
+    },
+    "start": "Start server",
+    "stop": "Stop server",
+    "port": "Port",
+    "portHint": "1024–65535. Changing the port requires restarting the server and updating your OBS scene.",
+    "url": "Board URL",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "clients": "Connected clients: {{count}}",
+    "autostart": "Start the server when the app launches",
+    "errorPortInUse": "That port is already in use — pick another port and start again.",
+    "errorGeneric": "The server failed to start. Check the logs for details.",
+    "errorInvalidPort": "Invalid port. Use a number between 1024 and 65535."
+  },
+  "obs": {
+    "title": "OBS setup",
+    "step1": "Start the server and copy the board URL.",
+    "step2": "In OBS: Sources → Add → Browser, paste the URL, set the size to 1920×1080.",
+    "step3": "The background is transparent by default. Append ?bg=dark for a solid background or ?bg=chroma for a green screen.",
+    "note": "The board follows your overlay scans: the pool appears after a scan (Ctrl+Shift+S) and picks update after each rescan (Ctrl+Shift+R)."
+  }
+}

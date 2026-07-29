@@ -10,6 +10,7 @@ import { DashboardPage } from '@/pages/dashboard-page'
 import { AbilitiesPage } from '@/pages/abilities-page'
 import { HeroesPage } from '@/pages/heroes-page'
 import { ScrapingPage } from '@/pages/scraping-page'
+import { StreamingPage } from '@/pages/streaming-page'
 import { SettingsPage } from '@/pages/settings-page'
 import { MapperPage } from '@/pages/mapper-page'
 import { DevMapperPage } from '@/pages/dev-mapper-page'
@@ -32,6 +33,7 @@ const pages: Record<PageId, React.ComponentType<PageProps>> = {
   abilities: AbilitiesPage,
   heroes: HeroesPage,
   scraping: ScrapingPage,
+  streaming: StreamingPage,
   settings: SettingsPage,
   mapper: MapperPage,
   'dev-mapper': DevMapperPage,

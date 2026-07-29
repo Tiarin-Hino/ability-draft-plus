@@ -8,6 +8,7 @@ import type {
   ResolutionLayout,
 } from '../types'
 import type { InitialScanResults } from '../types/ml'
+import type { StreamServerStatusInfo } from '../types/stream'
 import type { CalibrationAnchors, ValidationResult } from '@core/resolution/types'
 import type { MlModelGaps } from '@core/ml/staleness-detector'
 
@@ -109,6 +110,13 @@ export interface IpcInvokeMap {
     request: void
     response: { success: boolean; resolution?: string; source?: LayoutSource; error?: string }
   }
+  // Streamer view server (see src/main/services/stream-server-service.ts)
+  'stream:start': {
+    request: { port: number }
+    response: { success: boolean; errorKey?: string }
+  }
+  'stream:stop': { request: void; response: { success: boolean } }
+  'stream:getStatus': { request: void; response: StreamServerStatusInfo }
 }
 
 // Send (fire-and-forget) channels from renderer to main

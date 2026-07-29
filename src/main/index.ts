@@ -8,6 +8,7 @@ import { createMlService } from './services/ml-service'
 import { createLayoutService } from './services/layout-service'
 import { createScreenshotService } from './services/screenshot-service'
 import { createScanProcessingService } from './services/scan-processing-service'
+import { createStreamServerService } from './services/stream-server-service'
 import { createUpdateService } from './services/update-service'
 import { createWindowTrackerService } from './services/window-tracker-service'
 import { createScraperService } from './services/scraper-service'
@@ -117,18 +118,22 @@ app.whenReady().then(async () => {
   const layoutService = createLayoutService()
   const screenshotService = createScreenshotService()
   const draftStore = createDraftStore()
-  const scanProcessingService = createScanProcessingService(
-    draftStore,
-    dbService,
-    layoutService,
-    windowManager,
-  )
 
   // @DEV-GUIDE: @zubridge bridge wires the Zustand AppStore in main to all subscribed
   // BrowserWindows. When main calls appStore.setState(), the bridge serializes the delta
   // and pushes it to renderers via IPC. Renderers dispatch actions that the bridge routes
   // to the appHandlers map (see app-store.ts). The bridge is the single source of truth.
   const appStore = createAppStore()
+
+  // Stream server must exist before scan processing (it is the third scan consumer)
+  const streamService = createStreamServerService(dbService, appStore)
+  const scanProcessingService = createScanProcessingService(
+    draftStore,
+    dbService,
+    layoutService,
+    windowManager,
+    streamService,
+  )
   const appHandlers = createAppStoreHandlers(appStore)
   const bridge = createZustandBridge(appStore, { handlers: appHandlers })
 
@@ -172,6 +177,8 @@ app.whenReady().then(async () => {
       prevLanguage = state.language
       dbService.metadata.setSettings({ language: state.language })
       dbService.persist()
+      // Stream board carries the language in meta — re-push so OBS pages follow
+      streamService.refresh()
     }
     if (state.overlayOpacity !== prevOverlayOpacity) {
       prevOverlayOpacity = state.overlayOpacity
@@ -211,7 +218,13 @@ app.whenReady().then(async () => {
     updateService,
     windowTracker,
     scraperService,
+    streamService,
   )
+
+  // Streamer view autostart (opt-in setting)
+  if (settings.streamAutostart) {
+    void streamService.start(settings.streamPort)
+  }
 
   // Cleanup on quit
   app.on('before-quit', async () => {
@@ -219,6 +232,7 @@ app.whenReady().then(async () => {
     updateService.stopPeriodicChecks()
     windowTracker.stopTracking()
     bridge.destroy()
+    await streamService.stop()
     await mlService.terminate()
     dbService.close()
   })

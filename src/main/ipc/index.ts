@@ -14,6 +14,7 @@ import type { AppStore } from '../store/app-store'
 import type { ZustandBridge } from '@zubridge/electron/main'
 import type { UpdateService } from '../services/update-service'
 import type { ScraperService } from '../services/scraper-service'
+import type { StreamServerService } from '../services/stream-server-service'
 import { registerDatabaseHandlers } from './database-handlers'
 import { registerMlHandlers } from './ml-handlers'
 import { registerDraftHandlers } from './draft-handlers'
@@ -21,6 +22,7 @@ import { registerScraperHandlers } from './scraper-handlers'
 import { registerResolutionHandlers } from './resolution-handlers'
 import { registerFeedbackHandlers } from './feedback-handlers'
 import { registerDevHandlers } from './dev-handlers'
+import { registerStreamHandlers } from './stream-handlers'
 import { loadApiConfig } from '../services/api-config'
 import { createFeedbackService } from '../services/feedback-service'
 
@@ -58,6 +60,7 @@ export function registerIpcHandlers(
   updateService: UpdateService,
   windowTracker: WindowTrackerService,
   scraperService: ScraperService,
+  streamService: StreamServerService,
 ): void {
   logger.info('Registering IPC handlers...')
 
@@ -189,6 +192,7 @@ export function registerIpcHandlers(
       windowTracker.stopTracking()
       appStore.setState({ overlayActive: false, activeResolution: null, activeResolutionSource: null })
       draftStore.getState().resetSession()
+      streamService.onSessionReset()
       pendingOverlayData = null
 
       const cp = windowManager.getControlPanelWindow()
@@ -212,6 +216,7 @@ export function registerIpcHandlers(
   // Without this, a Reset followed by a Rescan diffs against the previous draft's pool.
   ipcMain.on('overlay:reset', () => {
     draftStore.getState().resetSession()
+    streamService.onSessionReset()
   })
 
   ipcMain.on(
@@ -249,6 +254,9 @@ export function registerIpcHandlers(
 
   // Scraper domain
   registerScraperHandlers(scraperService)
+
+  // Streamer view domain
+  registerStreamHandlers(streamService, dbService)
 
   // Resolution domain
   registerResolutionHandlers(layoutService, screenshotService, windowTracker, windowManager, apiConfig)

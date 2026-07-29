@@ -54,6 +54,8 @@ export interface AppSettings {
   themeMode: 'light' | 'dark' | 'system'
   overlayOpacity: number
   overlayAnchor: 'left' | 'right'
+  streamPort: number
+  streamAutostart: boolean
 }
 
 export interface SlotCoordinate {

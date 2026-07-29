@@ -45,6 +45,13 @@ export interface AppStoreState {
   updateProgress: number | null
   updateVersion: string | null
   updateError: string | null
+
+  // Stream server (streamer view). streamServerError carries an i18n key from the
+  // 'streaming' namespace — translated in the renderer (FeedbackStatus pattern).
+  streamServerStatus: 'stopped' | 'running' | 'error'
+  streamServerPort: number | null
+  streamServerError: string | null
+  streamClientCount: number
 }
 
 // Action types for @zubridge dispatch

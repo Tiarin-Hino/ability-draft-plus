@@ -5,6 +5,7 @@ export const PAGE_IDS = [
   'abilities',
   'heroes',
   'scraping',
+  'streaming',
   'settings',
   'mapper',
   'dev-mapper',

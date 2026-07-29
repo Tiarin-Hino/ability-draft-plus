@@ -43,6 +43,8 @@ export function createMetadataRepository(db: SQLJsDatabase): MetadataRepository 
       const themeMode = get('theme_mode')
       const overlayOpacity = get('overlay_opacity')
       const overlayAnchor = get('overlay_anchor')
+      const streamPort = get('stream_port')
+      const streamAutostart = get('stream_autostart')
 
       return {
         opThreshold:
@@ -66,6 +68,14 @@ export function createMetadataRepository(db: SQLJsDatabase): MetadataRepository 
           overlayAnchor === 'left' || overlayAnchor === 'right'
             ? overlayAnchor
             : DEFAULT_SETTINGS.overlayAnchor,
+        streamPort:
+          streamPort !== null
+            ? parseInt(streamPort, 10)
+            : DEFAULT_SETTINGS.streamPort,
+        streamAutostart:
+          streamAutostart !== null
+            ? streamAutostart === 'true'
+            : DEFAULT_SETTINGS.streamAutostart,
       }
     },
 
@@ -87,6 +97,12 @@ export function createMetadataRepository(db: SQLJsDatabase): MetadataRepository 
       }
       if (settings.overlayAnchor !== undefined) {
         set('overlay_anchor', settings.overlayAnchor)
+      }
+      if (settings.streamPort !== undefined) {
+        set('stream_port', String(settings.streamPort))
+      }
+      if (settings.streamAutostart !== undefined) {
+        set('stream_autostart', String(settings.streamAutostart))
       }
     },
 

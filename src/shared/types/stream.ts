@@ -121,6 +121,15 @@ export interface StreamBoardState {
   }
 }
 
+/** Response shape for the stream:getStatus IPC channel. */
+export interface StreamServerStatusInfo {
+  status: 'stopped' | 'running' | 'error'
+  port: number | null
+  clientCount: number
+  /** i18n key in the 'streaming' namespace; null when healthy. */
+  errorKey: string | null
+}
+
 /**
  * One attributed pick in the draft timeline (experimental auto-rescan feature, Phase 5).
  * kind 'modelSelectionMarker' records a turn where no ability left the pool — the player

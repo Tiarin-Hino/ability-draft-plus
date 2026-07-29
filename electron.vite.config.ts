@@ -80,6 +80,9 @@ export default defineConfig({
         input: {
           'control-panel': resolve(__dirname, 'src/renderer/control-panel/index.html'),
           overlay: resolve(__dirname, 'src/renderer/overlay/index.html'),
+          // Streamer view: served over HTTP by stream-server-service (OBS browser
+          // source), NOT loaded into an Electron window. No preload, no electron API.
+          stream: resolve(__dirname, 'src/renderer/stream/index.html'),
         },
       },
     },

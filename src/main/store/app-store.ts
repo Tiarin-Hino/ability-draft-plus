@@ -43,6 +43,10 @@ export function createAppStore() {
     updateProgress: null,
     updateVersion: null,
     updateError: null,
+    streamServerStatus: 'stopped',
+    streamServerPort: null,
+    streamServerError: null,
+    streamClientCount: 0,
   }))
 }
 
