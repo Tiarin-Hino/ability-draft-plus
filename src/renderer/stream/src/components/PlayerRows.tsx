@@ -99,7 +99,6 @@ export function PlayerColumn({
     <section className={`team-column team-${team}`} aria-label={t(`team.${team}`)}>
       <header className="team-header">
         <TeamCap team={team} />
-        <div className="team-cap-scrim" />
         <h2 className="team-title">{t(`team.${team}`)}</h2>
         {teamAverage !== null && (
           <span className="team-score" title={t('score.teamAverage')}>

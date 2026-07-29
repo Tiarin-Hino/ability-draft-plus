@@ -269,7 +269,9 @@ body,
   height: 100%;
   object-fit: cover;
   clip-path: polygon(3.5% 0, 96.5% 0, 100% 100%, 0 100%);
-  opacity: 0.18;
+  /* The etched slab texture is near-black itself — needs more presence than
+     a bright texture would under the smoked glass */
+  opacity: 0.32;
   z-index: -2;
 }
 
@@ -480,39 +482,27 @@ body,
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.35rem 0.8rem;
+  gap: 0.6rem;
+  height: 3.1rem;
+  padding: 0.3rem 0.8rem 0.3rem 0.3rem;
   border-radius: 0.45rem;
   border: 1px solid var(--panel-border);
 }
+.team-dire .team-header {
+  padding: 0.3rem 0.3rem 0.3rem 0.8rem;
+}
 
-/* Optional bundled banner art behind the team title */
+/* Optional bundled banner art shown WHOLE (natural aspect) at the header's
+   outer edge, with the team name beside it rather than over it */
 .team-cap {
-  position: absolute;
-  inset: 0;
-  width: 100%;
   height: 100%;
-  object-fit: cover;
-  z-index: 0;
-}
-.team-radiant .team-cap {
-  object-position: left center;
-}
-.team-dire .team-cap {
-  object-position: right center;
-}
-
-/* Readability scrim over the banner art — keeps the gem visible while making
-   the title and score pop at broadcast scale */
-.team-cap-scrim {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  background: rgba(0, 0, 0, 0.32);
+  width: auto;
+  max-width: 60%;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 .team-title,
 .team-score {
-  position: relative;
-  z-index: 1;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
 .team-radiant .team-header {
