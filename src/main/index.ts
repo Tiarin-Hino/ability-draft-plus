@@ -11,11 +11,15 @@ import { createScanProcessingService } from './services/scan-processing-service'
 import { createStreamServerService } from './services/stream-server-service'
 import { createIconCacheService } from './services/icon-cache-service'
 import { createGsiCfgService } from './services/gsi-cfg-service'
+import { createScanTriggerService } from './services/scan-trigger-service'
+import { createAutoRescanService } from './services/auto-rescan-service'
+import { createCursorParker } from './services/cursor-parker'
 import { createUpdateService } from './services/update-service'
 import { createWindowTrackerService } from './services/window-tracker-service'
 import { createScraperService } from './services/scraper-service'
 import { createSentryService } from './services/sentry-service'
-import { loadSentryDsn } from './services/api-config'
+import { loadSentryDsn, loadApiConfig } from './services/api-config'
+import { createFeedbackService } from './services/feedback-service'
 import { createDraftStore } from './store/draft-store'
 import { createAppStore, createAppStoreHandlers } from './store/app-store'
 import { registerIpcHandlers } from './ipc'
@@ -130,7 +134,12 @@ app.whenReady().then(async () => {
   // Stream server must exist before scan processing (it is the third scan consumer)
   const iconCache = createIconCacheService()
   const gsiCfgService = createGsiCfgService()
-  const streamService = createStreamServerService(dbService, appStore, iconCache)
+  const streamService = createStreamServerService(
+    dbService,
+    appStore,
+    iconCache,
+    () => draftStore.getState().draftTimeline,
+  )
   const scanProcessingService = createScanProcessingService(
     draftStore,
     dbService,
@@ -208,6 +217,33 @@ app.whenReady().then(async () => {
   }
   scraperService.restorePersistedState()
 
+  // Feedback service is shared by the feedback IPC handlers and the scan trigger
+  const feedbackService = createFeedbackService(loadApiConfig())
+
+  // The single scan pipeline, shared by the ml:scan IPC handler and auto-rescan
+  const scanTrigger = createScanTriggerService(
+    mlService,
+    layoutService,
+    screenshotService,
+    windowManager,
+    scanProcessingService,
+    appStore,
+    windowTracker,
+    feedbackService,
+    dbService,
+  )
+
+  // EXPERIMENTAL: GSI-driven auto-rescan + pick attribution (setting-gated, default off)
+  const autoRescanService = createAutoRescanService(
+    appStore,
+    draftStore,
+    dbService,
+    streamService,
+    scanTrigger,
+    createCursorParker(),
+  )
+  autoRescanService.start()
+
   registerIpcHandlers(
     windowManager,
     dbService,
@@ -225,6 +261,8 @@ app.whenReady().then(async () => {
     streamService,
     iconCache,
     gsiCfgService,
+    feedbackService,
+    scanTrigger,
   )
 
   // Streamer view autostart (opt-in setting)
@@ -237,6 +275,7 @@ app.whenReady().then(async () => {
     globalShortcut.unregisterAll()
     updateService.stopPeriodicChecks()
     windowTracker.stopTracking()
+    autoRescanService.stop()
     bridge.destroy()
     await streamService.stop()
     await mlService.terminate()

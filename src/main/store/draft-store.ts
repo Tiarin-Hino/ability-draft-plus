@@ -1,5 +1,6 @@
 import { createStore } from 'zustand/vanilla'
 import type { ScanResult } from '@shared/types'
+import type { PickEvent } from '@shared/types/stream'
 import type { IdentifiedHeroModel } from '@core/domain/types'
 
 // @DEV-GUIDE: Ephemeral draft session state, main-process-only (NOT synced via @zubridge).
@@ -23,12 +24,16 @@ export interface DraftSessionSlice {
   mySelectedSpotHeroOrder: number | null
   mySelectedModelDbHeroId: number | null
   mySelectedModelHeroOrder: number | null
+  /** Attributed pick events (experimental auto-rescan); empty otherwise. */
+  draftTimeline: PickEvent[]
 }
 
 export interface DraftStoreActions {
   resetSession(): void
   selectMySpot(dbHeroId: number | null, heroOrder: number | null): void
   selectMyModel(dbHeroId: number | null, heroOrder: number | null): void
+  appendPickEvents(events: PickEvent[]): void
+  clearDraftTimeline(): void
 }
 
 export type DraftStore = DraftSessionSlice & DraftStoreActions
@@ -42,6 +47,7 @@ export function createDraftStore() {
     mySelectedSpotHeroOrder: null,
     mySelectedModelDbHeroId: null,
     mySelectedModelHeroOrder: null,
+    draftTimeline: [],
 
     // Actions
     resetSession: () =>
@@ -52,6 +58,7 @@ export function createDraftStore() {
         mySelectedSpotHeroOrder: null,
         mySelectedModelDbHeroId: null,
         mySelectedModelHeroOrder: null,
+        draftTimeline: [],
       }),
 
     selectMySpot: (dbHeroId, heroOrder) =>
@@ -65,5 +72,10 @@ export function createDraftStore() {
         mySelectedModelDbHeroId: dbHeroId,
         mySelectedModelHeroOrder: heroOrder,
       }),
+
+    appendPickEvents: (events) =>
+      set((state) => ({ draftTimeline: [...state.draftTimeline, ...events] })),
+
+    clearDraftTimeline: () => set({ draftTimeline: [] }),
   }))
 }

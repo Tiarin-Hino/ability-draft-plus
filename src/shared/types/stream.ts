@@ -114,6 +114,8 @@ export interface StreamBoardState {
   players: StreamPlayerRow[]
   panels: StreamPanels
   gsi: StreamGsiInfo
+  /** Recent attributed pick events (experimental auto-rescan only), newest last. */
+  pickFeed?: PickEvent[]
   meta: {
     language: string
     appVersion: string

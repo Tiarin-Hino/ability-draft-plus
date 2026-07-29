@@ -4,6 +4,7 @@ import type {
   SynergyPairDisplay,
 } from '@shared/types'
 import type {
+  PickEvent,
   StreamAbilitySlot,
   StreamBoardState,
   StreamComboDisplay,
@@ -15,6 +16,7 @@ import type {
 import {
   STREAM_TOP_WINRATE_COUNT,
   STREAM_MAX_COMBO_PANEL_ENTRIES,
+  STREAM_PICK_FEED_LENGTH,
 } from '@shared/constants/thresholds'
 import { abilityIconPath, heroIconPath } from '../stream/icon-urls'
 import { deriveHeroCdnName } from '../stream/hero-cdn-names'
@@ -48,6 +50,8 @@ export interface StreamBoardBuildInput {
   meta: { language: string; appVersion: string; updatedAt: number }
   /** Synergy rows among the given ability names (SynergyRepository.getSynergiesAmong). */
   getPairSynergies?: (names: string[]) => PairSynergyInput[]
+  /** Attributed pick timeline (experimental auto-rescan); last STREAM_PICK_FEED_LENGTH kept. */
+  pickEvents?: PickEvent[]
 }
 
 const EMPTY_GSI: StreamGsiInfo = {
@@ -239,6 +243,9 @@ export function buildStreamBoardState(
     players: buildPlayerRows(latestPayload, gsi, getPairSynergies),
     panels: buildPanels(latestPayload, pickedNames),
     gsi,
+    ...(input.pickEvents && input.pickEvents.length > 0
+      ? { pickFeed: input.pickEvents.slice(-STREAM_PICK_FEED_LENGTH) }
+      : {}),
     meta: input.meta,
   }
 }

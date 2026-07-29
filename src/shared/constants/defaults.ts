@@ -14,6 +14,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   overlayAnchor: 'right',
   streamPort: DEFAULT_STREAM_PORT,
   streamAutostart: false,
+  experimentalAutoDraftTracking: false,
 }
 
 export const SUPPORTED_LANGUAGES = ['en', 'ru'] as const

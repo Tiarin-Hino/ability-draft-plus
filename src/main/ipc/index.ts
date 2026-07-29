@@ -26,7 +26,8 @@ import { registerFeedbackHandlers } from './feedback-handlers'
 import { registerDevHandlers } from './dev-handlers'
 import { registerStreamHandlers } from './stream-handlers'
 import { loadApiConfig } from '../services/api-config'
-import { createFeedbackService } from '../services/feedback-service'
+import type { FeedbackService } from '../services/feedback-service'
+import type { ScanTriggerService } from '../services/scan-trigger-service'
 
 // @DEV-GUIDE: Central IPC handler registration. All renderer↔main communication goes through
 // typed IPC channels following the domain:action naming convention (e.g. 'ml:scan', 'hero:getAll').
@@ -65,6 +66,8 @@ export function registerIpcHandlers(
   streamService: StreamServerService,
   iconCache: IconCacheService,
   gsiCfgService: GsiCfgService,
+  feedbackService: FeedbackService,
+  scanTrigger: ScanTriggerService,
 ): void {
   logger.info('Registering IPC handlers...')
 
@@ -236,22 +239,12 @@ export function registerIpcHandlers(
   // API config is shared by the resolution and feedback domains
   const apiConfig = loadApiConfig()
 
-  // Feedback domain (Report Failed Recognition → export/upload samples)
-  const feedbackService = createFeedbackService(apiConfig)
+  // Feedback domain (Report Failed Recognition → export/upload samples).
+  // The service itself is created in main/index.ts (shared with ScanTriggerService).
   registerFeedbackHandlers(feedbackService, windowManager)
 
   // ML domain
-  registerMlHandlers(
-    mlService,
-    layoutService,
-    screenshotService,
-    windowManager,
-    scanProcessingService,
-    appStore,
-    windowTracker,
-    feedbackService,
-    dbService,
-  )
+  registerMlHandlers(mlService, windowManager, scanTrigger, appStore, dbService)
 
   // Draft domain (My Spot, My Model)
   registerDraftHandlers(draftStore, windowManager)

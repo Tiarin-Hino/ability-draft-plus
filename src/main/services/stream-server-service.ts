@@ -9,7 +9,7 @@ import { STREAM_PROTOCOL_VERSION } from '@shared/constants/thresholds'
 import { buildStreamBoardState } from '@core/domain/stream-board'
 import { parseGsiPayload } from '@core/gsi/parser'
 import type { GsiSnapshot } from '@core/gsi/types'
-import type { StreamGsiInfo } from '@shared/types/stream'
+import type { PickEvent, StreamGsiInfo } from '@shared/types/stream'
 import type { DatabaseService } from './database-service'
 import type { AppStore } from '../store/app-store'
 import type { IconCacheService, IconKind } from './icon-cache-service'
@@ -71,12 +71,17 @@ export interface StreamServerService {
   onSessionReset(): void
   /** Re-push current state to clients (e.g. after a language change). */
   refresh(): void
+  /** Subscribe to parsed GSI snapshots (auto-rescan service). */
+  onGsiSnapshot(listener: (snapshot: GsiSnapshot) => void): void
+  /** Latest parsed GSI snapshot + liveness (null before the first POST). */
+  getGsiState(): { snapshot: GsiSnapshot | null; connected: boolean }
 }
 
 export function createStreamServerService(
   dbService: DatabaseService,
   appStore: AppStore,
   iconCache: IconCacheService,
+  getPickEvents?: () => PickEvent[],
 ): StreamServerService {
   let server: Server | null = null
   let activePort: number | null = null
@@ -91,6 +96,7 @@ export function createStreamServerService(
   let gsiLastAt: number | null = null
   let gsiStaleTimer: NodeJS.Timeout | null = null
   let gsiBroadcastTimer: NodeJS.Timeout | null = null
+  const gsiListeners: Array<(snapshot: GsiSnapshot) => void> = []
 
   const staticRoot = join(app.getAppPath(), 'out', 'renderer')
 
@@ -130,6 +136,7 @@ export function createStreamServerService(
       initialPayload,
       latestPayload,
       gsi: gsiInfo(),
+      pickEvents: getPickEvents?.(),
       meta: {
         language: appStore.getState().language,
         appVersion: app.getVersion(),
@@ -269,6 +276,15 @@ export function createStreamServerService(
         if (!wasConnected) {
           appStore.setState({ gsiConnected: true })
           logger.info('GSI connected')
+        }
+        for (const listener of gsiListeners) {
+          try {
+            listener(gsiSnapshot)
+          } catch (error) {
+            logger.warn('GSI listener threw', {
+              error: error instanceof Error ? error.message : String(error),
+            })
+          }
         }
         scheduleGsiBroadcast()
       } catch {
@@ -439,6 +455,14 @@ export function createStreamServerService(
 
     refresh(): void {
       broadcast()
+    },
+
+    onGsiSnapshot(listener): void {
+      gsiListeners.push(listener)
+    },
+
+    getGsiState(): { snapshot: GsiSnapshot | null; connected: boolean } {
+      return { snapshot: gsiSnapshot, connected: gsiConnected() }
     },
   }
 }

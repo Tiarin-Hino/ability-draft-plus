@@ -45,6 +45,7 @@ export function createMetadataRepository(db: SQLJsDatabase): MetadataRepository 
       const overlayAnchor = get('overlay_anchor')
       const streamPort = get('stream_port')
       const streamAutostart = get('stream_autostart')
+      const autoDraftTracking = get('experimental_auto_draft_tracking')
 
       return {
         opThreshold:
@@ -76,6 +77,10 @@ export function createMetadataRepository(db: SQLJsDatabase): MetadataRepository 
           streamAutostart !== null
             ? streamAutostart === 'true'
             : DEFAULT_SETTINGS.streamAutostart,
+        experimentalAutoDraftTracking:
+          autoDraftTracking !== null
+            ? autoDraftTracking === 'true'
+            : DEFAULT_SETTINGS.experimentalAutoDraftTracking,
       }
     },
 
@@ -103,6 +108,12 @@ export function createMetadataRepository(db: SQLJsDatabase): MetadataRepository 
       }
       if (settings.streamAutostart !== undefined) {
         set('stream_autostart', String(settings.streamAutostart))
+      }
+      if (settings.experimentalAutoDraftTracking !== undefined) {
+        set(
+          'experimental_auto_draft_tracking',
+          String(settings.experimentalAutoDraftTracking),
+        )
       }
     },
 
