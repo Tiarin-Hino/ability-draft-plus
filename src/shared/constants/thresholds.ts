@@ -39,6 +39,10 @@ export const STREAM_PICK_FEED_LENGTH = 20
 
 // Experimental auto-rescan (GSI-driven draft tracking)
 export const AUTO_RESCAN_INTERVAL_MS = 5_000
+// Contamination guard: after this many CONSECUTIVE rejected rescans, accept the
+// next one and re-baseline — a poisoned baseline (confident misread of an empty
+// slot) or a long-lived in-game overlay must not stall updates indefinitely.
+export const RESCAN_GUARD_MAX_CONSECUTIVE_REJECTIONS = 3
 
 // Per-player draft score: score = clamp01(meanWinrate + weight * Σ clamped pair lifts).
 // MAX_PAIR_DELTA caps a single pair's contribution so one outlier synergy row

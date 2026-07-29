@@ -137,6 +137,7 @@ function makeInitialState(): DraftSessionState {
     mySelectedModelDbHeroId: null,
     mySelectedModelHeroOrder: null,
     selectedAbilitiesCache: [],
+    rescanRejectionStreak: 0,
   }
 }
 
@@ -398,6 +399,44 @@ describe('processScanResults', () => {
         expect(
           corrected.updatedState.selectedAbilitiesCache.map((s) => s.name),
         ).toEqual(['firestorm'])
+      })
+
+      it('accepts and re-baselines after the consecutive-rejection cap', () => {
+        const first = acceptedFirstRescan()
+        const contaminatedResults = [makeScanResult(null, 0, 1, false, 0.4)]
+
+        // Rejections up to the cap
+        let state = first.updatedState
+        for (let i = 1; i <= 3; i++) {
+          const rejected = rescanWith(state, contaminatedResults)
+          expect(rejected.rescanRejected).toBe(true)
+          expect(rejected.updatedState.rescanRejectionStreak).toBe(i)
+          state = rejected.updatedState
+        }
+
+        // Cap reached: the 4th contaminated scan is accepted as the new baseline
+        const rebaselined = rescanWith(state, contaminatedResults)
+        expect(rebaselined.rescanRejected).toBe(false)
+        expect(rebaselined.rescanRebaselined).toBe(true)
+        expect(rebaselined.updatedState.rescanRejectionStreak).toBe(0)
+        expect(
+          rebaselined.updatedState.selectedAbilitiesCache.map((s) => s.name),
+        ).toEqual([null])
+      })
+
+      it('a clean scan resets the rejection streak', () => {
+        const first = acceptedFirstRescan()
+        const rejected = rescanWith(first.updatedState, [
+          makeScanResult(null, 0, 1, false, 0.4),
+        ])
+        expect(rejected.updatedState.rescanRejectionStreak).toBe(1)
+
+        const clean = rescanWith(rejected.updatedState, [
+          makeScanResult('fireball', 0, 1, false),
+        ])
+        expect(clean.rescanRejected).toBe(false)
+        expect(clean.rescanRebaselined).toBe(false)
+        expect(clean.updatedState.rescanRejectionStreak).toBe(0)
       })
 
       it('never rejects when there are no prior confident picks', () => {

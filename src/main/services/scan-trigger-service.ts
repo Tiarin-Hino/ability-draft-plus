@@ -1,5 +1,7 @@
+import { screen } from 'electron'
 import sharp from 'sharp'
 import log from 'electron-log/main'
+import { GAME_WINDOW_TITLE } from './window-tracker-service'
 import type { MlService } from './ml-service'
 import type { DatabaseService } from './database-service'
 import type { LayoutService } from './layout-service'
@@ -69,7 +71,30 @@ export function createScanTriggerService(
         }
 
         appStore.setState({ mlStatus: 'scanning' })
-        let screenshotBuffer = await screenshotService.capture()
+
+        // Fullscreen/borderless: capture ONLY the game window — far cheaper than a
+        // full-display capture session and it leaves the cursor/compositor alone.
+        // Windowed mode (game smaller than the display) keeps the screen path,
+        // whose crop logic below aligns coordinates to the game client area.
+        const primary = screen.getPrimaryDisplay()
+        const physicalScreen = {
+          width: Math.round(primary.size.width * primary.scaleFactor),
+          height: Math.round(primary.size.height * primary.scaleFactor),
+        }
+        const gameBounds = windowTracker.getGameWindowPhysicalBounds()
+        const isFullscreen =
+          !gameBounds ||
+          (gameBounds.width >= physicalScreen.width &&
+            gameBounds.height >= physicalScreen.height)
+
+        let screenshotBuffer: Buffer | null = null
+        if (isFullscreen) {
+          screenshotBuffer = await screenshotService.captureWindow(
+            GAME_WINDOW_TITLE,
+            physicalScreen,
+          )
+        }
+        screenshotBuffer ??= await screenshotService.capture()
 
         const layout = layoutService.getLayout(resolution)
         if (!layout) {
@@ -82,7 +107,6 @@ export function createScanTriggerService(
 
         // In windowed mode, crop the full-screen screenshot to the game window
         // so that JSON coordinates (relative to the game window) align correctly
-        const gameBounds = windowTracker.getGameWindowPhysicalBounds()
         if (gameBounds) {
           const meta = await sharp(screenshotBuffer).metadata()
           const screenW = meta.width ?? 0
