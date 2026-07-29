@@ -73,6 +73,45 @@ describe('SynergyRepository', () => {
     })
   })
 
+  describe('getSynergiesAmong', () => {
+    it('returns synergy rows where both abilities are in the name set', () => {
+      const rows = repo.getSynergiesAmong([
+        'antimage_mana_break',
+        'crystal_maiden_frostbite',
+        'pudge_meat_hook',
+      ])
+      // mana_break+frostbite (base=1,syn=6) and frostbite+meat_hook (base=6,syn=8)
+      expect(rows).toHaveLength(2)
+      const pair1 = rows.find(
+        (r) =>
+          r.ability1Name === 'antimage_mana_break' &&
+          r.ability2Name === 'crystal_maiden_frostbite',
+      )
+      expect(pair1).toBeDefined()
+      expect(pair1!.synergyWinrate).toBe(0.65)
+      expect(pair1!.synergyIncrease).toBe(0.15)
+    })
+
+    it('excludes rows where only one ability matches', () => {
+      const rows = repo.getSynergiesAmong([
+        'antimage_mana_break',
+        'pudge_rot',
+      ])
+      expect(rows).toEqual([])
+    })
+
+    it('includes same-hero pairs (caller decides relevance)', () => {
+      const rows = repo.getSynergiesAmong(['antimage_mana_break', 'antimage_blink'])
+      expect(rows).toHaveLength(1)
+      expect(rows[0].synergyIncrease).toBe(0.1)
+    })
+
+    it('returns empty for fewer than two names', () => {
+      expect(repo.getSynergiesAmong([])).toEqual([])
+      expect(repo.getSynergiesAmong(['antimage_mana_break'])).toEqual([])
+    })
+  })
+
   describe('getOPCombinationsInPool', () => {
     it('returns OP pairs where both abilities are in the pool', () => {
       const pool = [

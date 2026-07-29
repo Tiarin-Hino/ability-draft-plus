@@ -54,6 +54,8 @@ function filterAbilityPairs(
     .map((combo) => ({
       ability1DisplayName: combo.ability1DisplayName,
       ability2DisplayName: combo.ability2DisplayName,
+      ability1Name: combo.ability1InternalName,
+      ability2Name: combo.ability2InternalName,
       synergyWinrate: combo.synergyWinrate,
     }))
 }

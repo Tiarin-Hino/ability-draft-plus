@@ -61,12 +61,14 @@ describe('filterRelevantOPCombinations', () => {
     expect(result).toHaveLength(0)
   })
 
-  it('maps to SynergyPairDisplay format', () => {
+  it('maps to SynergyPairDisplay format with internal names', () => {
     const pool = new Set(['blink', 'stun'])
     const result = filterRelevantOPCombinations(opCombos, pool, new Set())
     expect(result[0]).toEqual({
       ability1DisplayName: 'Blink',
       ability2DisplayName: 'Stun',
+      ability1Name: 'blink',
+      ability2Name: 'stun',
       synergyWinrate: 0.70,
     })
   })

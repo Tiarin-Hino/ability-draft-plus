@@ -137,6 +137,9 @@ export interface ThirdAbilitySuggestion {
 export interface SynergyPairDisplay {
   ability1DisplayName: string
   ability2DisplayName: string
+  /** Valve internal names — optional (populated by op-trap-filter; consumed by the streamer view for icons). */
+  ability1Name?: string
+  ability2Name?: string
   synergyWinrate: number
   suggestedThird?: ThirdAbilitySuggestion
   inflatedSynergy?: boolean

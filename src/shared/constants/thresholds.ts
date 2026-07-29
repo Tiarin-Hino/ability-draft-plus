@@ -29,3 +29,15 @@ export const DEFAULT_TRAP_THRESHOLD = 0.05
 // The class count is NOT a constant — it is defined by resources/model/class_names.json
 // and validated against the model's output width at classifier init.
 export const MODEL_INPUT_SIZE = 96
+
+// Streamer view
+export const STREAM_PROTOCOL_VERSION = 1
+export const DEFAULT_STREAM_PORT = 58873
+export const STREAM_TOP_WINRATE_COUNT = 8
+export const STREAM_MAX_COMBO_PANEL_ENTRIES = 8
+
+// Per-player draft score: score = clamp01(meanWinrate + weight * Σ clamped pair lifts).
+// MAX_PAIR_DELTA caps a single pair's contribution so one outlier synergy row
+// cannot dominate the whole score.
+export const PLAYER_SCORE_SYNERGY_WEIGHT = 0.5
+export const PLAYER_SCORE_MAX_PAIR_DELTA = 0.08

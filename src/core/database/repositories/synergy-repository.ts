@@ -52,6 +52,13 @@ export interface HeroSynergyDisplay {
   synergyWinrate: number
 }
 
+export interface PairSynergyAmongRow {
+  ability1Name: string
+  ability2Name: string
+  synergyWinrate: number
+  synergyIncrease: number | null
+}
+
 export interface SynergyClearInsertData {
   ability1Name: string
   ability2Name: string
@@ -93,6 +100,12 @@ export interface SynergyRepository {
   getAllTrapCombinations(threshold: number): AbilitySynergyPair[]
 
   getAllHeroTrapSynergies(threshold: number): HeroAbilitySynergyRow[]
+
+  /**
+   * All synergy rows where BOTH abilities are in `names`. Used by the streamer view's
+   * per-player draft score (each player has at most 4 picks, so this stays tiny).
+   */
+  getSynergiesAmong(names: string[]): PairSynergyAmongRow[]
 
   clearAndInsertAbilitySynergies(
     pairs: SynergyClearInsertData[],
@@ -355,6 +368,27 @@ export function createSynergyRepository(db: SQLJsDatabase): SynergyRepository {
 
     getAllHeroTrapSynergies(threshold: number): HeroAbilitySynergyRow[] {
       return queryHeroAbilitySynergies({ direction: 'lte', value: -threshold })
+    },
+
+    getSynergiesAmong(names: string[]): PairSynergyAmongRow[] {
+      if (names.length < 2) return []
+
+      // Pairs are stored base_ability_id < synergy_ability_id, so one direction covers
+      // every unordered pair within the name set.
+      const rows = db
+        .select({
+          ability1Name: a1.name,
+          ability2Name: a2.name,
+          synergyWinrate: abilitySynergies.synergyWinrate,
+          synergyIncrease: abilitySynergies.synergyIncrease,
+        })
+        .from(abilitySynergies)
+        .innerJoin(a1, eq(abilitySynergies.baseAbilityId, a1.abilityId))
+        .innerJoin(a2, eq(abilitySynergies.synergyAbilityId, a2.abilityId))
+        .where(and(inArray(a1.name, names), inArray(a2.name, names)))
+        .all()
+
+      return rows
     },
 
     clearAndInsertAbilitySynergies(
