@@ -9,6 +9,7 @@ import { createLayoutService } from './services/layout-service'
 import { createScreenshotService } from './services/screenshot-service'
 import { createScanProcessingService } from './services/scan-processing-service'
 import { createStreamServerService } from './services/stream-server-service'
+import { createIconCacheService } from './services/icon-cache-service'
 import { createUpdateService } from './services/update-service'
 import { createWindowTrackerService } from './services/window-tracker-service'
 import { createScraperService } from './services/scraper-service'
@@ -126,7 +127,8 @@ app.whenReady().then(async () => {
   const appStore = createAppStore()
 
   // Stream server must exist before scan processing (it is the third scan consumer)
-  const streamService = createStreamServerService(dbService, appStore)
+  const iconCache = createIconCacheService()
+  const streamService = createStreamServerService(dbService, appStore, iconCache)
   const scanProcessingService = createScanProcessingService(
     draftStore,
     dbService,
@@ -219,6 +221,7 @@ app.whenReady().then(async () => {
     windowTracker,
     scraperService,
     streamService,
+    iconCache,
   )
 
   // Streamer view autostart (opt-in setting)

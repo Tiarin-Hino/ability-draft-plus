@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Copy, Check, Play, Square } from 'lucide-react'
+import { Copy, Check, Play, Square, ImageDown, Loader2 } from 'lucide-react'
 import {
   Card,
   CardContent,
@@ -21,6 +21,61 @@ import { DEFAULT_STREAM_PORT } from '@shared/constants/thresholds'
 // via the zubridge AppStore; start/stop go over stream:* invoke channels; the port and
 // autostart flag persist through the regular settings channels. streamServerError holds
 // an i18n key in the 'streaming' namespace, translated here (FeedbackStatus pattern).
+
+function IconPrefetchCard() {
+  const { t } = useTranslation('streaming')
+  const [prefetching, setPrefetching] = useState(false)
+  const [result, setResult] = useState<string | null>(null)
+
+  const handlePrefetch = async () => {
+    setPrefetching(true)
+    setResult(null)
+    try {
+      const summary = await window.electronApi.invoke('stream:prefetchIcons')
+      setResult(
+        summary.success
+          ? t('icons.result', {
+              fetched: summary.fetched ?? 0,
+              alreadyCached: summary.alreadyCached ?? 0,
+              failed: summary.failed ?? 0,
+            })
+          : t('icons.error'),
+      )
+    } finally {
+      setPrefetching(false)
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t('icons.title')}</CardTitle>
+        <CardDescription>{t('icons.description')}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        <Button
+          variant="outline"
+          onClick={handlePrefetch}
+          disabled={prefetching}
+          className="gap-2"
+        >
+          {prefetching ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              {t('icons.prefetching')}
+            </>
+          ) : (
+            <>
+              <ImageDown className="h-4 w-4" aria-hidden="true" />
+              {t('icons.prefetch')}
+            </>
+          )}
+        </Button>
+        {result && <p className="text-xs text-muted-foreground">{result}</p>}
+      </CardContent>
+    </Card>
+  )
+}
 
 export function StreamingPage() {
   const { t } = useTranslation('streaming')
@@ -160,6 +215,8 @@ export function StreamingPage() {
           </div>
         </CardContent>
       </Card>
+
+      <IconPrefetchCard />
 
       <Card>
         <CardHeader>

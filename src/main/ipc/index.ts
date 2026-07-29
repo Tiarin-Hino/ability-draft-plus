@@ -15,6 +15,7 @@ import type { ZustandBridge } from '@zubridge/electron/main'
 import type { UpdateService } from '../services/update-service'
 import type { ScraperService } from '../services/scraper-service'
 import type { StreamServerService } from '../services/stream-server-service'
+import type { IconCacheService } from '../services/icon-cache-service'
 import { registerDatabaseHandlers } from './database-handlers'
 import { registerMlHandlers } from './ml-handlers'
 import { registerDraftHandlers } from './draft-handlers'
@@ -61,6 +62,7 @@ export function registerIpcHandlers(
   windowTracker: WindowTrackerService,
   scraperService: ScraperService,
   streamService: StreamServerService,
+  iconCache: IconCacheService,
 ): void {
   logger.info('Registering IPC handlers...')
 
@@ -256,7 +258,7 @@ export function registerIpcHandlers(
   registerScraperHandlers(scraperService)
 
   // Streamer view domain
-  registerStreamHandlers(streamService, dbService)
+  registerStreamHandlers(streamService, dbService, iconCache)
 
   // Resolution domain
   registerResolutionHandlers(layoutService, screenshotService, windowTracker, windowManager, apiConfig)

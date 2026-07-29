@@ -9,6 +9,7 @@ import { STREAM_PROTOCOL_VERSION } from '@shared/constants/thresholds'
 import { buildStreamBoardState } from '@core/domain/stream-board'
 import type { DatabaseService } from './database-service'
 import type { AppStore } from '../store/app-store'
+import type { IconCacheService, IconKind } from './icon-cache-service'
 
 // @DEV-GUIDE: Local HTTP server powering the Streamer View (OBS browser source).
 // One server, one port (user-configurable, persisted as the stream_port setting),
@@ -63,6 +64,7 @@ export interface StreamServerService {
 export function createStreamServerService(
   dbService: DatabaseService,
   appStore: AppStore,
+  iconCache: IconCacheService,
 ): StreamServerService {
   let server: Server | null = null
   let activePort: number | null = null
@@ -171,6 +173,23 @@ export function createStreamServerService(
     }
   }
 
+  async function handleIcon(urlPath: string, res: ServerResponse): Promise<void> {
+    // /icons/<abilities|heroes>/<safe_name>.png — anything else is a 404.
+    const match = /^\/icons\/(abilities|heroes)\/([a-z0-9_]+)\.png$/.exec(urlPath)
+    if (!match) {
+      res.writeHead(404)
+      res.end()
+      return
+    }
+    const { data } = await iconCache.getIcon(match[1] as IconKind, match[2])
+    res.writeHead(200, {
+      'Content-Type': 'image/png',
+      'Cache-Control': 'public, max-age=3600',
+      'Access-Control-Allow-Origin': '*',
+    })
+    res.end(data)
+  }
+
   function handleRequest(req: IncomingMessage, res: ServerResponse): void {
     const urlPath = (req.url ?? '/').split('?')[0]
 
@@ -182,6 +201,11 @@ export function createStreamServerService(
 
     if (urlPath === '/events') {
       handleSse(res)
+      return
+    }
+
+    if (urlPath.startsWith('/icons/')) {
+      void handleIcon(urlPath, res)
       return
     }
 

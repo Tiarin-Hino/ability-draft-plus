@@ -117,6 +117,16 @@ export interface IpcInvokeMap {
   }
   'stream:stop': { request: void; response: { success: boolean } }
   'stream:getStatus': { request: void; response: StreamServerStatusInfo }
+  'stream:prefetchIcons': {
+    request: void
+    response: {
+      success: boolean
+      total?: number
+      fetched?: number
+      alreadyCached?: number
+      failed?: number
+    }
+  }
 }
 
 // Send (fire-and-forget) channels from renderer to main

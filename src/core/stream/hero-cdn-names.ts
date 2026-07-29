@@ -11,8 +11,11 @@
 // over-extension (all abilities sharing a word beyond the hero name) is practically
 // impossible; if a real case surfaces, fix it in HERO_CDN_NAME_OVERRIDES.
 
-/** Derived-prefix → correct CDN name, for heroes where prefix derivation misfires. */
-export const HERO_CDN_NAME_OVERRIDES: Readonly<Record<string, string>> = {}
+/** Derived-prefix → correct CDN name, for heroes where the ability prefix differs
+ * from the npc short name (e.g. sandking_burrowstrike but npc_dota_hero_sand_king). */
+export const HERO_CDN_NAME_OVERRIDES: Readonly<Record<string, string>> = {
+  sandking: 'sand_king',
+}
 
 /**
  * Derive the Valve CDN short name for a hero from its pool-row ability internal names.
