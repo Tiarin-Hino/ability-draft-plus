@@ -16,8 +16,10 @@
     "topWinrate": "Top Winrate",
     "opCombos": "Strongest Combos",
     "trapCombos": "Trap Combos",
-    "topTier": "Top Picks"
+    "topTier": "Top Picks",
+    "latestPicks": "Latest Picks"
   },
+  "avgPick": "Usually picked around #{{n}}",
   "player": "Player {{num}}",
   "noHero": "No Hero",
   "team": {

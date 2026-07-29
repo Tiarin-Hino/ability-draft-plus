@@ -251,6 +251,40 @@ export function createStreamServerService(
     }
   }
 
+  /**
+   * Bundled broadcast art (resources/data/stream): /art/<name> tries .png then
+   * .jpg. 404s are expected when optional art was not shipped — the SPA falls
+   * back to its CSS gradients.
+   */
+  async function handleArt(urlPath: string, res: ServerResponse): Promise<void> {
+    const match = /^\/art\/([a-z0-9-]+)$/.exec(urlPath)
+    if (!match) {
+      res.writeHead(404)
+      res.end()
+      return
+    }
+    const artDir = app.isPackaged
+      ? join(process.resourcesPath, 'data', 'stream')
+      : join(app.getAppPath(), 'resources', 'data', 'stream')
+
+    for (const ext of ['png', 'jpg'] as const) {
+      try {
+        const content = await fs.readFile(join(artDir, `${match[1]}.${ext}`))
+        res.writeHead(200, {
+          'Content-Type': ext === 'png' ? 'image/png' : 'image/jpeg',
+          'Cache-Control': 'public, max-age=3600',
+          'Access-Control-Allow-Origin': '*',
+        })
+        res.end(content)
+        return
+      } catch {
+        // try next extension
+      }
+    }
+    res.writeHead(404)
+    res.end()
+  }
+
   async function handleIcon(urlPath: string, res: ServerResponse): Promise<void> {
     // /icons/<abilities|heroes>/<safe_name>.png — anything else is a 404.
     const match = /^\/icons\/(abilities|heroes)\/([a-z0-9_]+)\.png$/.exec(urlPath)
@@ -380,6 +414,11 @@ export function createStreamServerService(
 
     if (urlPath.startsWith('/icons/')) {
       void handleIcon(urlPath, res)
+      return
+    }
+
+    if (urlPath.startsWith('/art/')) {
+      void handleArt(urlPath, res)
       return
     }
 
