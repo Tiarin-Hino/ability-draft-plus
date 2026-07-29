@@ -1,10 +1,12 @@
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { isDemoMode, useStreamState } from './hooks/use-stream-state'
+import { useState } from 'react'
+import { apiBase, isDemoMode, useStreamState } from './hooks/use-stream-state'
 import { TopBar } from './components/TopBar'
 import { PoolBoard } from './components/PoolBoard'
 import { PlayerColumn } from './components/PlayerRows'
 import { StatPanels } from './components/StatPanels'
+import { PickTicker } from './components/PickTicker'
 import i18n from './i18n'
 
 // @DEV-GUIDE: Root of the stream SPA (OBS browser source) — a tournament-style
@@ -31,6 +33,25 @@ function bgMode(): BgMode {
   return bg === 'chroma' || bg === 'dark' ? bg : 'transparent'
 }
 
+/**
+ * Optional bundled broadcast art (resources/data/stream/<name>.png|jpg) served at
+ * /art/<name>. Rendered behind the UI in dark mode only; missing art degrades to
+ * the CSS gradient silently.
+ */
+function ArtLayer({ name }: { name: string }) {
+  const [failed, setFailed] = useState(false)
+  if (bgMode() !== 'dark' || failed) return null
+  return (
+    <img
+      className="board-art"
+      src={`${apiBase()}/art/${name}`}
+      alt=""
+      aria-hidden="true"
+      onError={() => setFailed(true)}
+    />
+  )
+}
+
 function App(): React.ReactElement {
   const { t } = useTranslation()
   const { board, connection } = useStreamState()
@@ -46,17 +67,22 @@ function App(): React.ReactElement {
   if (!board || board.phase === 'waiting') {
     return (
       <div className={`board bg-${bgMode()}`}>
+        <ArtLayer name="waiting-bg" />
         <div
           className={`connection connection-${connection}`}
           title={t(`connection.${connection}`)}
         />
-        <div className="waiting">{t('waiting')}</div>
+        <div className="waiting">
+          <span className="waiting-wordmark">{t('wordmark')}</span>
+          <span className="waiting-text">{t('waiting')}</span>
+        </div>
       </div>
     )
   }
 
   return (
     <div className={`board bg-${bgMode()}`}>
+      <ArtLayer name="board-bg" />
       <TopBar
         title={param('title')}
         gsi={board.gsi}
@@ -75,6 +101,8 @@ function App(): React.ReactElement {
           players={board.players.filter((p) => p.team === 'dire')}
         />
       </main>
+
+      <PickTicker board={board} />
 
       <footer className="board-footer">
         <StatPanels panels={board.panels} />

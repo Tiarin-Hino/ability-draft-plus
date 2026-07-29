@@ -29,6 +29,10 @@ proportionally). Two zones are intentionally left empty for your own overlays â€
 top-right (sponsor logo / series score) and bottom-right (sponsor card / caster
 info); `?demo=1` outlines them so you can position your sources precisely.
 
+Optional bundled art (used automatically in `?bg=dark` when present, CSS
+gradients otherwise): drop `board-bg.png|jpg` (live board backdrop) and
+`waiting-bg.png|jpg` (waiting-screen backdrop) into `resources/data/stream/`.
+
 Recommended: press **Prefetch all icons** once (Streaming page) so every ability icon
 is cached locally before your first live draft.
 

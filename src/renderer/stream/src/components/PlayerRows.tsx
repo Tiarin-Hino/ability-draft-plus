@@ -4,24 +4,22 @@ import type { StreamPlayerModel, StreamPlayerRow, StreamTeam } from '@shared/typ
 import { AbilityTile } from './AbilityTile'
 import { apiBase } from '../hooks/use-stream-state'
 
-// @DEV-GUIDE: The two team columns flanking the pool board, mirroring the in-game
-// player panels: hero-name line in team color ("NO HERO" until a model is picked —
-// the game's own convention), player name, four pick slots, and the computed draft
-// score as a broadcast-style chip. Radiant left/green, Dire right/red.
+// @DEV-GUIDE: The two team columns flanking the pool board. Each player card uses the
+// picked hero's official 16:9 art as a FULL-BLEED background (Valve hero portraits are
+// landscape — cropping them into a small square looked broken) faded through a team-
+// color gradient, TI hero-card style: hero name line in team color ("NO HERO" until a
+// model is picked, the game's own convention), player name, four pick slots, and the
+// draft score as a gold medallion. Radiant left/green, Dire right/red (mirrored).
 
-function ModelPortrait({ model }: { model: StreamPlayerModel | null }) {
-  const { t } = useTranslation()
+function CardArt({ model }: { model: StreamPlayerModel }) {
   const [failed, setFailed] = useState(false)
-
-  if (!model || failed) {
-    return <div className="player-portrait player-portrait-empty">?</div>
-  }
+  if (failed) return null
   return (
     <img
-      className="player-portrait"
+      className="card-art"
       src={`${apiBase()}${model.portraitPath}`}
-      alt={model.displayName || t('unknownHero')}
-      title={model.displayName}
+      alt=""
+      aria-hidden="true"
       onError={() => setFailed(true)}
     />
   )
@@ -34,7 +32,9 @@ function PlayerCard({ player }: { player: StreamPlayerRow }) {
 
   return (
     <div className={`player-card team-accent-${player.team}`}>
-      <ModelPortrait model={player.model} />
+      {player.model && <CardArt model={player.model} />}
+      <div className="card-shade" />
+
       <div className="player-info">
         <div className="player-hero-line">
           {player.model ? player.model.displayName : t('noHero')}
@@ -43,14 +43,6 @@ function PlayerCard({ player }: { player: StreamPlayerRow }) {
           <span className="player-name" title={name}>
             {name}
           </span>
-          {score !== null && score.score !== null && (
-            <span
-              className={`player-score confidence-${score.confidence}`}
-              title={`${t('score.label')} (${t(`score.confidence.${score.confidence}`)})`}
-            >
-              {(score.score * 100).toFixed(0)}
-            </span>
-          )}
         </div>
         <div className="player-picks">
           {player.picks.map((slot, i) => (
@@ -61,6 +53,15 @@ function PlayerCard({ player }: { player: StreamPlayerRow }) {
           ))}
         </div>
       </div>
+
+      {score !== null && score.score !== null && (
+        <div
+          className={`player-score confidence-${score.confidence}`}
+          title={`${t('score.label')} (${t(`score.confidence.${score.confidence}`)})`}
+        >
+          {(score.score * 100).toFixed(0)}
+        </div>
+      )}
     </div>
   )
 }

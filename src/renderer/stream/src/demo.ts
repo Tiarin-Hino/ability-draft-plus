@@ -53,6 +53,8 @@ function slot(
     displayName,
     iconPath: `/icons/abilities/${name}.png`,
     winrate,
+    // Plausible spread: stronger abilities go earlier
+    pickPosition: Math.max(2, Math.round(46 - winrate * 70)),
     consolidatedScore: 0.5 + (winrate - 0.5),
     isTopTier: false,
     isUnknown: false,
@@ -177,6 +179,13 @@ export function buildDemoState(): StreamBoardState {
         p.model ? { npcName: p.model.npcName, displayName: p.model.displayName } : null,
       ),
     },
+    pickFeed: PICKED.map((pick, i) => ({
+      seq: i,
+      playerIndex: pick.player,
+      abilityName: pick.name,
+      kind: 'ability' as const,
+      clockTime: -60 + i * 8,
+    })),
     meta: { language: 'en', appVersion: 'demo', updatedAt: 0 },
   }
 }
