@@ -116,6 +116,9 @@ export function createScanProcessingService(
             'Rescan discarded by contamination guard (pick slot obscured); state unchanged',
           )
         }
+        if (output.rescanHasty) {
+          logger.debug('Hasty rescan (no new picks) skipped; state unchanged')
+        }
         if (output.rescanRebaselined) {
           logger.warn(
             'Contamination-guard rejection cap reached — accepted scan as new baseline',

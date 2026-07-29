@@ -80,6 +80,13 @@ export interface ScanProcessorOutput {
    * escape hatch against a poisoned baseline stalling updates forever.
    */
   rescanRebaselined?: boolean
+  /**
+   * True when a contaminated-looking rescan carried NO new picks — a "hasty"
+   * capture (scan landed mid-pick or an overlay briefly covered the slots).
+   * Skipped as a harmless no-op: state untouched, no rejection streak, and the
+   * next rescan starts fresh.
+   */
+  rescanHasty?: boolean
 }
 
 /**
@@ -121,6 +128,7 @@ export function processScanResults(
   let selectedAbilities: ScanResult[]
   let rescanRejected = false
   let rescanRebaselined = false
+  let rescanHasty = false
 
   if (isInitialScan) {
     const initial = rawResults as InitialScanResults
@@ -156,7 +164,19 @@ export function processScanResults(
       state.selectedAbilitiesCache,
       pickedAbilities,
     )
-    if (
+    const baselineNames = new Set(
+      state.selectedAbilitiesCache.map((s) => s.name).filter(Boolean),
+    )
+    const hasNewPicks = pickedAbilities.some(
+      (a) => a.name !== null && !baselineNames.has(a.name),
+    )
+
+    if (contaminated && !hasNewPicks) {
+      // Hasty capture: it carries no new information at all, so there is
+      // nothing to protect against — skip it without counting a rejection.
+      rescanHasty = true
+      selectedAbilities = state.selectedAbilitiesCache
+    } else if (
       contaminated &&
       state.rescanRejectionStreak < RESCAN_GUARD_MAX_CONSECUTIVE_REJECTIONS
     ) {
@@ -436,7 +456,13 @@ export function processScanResults(
     modelsCoords: modelCoords,
   }
 
-  return { overlayPayload, updatedState: state, rescanRejected, rescanRebaselined }
+  return {
+    overlayPayload,
+    updatedState: state,
+    rescanRejected,
+    rescanRebaselined,
+    rescanHasty,
+  }
 }
 
 // ---------------------------------------------------------------------------

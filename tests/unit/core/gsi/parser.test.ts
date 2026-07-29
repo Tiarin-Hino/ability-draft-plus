@@ -99,6 +99,58 @@ describe('parseGsiPayload', () => {
     expect(snapshot.localHeroNpcName).toBe('clinkz')
   })
 
+  it('parses a REAL spectated hero-selection capture (regression fixture)', async () => {
+    const { default: liveCapture } = await import(
+      './fixtures/live-spectated-hero-selection.json'
+    )
+    const snapshot = parseGsiPayload(liveCapture)
+
+    expect(snapshot.gamePhase).toBe('DOTA_GAMERULES_STATE_HERO_SELECTION')
+    expect(snapshot.players).toHaveLength(10)
+    expect(snapshot.players.map((p) => p.name)).toEqual([
+      'fish', 'Drea', 'Mangology', 'Dad Inside', 'Mahaximus',
+      'sifla', 'Spooner', 'Ipelius', 'Kenny', 'noertti',
+    ])
+
+    const models = new Map(snapshot.players.map((p) => [p.slotIndex, p.heroNpcName]))
+    expect(models.get(7)).toBe('kunkka')
+    expect(models.get(8)).toBe('keeper_of_the_light')
+    expect(models.get(9)).toBe('death_prophet')
+    expect(models.get(0)).toBeNull()
+  })
+
+  it('prefers team_slot over the playerN key for slot ordering', () => {
+    const snapshot = parseGsiPayload({
+      player: {
+        team2: {
+          player0: { name: 'SecondOnScreen', team_slot: 1 },
+          player1: { name: 'FirstOnScreen', team_slot: 0 },
+        },
+      },
+    })
+    expect(snapshot.players.map((p) => [p.slotIndex, p.name])).toEqual([
+      [0, 'FirstOnScreen'],
+      [1, 'SecondOnScreen'],
+    ])
+  })
+
+  it('joins hero models by raw key even when team_slot reorders players', () => {
+    const snapshot = parseGsiPayload({
+      player: {
+        team2: {
+          player0: { name: 'Reordered', team_slot: 1 },
+        },
+      },
+      hero: {
+        team2: { player0: { name: 'npc_dota_hero_luna' } },
+      },
+    })
+    // player0's hero must follow the player to their team_slot-resolved slot 1
+    expect(snapshot.players).toEqual([
+      { slotIndex: 1, name: 'Reordered', accountId: null, heroNpcName: 'luna' },
+    ])
+  })
+
   it('normalizes dire hero blocks keyed player0..player4 to slots 5-9', () => {
     const snapshot = parseGsiPayload({
       player: {

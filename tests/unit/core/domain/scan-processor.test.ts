@@ -401,9 +401,42 @@ describe('processScanResults', () => {
         ).toEqual(['firestorm'])
       })
 
+      it('treats a contaminated scan with NO new picks as a hasty no-op (no streak)', () => {
+        const first = acceptedFirstRescan()
+        const poolBefore = first.updatedState.initialPoolAbilitiesCache
+
+        // Baseline pick reads unknown, and nothing new appeared — hasty capture
+        const hasty = rescanWith(first.updatedState, [
+          makeScanResult(null, 0, 1, false, 0.4),
+        ])
+
+        expect(hasty.rescanHasty).toBe(true)
+        expect(hasty.rescanRejected).toBe(false)
+        expect(hasty.updatedState.rescanRejectionStreak).toBe(0)
+        expect(hasty.updatedState.initialPoolAbilitiesCache).toEqual(poolBefore)
+        expect(
+          hasty.updatedState.selectedAbilitiesCache.map((s) => s.name),
+        ).toEqual(['fireball'])
+
+        // The next clean scan works completely fresh
+        const clean = rescanWith(hasty.updatedState, [
+          makeScanResult('fireball', 0, 1, false),
+          makeScanResult('ice_blast', 1, 1, false),
+        ])
+        expect(clean.rescanRejected).toBe(false)
+        expect(clean.rescanHasty).toBe(false)
+        expect(
+          clean.updatedState.selectedAbilitiesCache.map((s) => s.name).sort(),
+        ).toEqual(['fireball', 'ice_blast'])
+      })
+
       it('accepts and re-baselines after the consecutive-rejection cap', () => {
         const first = acceptedFirstRescan()
-        const contaminatedResults = [makeScanResult(null, 0, 1, false, 0.4)]
+        // Contaminated AND carrying a new pick — the genuinely ambiguous case
+        const contaminatedResults = [
+          makeScanResult(null, 0, 1, false, 0.4),
+          makeScanResult('ice_blast', 1, 1, false),
+        ]
 
         // Rejections up to the cap
         let state = first.updatedState
@@ -421,13 +454,14 @@ describe('processScanResults', () => {
         expect(rebaselined.updatedState.rescanRejectionStreak).toBe(0)
         expect(
           rebaselined.updatedState.selectedAbilitiesCache.map((s) => s.name),
-        ).toEqual([null])
+        ).toEqual([null, 'ice_blast'])
       })
 
       it('a clean scan resets the rejection streak', () => {
         const first = acceptedFirstRescan()
         const rejected = rescanWith(first.updatedState, [
           makeScanResult(null, 0, 1, false, 0.4),
+          makeScanResult('ice_blast', 1, 1, false),
         ])
         expect(rejected.updatedState.rescanRejectionStreak).toBe(1)
 
