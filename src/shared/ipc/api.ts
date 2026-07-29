@@ -127,6 +127,17 @@ export interface IpcInvokeMap {
       failed?: number
     }
   }
+  // Dota GSI cfg management (see src/main/services/gsi-cfg-service.ts)
+  'gsi:detect': {
+    request: void
+    response: { dotaPath: string | null; cfgPath: string | null; cfgExists: boolean }
+  }
+  'gsi:writeCfg': {
+    request: { dotaDir?: string }
+    response: { success: boolean; path?: string; errorKey?: string }
+  }
+  // title is translated in the renderer (native dialogs can't use renderer i18n)
+  'gsi:pickDotaFolder': { request: { title: string }; response: { dir: string | null } }
 }
 
 // Send (fire-and-forget) channels from renderer to main

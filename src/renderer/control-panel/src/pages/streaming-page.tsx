@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { useAppStore } from '@/hooks/use-app-store'
+import { GsiCard } from '@/components/streaming/gsi-card'
 import { DEFAULT_STREAM_PORT } from '@shared/constants/thresholds'
 
 // @DEV-GUIDE: Streaming page — controls the local stream-board server (see
@@ -215,6 +216,8 @@ export function StreamingPage() {
           </div>
         </CardContent>
       </Card>
+
+      <GsiCard />
 
       <IconPrefetchCard />
 

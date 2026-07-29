@@ -10,6 +10,7 @@ import { createScreenshotService } from './services/screenshot-service'
 import { createScanProcessingService } from './services/scan-processing-service'
 import { createStreamServerService } from './services/stream-server-service'
 import { createIconCacheService } from './services/icon-cache-service'
+import { createGsiCfgService } from './services/gsi-cfg-service'
 import { createUpdateService } from './services/update-service'
 import { createWindowTrackerService } from './services/window-tracker-service'
 import { createScraperService } from './services/scraper-service'
@@ -128,6 +129,7 @@ app.whenReady().then(async () => {
 
   // Stream server must exist before scan processing (it is the third scan consumer)
   const iconCache = createIconCacheService()
+  const gsiCfgService = createGsiCfgService()
   const streamService = createStreamServerService(dbService, appStore, iconCache)
   const scanProcessingService = createScanProcessingService(
     draftStore,
@@ -222,6 +224,7 @@ app.whenReady().then(async () => {
     scraperService,
     streamService,
     iconCache,
+    gsiCfgService,
   )
 
   // Streamer view autostart (opt-in setting)
