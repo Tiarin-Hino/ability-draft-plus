@@ -49,6 +49,10 @@ body,
 
 .board {
   position: relative;
+  /* Establishes a stacking context so the negative-z .board-art layer paints
+     ABOVE this element's own background (bg-dark gradient) but below content —
+     without this the background covers the art entirely. */
+  z-index: 0;
   display: flex;
   flex-direction: column;
   height: 100vh;
