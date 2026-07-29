@@ -97,6 +97,11 @@ export function createStreamServerService(
   let gsiStaleTimer: NodeJS.Timeout | null = null
   let gsiBroadcastTimer: NodeJS.Timeout | null = null
   const gsiListeners: Array<(snapshot: GsiSnapshot) => void> = []
+  // Raw-payload capture for empirical validation (slot ordering, phase names,
+  // AD turn timings): latest payload per game_state, overwritten, throttled.
+  const gsiCaptureDir = join(app.getPath('userData'), 'gsi-captures')
+  const gsiCaptureLastWrite = new Map<string, number>()
+  let gsiLastPlayersLog = ''
 
   // Same path convention as window-manager's loadWindowContent: resolve renderer
   // output relative to the compiled main bundle (out/main -> out/renderer). Works in
@@ -241,6 +246,33 @@ export function createStreamServerService(
     res.end(data)
   }
 
+  function captureGsiPayload(rawBody: string, phase: string | null): void {
+    const safePhase = (phase ?? 'unknown').replace(/[^A-Za-z0-9_]/g, '_')
+    const now = Date.now()
+    const lastWrite = gsiCaptureLastWrite.get(safePhase) ?? 0
+    if (now - lastWrite < 5_000) return
+    gsiCaptureLastWrite.set(safePhase, now)
+    void fs
+      .mkdir(gsiCaptureDir, { recursive: true })
+      .then(() => fs.writeFile(join(gsiCaptureDir, `${safePhase}.json`), rawBody))
+      .catch((error: unknown) => {
+        logger.warn('GSI capture write failed', {
+          error: error instanceof Error ? error.message : String(error),
+        })
+      })
+  }
+
+  function logParsedPlayers(snapshot: GsiSnapshot): void {
+    if (snapshot.players.length === 0) return
+    const mapping = snapshot.players
+      .map((p) => `${p.slotIndex}:${p.name}`)
+      .join(', ')
+    if (mapping !== gsiLastPlayersLog) {
+      gsiLastPlayersLog = mapping
+      logger.info('GSI player slots', { mapping })
+    }
+  }
+
   function scheduleGsiBroadcast(): void {
     if (gsiBroadcastTimer) return
     gsiBroadcastTimer = setTimeout(() => {
@@ -274,10 +306,13 @@ export function createStreamServerService(
         return
       }
       try {
-        const json: unknown = JSON.parse(Buffer.concat(chunks).toString('utf-8'))
+        const rawBody = Buffer.concat(chunks).toString('utf-8')
+        const json: unknown = JSON.parse(rawBody)
         const wasConnected = gsiConnected()
         gsiSnapshot = parseGsiPayload(json)
         gsiLastAt = Date.now()
+        captureGsiPayload(rawBody, gsiSnapshot.gamePhase)
+        logParsedPlayers(gsiSnapshot)
         if (!wasConnected) {
           appStore.setState({ gsiConnected: true })
           logger.info('GSI connected')

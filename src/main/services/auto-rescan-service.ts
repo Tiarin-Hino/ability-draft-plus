@@ -62,6 +62,7 @@ export function createAutoRescanService(
   let lastAttributedS = 0
   let nextSeq = 0
   let lastPhase: string | null = null
+  let draftMatchId: string | null = null
   let warnedNoSlot = false
 
   streamService.onGsiSnapshot((snapshot) => {
@@ -70,15 +71,31 @@ export function createAutoRescanService(
     lastPhase = snapshot.gamePhase
 
     if (snapshot.gamePhase === GSI_HERO_SELECTION_PHASE) {
+      // Replay seeking / directed camera makes game_state flap in and out of hero
+      // selection every few seconds. Only a DIFFERENT matchid (or the very first
+      // entry) is a new draft; re-entries keep the anchor and timeline.
+      const isSameDraft =
+        draftAnchorMs !== null &&
+        snapshot.matchId !== null &&
+        snapshot.matchId === draftMatchId
+      if (isSameDraft) {
+        logger.info('Re-entered hero selection (same match, keeping session)', {
+          matchId: snapshot.matchId,
+        })
+        return
+      }
       draftAnchorMs = Date.now()
+      draftMatchId = snapshot.matchId
       lastAttributedS = 0
       nextSeq = 0
       warnedNoSlot = false
       draftStore.getState().clearDraftTimeline()
-      logger.info('Draft started (GSI hero selection)', { prevPhase })
+      logger.info('Draft started (GSI hero selection)', {
+        prevPhase,
+        matchId: snapshot.matchId,
+      })
     } else if (prevPhase === GSI_HERO_SELECTION_PHASE) {
-      draftAnchorMs = null
-      logger.info('Draft ended (left hero selection)', {
+      logger.info('Left hero selection (session retained for possible re-entry)', {
         nextPhase: snapshot.gamePhase,
       })
     }
@@ -89,6 +106,15 @@ export function createAutoRescanService(
     return [...cache.ultimates, ...cache.standard]
       .map((slot) => slot.name)
       .filter((name): name is string => name !== null)
+  }
+
+  /** Pure spectator: allplayers present but no local player — there is no own turn. */
+  function isSpectating(snapshot: GsiSnapshot | null): boolean {
+    return (
+      snapshot !== null &&
+      snapshot.players.length > 0 &&
+      snapshot.localPlayer === null
+    )
   }
 
   function resolveUserSlot(snapshot: GsiSnapshot | null): number | null {
@@ -117,13 +143,15 @@ export function createAutoRescanService(
       // The pool grid is still the user's manual initial scan (Ctrl+Shift+S)
       if (poolNames().length === 0) return
 
-      const userSlot = resolveUserSlot(snapshot)
-      if (userSlot === null) {
+      // Spectators/casters have no pick turn to protect — scan without suppression.
+      // Only a PLAYING user with an unknown slot forces idle (cursor parking during
+      // their own pick would be hostile and we cannot tell when their turn is).
+      const spectating = isSpectating(snapshot)
+      const userSlot = spectating ? null : resolveUserSlot(snapshot)
+      if (!spectating && userSlot === null) {
         if (!warnedNoSlot) {
           warnedNoSlot = true
-          logger.warn(
-            'Auto-rescan idle: user slot unknown (select My Spot or spectate)',
-          )
+          logger.warn('Auto-rescan idle: playing with unknown slot — select My Spot')
         }
         return
       }
@@ -137,7 +165,7 @@ export function createAutoRescanService(
         return
       }
 
-      if (currentTurn?.playerIndex === userSlot) {
+      if (userSlot !== null && currentTurn?.playerIndex === userSlot) {
         // Suppressed: never park the cursor during the user's own pick
         return
       }
