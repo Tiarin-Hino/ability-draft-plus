@@ -71,6 +71,7 @@ function toStreamSlot(
     displayName: slot.displayName,
     iconPath: slot.name ? abilityIconPath(slot.name) : null,
     winrate: slot.winrate,
+    pickPosition: slot.pickRate,
     consolidatedScore: slot.consolidatedScore,
     isTopTier: slot.isGeneralTopTier,
     isUnknown: slot.isUnknown === true,

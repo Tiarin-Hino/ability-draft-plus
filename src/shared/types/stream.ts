@@ -27,6 +27,8 @@ export interface StreamAbilitySlot {
   /** Server-relative icon path (e.g. "/icons/abilities/<name>.png"); null when name is unknown. */
   iconPath: string | null
   winrate: number | null
+  /** Average pick position from Windrun (lower = usually taken earlier); null if unknown. */
+  pickPosition: number | null
   consolidatedScore: number
   isTopTier: boolean
   isUnknown: boolean

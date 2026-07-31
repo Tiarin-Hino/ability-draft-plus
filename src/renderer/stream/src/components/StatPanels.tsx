@@ -9,6 +9,7 @@ function ComboEntry({ combo }: { combo: StreamComboDisplay }) {
       <div className="combo-icons">
         {[combo.ability1, combo.ability2].map((ability, i) => (
           <span className="combo-ability" key={i} title={ability.displayName}>
+            {i > 0 && <span className="combo-plus">+</span>}
             {ability.iconPath ? (
               <img
                 src={`${apiBase()}${ability.iconPath}`}
@@ -35,7 +36,14 @@ export function StatPanels({ panels }: { panels: StreamPanels }) {
         <h2 className="panel-title">{t('panels.topWinrate')}</h2>
         <div className="panel-tiles">
           {panels.topWinrateInPool.map((slot, i) => (
-            <AbilityTile key={i} slot={slot} size="small" />
+            <div className="top-winrate-entry" key={i}>
+              <AbilityTile slot={slot} size="small" />
+              {slot.pickPosition !== null && (
+                <span className="avg-pick" title={t('avgPick', { n: Math.round(slot.pickPosition) })}>
+                  #{Math.round(slot.pickPosition)}
+                </span>
+              )}
+            </div>
           ))}
         </div>
       </div>

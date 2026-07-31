@@ -9,7 +9,7 @@ import { apiBase } from '../hooks/use-stream-state'
 
 interface AbilityTileProps {
   slot: StreamAbilitySlot
-  size?: 'normal' | 'small'
+  size?: 'normal' | 'small' | 'large'
 }
 
 export function AbilityTile({ slot, size = 'normal' }: AbilityTileProps) {
@@ -22,6 +22,7 @@ export function AbilityTile({ slot, size = 'normal' }: AbilityTileProps) {
   const classes = [
     'tile',
     size === 'small' ? 'tile-small' : '',
+    size === 'large' ? 'tile-large' : '',
     slot.isPicked ? 'tile-picked' : '',
     slot.isTopTier ? 'tile-top-tier' : '',
     slot.isUnknown ? 'tile-unknown' : '',

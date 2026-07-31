@@ -251,6 +251,42 @@ export function createStreamServerService(
     }
   }
 
+  /**
+   * Bundled broadcast art (resources/data/stream): /art/<name> tries .png then
+   * .jpg. 404s are expected when optional art was not shipped — the SPA falls
+   * back to its CSS gradients.
+   */
+  async function handleArt(urlPath: string, res: ServerResponse): Promise<void> {
+    const match = /^\/art\/([a-z0-9-]+)$/.exec(urlPath)
+    if (!match) {
+      res.writeHead(404)
+      res.end()
+      return
+    }
+    // __dirname convention (out/main -> project root), NOT app.getAppPath():
+    // the latter resolves to the default_app wrapper under `electron <file.js>`
+    const artDir = app.isPackaged
+      ? join(process.resourcesPath, 'data', 'stream')
+      : join(__dirname, '..', '..', 'resources', 'data', 'stream')
+
+    for (const ext of ['png', 'jpg'] as const) {
+      try {
+        const content = await fs.readFile(join(artDir, `${match[1]}.${ext}`))
+        res.writeHead(200, {
+          'Content-Type': ext === 'png' ? 'image/png' : 'image/jpeg',
+          'Cache-Control': 'public, max-age=3600',
+          'Access-Control-Allow-Origin': '*',
+        })
+        res.end(content)
+        return
+      } catch {
+        // try next extension
+      }
+    }
+    res.writeHead(404)
+    res.end()
+  }
+
   async function handleIcon(urlPath: string, res: ServerResponse): Promise<void> {
     // /icons/<abilities|heroes>/<safe_name>.png — anything else is a 404.
     const match = /^\/icons\/(abilities|heroes)\/([a-z0-9_]+)\.png$/.exec(urlPath)
@@ -383,12 +419,20 @@ export function createStreamServerService(
       return
     }
 
+    if (urlPath.startsWith('/art/')) {
+      void handleArt(urlPath, res)
+      return
+    }
+
     // Dev: the SPA bundle lives on the electron-vite dev server, not on disk.
+    // Preserve the caller's query params (?demo=1&bg=...&title=...) — only the
+    // api origin is appended for the split-origin SSE connection.
     const devRendererUrl = !app.isPackaged && process.env['ELECTRON_RENDERER_URL']
     if (devRendererUrl && (urlPath === '/' || urlPath === '/stream' || urlPath === '/stream/')) {
-      const api = encodeURIComponent(`http://127.0.0.1:${activePort}`)
+      const query = new URLSearchParams((req.url ?? '').split('?')[1] ?? '')
+      query.set('api', `http://127.0.0.1:${activePort}`)
       res.writeHead(302, {
-        Location: `${devRendererUrl}/stream/index.html?api=${api}`,
+        Location: `${devRendererUrl}/stream/index.html?${query.toString()}`,
       })
       res.end()
       return
