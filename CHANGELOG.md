@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Changed
 
 - **New app icon** — flat vector "ability slot" mark (shimmer-gradient border + green plus) replacing the 3D AD+ render, matching the redesigned tiarinhino.com branding. Source at `build/icon.svg`, `build/icon.ico` regenerated (16–256 px). Ships with the next release; taskbar/installer/Start Menu icons update on install.
+- **Prominent support buttons** — a Ko-fi "Support me" button now sits in the control panel sidebar (with a secondary "Support datdota" link crediting the Windrun data source) and in the header bar next to the language switcher, visible on every page. Both open externally via the validated `app:openExternal` channel; localized EN/RU.
 
 ### Fixed (2.1.0 release blockers)
 

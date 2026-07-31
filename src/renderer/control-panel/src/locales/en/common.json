@@ -37,5 +37,11 @@
     "confirm": "Confirm",
     "close": "Close",
     "retry": "Retry"
+  },
+  "support": {
+    "label": "Support me",
+    "tooltip": "Support the developer on Ko-fi",
+    "datdota": "Support datdota",
+    "datdotaTooltip": "Support datdota (Windrun data) on Ko-fi"
   }
 }

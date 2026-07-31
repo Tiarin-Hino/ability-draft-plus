@@ -12,18 +12,16 @@ import {
   Sun,
   Moon,
   Monitor,
+  Heart,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useAppStore } from '@/hooks/use-app-store'
 import { useAppDispatch } from '@/hooks/use-dispatch'
 import { APP_ACTIONS } from '@shared/types/app-store'
+import { SUPPORT_URL, SUPPORT_DATDOTA_URL } from '@shared/constants/defaults'
 import type { PageId } from '@/hooks/use-navigation'
 
 const navItems: Array<{
@@ -106,12 +104,31 @@ export function Sidebar({ activePage, onNavigate }: SidebarProps) {
         })}
       </nav>
 
+      {/* Ko-fi brand red (#ff5e5b) in both themes — intentionally louder than the
+          rest of the sidebar so the support option is never overlooked */}
+      <div className="space-y-1 px-2 pb-2">
+        <button
+          onClick={() => window.electronApi.send('app:openExternal', { url: SUPPORT_URL })}
+          title={t('support.tooltip')}
+          className="flex w-full items-center justify-center gap-2 rounded-md bg-[#ff5e5b] px-3 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#e8524f]"
+        >
+          <Heart className="h-4 w-4 shrink-0" fill="currentColor" aria-hidden="true" />
+          <span>{t('support.label')}</span>
+        </button>
+        <button
+          onClick={() => window.electronApi.send('app:openExternal', { url: SUPPORT_DATDOTA_URL })}
+          title={t('support.datdotaTooltip')}
+          className="flex w-full items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+        >
+          <Heart className="h-3 w-3 shrink-0" aria-hidden="true" />
+          <span>{t('support.datdota')}</span>
+        </button>
+      </div>
+
       <Separator />
 
       <div className="flex items-center justify-between px-4 py-3">
-        <span className="text-xs text-muted-foreground">
-          v{version}
-        </span>
+        <span className="text-xs text-muted-foreground">v{version}</span>
         <Button
           variant="ghost"
           size="icon"
