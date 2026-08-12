@@ -1,20 +1,36 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { SlotCoordinate } from '@shared/types'
 
-// Mock sharp before importing the module under test
-const mockSharpChain = {
-  extract: vi.fn().mockReturnThis(),
-  resize: vi.fn().mockReturnThis(),
-  removeAlpha: vi.fn().mockReturnThis(),
-  raw: vi.fn().mockReturnThis(),
-  toBuffer: vi.fn(),
-}
+// Mock sharp before importing the module under test (vi.hoisted so the
+// factory can reference the mocks after vi.mock is hoisted to the top)
+const { mockSharpChain, mockSharp } = vi.hoisted(() => {
+  const chain = {
+    extract: vi.fn().mockReturnThis(),
+    resize: vi.fn().mockReturnThis(),
+    removeAlpha: vi.fn().mockReturnThis(),
+    raw: vi.fn().mockReturnThis(),
+    toBuffer: vi.fn(),
+  }
+  return { mockSharpChain: chain, mockSharp: vi.fn(() => chain) }
+})
 
 vi.mock('sharp', () => ({
-  default: vi.fn(() => mockSharpChain),
+  default: mockSharp,
 }))
 
-import { bufferToFloat32, preprocessSlot, preprocessBatch } from '@core/ml/preprocessing'
+import {
+  bufferToFloat32,
+  decodeScreenshot,
+  preprocessSlot,
+  preprocessBatch,
+} from '@core/ml/preprocessing'
+import type { DecodedScreenshot } from '@core/ml/preprocessing'
+
+// Sharp is mocked, so the bitmap only needs to be a stand-in — keep it tiny
+// (deep-equality assertions on realistic multi-MB buffers time the test out).
+function makeDecoded(width = 8, height = 6): DecodedScreenshot {
+  return { data: Buffer.alloc(width * height * 3), width, height }
+}
 
 describe('preprocessing', () => {
   beforeEach(() => {
@@ -57,8 +73,29 @@ describe('preprocessing', () => {
     })
   })
 
+  describe('decodeScreenshot', () => {
+    it('decodes the PNG once to a raw RGB bitmap with dimensions', async () => {
+      const rawData = Buffer.alloc(4 * 2 * 3, 9)
+      mockSharpChain.toBuffer.mockResolvedValueOnce({
+        data: rawData,
+        info: { width: 4, height: 2 },
+      })
+
+      const png = Buffer.alloc(50)
+      const result = await decodeScreenshot(png)
+
+      expect(mockSharp).toHaveBeenCalledWith(png)
+      expect(mockSharpChain.removeAlpha).toHaveBeenCalled()
+      expect(mockSharpChain.raw).toHaveBeenCalled()
+      expect(mockSharpChain.toBuffer).toHaveBeenCalledWith({
+        resolveWithObject: true,
+      })
+      expect(result).toEqual({ data: rawData, width: 4, height: 2 })
+    })
+  })
+
   describe('preprocessSlot', () => {
-    it('calls sharp with correct extract, resize, and raw pipeline', async () => {
+    it('crops from the decoded bitmap with correct extract, resize, and raw pipeline', async () => {
       const expectedOutput = Buffer.alloc(96 * 96 * 3, 42)
       mockSharpChain.toBuffer.mockResolvedValueOnce(expectedOutput)
 
@@ -69,10 +106,14 @@ describe('preprocessing', () => {
         height: 70,
         hero_order: 0,
       }
-      const screenshot = Buffer.alloc(10)
+      const screenshot = makeDecoded(8, 6)
 
       const result = await preprocessSlot(screenshot, slot)
 
+      // Crops read from the raw bitmap — no PNG re-decode per slot
+      expect(mockSharp).toHaveBeenCalledWith(screenshot.data, {
+        raw: { width: 8, height: 6, channels: 3 },
+      })
       expect(mockSharpChain.extract).toHaveBeenCalledWith({
         left: 100,
         top: 200,
@@ -82,7 +123,6 @@ describe('preprocessing', () => {
       // bilinear kernel matches the training pipeline's TF resize — lanczos
       // sharpening artifacts drop borderline classes below the 0.9 threshold
       expect(mockSharpChain.resize).toHaveBeenCalledWith(96, 96, { kernel: 'linear' })
-      expect(mockSharpChain.removeAlpha).toHaveBeenCalled()
       expect(mockSharpChain.raw).toHaveBeenCalled()
       expect(result).toBe(expectedOutput)
     })
@@ -99,7 +139,7 @@ describe('preprocessing', () => {
       ]
 
       const { batch, validIndices } = await preprocessBatch(
-        Buffer.alloc(100),
+        makeDecoded(),
         slots,
       )
 
@@ -118,7 +158,7 @@ describe('preprocessing', () => {
       ]
 
       const { batch, validIndices } = await preprocessBatch(
-        Buffer.alloc(100),
+        makeDecoded(),
         slots,
       )
 
@@ -138,7 +178,7 @@ describe('preprocessing', () => {
       ]
 
       const { batch, validIndices } = await preprocessBatch(
-        Buffer.alloc(100),
+        makeDecoded(),
         slots,
       )
 
@@ -148,7 +188,7 @@ describe('preprocessing', () => {
 
     it('returns empty batch for empty slots array', async () => {
       const { batch, validIndices } = await preprocessBatch(
-        Buffer.alloc(100),
+        makeDecoded(),
         [],
       )
 
@@ -168,7 +208,7 @@ describe('preprocessing', () => {
         { x: 50, y: 0, width: 50, height: 50, hero_order: 1 },
       ]
 
-      const { batch } = await preprocessBatch(Buffer.alloc(100), slots)
+      const { batch } = await preprocessBatch(makeDecoded(), slots)
 
       // First image should be all 10s, second all 20s
       expect(batch[0]).toBe(10)
