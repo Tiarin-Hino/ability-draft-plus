@@ -139,6 +139,7 @@ app.whenReady().then(async () => {
     appStore,
     iconCache,
     () => draftStore.getState().draftTimeline,
+    () => draftStore.getState().modelAssignments,
   )
   // Auto "My Spot" from GSI (playing mode) — re-applied after each initial scan
   const spotDetectionService = createSpotDetectionService(

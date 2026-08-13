@@ -82,6 +82,7 @@ export function createStreamServerService(
   appStore: AppStore,
   iconCache: IconCacheService,
   getPickEvents?: () => PickEvent[],
+  getModelAssignments?: () => Array<{ poolHeroOrder: number; playerIndex: number }>,
 ): StreamServerService {
   let server: Server | null = null
   let activePort: number | null = null
@@ -190,6 +191,7 @@ export function createStreamServerService(
       latestPayload,
       gsi: gsiInfo(),
       pickEvents: getPickEvents?.(),
+      modelAssignments: getModelAssignments?.(),
       meta: {
         language: appStore.getState().language,
         appVersion: app.getVersion(),

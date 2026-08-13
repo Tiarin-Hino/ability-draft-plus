@@ -99,6 +99,17 @@ export function createAutoRescanService(
   let targetRetries = 0
   /** Wall-clock ms of the last replay-mode periodic full rescan. */
   let lastReplayScanMs = 0
+  /**
+   * Model -> player attribution, keyed at FIRST-SEEN time: the pool tile greys
+   * exactly when the assigning player's turn ends (user-verified), so the turn
+   * that triggered the first-seen scan identifies the picker. The mapping is
+   * tentative until the two-scan persistence commit (commit time lags by one
+   * turn and must NOT be used for attribution).
+   */
+  const tentativeModelPicker = new Map<number, number>()
+  /** Accepted rescans this session — the 1st sweeps up all preview-time picks
+   * at once, so its timing carries no per-turn information. */
+  let acceptedRescans = 0
   /** Previous clock_time inside hero selection — rewind detector input. */
   let lastClockTime: number | null = null
   /** Sticky per draft session: a big clock rewind marked this as a replay. */
@@ -115,6 +126,8 @@ export function createAutoRescanService(
     lastReplayScanMs = 0
     lastClockTime = null
     replayDetected = false
+    tentativeModelPicker.clear()
+    acceptedRescans = 0
   }
 
   function handlePhaseChange(snapshot: GsiSnapshot): void {
@@ -265,7 +278,7 @@ export function createAutoRescanService(
         lastReplayScanMs = Date.now()
         pendingRows.clear()
         fullScanDue = false
-        await runRescan(undefined, snapshot.clockTime, null)
+        await runRescan(undefined, undefined, snapshot.clockTime, null)
         return
       }
 
@@ -291,8 +304,9 @@ export function createAutoRescanService(
 
       if (pendingRows.size === 0 && !fullScanDue) return
 
-      const heroOrders = fullScanDue ? undefined : [...pendingRows]
-      await runRescan(heroOrders, snapshot.clockTime, elapsedS)
+      const attributionRows = [...pendingRows]
+      const heroOrders = fullScanDue ? undefined : attributionRows
+      await runRescan(heroOrders, attributionRows, snapshot.clockTime, elapsedS)
 
     } catch (error) {
       logger.error('Auto-rescan tick failed', {
@@ -303,13 +317,83 @@ export function createAutoRescanService(
     }
   }
 
-  /** Run one rescan (targeted rows or full) and attribute new picks by row diff. */
+  /**
+   * Attribute model-tile changes to players. Newly PENDING tiles are mapped to
+   * the single turn that triggered this scan (ambiguous multi-turn scans and
+   * the first sweep-up rescan attribute nothing); newly COMMITTED tiles turn
+   * their tentative mapping into a stored assignment. The user's own model is
+   * attributed from GSI directly, which also overrides any tentative guess.
+   */
+  function attributeModelPicks(
+    prevPending: readonly number[],
+    prevPicked: readonly number[],
+    scannedRows: number[] | undefined,
+  ): void {
+    const state = draftStore.getState()
+    const { snapshot } = streamService.getGsiState()
+
+    const localNpc = snapshot?.localHeroNpcName ?? null
+    const localSlot = snapshot?.localPlayer?.slotIndex ?? null
+    const localDbName = localNpc ? localNpc.replace(/_/g, '') : null
+
+    // Tentative mapping at FIRST-SEEN time
+    const prevPendingSet = new Set(prevPending)
+    const newlyPending = state.pendingModelChanges.filter(
+      (order) => !prevPendingSet.has(order),
+    )
+    for (const order of newlyPending) {
+      const heroName = state.identifiedHeroModelsCache.find(
+        (m) => m.heroOrder === order,
+      )?.heroName
+      if (localDbName !== null && localSlot !== null && heroName === localDbName) {
+        tentativeModelPicker.set(order, localSlot)
+      } else if (acceptedRescans > 1 && scannedRows?.length === 1) {
+        tentativeModelPicker.set(order, scannedRows[0])
+      }
+    }
+    // Pending entries that neither persisted nor committed were flickers
+    const stillRelevant = new Set([
+      ...state.pendingModelChanges,
+      ...state.pickedModelHeroOrders,
+    ])
+    for (const order of [...tentativeModelPicker.keys()]) {
+      if (!stillRelevant.has(order)) tentativeModelPicker.delete(order)
+    }
+
+    // Commit: persist the tentative mapping as an assignment
+    const prevPickedSet = new Set(prevPicked)
+    const assignments: import('../store/draft-store').ModelAssignment[] = []
+    for (const order of state.pickedModelHeroOrders) {
+      if (prevPickedSet.has(order)) continue
+      const playerIndex = tentativeModelPicker.get(order)
+      tentativeModelPicker.delete(order)
+      if (playerIndex === undefined) {
+        logger.info('Model pick left unattributed (ambiguous timing)', { order })
+        continue
+      }
+      assignments.push({ poolHeroOrder: order, playerIndex })
+    }
+    if (assignments.length > 0) {
+      draftStore.getState().appendModelAssignments(assignments)
+      logger.info('Model picks attributed', { assignments })
+    }
+  }
+
+  /**
+   * Run one rescan (targeted rows or full) and attribute new picks by row diff.
+   * attributionRows = the turns whose end triggered this scan (independent of
+   * scan coverage: a round-break FULL scan still reads one specific turn's pick).
+   */
   async function runRescan(
     heroOrders: number[] | undefined,
+    attributionRows: number[] | undefined,
     clockTime: number | null,
     elapsedS: number | null,
   ): Promise<void> {
-    const prevSelected = draftStore.getState().selectedAbilitiesCache
+    const before = draftStore.getState()
+    const prevSelected = before.selectedAbilitiesCache
+    const prevPendingModels = before.pendingModelChanges
+    const prevPickedModels = before.pickedModelHeroOrders
 
     await scanTrigger.performScan(false, { heroOrders })
 
@@ -328,6 +412,9 @@ export function createAutoRescanService(
       }
       return
     }
+
+    acceptedRescans += 1
+    attributeModelPicks(prevPendingModels, prevPickedModels, attributionRows)
 
     const events = attributePicksByRow({
       prevSelected,

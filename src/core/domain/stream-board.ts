@@ -11,6 +11,7 @@ import type {
   StreamGsiInfo,
   StreamHeroRow,
   StreamPanels,
+  StreamPlayerModel,
   StreamPlayerRow,
 } from '@shared/types/stream'
 import {
@@ -52,6 +53,8 @@ export interface StreamBoardBuildInput {
   getPairSynergies?: (names: string[]) => PairSynergyInput[]
   /** Attributed pick timeline (experimental auto-rescan); last STREAM_PICK_FEED_LENGTH kept. */
   pickEvents?: PickEvent[]
+  /** Model -> player attribution from turn timing (playing mode; GSI covers spectate). */
+  modelAssignments?: Array<{ poolHeroOrder: number; playerIndex: number }>
 }
 
 const EMPTY_GSI: StreamGsiInfo = {
@@ -128,8 +131,26 @@ function buildPlayerRows(
   latestPayload: OverlayDataPayload | null,
   gsi: StreamGsiInfo,
   getPairSynergies: (names: string[]) => PairSynergyInput[],
+  heroRows: StreamHeroRow[],
+  initialPayload: OverlayDataPayload,
+  modelAssignments: Array<{ poolHeroOrder: number; playerIndex: number }>,
 ): StreamPlayerRow[] {
   const selected = latestPayload?.scanData?.selectedAbilities ?? []
+
+  // Scan-attributed model per player (playing mode fallback — GSI wins below)
+  const assignedByPlayer = new Map<number, StreamPlayerModel>()
+  for (const assignment of modelAssignments) {
+    const heroRow = heroRows.find((h) => h.heroOrder === assignment.poolHeroOrder)
+    const model = initialPayload.heroModels.find(
+      (m) => m.heroOrder === assignment.poolHeroOrder,
+    )
+    if (!heroRow || !model || model.dbHeroId === null) continue
+    assignedByPlayer.set(assignment.playerIndex, {
+      npcName: model.heroName,
+      displayName: model.heroDisplayName,
+      portraitPath: heroRow.portraitPath ?? heroIconPath(model.heroName),
+    })
+  }
 
   const rows: StreamPlayerRow[] = []
   for (let playerIndex = 0; playerIndex < PLAYER_COUNT; playerIndex++) {
@@ -163,7 +184,7 @@ function buildPlayerRows(
       playerName: gsi.playerNames[playerIndex] ?? null,
       model: gsiModel
         ? { ...gsiModel, portraitPath: heroIconPath(gsiModel.npcName) }
-        : null,
+        : (assignedByPlayer.get(playerIndex) ?? null),
       picks,
       draftScore,
     })
@@ -252,10 +273,19 @@ export function buildStreamBoardState(
     if (slot.name && slot.isUnknown !== true) pickedNames.add(slot.name)
   }
 
+  const heroes = buildHeroRows(initialPayload, latestPayload, pickedNames)
+
   return {
     phase: 'drafting',
-    heroes: buildHeroRows(initialPayload, latestPayload, pickedNames),
-    players: buildPlayerRows(latestPayload, gsi, getPairSynergies),
+    heroes,
+    players: buildPlayerRows(
+      latestPayload,
+      gsi,
+      getPairSynergies,
+      heroes,
+      initialPayload,
+      input.modelAssignments ?? [],
+    ),
     panels: buildPanels(latestPayload, pickedNames),
     gsi,
     ...(input.pickEvents && input.pickEvents.length > 0

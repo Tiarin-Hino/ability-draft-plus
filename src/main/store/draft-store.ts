@@ -39,8 +39,18 @@ export interface DraftSessionSlice {
   pendingModelChanges: number[]
   /** Pool hero orders whose model was detected as picked (never reverts). */
   pickedModelHeroOrders: number[]
+  /** Model -> player attribution (auto-rescan turn timing + GSI self). */
+  modelAssignments: ModelAssignment[]
   /** Attributed pick events (experimental auto-rescan); empty otherwise. */
   draftTimeline: PickEvent[]
+}
+
+/** A picked hero model attributed to the player who drafted it. */
+export interface ModelAssignment {
+  /** Pool hero row 0-11. */
+  poolHeroOrder: number
+  /** Player index 0-9 (scan convention). */
+  playerIndex: number
 }
 
 export interface DraftStoreActions {
@@ -48,6 +58,7 @@ export interface DraftStoreActions {
   selectMySpot(dbHeroId: number | null, heroOrder: number | null): void
   selectMyModel(dbHeroId: number | null, heroOrder: number | null): void
   appendPickEvents(events: PickEvent[]): void
+  appendModelAssignments(assignments: ModelAssignment[]): void
   clearDraftTimeline(): void
 }
 
@@ -69,6 +80,7 @@ export function createDraftStore() {
     modelTileBaselines: [],
     pendingModelChanges: [],
     pickedModelHeroOrders: [],
+    modelAssignments: [],
     draftTimeline: [],
 
     // Actions
@@ -87,6 +99,7 @@ export function createDraftStore() {
         modelTileBaselines: [],
         pendingModelChanges: [],
         pickedModelHeroOrders: [],
+        modelAssignments: [],
         draftTimeline: [],
       }),
 
@@ -105,6 +118,11 @@ export function createDraftStore() {
     appendPickEvents: (events) =>
       set((state) => ({ draftTimeline: [...state.draftTimeline, ...events] })),
 
-    clearDraftTimeline: () => set({ draftTimeline: [] }),
+    appendModelAssignments: (assignments) =>
+      set((state) => ({
+        modelAssignments: [...state.modelAssignments, ...assignments],
+      })),
+
+    clearDraftTimeline: () => set({ draftTimeline: [], modelAssignments: [] }),
   }))
 }
