@@ -49,6 +49,21 @@ export const MODEL_PICK_DIFF_THRESHOLD = 10
 // resolves in ~1.5s instead of waiting a full turn for the next scheduled scan.
 export const MODEL_PICK_CONFIRM_DELAY_MS = 1_500
 
+// GSI slot <-> scan row correlation via player-card diffing (spectate/replay).
+// The 10 player cards on the draft screen show pixel-static "NO HERO" art until
+// that row's player drafts a model, then switch to ANIMATED hero art — a change
+// that persists against the baseline on every later scan. Cards are normalized
+// to a small square for comparison (same rationale as model tiles; the downscale
+// also absorbs the spectator layout's slight coordinate nudges).
+export const PLAYER_CARD_COMPARE_SIZE = 48
+export const PLAYER_CARD_DIFF_THRESHOLD = 10
+// Matching window between a GSI "slot S gained hero H" event and a card row's
+// first-read-changed time. BEFORE covers GSI lagging the screen (throttle /
+// 10s heartbeat); AFTER covers the scan cadence reaching the changed card
+// (5s replay interval or ~7s turn spacing, plus processing).
+export const SLOT_MAP_EVENT_SLACK_BEFORE_MS = 10_000
+export const SLOT_MAP_EVENT_SLACK_AFTER_MS = 20_000
+
 // Experimental auto-rescan (GSI-driven draft tracking).
 // Fallback auto INITIAL scan: fires this long after the draft clock is first
 // identified (hero selection + clock_time present) when the user hasn't run

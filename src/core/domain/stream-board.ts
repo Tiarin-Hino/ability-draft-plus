@@ -58,12 +58,20 @@ export interface StreamBoardBuildInput {
   pickEvents?: PickEvent[]
   /** Model -> player attribution from turn timing (playing mode; GSI covers spectate). */
   modelAssignments?: Array<{ poolHeroOrder: number; playerIndex: number }>
+  /**
+   * Learned GSI slot -> scan row mappings (spectate/replay). GSI's within-team
+   * slot order does not match the draft screen's row order, so in spectate mode
+   * GSI names/models are ONLY placed on rows with a committed mapping — an
+   * unmapped row shows no name rather than a probably-wrong one.
+   */
+  slotRowMappings?: Array<{ gsiSlot: number; scanRow: number }>
 }
 
 const EMPTY_GSI: StreamGsiInfo = {
   connected: false,
   gamePhase: null,
   clockTime: null,
+  spectating: false,
   playerNames: [],
   playerModels: [],
 }
@@ -141,8 +149,16 @@ function buildPlayerRows(
   heroRows: StreamHeroRow[],
   initialPayload: OverlayDataPayload,
   modelAssignments: Array<{ poolHeroOrder: number; playerIndex: number }>,
+  slotRowMappings: Array<{ gsiSlot: number; scanRow: number }>,
 ): StreamPlayerRow[] {
   const selected = latestPayload?.scanData?.selectedAbilities ?? []
+
+  // Spectate: GSI arrays are slot-indexed and the within-team slot order does
+  // NOT match the board's row order — only a correlated mapping may place a
+  // name/model on a row. Playing: the index IS the row (validated team_slot).
+  const slotByRow = new Map(slotRowMappings.map((m) => [m.scanRow, m.gsiSlot]))
+  const gsiSlotForRow = (row: number): number | null =>
+    gsi.spectating ? (slotByRow.get(row) ?? null) : row
 
   // Scan-attributed model per player (playing mode fallback — GSI wins below)
   const assignedByPlayer = new Map<number, StreamPlayerModel>()
@@ -188,12 +204,13 @@ function buildPlayerRows(
           )
         : null
 
-    const gsiModel = gsi.playerModels[playerIndex] ?? null
+    const gsiSlot = gsiSlotForRow(playerIndex)
+    const gsiModel = gsiSlot !== null ? (gsi.playerModels[gsiSlot] ?? null) : null
 
     rows.push({
       playerIndex,
       team: playerIndex < PLAYER_COUNT / 2 ? 'radiant' : 'dire',
-      playerName: gsi.playerNames[playerIndex] ?? null,
+      playerName: gsiSlot !== null ? (gsi.playerNames[gsiSlot] ?? null) : null,
       model: gsiModel
         ? { ...gsiModel, portraitPath: heroIconPath(gsiModel.npcName) }
         : (assignedByPlayer.get(playerIndex) ?? null),
@@ -297,6 +314,7 @@ export function buildStreamBoardState(
       heroes,
       initialPayload,
       input.modelAssignments ?? [],
+      input.slotRowMappings ?? [],
     ),
     panels: buildPanels(latestPayload, pickedNames),
     gsi,

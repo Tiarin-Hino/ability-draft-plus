@@ -83,6 +83,7 @@ export function createStreamServerService(
   iconCache: IconCacheService,
   getPickEvents?: () => PickEvent[],
   getModelAssignments?: () => Array<{ poolHeroOrder: number; playerIndex: number }>,
+  getSlotRowMappings?: () => Array<{ gsiSlot: number; scanRow: number }>,
 ): StreamServerService {
   let server: Server | null = null
   let activePort: number | null = null
@@ -171,6 +172,9 @@ export function createStreamServerService(
       connected,
       gamePhase: connected ? (gsiSnapshot?.gamePhase ?? null) : null,
       clockTime: connected ? (gsiSnapshot?.clockTime ?? null) : null,
+      spectating: gsiSnapshot
+        ? gsiSnapshotMode(gsiSnapshot) === 'spectating'
+        : false,
       playerNames,
       playerModels,
     }
@@ -192,6 +196,7 @@ export function createStreamServerService(
       gsi: gsiInfo(),
       pickEvents: getPickEvents?.(),
       modelAssignments: getModelAssignments?.(),
+      slotRowMappings: getSlotRowMappings?.(),
       meta: {
         language: appStore.getState().language,
         appVersion: app.getVersion(),

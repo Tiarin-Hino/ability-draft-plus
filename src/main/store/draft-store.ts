@@ -3,6 +3,12 @@ import type { ScanResult } from '@shared/types'
 import type { PickEvent } from '@shared/types/stream'
 import type { IdentifiedHeroModel } from '@core/domain/types'
 import type { ModelTileCapture } from '@core/domain/model-pick-detection'
+import type {
+  PlayerCardCapture,
+  CardRowState,
+  GsiHeroEvent,
+  SlotRowMapping,
+} from '@core/domain/slot-row-correlation'
 
 // @DEV-GUIDE: Ephemeral draft session state, main-process-only (NOT synced via @zubridge).
 // Holds mutable caches and user selections that only exist during an active overlay session:
@@ -43,6 +49,15 @@ export interface DraftSessionSlice {
   modelAssignments: ModelAssignment[]
   /** Attributed pick events (experimental auto-rescan); empty otherwise. */
   draftTimeline: PickEvent[]
+  /** Player cards captured at initial scan (NO HERO reference for the GSI
+   * slot <-> scan row correlation; see slot-row-correlation.ts). */
+  playerCardBaselines: PlayerCardCapture[]
+  /** Per-row card change state (pending/changed + first-seen times). */
+  playerCardRows: CardRowState[]
+  /** Unresolved GSI "slot gained a hero" events (spectate/replay). */
+  gsiHeroEvents: GsiHeroEvent[]
+  /** Committed GSI slot <-> scan row mappings (sticky for the draft). */
+  slotRowMappings: SlotRowMapping[]
 }
 
 /** A picked hero model attributed to the player who drafted it. */
@@ -82,6 +97,10 @@ export function createDraftStore() {
     pickedModelHeroOrders: [],
     modelAssignments: [],
     draftTimeline: [],
+    playerCardBaselines: [],
+    playerCardRows: [],
+    gsiHeroEvents: [],
+    slotRowMappings: [],
 
     // Actions
     resetSession: () =>
@@ -101,6 +120,10 @@ export function createDraftStore() {
         pickedModelHeroOrders: [],
         modelAssignments: [],
         draftTimeline: [],
+        playerCardBaselines: [],
+        playerCardRows: [],
+        gsiHeroEvents: [],
+        slotRowMappings: [],
       }),
 
     selectMySpot: (dbHeroId, heroOrder) =>

@@ -11,7 +11,10 @@ import { createOnnxClassifier } from '@core/ml/onnx-classifier'
 import { preprocessBatch, cropTile } from '@core/ml/preprocessing'
 import type { DecodedScreenshot } from '@core/ml/preprocessing'
 import type { ClassifierResult } from '@core/ml/classifier'
-import { MODEL_TILE_COMPARE_SIZE } from '@shared/constants/thresholds'
+import {
+  MODEL_TILE_COMPARE_SIZE,
+  PLAYER_CARD_COMPARE_SIZE,
+} from '@shared/constants/thresholds'
 
 // @DEV-GUIDE: ML Worker thread entry point. Runs as a Node.js worker_thread, spawned by MlService.
 // Handles two operations: init (load ONNX model) and scan (classify ability icons).
@@ -35,7 +38,9 @@ import { MODEL_TILE_COMPARE_SIZE } from '@shared/constants/thresholds'
 // For rescan: processes only the selected-ability slots.
 // Every scan additionally captures the 12 model portrait tiles (models_coords) as
 // normalized raw crops — the scan-processor diffs them against the initial-scan
-// baseline to detect picked models (see core/domain/model-pick-detection.ts).
+// baseline to detect picked models (see core/domain/model-pick-detection.ts) —
+// plus the 10 player cards (heroes_coords) for the GSI slot <-> scan row
+// correlation (see core/domain/slot-row-correlation.ts).
 
 if (!parentPort) {
   throw new Error('ml-worker must run as a worker thread')
@@ -150,17 +155,20 @@ async function handleScan(payload: {
   // Model portrait tiles for picked-model diff detection — captured every scan
   // (~10ms for 12 small crops from the already-decoded bitmap)
   const modelTiles = await captureModelTiles(screenshot, coords)
+  // Player cards for GSI slot <-> scan row correlation — same cost profile
+  const playerCardTiles = await capturePlayerCardTiles(screenshot, coords)
 
   const response: MlWorkerSuccessResponse = {
     status: 'success',
     results,
     isInitialScan,
     modelTiles,
+    playerCardTiles,
   }
-  parentPort!.postMessage(
-    response,
-    modelTiles?.map((t) => t.tile) ?? [],
-  )
+  parentPort!.postMessage(response, [
+    ...(modelTiles?.map((t) => t.tile) ?? []),
+    ...(playerCardTiles?.map((t) => t.tile) ?? []),
+  ])
 }
 
 /** Crop + normalize the 12 model portrait tiles; undefined when unavailable. */
@@ -182,6 +190,38 @@ async function captureModelTiles(
       })
     } catch {
       // Out-of-bounds crop (layout drift) — skip this tile
+    }
+  }
+  return tiles.length > 0 ? tiles : undefined
+}
+
+/**
+ * Crop + normalize the 10 player-card regions. heroes_coords entries carry only
+ * x/y — the shared card dimensions live in heroes_params.
+ */
+async function capturePlayerCardTiles(
+  screenshot: DecodedScreenshot,
+  coords: ResolutionLayout,
+): Promise<{ row: number; tile: ArrayBuffer }[] | undefined> {
+  const heroCoords = coords.heroes_coords
+  const params = coords.heroes_params
+  if (!heroCoords || heroCoords.length === 0) return undefined
+  if (!params || params.width <= 0 || params.height <= 0) return undefined
+
+  const tiles: { row: number; tile: ArrayBuffer }[] = []
+  for (const c of heroCoords) {
+    try {
+      const raw = await cropTile(
+        screenshot,
+        { ...c, width: params.width, height: params.height },
+        PLAYER_CARD_COMPARE_SIZE,
+      )
+      tiles.push({
+        row: c.hero_order,
+        tile: raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength),
+      })
+    } catch {
+      // Out-of-bounds crop (layout drift) — skip this card
     }
   }
   return tiles.length > 0 ? tiles : undefined

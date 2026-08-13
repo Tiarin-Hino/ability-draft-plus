@@ -161,6 +161,7 @@ describe('buildStreamBoardState', () => {
           connected: true,
           gamePhase: 'DOTA_GAMERULES_STATE_HERO_SELECTION',
           clockTime: 0,
+          spectating: false,
           playerNames: [],
           playerModels: Object.assign(Array.from({ length: 10 }, () => null), {
             1: { npcName: 'sand_king', displayName: 'Sand King' },
@@ -247,6 +248,7 @@ describe('buildStreamBoardState', () => {
           connected: true,
           gamePhase: 'DOTA_GAMERULES_STATE_HERO_SELECTION',
           clockTime: 42,
+          spectating: false,
           playerNames: ['Alice', null, null, null, null, null, null, 'Bob', null, null],
           playerModels: [
             { npcName: 'sand_king', displayName: 'Sand King' },
@@ -271,6 +273,57 @@ describe('buildStreamBoardState', () => {
     expect(state.players[7].picks.map((p) => p.name)).toEqual(['hero1_slot1'])
     expect(state.players[1].picks).toEqual([])
     expect(state.players[1].draftScore).toBeNull()
+  })
+
+  it('places spectate GSI names/models only through slot-row mappings', () => {
+    const state = buildStreamBoardState(
+      makeInput({
+        gsi: {
+          connected: true,
+          gamePhase: 'DOTA_GAMERULES_STATE_HERO_SELECTION',
+          clockTime: 42,
+          spectating: true,
+          playerNames: ['Alice', 'Carol', null, null, null, null, null, 'Bob', null, null],
+          playerModels: Object.assign(Array.from({ length: 10 }, () => null), {
+            0: { npcName: 'sand_king', displayName: 'Sand King' },
+          }),
+        },
+        // GSI slot 0 ("Alice") sits on board row 2; slot 7 ("Bob") on row 9
+        slotRowMappings: [
+          { gsiSlot: 0, scanRow: 2 },
+          { gsiSlot: 7, scanRow: 9 },
+        ],
+      }),
+    )
+
+    expect(state.players[2].playerName).toBe('Alice')
+    expect(state.players[2].model?.npcName).toBe('sand_king')
+    expect(state.players[9].playerName).toBe('Bob')
+    // Slot 1 ("Carol") has no mapping — identity placement would be a guess,
+    // so her name appears nowhere
+    expect(state.players.filter((p) => p.playerName === 'Carol')).toEqual([])
+    // Unmapped rows show nothing rather than a wrong name
+    expect(state.players[0].playerName).toBeNull()
+    expect(state.players[0].model).toBeNull()
+    expect(state.players[7].playerName).toBeNull()
+  })
+
+  it('keeps identity placement while playing even when mappings exist', () => {
+    const state = buildStreamBoardState(
+      makeInput({
+        gsi: {
+          connected: true,
+          gamePhase: 'DOTA_GAMERULES_STATE_HERO_SELECTION',
+          clockTime: 42,
+          spectating: false,
+          playerNames: ['Alice', null, null, null, null, null, null, null, null, null],
+          playerModels: [],
+        },
+        slotRowMappings: [{ gsiSlot: 0, scanRow: 2 }],
+      }),
+    )
+    expect(state.players[0].playerName).toBe('Alice')
+    expect(state.players[2].playerName).toBeNull()
   })
 
   it('computes draft scores through the provided synergy lookup', () => {
