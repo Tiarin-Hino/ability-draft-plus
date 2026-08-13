@@ -1,13 +1,16 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { StreamGsiInfo } from '@shared/types/stream'
+import type { StreamGsiInfo, StreamPlayerRow } from '@shared/types/stream'
 import { apiBase } from '../hooks/use-stream-state'
 import type { StreamConnectionState } from '../hooks/use-stream-state'
+import medallionUrl from '../assets/ui/clock-medallion.png'
 
 // @DEV-GUIDE: Broadcast top bar: ABILITY DRAFT wordmark + optional tournament title
-// (?title= query param), a phase/clock chip fed by GSI, and the connection dot.
-// The right side is intentionally EMPTY — a reserved zone where productions stack
-// their own OBS sources (sponsor logos, series score). ?demo=1 outlines it.
+// (?title= query param), the gold medallion draft clock (GSI) flanked by per-player
+// gem sockets (a gem lights when that player has drafted at least one ability), and
+// the connection dot. The right side is intentionally EMPTY — a reserved zone where
+// productions stack their own OBS sources (sponsor logos, series score). ?demo=1
+// outlines it.
 
 function formatClock(clockTime: number | null): string | null {
   if (clockTime === null) return null
@@ -32,16 +35,33 @@ function LogoPlate() {
   )
 }
 
+function TurnGems({ team, players }: { team: 'radiant' | 'dire'; players: StreamPlayerRow[] }) {
+  const teamPlayers = players.filter((p) => p.team === team)
+  const lit = teamPlayers.filter((p) => p.picks.some((s) => s !== null)).length
+  return (
+    <div className={`turn-gems turn-gems-${team}`}>
+      {teamPlayers.map((_, i) => {
+        // Gems fill toward the medallion: right-to-left for radiant (left of the
+        // clock), left-to-right for dire (right of it)
+        const isLit = team === 'radiant' ? i >= teamPlayers.length - lit : i < lit
+        return <span key={i} className={`turn-gem${isLit ? ' turn-gem-lit' : ''}`} />
+      })}
+    </div>
+  )
+}
+
 export function TopBar({
   title,
   gsi,
   connection,
   demo,
+  players,
 }: {
   title: string | null
   gsi: StreamGsiInfo
   connection: StreamConnectionState
   demo: boolean
+  players: StreamPlayerRow[]
 }) {
   const { t } = useTranslation()
   const clock = formatClock(gsi.clockTime)
@@ -56,7 +76,18 @@ export function TopBar({
       </div>
 
       <div className="top-bar-center">
-        {gsi.connected && clock && <span className="clock-chip">{clock}</span>}
+        {gsi.connected && clock && (
+          <>
+            <TurnGems team="radiant" players={players} />
+            <div
+              className="clock-medallion"
+              style={{ backgroundImage: `url(${medallionUrl})` }}
+            >
+              <span className="clock-time">{clock}</span>
+            </div>
+            <TurnGems team="dire" players={players} />
+          </>
+        )}
       </div>
 
       <div className={`reserved-zone reserved-top${demo ? ' reserved-visible' : ''}`}>

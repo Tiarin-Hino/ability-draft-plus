@@ -9,6 +9,51 @@
   box-sizing: border-box;
 }
 
+/* Custom fonts built from design/fonts/ sheets by scripts/build-stream-fonts.mjs.
+   Display: chiseled caps (A-Z, 0-9, basic punctuation) for headings — ONLY safe
+   on uppercase(d) text; there is no lowercase, and non-Latin glyphs (RU locale,
+   player names) fall back to the system stack per glyph.
+   Score: condensed tabular digits + %:.- for winrates, scores, and the clock. */
+@font-face {
+  font-family: 'ADPlus Display';
+  src: url('./assets/fonts/adplus-display.otf') format('opentype');
+  font-display: block;
+}
+@font-face {
+  font-family: 'ADPlus Score';
+  src: url('./assets/fonts/adplus-score.otf') format('opentype');
+  font-display: block;
+}
+
+:root {
+  --font-display: 'ADPlus Display', 'Trebuchet MS', serif;
+  --font-score: 'ADPlus Score', 'Segoe UI', sans-serif;
+}
+
+/* Display face on every all-caps heading element */
+.top-bar-wordmark,
+.top-bar-title,
+.waiting-wordmark,
+.pool-section-title,
+.team-title,
+.player-hero-line,
+.panel-title,
+.pick-ticker-label,
+.demo-badge,
+.reserved-zone {
+  font-family: var(--font-display);
+}
+
+/* Score face on every numeric readout */
+.tile-winrate,
+.player-score,
+.team-score,
+.clock-chip,
+.avg-pick,
+.combo-winrate {
+  font-family: var(--font-score);
+}
+
 :root {
   /* Palette: Dota-adjacent graphite + team identities */
   --bg-deep: #0b0d11;
@@ -152,8 +197,15 @@ body,
   padding: 0 1.1rem;
   background: var(--panel);
   border: 1px solid var(--panel-border);
+  /* Double gold hairline, broadcast-frame style */
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.4),
+    inset 0 0 0 2px rgba(201, 163, 76, 0.22);
   border-radius: 0.55rem;
   flex-shrink: 0;
+  /* The clock medallion hangs below the bar and must paint over the board */
+  position: relative;
+  z-index: 5;
 }
 
 .top-bar-brand {
@@ -192,18 +244,67 @@ body,
 
 .top-bar-center {
   display: flex;
+  align-items: center;
   justify-content: center;
+  gap: 0.7rem;
 }
 
-.clock-chip {
-  padding: 0.15rem 0.85rem;
-  background: rgba(0, 0, 0, 0.45);
-  border: 1px solid var(--panel-border);
-  border-radius: 0.35rem;
-  font-size: 1.05rem;
+/* Gold laurel medallion (design/ui/clock-medallion.png) hanging through the
+   bar's bottom edge; the ring occupies the top ~33% of the (tall) art, so the
+   time sits at the ring's center, not the box's. The bar needs z-index so the
+   hanging part paints over the board below. */
+.clock-medallion {
+  width: 3.4rem;
+  height: 5.1rem;
+  margin-bottom: -2.6rem;
+  transform: translateY(-0.45rem);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: top center;
+  position: relative;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.6));
+}
+.clock-time {
+  position: absolute;
+  top: 33%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: var(--font-score);
+  font-size: 0.95rem;
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
+  color: var(--gold);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+/* Per-player gem sockets flanking the medallion (lit = has drafted) */
+.turn-gems {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.turn-gem {
+  width: 0.95rem;
+  height: 0.95rem;
+  background: center / contain no-repeat;
+  filter: grayscale(0.9) brightness(0.45);
+  opacity: 0.55;
+}
+.turn-gems-radiant .turn-gem {
+  background-image: url('./assets/ui/gem-radiant.png');
+}
+.turn-gems-dire .turn-gem {
+  background-image: url('./assets/ui/gem-dire.png');
+}
+.turn-gem-lit {
+  filter: none;
+  opacity: 1;
+}
+.turn-gems-radiant .turn-gem-lit {
+  filter: drop-shadow(0 0 4px rgba(111, 191, 74, 0.6));
+}
+.turn-gems-dire .turn-gem-lit {
+  filter: drop-shadow(0 0 4px rgba(211, 75, 58, 0.6));
 }
 
 .demo-badge {
@@ -404,18 +505,18 @@ body,
   );
 }
 
-/* ── Tiles (kept from the original board: winrate badge, gold top-tier,
-      grey picked, amber unknown) with a stone-bezel frame like the game ── */
+/* ── Tiles: carved stone-and-gold frames cut from design/ui/tile-frames.png
+      (border-image keeps only the frame ring; the icon fills the content box).
+      States swap the frame source: gold glow top-tier, silvered picked, ember
+      unknown, engraved-emblem empty. ── */
 .tile {
   position: relative;
   width: 3.55rem;
   height: 3.55rem;
-  border-radius: 0.3rem;
   background: var(--bezel-dark);
-  border: 2px solid var(--bezel);
-  box-shadow:
-    inset 0 0 0 1px rgba(0, 0, 0, 0.7),
-    0 2px 5px rgba(0, 0, 0, 0.5);
+  border: 0.32rem solid transparent;
+  border-image: url('./assets/ui/tile-frame-normal.png') 84 stretch;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -423,12 +524,13 @@ body,
 .tile-large {
   width: 4.15rem;
   height: 4.15rem;
+  border-width: 0.38rem;
 }
 
 .tile-small {
   width: 2.7rem;
   height: 2.7rem;
-  border-width: 1px;
+  border-width: 0.26rem;
 }
 
 .tile-icon {
@@ -467,26 +569,42 @@ body,
 }
 
 .tile-top-tier {
-  border-color: var(--gold);
-  box-shadow:
-    inset 0 0 0 1px rgba(0, 0, 0, 0.7),
-    0 0 9px rgba(201, 163, 76, 0.45);
+  border-image-source: url('./assets/ui/tile-frame-toptier.png');
+  box-shadow: 0 0 9px rgba(201, 163, 76, 0.45);
 }
 
 .tile-unknown {
-  border-color: var(--unknown);
-  border-style: dashed;
+  border-image-source: url('./assets/ui/tile-frame-unknown.png');
 }
 
 .tile-picked {
+  border-image-source: url('./assets/ui/tile-frame-picked.png');
   opacity: var(--picked-opacity);
   filter: grayscale(1);
 }
 
+/* Empty slot: the full engraved-emblem frame art as background (no icon to
+   make room for), plus a faint team sigil watermark inside team columns */
 .tile-empty {
-  background: rgba(20, 24, 31, 0.55);
-  border: 1px dashed rgba(255, 255, 255, 0.13);
+  border: 0;
+  border-image: none;
+  background:
+    url('./assets/ui/tile-frame-empty.png') center / 100% 100% no-repeat,
+    rgba(20, 24, 31, 0.55);
   box-shadow: none;
+}
+.tile-empty::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: center / 46% no-repeat;
+  opacity: 0.2;
+}
+.team-radiant .tile-empty::after {
+  background-image: url('./assets/ui/sigil-radiant.png');
+}
+.team-dire .tile-empty::after {
+  background-image: url('./assets/ui/sigil-dire.png');
 }
 
 /* ── Team columns ─────────────────────────────────────────────────────── */
@@ -662,10 +780,11 @@ body,
   align-items: flex-end;
 }
 
+/* Mockup-derived hierarchy: small gold hero name over a BIG white player name */
 .player-hero-line {
-  font-size: 0.82rem;
+  font-size: 0.68rem;
   font-weight: 800;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -673,11 +792,8 @@ body,
   max-width: 100%;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
-.team-accent-radiant .player-hero-line {
-  color: var(--radiant);
-}
-.team-accent-dire .player-hero-line {
-  color: var(--dire);
+.player-hero-line {
+  color: var(--gold);
 }
 
 .player-name-line {
@@ -689,13 +805,30 @@ body,
 }
 
 .player-name {
-  font-size: 0.92rem;
-  font-weight: 600;
+  font-size: 1.08rem;
+  font-weight: 700;
   color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+/* No model picked yet: a faint team crest fills the art side of the card */
+.player-card-vacant::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: center right 0.6rem / auto 78% no-repeat;
+  opacity: 0.14;
+}
+.team-accent-radiant.player-card-vacant::before {
+  background-image: url('./assets/ui/crest-radiant.png');
+}
+.team-accent-dire.player-card-vacant::before {
+  background-image: url('./assets/ui/crest-dire.png');
+  background-position: center left 0.6rem;
 }
 
 /* Gold score medallion pinned to the card's outer edge */

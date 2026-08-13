@@ -94,6 +94,7 @@ function App(): React.ReactElement {
         gsi={board.gsi}
         connection={connection}
         demo={demo}
+        players={board.players}
       />
 
       <main className="board-main">
