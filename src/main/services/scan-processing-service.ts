@@ -38,7 +38,7 @@ export function createScanProcessingService(
   windowManager: WindowManager,
   streamService?: Pick<
     import('./stream-server-service').StreamServerService,
-    'onScanProcessed'
+    'onScanProcessed' | 'getGsiState'
   >,
   spotDetection?: Pick<
     import('./spot-detection-service').SpotDetectionService,
@@ -73,10 +73,15 @@ export function createScanProcessingService(
           return
         }
 
+        // While SPECTATING, GSI is the authoritative model-pick source and the
+        // spectator draft screen's coordinate offsets make tile diffs garbage
+        // (observed: 'Unknown Hero' commits) — drop the tiles entirely.
+        const gsiSnapshot = streamService?.getGsiState().snapshot
+        const spectating = (gsiSnapshot?.players.length ?? 0) > 0
         const output = processScanResults({
           rawResults: results,
           isInitialScan,
-          modelTiles,
+          modelTiles: spectating ? undefined : modelTiles,
           state: {
             initialPoolAbilitiesCache: state.initialPoolAbilitiesCache,
             identifiedHeroModelsCache: state.identifiedHeroModelsCache,

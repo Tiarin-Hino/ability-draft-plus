@@ -18,6 +18,7 @@ import {
   AUTO_RESCAN_TICK_MS,
   AUTO_RESCAN_PICK_VISIBLE_DELAY_S,
   AUTO_RESCAN_MAX_TARGET_RETRIES,
+  AUTO_RESCAN_SPECTATE_INTERVAL_MS,
 } from '@shared/constants/thresholds'
 
 // @DEV-GUIDE: EXPERIMENTAL GSI-driven TURN-CLOCK auto-rescan (disabled by default —
@@ -39,8 +40,13 @@ import {
 // the queued rows and retry next tick, up to AUTO_RESCAN_MAX_TARGET_RETRIES.
 //
 // Fallback auto INITIAL scan: if the user never pressed the initial-scan hotkey,
-// the pool is scanned automatically AUTO_INITIAL_SCAN_DELAY_S after the draft clock
-// is first identified (hero selection + clock_time present) — one attempt per draft.
+// the pool is scanned automatically autoInitialScanDelayS (setting) after the draft
+// clock is first identified (hero selection + clock_time present) — one attempt per draft.
+//
+// SPECTATING is different: DotaTV playback buffers state into chunks and seeking
+// rewinds the clock, so the turn schedule is meaningless — spectated drafts use
+// plain periodic FULL rescans (AUTO_RESCAN_SPECTATE_INTERVAL_MS) instead, with the
+// same row-diff attribution. Model picks come from GSI there, not tile diffing.
 //
 // Gates per tick (ALL must hold): setting on, overlay active, ML idle, GSI
 // connected and in hero selection; the turn logic additionally needs an initial
@@ -82,6 +88,8 @@ export function createAutoRescanService(
   /** True when a queued turn completed a round — escalate to a full rescan. */
   let fullScanDue = false
   let targetRetries = 0
+  /** Wall-clock ms of the last spectate-mode periodic full rescan. */
+  let lastSpectateScanMs = 0
 
   function resetDraftSession(): void {
     draftClockSeenAtMs = null
@@ -213,6 +221,24 @@ export function createAutoRescanService(
         return
       }
 
+      // SPECTATING: DotaTV playback delivers state in buffered chunks and
+      // seeking rewinds the clock (observed live: clock back at -59 with the
+      // schedule at 38s) — the turn schedule cannot be trusted. Fall back to
+      // plain periodic FULL rescans; attribution stays row-diff-correct.
+      if (gsiSnapshotMode(snapshot) === 'spectating') {
+        if (
+          Date.now() - lastSpectateScanMs <
+          AUTO_RESCAN_SPECTATE_INTERVAL_MS
+        ) {
+          return
+        }
+        lastSpectateScanMs = Date.now()
+        pendingRows.clear()
+        fullScanDue = false
+        await runRescan(undefined, snapshot.clockTime, null)
+        return
+      }
+
       if (pickAnchorMs === null) return
 
       const elapsedS = (Date.now() - pickAnchorMs) / 1000
@@ -235,50 +261,9 @@ export function createAutoRescanService(
 
       if (pendingRows.size === 0 && !fullScanDue) return
 
-      const store = draftStore.getState()
-      const prevSelected = store.selectedAbilitiesCache
       const heroOrders = fullScanDue ? undefined : [...pendingRows]
+      await runRescan(heroOrders, snapshot.clockTime, elapsedS)
 
-      await scanTrigger.performScan(false, { heroOrders })
-
-      const after = draftStore.getState()
-      if (after.lastRescanRejected || after.lastRescanHasty) {
-        // Tooltip over the rows — capture void, state untouched. Retry next
-        // tick; past the cap, drop and let the round-break full scan catch up.
-        targetRetries += 1
-        if (targetRetries > AUTO_RESCAN_MAX_TARGET_RETRIES) {
-          logger.warn('Targeted rescan retry cap hit; deferring to round break', {
-            rows: [...pendingRows],
-          })
-          pendingRows.clear()
-          fullScanDue = false
-          targetRetries = 0
-        }
-        return
-      }
-
-      const events = attributePicksByRow({
-        prevSelected,
-        nextSelected: after.selectedAbilitiesCache,
-        nextSeq: after.draftTimeline.length,
-        clockTime: snapshot.clockTime,
-      })
-
-      logger.info('Turn-driven rescan complete', {
-        targeted: heroOrders ?? 'full',
-        newPicks: events.length,
-        clockTime: snapshot.clockTime,
-        elapsedS: Math.round(elapsedS),
-      })
-
-      pendingRows.clear()
-      fullScanDue = false
-      targetRetries = 0
-
-      if (events.length > 0) {
-        draftStore.getState().appendPickEvents(events)
-      }
-      streamService.refresh()
     } catch (error) {
       logger.error('Auto-rescan tick failed', {
         error: error instanceof Error ? error.message : String(error),
@@ -286,6 +271,56 @@ export function createAutoRescanService(
     } finally {
       tickRunning = false
     }
+  }
+
+  /** Run one rescan (targeted rows or full) and attribute new picks by row diff. */
+  async function runRescan(
+    heroOrders: number[] | undefined,
+    clockTime: number | null,
+    elapsedS: number | null,
+  ): Promise<void> {
+    const prevSelected = draftStore.getState().selectedAbilitiesCache
+
+    await scanTrigger.performScan(false, { heroOrders })
+
+    const after = draftStore.getState()
+    if (after.lastRescanRejected || after.lastRescanHasty) {
+      // Tooltip over the rows — capture void, state untouched. Retry next
+      // tick; past the cap, drop and let the round-break full scan catch up.
+      targetRetries += 1
+      if (targetRetries > AUTO_RESCAN_MAX_TARGET_RETRIES) {
+        logger.warn('Targeted rescan retry cap hit; deferring to round break', {
+          rows: [...pendingRows],
+        })
+        pendingRows.clear()
+        fullScanDue = false
+        targetRetries = 0
+      }
+      return
+    }
+
+    const events = attributePicksByRow({
+      prevSelected,
+      nextSelected: after.selectedAbilitiesCache,
+      nextSeq: after.draftTimeline.length,
+      clockTime,
+    })
+
+    logger.info('Turn-driven rescan complete', {
+      targeted: heroOrders ?? 'full',
+      newPicks: events.length,
+      clockTime,
+      ...(elapsedS !== null ? { elapsedS: Math.round(elapsedS) } : { spectate: true }),
+    })
+
+    pendingRows.clear()
+    fullScanDue = false
+    targetRetries = 0
+
+    if (events.length > 0) {
+      draftStore.getState().appendPickEvents(events)
+    }
+    streamService.refresh()
   }
 
   return {
