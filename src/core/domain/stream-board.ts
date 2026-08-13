@@ -145,10 +145,17 @@ function buildPlayerRows(
       (m) => m.heroOrder === assignment.poolHeroOrder,
     )
     if (!heroRow || !model || model.dbHeroId === null) continue
+    // Portrait: the row's ability-prefix derivation when available; otherwise a
+    // display-name slug ("Crystal Maiden" -> crystal_maiden), which matches the
+    // CDN for most heroes — the DB's concatenated name ("crystalmaiden") never does
+    const displaySlug = model.heroDisplayName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '')
     assignedByPlayer.set(assignment.playerIndex, {
       npcName: model.heroName,
       displayName: model.heroDisplayName,
-      portraitPath: heroRow.portraitPath ?? heroIconPath(model.heroName),
+      portraitPath: heroRow.portraitPath ?? heroIconPath(displaySlug),
     })
   }
 

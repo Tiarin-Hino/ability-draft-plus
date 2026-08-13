@@ -136,12 +136,14 @@ async function handleScan(payload: {
       activeSet,
     )
   } else {
+    // heroOrders: undefined = all rows; [] = NO ability rows (model-tile-only
+    // confirmation capture); non-empty = targeted player rows
     results = await performSelectedAbilitiesScan(
       screenshot,
       coords,
       confidenceThreshold,
       activeSet,
-      heroOrders && heroOrders.length > 0 ? new Set(heroOrders) : undefined,
+      heroOrders ? new Set(heroOrders) : undefined,
     )
   }
 

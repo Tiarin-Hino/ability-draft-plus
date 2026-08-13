@@ -20,6 +20,7 @@ import {
   AUTO_RESCAN_MAX_TARGET_RETRIES,
   AUTO_RESCAN_REPLAY_INTERVAL_MS,
   REPLAY_CLOCK_REWIND_THRESHOLD_S,
+  MODEL_PICK_CONFIRM_DELAY_MS,
 } from '@shared/constants/thresholds'
 
 // @DEV-GUIDE: EXPERIMENTAL GSI-driven TURN-CLOCK auto-rescan (disabled by default —
@@ -110,6 +111,9 @@ export function createAutoRescanService(
   /** Accepted rescans this session — the 1st sweeps up all preview-time picks
    * at once, so its timing carries no per-turn information. */
   let acceptedRescans = 0
+  /** When set, a model-tile CONFIRMATION capture (zero ability rows) is due —
+   * resolves pending tile changes in ~1.5s instead of one turn later. */
+  let modelConfirmAtMs: number | null = null
   /** Previous clock_time inside hero selection — rewind detector input. */
   let lastClockTime: number | null = null
   /** Sticky per draft session: a big clock rewind marked this as a replay. */
@@ -128,6 +132,7 @@ export function createAutoRescanService(
     replayDetected = false
     tentativeModelPicker.clear()
     acceptedRescans = 0
+    modelConfirmAtMs = null
   }
 
   function handlePhaseChange(snapshot: GsiSnapshot): void {
@@ -282,6 +287,15 @@ export function createAutoRescanService(
         return
       }
 
+      // Fast model-pick confirmation: a tile read changed last scan — capture
+      // just the model tiles again (zero ability rows) so the persistence rule
+      // commits in ~1.5s instead of one full turn later
+      if (modelConfirmAtMs !== null && Date.now() >= modelConfirmAtMs) {
+        modelConfirmAtMs = null
+        await runRescan([], undefined, snapshot.clockTime, null)
+        return
+      }
+
       if (pickAnchorMs === null) return
 
       const elapsedS = (Date.now() - pickAnchorMs) / 1000
@@ -415,6 +429,13 @@ export function createAutoRescanService(
 
     acceptedRescans += 1
     attributeModelPicks(prevPendingModels, prevPickedModels, attributionRows)
+
+    // Pending tile changes await their persistence confirmation — schedule the
+    // fast model-only capture (chains naturally if new changes keep appearing)
+    modelConfirmAtMs =
+      draftStore.getState().pendingModelChanges.length > 0
+        ? Date.now() + MODEL_PICK_CONFIRM_DELAY_MS
+        : null
 
     const events = attributePicksByRow({
       prevSelected,

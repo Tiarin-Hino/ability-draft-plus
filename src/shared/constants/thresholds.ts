@@ -44,6 +44,10 @@ export const STREAM_PICK_FEED_LENGTH = 20
 // gap between "identical" and "changed".
 export const MODEL_TILE_COMPARE_SIZE = 48
 export const MODEL_PICK_DIFF_THRESHOLD = 10
+// A model tile that just read changed gets a dedicated CONFIRMATION capture this
+// soon (zero ability slots — model tiles only), so the two-scan persistence rule
+// resolves in ~1.5s instead of waiting a full turn for the next scheduled scan.
+export const MODEL_PICK_CONFIRM_DELAY_MS = 1_500
 
 // Experimental auto-rescan (GSI-driven draft tracking).
 // Fallback auto INITIAL scan: fires this long after the draft clock is first
