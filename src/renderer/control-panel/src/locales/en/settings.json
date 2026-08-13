@@ -57,5 +57,16 @@
     "uploadPartial": "Uploaded {{count}} of {{total}} snapshot(s); {{failed}} failed. Will retry the rest next time.",
     "uploadError": "Upload failed: {{error}}",
     "apiNotConfigured": "The upload service is not configured in this build — use Export and attach the file to a GitHub issue."
+  },
+  "autoTracking": {
+    "title": "Automatic draft tracking",
+    "description": "Automates the whole draft flow: the initial pool scan, your spot and hero model selection, and targeted rescans after every pick with per-player pick tracking.",
+    "toggle": "Enable automatic draft tracking",
+    "gsiNote": "This feature relies on Dota 2's built-in Game State Integration (GSI). With the config file installed, your game sends draft information (game phase, draft clock, your slot and picked hero) to this app. The connection is local-only and strictly one-way — the app never sends anything to the game and nothing leaves your PC. GSI is an official Valve feature used by broadcast tools and carries no ban risk.",
+    "delayLabel": "Auto initial scan delay (seconds)",
+    "delayHint": "How long to wait after the draft is detected before scanning the pool automatically ({{min}}–{{max}}s). Fast PCs are fine with 5s; slower machines may need up to 30s for the draft screen to fully render.",
+    "buttonsNote": "While enabled, the manual My Spot and My Model overlay buttons are hidden — both selections happen automatically from game data.",
+    "setupTitle": "GSI setup",
+    "setupHint": "One-time: install the config file below into your Dota folder, then restart Dota 2."
   }
 }

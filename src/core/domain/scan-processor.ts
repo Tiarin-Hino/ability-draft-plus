@@ -515,6 +515,7 @@ export function processScanResults(
     heroesCoords,
     heroesParams,
     modelsCoords: modelCoords,
+    autoDraftTrackingEnabled: settings.experimentalAutoDraftTracking === true,
   }
 
   return {

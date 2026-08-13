@@ -4,20 +4,23 @@ import type { DraftStore } from '../store/draft-store'
 import type { WindowManager } from './window-manager'
 import type { StreamServerService } from './stream-server-service'
 
-// @DEV-GUIDE: Auto "My Spot" selection from GSI. While PLAYING (not spectating),
-// Dota's GSI player block carries team_name + team_slot, which the parser maps to
-// the scan's player index (0-4 radiant, 5-9 dire) as localPlayer.slotIndex — so the
-// user's spot is known without clicking the overlay button.
+// @DEV-GUIDE: Auto "My Spot" + "My Model" selection from GSI while PLAYING (not
+// spectating) — the automated replacement for the overlay's manual buttons (which
+// are hidden when automatic draft tracking is enabled).
+// - Spot: the GSI player block carries team_name + team_slot, which the parser maps
+//   to the scan's player index (0-4 radiant, 5-9 dire) as localPlayer.slotIndex.
+// - Model: once the user picks their hero, GSI's hero block reports it as an npc
+//   short name (localHeroNpcName); matched against the identified pool heroes by
+//   DB name (npc name minus underscores — same convention as stream-server).
 //
-// Applied at most ONCE per initial scan (the scan-processor resets selections on
-// every initial scan, and scan-processing-service calls onInitialScanProcessed):
-// - immediately after the initial scan when GSI already knows the slot, or
-// - on a later GSI snapshot if GSI connects/reports the slot afterwards.
-// A manual deselect after auto-selection is respected (the once-flag stays set);
-// the manual My Spot button keeps working as an override either way.
+// Each selection applies at most ONCE per initial scan (the scan-processor resets
+// selections on every initial scan, and scan-processing-service calls
+// onInitialScanProcessed): immediately when GSI already knows the value, or on a
+// later GSI snapshot when it arrives (the model typically lands mid-draft). A
+// manual deselect after auto-selection is respected (the once-flags stay set).
 //
-// Selection mirrors the draft:selectMySpot IPC handler exactly: DraftStore update
-// + broadcast to both windows so the overlay highlight and control panel sync.
+// Selection mirrors the draft:selectMySpot/selectMyModel IPC handlers exactly:
+// DraftStore update + broadcast to both windows.
 
 const logger = log.scope('spot-detection')
 
@@ -31,17 +34,23 @@ export function createSpotDetectionService(
   windowManager: WindowManager,
   streamService: Pick<StreamServerService, 'getGsiState' | 'onGsiSnapshot'>,
 ): SpotDetectionService {
-  /** True once auto-selection ran for the current initial scan generation. */
-  let applied = false
-  /** True between an initial scan and the auto-selection attempt succeeding. */
+  /** True once the respective auto-selection ran for this initial scan generation. */
+  let spotApplied = false
+  let modelApplied = false
+  /** True between an initial scan and the auto-selection attempts succeeding. */
   let armed = false
 
-  function tryApply(): void {
-    if (applied || !armed) return
+  function broadcast(channel: string, payload: unknown): void {
+    const cp = windowManager.getControlPanelWindow()
+    const overlay = windowManager.getOverlayWindow()
+    if (cp && !cp.isDestroyed()) cp.webContents.send(channel, payload)
+    if (overlay && !overlay.isDestroyed()) overlay.webContents.send(channel, payload)
+  }
+
+  function trySelectSpot(): void {
+    if (spotApplied) return
 
     const state = draftStore.getState()
-    // Initial scan must have identified the board, and the user must not have
-    // picked a spot already (fresh initial scans reset it to null anyway)
     if (state.identifiedHeroModelsCache.length === 0) return
     if (state.mySelectedSpotHeroOrder !== null) return
 
@@ -61,31 +70,63 @@ export function createSpotDetectionService(
       return
     }
 
-    applied = true
-    armed = false
+    spotApplied = true
     draftStore.getState().selectMySpot(hero.dbHeroId, slotIndex)
     logger.info('My Spot auto-selected from GSI', {
       slotIndex,
       hero: hero.heroDisplayName,
       player: snapshot?.localPlayer?.name,
     })
-
-    const payload = { selectedHeroOrderForDrafting: slotIndex }
-    const cp = windowManager.getControlPanelWindow()
-    const overlay = windowManager.getOverlayWindow()
-    if (cp && !cp.isDestroyed()) cp.webContents.send('draft:selectMySpot', payload)
-    if (overlay && !overlay.isDestroyed()) {
-      overlay.webContents.send('draft:selectMySpot', payload)
-    }
+    broadcast('draft:selectMySpot', { selectedHeroOrderForDrafting: slotIndex })
   }
 
-  // GSI may learn the slot after the initial scan (server started late, Dota
-  // reconnect) — every snapshot is a cheap retry while armed.
+  function trySelectModel(): void {
+    if (modelApplied) return
+
+    const state = draftStore.getState()
+    if (state.identifiedHeroModelsCache.length === 0) return
+    if (state.mySelectedModelHeroOrder !== null) return
+
+    const { snapshot, connected } = streamService.getGsiState()
+    const npcName = snapshot?.localHeroNpcName ?? null
+    if (!connected || !npcName) return
+
+    // npc short name -> DB hero name convention: underscores stripped
+    const dbName = npcName.replace(/_/g, '')
+    const model = state.identifiedHeroModelsCache.find(
+      (m) => m.heroName === dbName,
+    )
+    if (!model || model.dbHeroId === null) {
+      logger.warn('GSI reported a picked model outside the identified pool', {
+        npcName,
+      })
+      return
+    }
+
+    modelApplied = true
+    draftStore.getState().selectMyModel(model.dbHeroId, model.heroOrder)
+    logger.info('My Model auto-selected from GSI', {
+      heroOrder: model.heroOrder,
+      hero: model.heroDisplayName,
+    })
+    broadcast('draft:selectMyModel', { selectedModelHeroOrder: model.heroOrder })
+  }
+
+  function tryApply(): void {
+    if (!armed) return
+    trySelectSpot()
+    trySelectModel()
+    if (spotApplied && modelApplied) armed = false
+  }
+
+  // GSI learns things over time (the model pick lands mid-draft; the server may
+  // start late) — every snapshot is a cheap retry while armed.
   streamService.onGsiSnapshot(() => tryApply())
 
   return {
     onInitialScanProcessed(): void {
-      applied = false
+      spotApplied = false
+      modelApplied = false
       armed = true
       tryApply()
     },

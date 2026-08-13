@@ -18,7 +18,6 @@ import {
   AUTO_RESCAN_TICK_MS,
   AUTO_RESCAN_PICK_VISIBLE_DELAY_S,
   AUTO_RESCAN_MAX_TARGET_RETRIES,
-  AUTO_INITIAL_SCAN_DELAY_S,
 } from '@shared/constants/thresholds'
 
 // @DEV-GUIDE: EXPERIMENTAL GSI-driven TURN-CLOCK auto-rescan (disabled by default —
@@ -196,12 +195,13 @@ export function createAutoRescanService(
 
       if (poolNames().length === 0) {
         // Fallback auto INITIAL scan: the user hasn't scanned the pool yet —
-        // do it for them once, AUTO_INITIAL_SCAN_DELAY_S after the draft clock
-        // was identified (deep enough into the preview for the grid to render)
+        // do it for them once, autoInitialScanDelayS (user setting; slower PCs
+        // need the draft screen fully rendered) after the draft clock was seen
         if (
           !autoInitialScanAttempted &&
           draftClockSeenAtMs !== null &&
-          Date.now() - draftClockSeenAtMs >= AUTO_INITIAL_SCAN_DELAY_S * 1000
+          Date.now() - draftClockSeenAtMs >=
+            settings.autoInitialScanDelayS * 1000
         ) {
           autoInitialScanAttempted = true
           logger.info('Auto initial scan (no manual scan yet)', {
