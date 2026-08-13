@@ -6,10 +6,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
-import { Languages } from 'lucide-react'
+import { Languages, Heart } from 'lucide-react'
 import { useAppStore } from '@/hooks/use-app-store'
 import { useAppDispatch } from '@/hooks/use-dispatch'
 import { APP_ACTIONS } from '@shared/types/app-store'
+import { SUPPORT_URL } from '@shared/constants/defaults'
 import type { PageId } from '@/hooks/use-navigation'
 
 const pageTitleKeys: Record<PageId, { ns: string; key: string }> = {
@@ -45,28 +46,41 @@ export function HeaderBar({ activePage }: HeaderBarProps) {
     <header className="flex items-center justify-between border-b border-border px-6 py-3">
       <h1 className="text-lg font-semibold">{pageTitle}</h1>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className="gap-2" aria-label={t('language.label')}>
-            <Languages className="h-4 w-4" aria-hidden="true" />
-            <span className="text-sm">{language === 'en' ? 'EN' : 'RU'}</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem
-            onClick={() => handleLanguageChange('en')}
-            className={language === 'en' ? 'bg-accent' : ''}
-          >
-            {t('language.en')} (EN)
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => handleLanguageChange('ru')}
-            className={language === 'ru' ? 'bg-accent' : ''}
-          >
-            {t('language.ru')} (RU)
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <div className="flex items-center gap-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="gap-2 text-[#ff5e5b] hover:bg-[#ff5e5b]/10 hover:text-[#ff5e5b]"
+          onClick={() => window.electronApi.send('app:openExternal', { url: SUPPORT_URL })}
+          title={t('support.tooltip')}
+        >
+          <Heart className="h-4 w-4" fill="currentColor" aria-hidden="true" />
+          <span className="text-sm">{t('support.label')}</span>
+        </Button>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="gap-2" aria-label={t('language.label')}>
+              <Languages className="h-4 w-4" aria-hidden="true" />
+              <span className="text-sm">{language === 'en' ? 'EN' : 'RU'}</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={() => handleLanguageChange('en')}
+              className={language === 'en' ? 'bg-accent' : ''}
+            >
+              {t('language.en')} (EN)
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => handleLanguageChange('ru')}
+              className={language === 'ru' ? 'bg-accent' : ''}
+            >
+              {t('language.ru')} (RU)
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </header>
   )
 }

@@ -94,9 +94,9 @@ export function registerResolutionHandlers(
       await delay(300) // Wait for window to disappear from screen
     }
 
-    let buffer: Buffer
+    let raw: import('@core/ml/preprocessing').DecodedScreenshot
     try {
-      buffer = await screenshotService.capture()
+      raw = await screenshotService.capture()
     } finally {
       // Always restore the control panel, even on capture failure
       if (cpWindow && !cpWindow.isDestroyed()) {
@@ -104,6 +104,12 @@ export function registerResolutionHandlers(
         cpWindow.focus()
       }
     }
+
+    // The capture is a raw RGB bitmap (the scan pipeline never PNG-encodes);
+    // this mapper/submission path is where PNG is actually needed
+    let png = sharp(raw.data, {
+      raw: { width: raw.width, height: raw.height, channels: 3 },
+    })
 
     // Detect Dota 2 game window for correct resolution
     const gameBounds = windowTracker.getGameWindowPhysicalBounds()
@@ -116,18 +122,13 @@ export function registerResolutionHandlers(
       gameHeight = gameBounds.height
 
       // Crop screenshot to game window if it's smaller than the full screen
-      const meta = await sharp(buffer).metadata()
-      const screenW = meta.width ?? 0
-      const screenH = meta.height ?? 0
-      if (gameBounds.width < screenW || gameBounds.height < screenH) {
-        buffer = await sharp(buffer)
-          .extract({
-            left: gameBounds.x,
-            top: gameBounds.y,
-            width: gameBounds.width,
-            height: gameBounds.height,
-          })
-          .toBuffer()
+      if (gameBounds.width < raw.width || gameBounds.height < raw.height) {
+        png = png.extract({
+          left: gameBounds.x,
+          top: gameBounds.y,
+          width: gameBounds.width,
+          height: gameBounds.height,
+        })
         logger.info('Cropped screenshot to game window', {
           gameWidth,
           gameHeight,
@@ -144,8 +145,9 @@ export function registerResolutionHandlers(
       })
     }
 
+    const pngBuffer = await png.png().toBuffer()
     return {
-      imageBase64: buffer.toString('base64'),
+      imageBase64: pngBuffer.toString('base64'),
       width: gameWidth,
       height: gameHeight,
     }

@@ -2,6 +2,7 @@ import {
   DEFAULT_OP_THRESHOLD,
   DEFAULT_TRAP_THRESHOLD,
   DEFAULT_STREAM_PORT,
+  AUTO_INITIAL_SCAN_DELAY_S,
 } from './thresholds'
 import type { AppSettings } from '../types'
 
@@ -15,6 +16,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   streamPort: DEFAULT_STREAM_PORT,
   streamAutostart: false,
   experimentalAutoDraftTracking: false,
+  autoInitialScanDelayS: AUTO_INITIAL_SCAN_DELAY_S,
 }
 
 export const SUPPORTED_LANGUAGES = ['en', 'ru'] as const
@@ -22,3 +24,6 @@ export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number]
 
 export const APP_ID = 'com.tiarinhino.dota2abilitydraftplus'
 export const APP_NAME = 'Dota 2 Ability Draft Plus'
+
+export const SUPPORT_URL = 'https://ko-fi.com/tiarinhino'
+export const SUPPORT_DATDOTA_URL = 'https://ko-fi.com/datdota'

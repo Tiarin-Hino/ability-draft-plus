@@ -75,6 +75,12 @@ export interface DraftSessionState {
   selectedAbilitiesCache: ScanResult[]
   /** Consecutive contamination-guard rejections; capped so rejections can't stall forever. */
   rescanRejectionStreak: number
+  /** Model tiles captured at initial scan — the unpicked reference state. */
+  modelTileBaselines: import('./model-pick-detection').ModelTileCapture[]
+  /** Model tiles that read changed in the last scan, awaiting confirmation. */
+  pendingModelChanges: number[]
+  /** Pool hero orders whose model was detected as picked (never reverts). */
+  pickedModelHeroOrders: number[]
 }
 
 // ---------------------------------------------------------------------------

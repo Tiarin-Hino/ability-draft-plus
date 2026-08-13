@@ -8,8 +8,13 @@ import type {
 } from '@shared/types/ml'
 import type { ScanResult, SlotCoordinate, ResolutionLayout } from '@shared/types'
 import { createOnnxClassifier } from '@core/ml/onnx-classifier'
-import { preprocessBatch } from '@core/ml/preprocessing'
+import { preprocessBatch, cropTile } from '@core/ml/preprocessing'
+import type { DecodedScreenshot } from '@core/ml/preprocessing'
 import type { ClassifierResult } from '@core/ml/classifier'
+import {
+  MODEL_TILE_COMPARE_SIZE,
+  PLAYER_CARD_COMPARE_SIZE,
+} from '@shared/constants/thresholds'
 
 // @DEV-GUIDE: ML Worker thread entry point. Runs as a Node.js worker_thread, spawned by MlService.
 // Handles two operations: init (load ONNX model) and scan (classify ability icons).
@@ -22,12 +27,20 @@ import type { ClassifierResult } from '@core/ml/classifier'
 //   activeClassNames (DB ability names) masks model classes for removed-from-pool abilities.
 // - Main → { type: 'dispose' } → Worker releases ONNX session
 //
-// Scan pipeline: receive screenshot buffer → extract slot images (sharp crop+resize to 96x96) →
-// convert to float32 (raw 0-255 — the model's internal Rescaling layer maps to [-1,1])
-// → ONNX batch inference → filter by confidence → return ScanResult[].
+// Scan pipeline: receive a transferred RAW RGB bitmap (+dimensions — no PNG anywhere:
+// the encode/decode round-trip cost ~145ms/scan) → extract slot images from it (sharp
+// crop+resize to 96x96) → convert to float32 (raw 0-255 — the model's internal
+// Rescaling layer maps to [-1,1]) → ONNX batch inference → filter by confidence →
+// return ScanResult[]. Slot crops MUST read from the single shared bitmap: cropping
+// from an encoded buffer re-decoded the full screenshot per slot (~1.1s/scan at 1440p).
 //
 // For initial scan: processes ultimate + standard slots, extracts heroDefiningAbilities (ability_order===2).
-// For rescan: processes only selected ability slots (much faster).
+// For rescan: processes only the selected-ability slots.
+// Every scan additionally captures the 12 model portrait tiles (models_coords) as
+// normalized raw crops — the scan-processor diffs them against the initial-scan
+// baseline to detect picked models (see core/domain/model-pick-detection.ts) —
+// plus the 10 player cards (heroes_coords) for the GSI slot <-> scan row
+// correlation (see core/domain/slot-row-correlation.ts).
 
 if (!parentPort) {
   throw new Error('ml-worker must run as a worker thread')
@@ -83,10 +96,13 @@ async function handleInit(payload: {
 
 async function handleScan(payload: {
   screenshotBuffer: ArrayBuffer
+  screenshotWidth: number
+  screenshotHeight: number
   layout: ResolutionLayout
   confidenceThreshold: number
   isInitialScan: boolean
   activeClassNames?: string[]
+  heroOrders?: number[]
 }): Promise<void> {
   if (!classifier.isReady()) {
     throw new Error('ML Worker not initialized')
@@ -94,12 +110,21 @@ async function handleScan(payload: {
 
   const {
     screenshotBuffer,
+    screenshotWidth,
+    screenshotHeight,
     layout: coords,
     confidenceThreshold,
     isInitialScan,
     activeClassNames,
+    heroOrders,
   } = payload
-  const buffer = Buffer.from(screenshotBuffer)
+  // The buffer arrives as a transferred RAW RGB bitmap — no decode step;
+  // every slot crop reads from it directly.
+  const screenshot: DecodedScreenshot = {
+    data: Buffer.from(screenshotBuffer),
+    width: screenshotWidth,
+    height: screenshotHeight,
+  }
 
   const activeSet =
     activeClassNames && activeClassNames.length > 0
@@ -110,26 +135,96 @@ async function handleScan(payload: {
 
   if (isInitialScan) {
     results = await performInitialScan(
-      buffer,
+      screenshot,
       coords,
       confidenceThreshold,
       activeSet,
     )
   } else {
+    // heroOrders: undefined = all rows; [] = NO ability rows (model-tile-only
+    // confirmation capture); non-empty = targeted player rows
     results = await performSelectedAbilitiesScan(
-      buffer,
+      screenshot,
       coords,
       confidenceThreshold,
       activeSet,
+      heroOrders ? new Set(heroOrders) : undefined,
     )
   }
+
+  // Model portrait tiles for picked-model diff detection — captured every scan
+  // (~10ms for 12 small crops from the already-decoded bitmap)
+  const modelTiles = await captureModelTiles(screenshot, coords)
+  // Player cards for GSI slot <-> scan row correlation — same cost profile
+  const playerCardTiles = await capturePlayerCardTiles(screenshot, coords)
 
   const response: MlWorkerSuccessResponse = {
     status: 'success',
     results,
     isInitialScan,
+    modelTiles,
+    playerCardTiles,
   }
-  parentPort!.postMessage(response)
+  parentPort!.postMessage(response, [
+    ...(modelTiles?.map((t) => t.tile) ?? []),
+    ...(playerCardTiles?.map((t) => t.tile) ?? []),
+  ])
+}
+
+/** Crop + normalize the 12 model portrait tiles; undefined when unavailable. */
+async function captureModelTiles(
+  screenshot: DecodedScreenshot,
+  coords: ResolutionLayout,
+): Promise<{ heroOrder: number; tile: ArrayBuffer }[] | undefined> {
+  const modelCoords = coords.models_coords
+  if (!modelCoords || modelCoords.length === 0) return undefined
+
+  const tiles: { heroOrder: number; tile: ArrayBuffer }[] = []
+  for (const c of modelCoords) {
+    if (c.width <= 0 || c.height <= 0) continue
+    try {
+      const raw = await cropTile(screenshot, c, MODEL_TILE_COMPARE_SIZE)
+      tiles.push({
+        heroOrder: c.hero_order,
+        tile: raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength),
+      })
+    } catch {
+      // Out-of-bounds crop (layout drift) — skip this tile
+    }
+  }
+  return tiles.length > 0 ? tiles : undefined
+}
+
+/**
+ * Crop + normalize the 10 player-card regions. heroes_coords entries carry only
+ * x/y — the shared card dimensions live in heroes_params.
+ */
+async function capturePlayerCardTiles(
+  screenshot: DecodedScreenshot,
+  coords: ResolutionLayout,
+): Promise<{ row: number; tile: ArrayBuffer }[] | undefined> {
+  const heroCoords = coords.heroes_coords
+  const params = coords.heroes_params
+  if (!heroCoords || heroCoords.length === 0) return undefined
+  if (!params || params.width <= 0 || params.height <= 0) return undefined
+
+  const tiles: { row: number; tile: ArrayBuffer }[] = []
+  for (const c of heroCoords) {
+    try {
+      const raw = await cropTile(
+        screenshot,
+        { ...c, width: params.width, height: params.height },
+        PLAYER_CARD_COMPARE_SIZE,
+      )
+      tiles.push({
+        row: c.hero_order,
+        tile: raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength),
+      })
+    } catch {
+      // Out-of-bounds crop (layout drift) — skip this card
+    }
+  }
+  return tiles.length > 0 ? tiles : undefined
 }
 
 // @DEV-GUIDE: Initial scan processes ultimate + standard ability slots in parallel, then
@@ -137,7 +232,7 @@ async function handleScan(payload: {
 // These hero-defining abilities are used by the scan processor to identify which hero each
 // draft slot belongs to (hero identification by their second ability).
 async function performInitialScan(
-  screenshotBuffer: Buffer,
+  screenshot: DecodedScreenshot,
   coords: ResolutionLayout,
   confidenceThreshold: number,
   activeClassNames?: ReadonlySet<string>,
@@ -145,13 +240,13 @@ async function performInitialScan(
   const [ultimates, standard] = await Promise.all([
     identifySlots(
       coords.ultimate_slots_coords,
-      screenshotBuffer,
+      screenshot,
       confidenceThreshold,
       activeClassNames,
     ),
     identifySlots(
       coords.standard_slots_coords,
-      screenshotBuffer,
+      screenshot,
       confidenceThreshold,
       activeClassNames,
     ),
@@ -170,16 +265,22 @@ async function performInitialScan(
 }
 
 async function performSelectedAbilitiesScan(
-  screenshotBuffer: Buffer,
+  screenshot: DecodedScreenshot,
   coords: ResolutionLayout,
   confidenceThreshold: number,
   activeClassNames?: ReadonlySet<string>,
+  heroOrders?: ReadonlySet<number>,
 ): Promise<ScanResult[]> {
   const selectedCoords = coords.selected_abilities_coords
   if (!selectedCoords || selectedCoords.length === 0) return []
 
   const params = coords.selected_abilities_params
-  const slotsToScan: SlotCoordinate[] = selectedCoords.map((c) => ({
+  // heroOrders restricts a targeted rescan to specific player rows; the
+  // partial results merge into the baseline downstream (scan-processor).
+  const relevantCoords = heroOrders
+    ? selectedCoords.filter((c) => heroOrders.has(c.hero_order))
+    : selectedCoords
+  const slotsToScan: SlotCoordinate[] = relevantCoords.map((c) => ({
     ...c,
     width: params?.width ?? c.width,
     height: params?.height ?? c.height,
@@ -187,25 +288,25 @@ async function performSelectedAbilitiesScan(
 
   return identifySlots(
     slotsToScan,
-    screenshotBuffer,
+    screenshot,
     confidenceThreshold,
     activeClassNames,
   )
 }
 
 // @DEV-GUIDE: Core ML pipeline for a batch of slots. preprocessBatch crops each slot from the
-// screenshot and resizes to 96x96 (model input size). validIndices tracks which slots had
-// enough image data to process. Slots that failed preprocessing get default (null) results.
+// decoded screenshot bitmap and resizes to 96x96 (model input size). validIndices tracks which
+// slots had enough image data to process. Slots that failed preprocessing get default (null) results.
 async function identifySlots(
   slots: SlotCoordinate[],
-  screenshotBuffer: Buffer,
+  screenshot: DecodedScreenshot,
   confidenceThreshold: number,
   activeClassNames?: ReadonlySet<string>,
 ): Promise<ScanResult[]> {
   if (slots.length === 0) return []
 
   const { batch, validIndices } = await preprocessBatch(
-    screenshotBuffer,
+    screenshot,
     slots,
   )
   if (validIndices.length === 0) return slots.map(makeDefaultResult)

@@ -165,7 +165,7 @@ describe('MlService', () => {
       const service = await createReadyService()
 
       const scanPromise = service.scan(
-        Buffer.from('screenshot'),
+        { data: Buffer.from('screenshot'), width: 3, height: 1 },
         {} as never,
         true,
       )
@@ -205,7 +205,7 @@ describe('MlService', () => {
       const service = await createReadyService()
 
       const scanPromise = service.scan(
-        Buffer.from('screenshot'),
+        { data: Buffer.from('screenshot'), width: 3, height: 1 },
         {} as never,
         true,
         ['ursa_fury_swipes', 'sniper_shrapnel'],
@@ -233,7 +233,7 @@ describe('MlService', () => {
       const service = await createReadyService()
 
       const scanPromise = service.scan(
-        Buffer.from('screenshot'),
+        { data: Buffer.from('screenshot'), width: 3, height: 1 },
         {} as never,
         true,
       )
@@ -250,7 +250,7 @@ describe('MlService', () => {
       const service = createMlService()
       await expect(
         service.scan(
-          Buffer.from('screenshot'),
+          { data: Buffer.from('screenshot'), width: 3, height: 1 },
           {} as never,
           true,
         ),

@@ -47,6 +47,9 @@ export interface StreamHeroRow {
   /** ability_order 1–3 (Q/W/E), sorted. */
   standard: StreamAbilitySlot[]
   ultimate: StreamAbilitySlot | null
+  /** True once this hero MODEL was drafted by a player (tile-diff detection while
+   * playing, GSI while spectating feeds the player rows instead). */
+  modelPicked: boolean
 }
 
 export type StreamTeam = 'radiant' | 'dire'
@@ -67,7 +70,8 @@ export interface StreamPlayerRow {
   team: StreamTeam
   /** From GSI when available; null until known. */
   playerName: string | null
-  /** Picked hero model from GSI (spectating); null until picked/unknown. */
+  /** Picked hero model from GSI (spectating: every player; playing: the local
+   * player only); null until picked/unknown. */
   model: StreamPlayerModel | null
   picks: StreamAbilitySlot[]
   draftScore: PlayerDraftScore | null
@@ -115,9 +119,18 @@ export interface StreamGsiInfo {
   connected: boolean
   gamePhase: string | null
   clockTime: number | null
-  /** Player names by player index 0–9; empty or sparse until GSI reports them. */
+  /**
+   * True when GSI carries allplayers data (spectate/replay). In that case the
+   * arrays below are indexed by GSI SLOT — whose within-team order does NOT
+   * match the draft screen's row order — and entries may only be placed on
+   * board rows through a learned slot->row mapping (see
+   * core/domain/slot-row-correlation.ts). When false (playing), the index is
+   * the scan row directly (local player's team_slot placement is validated).
+   */
+  spectating: boolean
+  /** Player names by slot/player index 0–9; empty or sparse until GSI reports them. */
   playerNames: (string | null)[]
-  /** Picked hero models by player index 0–9 (npcName + resolved display name). */
+  /** Picked hero models by slot/player index 0–9 (npcName + resolved display name). */
   playerModels: ({ npcName: string; displayName: string } | null)[]
 }
 

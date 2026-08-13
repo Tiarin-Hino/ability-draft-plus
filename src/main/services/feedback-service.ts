@@ -3,14 +3,18 @@ import { join } from 'path'
 import { mkdir, writeFile, readdir, rm, access } from 'fs/promises'
 import log from 'electron-log/main'
 import AdmZip from 'adm-zip'
+import sharp from 'sharp'
 import type { ApiConfig } from './api-config'
 import { generateHmacSignature, generateNonce } from './api-config'
+import type { DecodedScreenshot } from '@core/ml/preprocessing'
 
 // @DEV-GUIDE: Backs the "Report Failed Recognition" loop. The overlay button saves a
 // snapshot of the LAST SCAN (the exact screenshot the model classified, plus its raw
 // predictions) — not a fresh capture, so the reported image always matches the
-// misrecognition the user saw. Samples live under userData/feedback-samples/, one
-// folder per snapshot (screenshot.png + metadata.json), pruned to MAX_STORED_SAMPLES.
+// misrecognition the user saw. The scan pipeline hands over the RAW bitmap (it never
+// PNG-encodes); the PNG is produced HERE, lazily, only when the user actually files a
+// report. Samples live under userData/feedback-samples/, one folder per snapshot
+// (screenshot.png + metadata.json), pruned to MAX_STORED_SAMPLES.
 //
 // Export zips all samples to a user-chosen path (for attaching to GitHub issues).
 // Upload POSTs each pending sample (zipped) to the feedback API endpoint using the
@@ -24,7 +28,7 @@ const UPLOADED_MARKER = '.uploaded'
 const UPLOAD_PATH = '/feedback-upload'
 
 export interface ScanContext {
-  screenshot: Buffer
+  screenshot: DecodedScreenshot
   resolution: string
   isInitialScan: boolean
   results: unknown
@@ -99,7 +103,16 @@ export function createFeedbackService(apiConfig: ApiConfig | null): FeedbackServ
       const sampleDir = join(samplesRoot, folderName)
       await mkdir(sampleDir, { recursive: true })
 
-      await writeFile(join(sampleDir, 'screenshot.png'), lastScan.screenshot)
+      const png = await sharp(lastScan.screenshot.data, {
+        raw: {
+          width: lastScan.screenshot.width,
+          height: lastScan.screenshot.height,
+          channels: 3,
+        },
+      })
+        .png()
+        .toBuffer()
+      await writeFile(join(sampleDir, 'screenshot.png'), png)
       await writeFile(
         join(sampleDir, 'metadata.json'),
         JSON.stringify(

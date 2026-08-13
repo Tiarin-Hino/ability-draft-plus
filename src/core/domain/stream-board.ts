@@ -11,6 +11,7 @@ import type {
   StreamGsiInfo,
   StreamHeroRow,
   StreamPanels,
+  StreamPlayerModel,
   StreamPlayerRow,
 } from '@shared/types/stream'
 import {
@@ -19,7 +20,10 @@ import {
   STREAM_PICK_FEED_LENGTH,
 } from '@shared/constants/thresholds'
 import { abilityIconPath, heroIconPath } from '../stream/icon-urls'
-import { deriveHeroCdnName } from '../stream/hero-cdn-names'
+import {
+  deriveHeroCdnName,
+  heroCdnNameFromDisplayName,
+} from '../stream/hero-cdn-names'
 import {
   calculatePlayerDraftScore,
   type PairSynergyInput,
@@ -52,12 +56,22 @@ export interface StreamBoardBuildInput {
   getPairSynergies?: (names: string[]) => PairSynergyInput[]
   /** Attributed pick timeline (experimental auto-rescan); last STREAM_PICK_FEED_LENGTH kept. */
   pickEvents?: PickEvent[]
+  /** Model -> player attribution from turn timing (playing mode; GSI covers spectate). */
+  modelAssignments?: Array<{ poolHeroOrder: number; playerIndex: number }>
+  /**
+   * Learned GSI slot -> scan row mappings (spectate/replay). GSI's within-team
+   * slot order does not match the draft screen's row order, so in spectate mode
+   * GSI names/models are ONLY placed on rows with a committed mapping — an
+   * unmapped row shows no name rather than a probably-wrong one.
+   */
+  slotRowMappings?: Array<{ gsiSlot: number; scanRow: number }>
 }
 
 const EMPTY_GSI: StreamGsiInfo = {
   connected: false,
   gamePhase: null,
   clockTime: null,
+  spectating: false,
   playerNames: [],
   playerModels: [],
 }
@@ -81,6 +95,7 @@ function toStreamSlot(
 
 function buildHeroRows(
   initialPayload: OverlayDataPayload,
+  latestPayload: OverlayDataPayload | null,
   pickedNames: ReadonlySet<string>,
 ): StreamHeroRow[] {
   const scanData = initialPayload.scanData
@@ -100,10 +115,20 @@ function buildHeroRows(
     const heroDisplayName =
       model && model.dbHeroId !== null ? model.heroDisplayName : null
 
-    const cdnName = deriveHeroCdnName([
-      ...rowStandard.map((s) => s.name),
-      rowUltimate?.name ?? null,
-    ])
+    // Picked-model state updates on RESCANS (tile-diff detection), so it must
+    // come from the latest payload, not the frozen initial one
+    const latestModel = latestPayload?.heroModels.find(
+      (m) => m.heroOrder === heroOrder,
+    )
+
+    // Ability-prefix derivation first; when too few row tiles were recognized
+    // for it, fall back to the identified hero's display name (npc-divergent
+    // names mapped in DISPLAY_SLUG_CDN_OVERRIDES)
+    const cdnName =
+      deriveHeroCdnName([
+        ...rowStandard.map((s) => s.name),
+        rowUltimate?.name ?? null,
+      ]) ?? (heroDisplayName ? heroCdnNameFromDisplayName(heroDisplayName) : null)
 
     rows.push({
       heroOrder,
@@ -111,6 +136,7 @@ function buildHeroRows(
       portraitPath: cdnName ? heroIconPath(cdnName) : null,
       standard: rowStandard.map((s) => toStreamSlot(s, pickedNames)),
       ultimate: rowUltimate ? toStreamSlot(rowUltimate, pickedNames) : null,
+      modelPicked: latestModel?.isPicked ?? model?.isPicked ?? false,
     })
   }
   return rows
@@ -120,8 +146,39 @@ function buildPlayerRows(
   latestPayload: OverlayDataPayload | null,
   gsi: StreamGsiInfo,
   getPairSynergies: (names: string[]) => PairSynergyInput[],
+  heroRows: StreamHeroRow[],
+  initialPayload: OverlayDataPayload,
+  modelAssignments: Array<{ poolHeroOrder: number; playerIndex: number }>,
+  slotRowMappings: Array<{ gsiSlot: number; scanRow: number }>,
 ): StreamPlayerRow[] {
   const selected = latestPayload?.scanData?.selectedAbilities ?? []
+
+  // Spectate: GSI arrays are slot-indexed and the within-team slot order does
+  // NOT match the board's row order — only a correlated mapping may place a
+  // name/model on a row. Playing: the index IS the row (validated team_slot).
+  const slotByRow = new Map(slotRowMappings.map((m) => [m.scanRow, m.gsiSlot]))
+  const gsiSlotForRow = (row: number): number | null =>
+    gsi.spectating ? (slotByRow.get(row) ?? null) : row
+
+  // Scan-attributed model per player (playing mode fallback — GSI wins below)
+  const assignedByPlayer = new Map<number, StreamPlayerModel>()
+  for (const assignment of modelAssignments) {
+    const heroRow = heroRows.find((h) => h.heroOrder === assignment.poolHeroOrder)
+    const model = initialPayload.heroModels.find(
+      (m) => m.heroOrder === assignment.poolHeroOrder,
+    )
+    if (!heroRow || !model || model.dbHeroId === null) continue
+    // Portrait: the row's ability-prefix derivation when available; otherwise
+    // the display-name -> CDN mapping (handles npc-divergent names like
+    // "Outworld Destroyer" -> obsidian_destroyer)
+    assignedByPlayer.set(assignment.playerIndex, {
+      npcName: model.heroName,
+      displayName: model.heroDisplayName,
+      portraitPath:
+        heroRow.portraitPath ??
+        heroIconPath(heroCdnNameFromDisplayName(model.heroDisplayName)),
+    })
+  }
 
   const rows: StreamPlayerRow[] = []
   for (let playerIndex = 0; playerIndex < PLAYER_COUNT; playerIndex++) {
@@ -147,15 +204,16 @@ function buildPlayerRows(
           )
         : null
 
-    const gsiModel = gsi.playerModels[playerIndex] ?? null
+    const gsiSlot = gsiSlotForRow(playerIndex)
+    const gsiModel = gsiSlot !== null ? (gsi.playerModels[gsiSlot] ?? null) : null
 
     rows.push({
       playerIndex,
       team: playerIndex < PLAYER_COUNT / 2 ? 'radiant' : 'dire',
-      playerName: gsi.playerNames[playerIndex] ?? null,
+      playerName: gsiSlot !== null ? (gsi.playerNames[gsiSlot] ?? null) : null,
       model: gsiModel
         ? { ...gsiModel, portraitPath: heroIconPath(gsiModel.npcName) }
-        : null,
+        : (assignedByPlayer.get(playerIndex) ?? null),
       picks,
       draftScore,
     })
@@ -244,10 +302,20 @@ export function buildStreamBoardState(
     if (slot.name && slot.isUnknown !== true) pickedNames.add(slot.name)
   }
 
+  const heroes = buildHeroRows(initialPayload, latestPayload, pickedNames)
+
   return {
     phase: 'drafting',
-    heroes: buildHeroRows(initialPayload, pickedNames),
-    players: buildPlayerRows(latestPayload, gsi, getPairSynergies),
+    heroes,
+    players: buildPlayerRows(
+      latestPayload,
+      gsi,
+      getPairSynergies,
+      heroes,
+      initialPayload,
+      input.modelAssignments ?? [],
+      input.slotRowMappings ?? [],
+    ),
     panels: buildPanels(latestPayload, pickedNames),
     gsi,
     ...(input.pickEvents && input.pickEvents.length > 0

@@ -10,7 +10,8 @@
   },
   "pool": {
     "ultimates": "Ultimate Abilities",
-    "standard": "Standard Abilities"
+    "standard": "Standard Abilities",
+    "modelPicked": "Drafted"
   },
   "panels": {
     "topWinrate": "Top Winrate",

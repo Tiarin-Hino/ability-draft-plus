@@ -7,10 +7,13 @@ import { createBackupService } from './services/backup-service'
 import { createMlService } from './services/ml-service'
 import { createLayoutService } from './services/layout-service'
 import { createScreenshotService } from './services/screenshot-service'
+import { createCachedWindowCaptureService } from './services/cached-window-capture-service'
 import { createScanProcessingService } from './services/scan-processing-service'
 import { createStreamServerService } from './services/stream-server-service'
 import { createIconCacheService } from './services/icon-cache-service'
 import { createGsiCfgService } from './services/gsi-cfg-service'
+import { createSpotDetectionService } from './services/spot-detection-service'
+import { createSlotMappingService } from './services/slot-mapping-service'
 import { createScanTriggerService } from './services/scan-trigger-service'
 import { createAutoRescanService } from './services/auto-rescan-service'
 import { createUpdateService } from './services/update-service'
@@ -122,6 +125,9 @@ app.whenReady().then(async () => {
   const mlService = createMlService()
   const layoutService = createLayoutService()
   const screenshotService = createScreenshotService()
+  // Fast scan capture: cached game-window source + overlay-renderer frame
+  // grabs; screenshotService stays the fallback (see the service dev-guide)
+  const cachedWindowCapture = createCachedWindowCaptureService(windowManager)
   const draftStore = createDraftStore()
 
   // @DEV-GUIDE: @zubridge bridge wires the Zustand AppStore in main to all subscribed
@@ -138,13 +144,25 @@ app.whenReady().then(async () => {
     appStore,
     iconCache,
     () => draftStore.getState().draftTimeline,
+    () => draftStore.getState().modelAssignments,
+    () => draftStore.getState().slotRowMappings,
   )
+  // Auto "My Spot" from GSI (playing mode) — re-applied after each initial scan
+  const spotDetectionService = createSpotDetectionService(
+    draftStore,
+    windowManager,
+    streamService,
+  )
+  // GSI slot <-> scan row correlation (spectate/replay name placement)
+  const slotMappingService = createSlotMappingService(draftStore, streamService)
   const scanProcessingService = createScanProcessingService(
     draftStore,
     dbService,
     layoutService,
     windowManager,
     streamService,
+    spotDetectionService,
+    slotMappingService,
   )
   const appHandlers = createAppStoreHandlers(appStore)
   const bridge = createZustandBridge(appStore, { handlers: appHandlers })
@@ -224,6 +242,7 @@ app.whenReady().then(async () => {
     mlService,
     layoutService,
     screenshotService,
+    cachedWindowCapture,
     windowManager,
     scanProcessingService,
     appStore,
@@ -261,6 +280,7 @@ app.whenReady().then(async () => {
     gsiCfgService,
     feedbackService,
     scanTrigger,
+    slotMappingService,
   )
 
   // Streamer view autostart (opt-in setting)
@@ -274,6 +294,7 @@ app.whenReady().then(async () => {
     updateService.stopPeriodicChecks()
     windowTracker.stopTracking()
     autoRescanService.stop()
+    cachedWindowCapture.dispose()
     bridge.destroy()
     await streamService.stop()
     await mlService.terminate()

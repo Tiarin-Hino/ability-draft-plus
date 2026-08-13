@@ -14,7 +14,10 @@ export interface MlWorkerInitRequest {
 export interface MlWorkerScanRequest {
   type: 'scan'
   payload: {
+    /** RAW RGB bitmap (3 channels), transferred — NOT an encoded image. */
     screenshotBuffer: ArrayBuffer
+    screenshotWidth: number
+    screenshotHeight: number
     layout: ResolutionLayout
     confidenceThreshold: number
     isInitialScan: boolean
@@ -25,6 +28,12 @@ export interface MlWorkerScanRequest {
      * Omitted/empty → no masking.
      */
     activeClassNames?: string[]
+    /**
+     * Rescan only: restrict the selected-abilities scan to these player rows
+     * (hero_order 0-9). Omitted → scan all rows. Ignored for initial scans.
+     * Used by the GSI turn-driven auto-rescan to scan ~4 slots instead of 40.
+     */
+    heroOrders?: number[]
   }
 }
 
@@ -45,6 +54,20 @@ export interface MlWorkerSuccessResponse {
   status: 'success'
   results: InitialScanResults | ScanResult[]
   isInitialScan: boolean
+  /**
+   * Normalized crops of the 12 model portrait tiles (raw RGB at
+   * MODEL_TILE_COMPARE_SIZE²), captured on every scan for picked-model diff
+   * detection. Buffers are transferred, not copied. Absent when the layout has
+   * no models_coords or a tile crop failed.
+   */
+  modelTiles?: { heroOrder: number; tile: ArrayBuffer }[]
+  /**
+   * Normalized crops of the 10 player cards (heroes_coords regions at
+   * PLAYER_CARD_COMPARE_SIZE²), captured on every scan for the GSI slot <->
+   * scan row correlation (spectate/replay name placement). Buffers are
+   * transferred, not copied. Absent when the layout has no heroes_coords.
+   */
+  playerCardTiles?: { row: number; tile: ArrayBuffer }[]
 }
 
 export interface MlWorkerErrorResponse {

@@ -27,7 +27,17 @@ function makeScanResult(
     hero_order: heroOrder,
     ability_order: abilityOrder,
     is_ultimate: isUltimate,
-    coord: { x: 0, y: 0, width: 64, height: 64, hero_order: heroOrder, ability_order: abilityOrder },
+    // Unique per slot, stable across scans — mirrors the real layout JSON, where
+    // the coordinate is the only reliable slot identity (selected-abilities
+    // slots share ability_order) and the rescan merge keys on it.
+    coord: {
+      x: heroOrder * 100 + abilityOrder * 10,
+      y: isUltimate ? 0 : 50,
+      width: 64,
+      height: 64,
+      hero_order: heroOrder,
+      ability_order: abilityOrder,
+    },
   }
 }
 
@@ -138,7 +148,14 @@ function makeInitialState(): DraftSessionState {
     mySelectedModelHeroOrder: null,
     selectedAbilitiesCache: [],
     rescanRejectionStreak: 0,
+    modelTileBaselines: [],
+    pendingModelChanges: [],
+    pickedModelHeroOrders: [],
   }
+}
+
+function makeModelTile(heroOrder: number, fill: number) {
+  return { heroOrder, tile: new Uint8Array(12).fill(fill) }
 }
 
 function makeInitialScanInput(): ScanProcessorInput {
@@ -366,9 +383,36 @@ describe('processScanResults', () => {
         ).toEqual(['fireball'])
       })
 
-      it('rejects a rescan where a previously seen pick tile is missing entirely', () => {
+      it('accepts a PARTIAL rescan covering only one player row (targeted scan)', () => {
+        // Targeted auto-rescan scans only player 1's slots; player 0's cached
+        // pick is absent from the scan — that is valid coverage, not
+        // contamination, and the results merge into the baseline.
+        const first = acceptedFirstRescan()
+        const partial = rescanWith(first.updatedState, [
+          makeScanResult('ice_blast', 1, 1, false),
+        ])
+        expect(partial.rescanRejected).toBe(false)
+        expect(partial.rescanHasty).toBe(false)
+        expect(
+          partial.updatedState.selectedAbilitiesCache.map((s) => s.name).sort(),
+        ).toEqual(['fireball', 'ice_blast'])
+        // Pool subtraction covers ALL known picks, not just this scan's subset
+        const poolNames = partial.updatedState.initialPoolAbilitiesCache.standard.map(
+          (s) => s.name,
+        )
+        expect(poolNames).not.toContain('ice_blast')
+        expect(poolNames).not.toContain('fireball')
+        // Enriched payload renders the full merged pick state
+        expect(
+          partial.overlayPayload.scanData!.selectedAbilities.map((s) => s.name).sort(),
+        ).toEqual(['fireball', 'ice_blast'])
+      })
+
+      it('a partial rescan is judged for contamination only within its own slots', () => {
+        // Player 0's cached pick reads unknown IN the scanned subset -> still guarded
         const first = acceptedFirstRescan()
         const contaminated = rescanWith(first.updatedState, [
+          makeScanResult(null, 0, 1, false, 0.4),
           makeScanResult('ice_blast', 1, 1, false),
         ])
         expect(contaminated.rescanRejected).toBe(true)
@@ -479,6 +523,93 @@ describe('processScanResults', () => {
           makeScanResult(null, 2, 1, false, 0.3),
         ])
         expect(rescan.rescanRejected).toBe(false)
+      })
+    })
+
+    describe('picked-model detection (tile diff)', () => {
+      function initialWithTiles() {
+        const input = makeInitialScanInput()
+        input.modelTiles = [makeModelTile(0, 50), makeModelTile(1, 50)]
+        return processScanResults(input)
+      }
+
+      function rescanWithTiles(
+        state: DraftSessionState,
+        tiles: ReturnType<typeof makeModelTile>[],
+      ) {
+        return processScanResults({
+          rawResults: [makeScanResult('fireball', 0, 1, false)],
+          isInitialScan: false,
+          state,
+          deps: mockDeps,
+          modelCoords: [makeCoord(0), makeCoord(1)],
+          heroesCoords: [makeCoord(0), makeCoord(1)],
+          heroesParams: { width: 358, height: 170 },
+          targetResolution: '1920x1080',
+          scaleFactor: 1.0,
+          modelTiles: tiles,
+        })
+      }
+
+      it('stores baselines on initial scan and resets picked state', () => {
+        const { updatedState } = initialWithTiles()
+        expect(updatedState.modelTileBaselines).toHaveLength(2)
+        expect(updatedState.pickedModelHeroOrders).toEqual([])
+        expect(updatedState.pendingModelChanges).toEqual([])
+      })
+
+      it('commits a pick only after the change persists across two scans', () => {
+        const initial = initialWithTiles()
+
+        const first = rescanWithTiles(initial.updatedState, [
+          makeModelTile(0, 50),
+          makeModelTile(1, 200),
+        ])
+        expect(first.newlyPickedModels).toEqual([])
+        expect(first.updatedState.pendingModelChanges).toEqual([1])
+
+        const second = rescanWithTiles(first.updatedState, [
+          makeModelTile(0, 50),
+          makeModelTile(1, 200),
+        ])
+        expect(second.newlyPickedModels).toEqual([1])
+        expect(second.updatedState.pickedModelHeroOrders).toEqual([1])
+        // Picked state reaches the enriched hero models
+        const model1 = second.overlayPayload.heroModels.find((m) => m.heroOrder === 1)
+        expect(model1?.isPicked).toBe(true)
+        const model0 = second.overlayPayload.heroModels.find((m) => m.heroOrder === 0)
+        expect(model0?.isPicked).toBe(false)
+      })
+
+      it('a one-scan flicker (tooltip) never commits', () => {
+        const initial = initialWithTiles()
+        const flicker = rescanWithTiles(initial.updatedState, [
+          makeModelTile(0, 50),
+          makeModelTile(1, 200),
+        ])
+        const settled = rescanWithTiles(flicker.updatedState, [
+          makeModelTile(0, 50),
+          makeModelTile(1, 50),
+        ])
+        expect(settled.updatedState.pickedModelHeroOrders).toEqual([])
+        expect(settled.updatedState.pendingModelChanges).toEqual([])
+      })
+
+      it('rescans without tiles leave model state untouched', () => {
+        const initial = initialWithTiles()
+        const noTiles = processScanResults({
+          rawResults: [makeScanResult('fireball', 0, 1, false)],
+          isInitialScan: false,
+          state: initial.updatedState,
+          deps: mockDeps,
+          modelCoords: [makeCoord(0), makeCoord(1)],
+          heroesCoords: [makeCoord(0), makeCoord(1)],
+          heroesParams: { width: 358, height: 170 },
+          targetResolution: '1920x1080',
+          scaleFactor: 1.0,
+        })
+        expect(noTiles.updatedState.modelTileBaselines).toHaveLength(2)
+        expect(noTiles.updatedState.pickedModelHeroOrders).toEqual([])
       })
     })
 

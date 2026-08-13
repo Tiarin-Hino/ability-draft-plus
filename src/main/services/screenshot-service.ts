@@ -1,21 +1,29 @@
 import { desktopCapturer, screen } from 'electron'
-import sharp from 'sharp'
 import log from 'electron-log/main'
+import type { DecodedScreenshot } from '@core/ml/preprocessing'
 
 // @DEV-GUIDE: Captures via Electron's native desktopCapturer. Two paths:
 // - capture(): full primary display at PHYSICAL resolution (mapper/calibration and
 //   the windowed-mode scan fallback — windowed scans crop to game bounds downstream).
 // - captureWindow(title, expectedSize): a single window source by exact title —
-//   the scan path for fullscreen/borderless Dota. Capturing only the game window
+//   the scan FALLBACK for fullscreen/borderless Dota (the primary path is
+//   cached-window-capture-service, which avoids the per-scan getSources
+//   enumeration measured at 730-1075ms). Capturing only the game window
 //   avoids the full-display Windows Graphics Capture session that hitches the game
 //   (and briefly the cursor) every auto-rescan tick. Returns null when the source
 //   is missing or the captured size deviates from expectedSize (e.g. windowed mode,
 //   where the window includes its frame) — callers fall back to capture().
 //
-// PNG encoding is NOT done with NativeImage.toPNG(): that is synchronous on the
-// main process thread (~100ms+ at 1440p) and froze the event loop once auto-rescan
-// started running every 5s. Instead the raw BGRA bitmap is swapped to RGBA (cheap)
-// and encoded by sharp on the libuv threadpool, keeping the main thread responsive.
+// Output is a RAW RGB bitmap ({data,width,height}), NOT PNG: the scan pipeline used
+// to PNG-encode here (~70ms) only for the ML worker to decode it again (~75ms).
+// Raw goes straight to the worker as a transferred ArrayBuffer; consumers that
+// genuinely need PNG (feedback snapshots, the mapper IPC) encode lazily themselves.
+// The BGRA->RGB conversion drops alpha in the same single pass as the channel swap.
+//
+// Known noise: getSources() thumbnails EVERY window, and Chromium logs a stderr
+// "Failed to start capture" for non-capturable ones (e.g. the minimized control
+// panel) before the game window succeeds — Electron exposes no per-source filter.
+// The debug timing log below keeps that enumeration cost measurable.
 //
 // The previous screenshot-desktop implementation spawned a .bat through cmd.exe
 // (issues #74/#76) — never reintroduce child-process capture.
@@ -23,13 +31,10 @@ import log from 'electron-log/main'
 const logger = log.scope('screenshot')
 
 const WINDOW_SIZE_TOLERANCE_PX = 2
-// Fast compression: scan screenshots are transient (worker decodes them right
-// away); trading size for encode speed keeps the threadpool stall negligible.
-const PNG_COMPRESSION_LEVEL = 1
 
 export interface ScreenshotService {
-  /** Full primary display at physical resolution. */
-  capture(): Promise<Buffer>
+  /** Full primary display at physical resolution, as a raw RGB bitmap. */
+  capture(): Promise<DecodedScreenshot>
   /**
    * Capture one window by exact title at the expected physical size. Null when
    * the window source is unavailable or the frame size doesn't match.
@@ -37,45 +42,48 @@ export interface ScreenshotService {
   captureWindow(
     title: string,
     expectedSize: { width: number; height: number },
-  ): Promise<Buffer | null>
+  ): Promise<DecodedScreenshot | null>
 }
 
-/** Electron bitmaps are BGRA; sharp expects RGBA — swap in place (a few ms). */
-function bgraToRgba(buffer: Buffer): Buffer {
-  for (let i = 0; i < buffer.length; i += 4) {
-    const blue = buffer[i]
-    buffer[i] = buffer[i + 2]
-    buffer[i + 2] = blue
+/** Electron bitmaps are BGRA; convert to 3-channel RGB in one pass. */
+function bgraToRgb(bgra: Buffer, width: number, height: number): Buffer {
+  const rgb = Buffer.allocUnsafe(width * height * 3)
+  for (let src = 0, dst = 0; src < bgra.length; src += 4, dst += 3) {
+    rgb[dst] = bgra[src + 2]
+    rgb[dst + 1] = bgra[src + 1]
+    rgb[dst + 2] = bgra[src]
   }
-  return buffer
+  return rgb
 }
 
-async function encodePng(thumbnail: Electron.NativeImage): Promise<Buffer> {
+function toRawScreenshot(thumbnail: Electron.NativeImage): DecodedScreenshot {
   const size = thumbnail.getSize()
-  const raw = thumbnail.toBitmap()
-  if (raw.length === 0 || size.width === 0 || size.height === 0) {
+  const bgra = thumbnail.toBitmap()
+  if (bgra.length === 0 || size.width === 0 || size.height === 0) {
     throw new Error('Capture returned an empty image')
   }
-  return sharp(bgraToRgba(raw), {
-    raw: { width: size.width, height: size.height, channels: 4 },
-  })
-    .png({ compressionLevel: PNG_COMPRESSION_LEVEL })
-    .toBuffer()
+  return {
+    data: bgraToRgb(bgra, size.width, size.height),
+    width: size.width,
+    height: size.height,
+  }
 }
 
 export function createScreenshotService(): ScreenshotService {
   return {
-    async capture(): Promise<Buffer> {
+    async capture(): Promise<DecodedScreenshot> {
       const primary = screen.getPrimaryDisplay()
       const thumbnailSize = {
         width: Math.round(primary.size.width * primary.scaleFactor),
         height: Math.round(primary.size.height * primary.scaleFactor),
       }
 
+      const start = performance.now()
       const sources = await desktopCapturer.getSources({
         types: ['screen'],
         thumbnailSize,
       })
+      const getSourcesMs = Math.round(performance.now() - start)
 
       const source =
         sources.find((s) => s.display_id === String(primary.id)) ?? sources[0]
@@ -83,20 +91,24 @@ export function createScreenshotService(): ScreenshotService {
         throw new Error('No screen sources available for capture')
       }
 
-      const png = await encodePng(source.thumbnail)
+      const raw = toRawScreenshot(source.thumbnail)
       logger.debug('Captured primary display', {
         sourceId: source.id,
+        getSourcesMs,
         ...thumbnailSize,
       })
-      return png
+      return raw
     },
 
-    async captureWindow(title, expectedSize): Promise<Buffer | null> {
+    async captureWindow(title, expectedSize): Promise<DecodedScreenshot | null> {
       try {
+        const start = performance.now()
         const sources = await desktopCapturer.getSources({
           types: ['window'],
           thumbnailSize: expectedSize,
         })
+        const getSourcesMs = Math.round(performance.now() - start)
+
         const source = sources.find((s) => s.name === title)
         if (!source) {
           logger.debug('Window source not found, falling back', { title })
@@ -118,9 +130,16 @@ export function createScreenshotService(): ScreenshotService {
           return null
         }
 
-        const png = await encodePng(source.thumbnail)
-        logger.debug('Captured game window', { title, ...size })
-        return png
+        const convertStart = performance.now()
+        const raw = toRawScreenshot(source.thumbnail)
+        logger.debug('Captured game window', {
+          title,
+          getSourcesMs,
+          convertMs: Math.round(performance.now() - convertStart),
+          windowCount: sources.length,
+          ...size,
+        })
+        return raw
       } catch (error) {
         logger.warn('Window capture failed, falling back to screen', {
           title,

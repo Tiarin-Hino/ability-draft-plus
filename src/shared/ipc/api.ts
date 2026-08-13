@@ -73,7 +73,10 @@ export interface IpcInvokeMap {
   'app:getSystemInfo': { request: void; response: SystemDisplayInfo }
   'app:isPackaged': { request: void; response: boolean }
   'theme:get': { request: void; response: { shouldUseDarkColors: boolean } }
-  'backup:create': { request: void; response: { success: boolean; backupPath?: string; error?: string } }
+  'backup:create': {
+    request: void
+    response: { success: boolean; backupPath?: string; error?: string }
+  }
   'backup:list': {
     request: void
     response: Array<{ name: string; path: string; date: string; size: number }>
@@ -130,7 +133,13 @@ export interface IpcInvokeMap {
   // Dota GSI cfg management (see src/main/services/gsi-cfg-service.ts)
   'gsi:detect': {
     request: void
-    response: { dotaPath: string | null; cfgPath: string | null; cfgExists: boolean }
+    response: {
+      dotaPath: string | null
+      cfgPath: string | null
+      cfgExists: boolean
+      /** Port pinned in the existing cfg's uri; null if absent/unparseable. */
+      cfgPort: number | null
+    }
   }
   'gsi:writeCfg': {
     request: { dotaDir?: string }
@@ -142,6 +151,21 @@ export interface IpcInvokeMap {
 
 // Send (fire-and-forget) channels from renderer to main
 export interface IpcSendMap {
+  // Cached-source capture responses (overlay capture-agent -> main). Handled
+  // inside cached-window-capture-service (request/response correlation lives
+  // there), NOT in src/main/ipc/. data is tightly-packed RGBA at the captured
+  // size (getImageData output — no stride padding, alpha always 255).
+  'capture:frameResult': {
+    requestId: number
+    ok: boolean
+    width?: number
+    height?: number
+    data?: Uint8Array
+    error?: string
+  }
+  // The capture track died (game window closed/recreated, e.g. resolution
+  // change) — main must drop the cached source id and re-resolve.
+  'capture:sessionEnded': void
   'scraper:start': void
   'scraper:startLiquipedia': void
   'overlay:close': void
@@ -163,6 +187,19 @@ export interface IpcSendMap {
 // Scraper/theme/i18n/update state intentionally has NO push channels here —
 // it flows through the @zubridge-synced AppStore.
 export interface IpcOnMap {
+  // Cached-source capture requests (main -> overlay capture-agent): grab one
+  // frame of the desktopCapturer source `sourceId` from a persistent
+  // getUserMedia stream and answer on 'capture:frameResult' with the same
+  // requestId. max* bound the stream resolution (never upscaled).
+  'capture:frame': {
+    requestId: number
+    sourceId: string
+    maxWidth: number
+    maxHeight: number
+  }
+  // Stop the capture stream (scans idle — draft over). The cached source id
+  // in main stays valid; the next request restarts the stream.
+  'capture:stop': void
   'overlay:data': OverlayDataPayload
   'overlay:hotkey': { action: 'scan' | 'rescan' }
   'ml:scanResults': {
@@ -191,8 +228,5 @@ export interface ElectronApi {
     ...args: IpcSendMap[K] extends void ? [] : [IpcSendMap[K]]
   ): void
 
-  on<K extends keyof IpcOnMap>(
-    channel: K,
-    callback: (data: IpcOnMap[K]) => void,
-  ): () => void // Returns an unsubscribe function
+  on<K extends keyof IpcOnMap>(channel: K, callback: (data: IpcOnMap[K]) => void): () => void // Returns an unsubscribe function
 }

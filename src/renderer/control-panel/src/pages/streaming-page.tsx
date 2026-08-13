@@ -23,47 +23,6 @@ import { DEFAULT_STREAM_PORT } from '@shared/constants/thresholds'
 // autostart flag persist through the regular settings channels. streamServerError holds
 // an i18n key in the 'streaming' namespace, translated here (FeedbackStatus pattern).
 
-function ExperimentalCard() {
-  const { t } = useTranslation('streaming')
-  const [enabled, setEnabled] = useState(false)
-
-  useEffect(() => {
-    window.electronApi.invoke('settings:get').then((settings) => {
-      setEnabled(settings.experimentalAutoDraftTracking)
-    })
-  }, [])
-
-  const handleToggle = (checked: boolean) => {
-    setEnabled(checked)
-    window.electronApi.invoke('settings:set', {
-      experimentalAutoDraftTracking: checked,
-    })
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>{t('experimental.title')}</CardTitle>
-          <Badge variant="outline">{t('experimental.badge')}</Badge>
-        </div>
-        <CardDescription>{t('experimental.description')}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Switch
-            id="auto-draft-tracking"
-            checked={enabled}
-            onCheckedChange={handleToggle}
-          />
-          <Label htmlFor="auto-draft-tracking">{t('experimental.toggle')}</Label>
-        </div>
-        <p className="text-xs text-muted-foreground">{t('experimental.guardNote')}</p>
-      </CardContent>
-    </Card>
-  )
-}
-
 function IconPrefetchCard() {
   const { t } = useTranslation('streaming')
   const [prefetching, setPrefetching] = useState(false)
@@ -259,8 +218,6 @@ export function StreamingPage() {
       </Card>
 
       <GsiCard />
-
-      <ExperimentalCard />
 
       <IconPrefetchCard />
 

@@ -27,6 +27,8 @@ import {
   filterRelevantHeroTraps,
 } from './op-trap-filter'
 import { determineTopTierEntities } from './top-tier'
+import { detectModelPicks } from './model-pick-detection'
+import type { ModelTileCapture } from './model-pick-detection'
 import { RESCAN_GUARD_MAX_CONSECUTIVE_REJECTIONS } from '@shared/constants/thresholds'
 
 // @DEV-GUIDE: Central business logic — transforms raw ML scan results into a fully-enriched
@@ -62,6 +64,12 @@ export interface ScanProcessorInput {
   heroesParams: { width: number; height: number }
   targetResolution: string
   scaleFactor: number
+  /**
+   * Normalized model portrait tiles captured with this scan. Initial scan:
+   * stored as the unpicked baseline. Rescan: diffed against the baseline to
+   * detect picked models (see model-pick-detection.ts).
+   */
+  modelTiles?: ModelTileCapture[]
 }
 
 export interface ScanProcessorOutput {
@@ -74,6 +82,8 @@ export interface ScanProcessorOutput {
    * callers (auto-rescan) must not treat the scan as fresh evidence.
    */
   rescanRejected?: boolean
+  /** Pool hero orders whose model pick was committed by THIS scan. */
+  newlyPickedModels?: number[]
   /**
    * True when the guard hit RESCAN_GUARD_MAX_CONSECUTIVE_REJECTIONS and this
    * (still-contaminated-looking) rescan was accepted as the new baseline —
@@ -89,27 +99,49 @@ export interface ScanProcessorOutput {
   rescanHasty?: boolean
 }
 
+/** Stable identity of a selected-abilities slot: its layout coordinate. */
+function slotKey(slot: ScanResult): string {
+  return `${slot.coord.x},${slot.coord.y}`
+}
+
 /**
- * Contamination guard: picks never un-pick, so a slot that previously held a
- * confident name but now reads unknown means the capture was obscured (hover
- * tooltip). A slot changing to a DIFFERENT confident name is allowed — that is
- * a correction of an earlier misread, and rejecting it would deadlock.
+ * Contamination guard: picks never un-pick, so a scanned slot that previously
+ * held a confident name but now reads unknown means the capture was obscured
+ * (hover tooltip). A slot changing to a DIFFERENT confident name is allowed —
+ * that is a correction of an earlier misread, and rejecting it would deadlock.
+ * Rescans may be PARTIAL (targeted auto-rescan); only slots present in the
+ * scan are judged — unscanned baseline slots carry no evidence either way.
  */
 function isRescanContaminated(
   previous: ScanResult[],
-  next: ScanResult[],
+  scanned: ScanResult[],
 ): boolean {
-  for (const prev of previous) {
-    if (prev.name === null) continue
-    const match = next.find(
-      (n) =>
-        n.hero_order === prev.hero_order &&
-        n.ability_order === prev.ability_order &&
-        n.is_ultimate === prev.is_ultimate,
-    )
-    if (!match || match.name === null) return true
+  const prevByCoord = new Map(previous.map((s) => [slotKey(s), s]))
+  for (const next of scanned) {
+    const prev = prevByCoord.get(slotKey(next))
+    if (prev !== undefined && prev.name !== null && next.name === null) {
+      return true
+    }
   }
   return false
+}
+
+/**
+ * Merges a (possibly partial) rescan into the selected-abilities baseline by
+ * slot coordinate: scanned slots replace their baseline entries, unscanned
+ * baseline entries are kept, never-seen slots are appended in scan order.
+ */
+function mergeSelectedSlots(
+  previous: ScanResult[],
+  scanned: ScanResult[],
+): ScanResult[] {
+  const scannedByCoord = new Map(scanned.map((s) => [slotKey(s), s]))
+  const merged = previous.map((p) => scannedByCoord.get(slotKey(p)) ?? p)
+  const prevKeys = new Set(previous.map(slotKey))
+  for (const s of scanned) {
+    if (!prevKeys.has(slotKey(s))) merged.push(s)
+  }
+  return merged
 }
 
 /**
@@ -130,6 +162,8 @@ export function processScanResults(
   let rescanRebaselined = false
   let rescanHasty = false
 
+  let newlyPickedModels: number[] = []
+
   if (isInitialScan) {
     const initial = rawResults as InitialScanResults
     ultimates = initial.ultimates
@@ -137,6 +171,11 @@ export function processScanResults(
     selectedAbilities = initial.selectedAbilities
     state.selectedAbilitiesCache = [...selectedAbilities]
     state.rescanRejectionStreak = 0
+
+    // Model-tile baseline: the unpicked reference state for pick detection
+    state.modelTileBaselines = input.modelTiles ?? []
+    state.pendingModelChanges = []
+    state.pickedModelHeroOrders = []
 
     // Cache pool for future rescans
     state.initialPoolAbilitiesCache = {
@@ -157,17 +196,19 @@ export function processScanResults(
       deps.heroes,
     )
   } else {
-    // Rescan: rawResults = newly identified selected/picked abilities
-    const pickedAbilities = rawResults as ScanResult[]
+    // Rescan: rawResults = newly scanned selected/picked ability slots. The scan
+    // may be PARTIAL (targeted auto-rescan covers only specific players' rows);
+    // accepted results MERGE into selectedAbilitiesCache by slot coordinate.
+    const scannedSlots = rawResults as ScanResult[]
 
     const contaminated = isRescanContaminated(
       state.selectedAbilitiesCache,
-      pickedAbilities,
+      scannedSlots,
     )
     const baselineNames = new Set(
       state.selectedAbilitiesCache.map((s) => s.name).filter(Boolean),
     )
-    const hasNewPicks = pickedAbilities.some(
+    const hasNewPicks = scannedSlots.some(
       (a) => a.name !== null && !baselineNames.has(a.name),
     )
 
@@ -189,11 +230,17 @@ export function processScanResults(
       // Clean scan, or the rejection cap was hit — accept and re-baseline.
       rescanRebaselined = contaminated
       state.rescanRejectionStreak = 0
-      const pickedNames = new Set(
-        pickedAbilities.map((a) => a.name).filter(Boolean) as string[],
+      state.selectedAbilitiesCache = mergeSelectedSlots(
+        state.selectedAbilitiesCache,
+        scannedSlots,
       )
+      selectedAbilities = state.selectedAbilitiesCache
 
-      // Remove picked abilities from cached pool
+      // Remove every known picked ability from the cached pool (idempotent —
+      // names picked in earlier scans are already gone from the pool)
+      const pickedNames = new Set(
+        selectedAbilities.map((a) => a.name).filter(Boolean) as string[],
+      )
       state.initialPoolAbilitiesCache = {
         ultimates: state.initialPoolAbilitiesCache.ultimates.filter(
           (a) => !pickedNames.has(a.name ?? ''),
@@ -202,12 +249,25 @@ export function processScanResults(
           (a) => !pickedNames.has(a.name ?? ''),
         ),
       }
-      state.selectedAbilitiesCache = [...pickedAbilities]
-      selectedAbilities = pickedAbilities
     }
 
     ultimates = state.initialPoolAbilitiesCache.ultimates
     standard = state.initialPoolAbilitiesCache.standard
+
+    // Picked-model detection runs on every rescan, independent of the ability
+    // contamination verdict (the model arcs are separate screen regions and
+    // the two-scan persistence rule absorbs capture glitches)
+    if (input.modelTiles && state.modelTileBaselines.length > 0) {
+      const detection = detectModelPicks({
+        baselines: state.modelTileBaselines,
+        current: input.modelTiles,
+        pending: state.pendingModelChanges,
+        picked: state.pickedModelHeroOrders,
+      })
+      state.pickedModelHeroOrders = detection.picked
+      state.pendingModelChanges = detection.pending
+      newlyPickedModels = detection.newlyPicked
+    }
   }
 
   // --- Phase 2: Collect ability names ---
@@ -427,6 +487,7 @@ export function processScanResults(
     heroModelSynergyMap,
     topTierLookup,
     allScoredEntities,
+    new Set(state.pickedModelHeroOrders),
   )
 
   const heroesForMySpotUI = buildHeroesForMySpotUI(
@@ -454,6 +515,7 @@ export function processScanResults(
     heroesCoords,
     heroesParams,
     modelsCoords: modelCoords,
+    autoDraftTrackingEnabled: settings.experimentalAutoDraftTracking === true,
   }
 
   return {
@@ -462,6 +524,7 @@ export function processScanResults(
     rescanRejected,
     rescanRebaselined,
     rescanHasty,
+    newlyPickedModels,
   }
 }
 
@@ -484,6 +547,9 @@ function cloneState(state: DraftSessionState): DraftSessionState {
     mySelectedModelHeroOrder: state.mySelectedModelHeroOrder,
     selectedAbilitiesCache: [...state.selectedAbilitiesCache],
     rescanRejectionStreak: state.rescanRejectionStreak,
+    modelTileBaselines: [...state.modelTileBaselines],
+    pendingModelChanges: [...state.pendingModelChanges],
+    pickedModelHeroOrders: [...state.pickedModelHeroOrders],
   }
 }
 
@@ -653,6 +719,7 @@ function enrichHeroModels(
   heroModelSynergyMap: HeroSynergyMap,
   topTierLookup: Map<string, import('./types').TopTierEntity>,
   allScoredEntities: ScoredEntity[],
+  pickedModelHeroOrders: ReadonlySet<number>,
 ): HeroModelDisplay[] {
   const scoredHeroLookup = new Map(
     allScoredEntities
@@ -665,6 +732,7 @@ function enrichHeroModels(
     const synergies = heroModelSynergyMap.get(model.heroName)
 
     return {
+      isPicked: pickedModelHeroOrders.has(model.heroOrder),
       heroOrder: model.heroOrder,
       heroName: model.heroName,
       heroDisplayName: model.heroDisplayName,

@@ -380,6 +380,25 @@ body,
   color: var(--text-dim);
   font-weight: 700;
 }
+/* Hero model drafted by a player (tile-diff / GSI): dimmed portrait + red slash */
+.pool-hero-mini-picked {
+  position: relative;
+}
+.pool-hero-mini-picked img {
+  filter: grayscale(0.85) brightness(0.55);
+}
+.pool-hero-mini-picked-mark {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    to top left,
+    transparent 46%,
+    rgba(214, 66, 56, 0.9) 48%,
+    rgba(214, 66, 56, 0.9) 52%,
+    transparent 54%
+  );
+}
 
 /* ── Tiles (kept from the original board: winrate badge, gold top-tier,
       grey picked, amber unknown) with a stone-bezel frame like the game ── */
