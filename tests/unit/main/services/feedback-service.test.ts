@@ -74,6 +74,31 @@ describe('feedback-service', () => {
       const service = createFeedbackService(null)
       await expect(service.saveSnapshot()).rejects.toThrow('No scan context')
     })
+
+    it('ignores targeted rescans so they never become the snapshot', () => {
+      const service = createFeedbackService(null)
+      service.recordScanContext(makeContext({ targetedRows: [3], results: [] }))
+      expect(service.hasScanContext()).toBe(false)
+    })
+
+    it('keeps the last full scan when a targeted rescan follows it', async () => {
+      const service = createFeedbackService(null)
+      service.recordScanContext(makeContext())
+      service.recordScanContext(
+        makeContext({ isInitialScan: false, targetedRows: [1, 7], results: [] }),
+      )
+      // Model-tile-only rescan (empty row list) is also targeted
+      service.recordScanContext(
+        makeContext({ isInitialScan: false, targetedRows: [], results: [] }),
+      )
+
+      await service.saveSnapshot()
+      const root = join(userDataDir, 'feedback-samples')
+      const [folder] = readdirSync(root)
+      const metadata = JSON.parse(readFileSync(join(root, folder, 'metadata.json'), 'utf-8'))
+      expect(metadata.isInitialScan).toBe(true)
+      expect(metadata.results.ultimates[0].name).toBe('test_ability')
+    })
   })
 
   describe('saveSnapshot', () => {
