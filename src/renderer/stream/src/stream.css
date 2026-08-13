@@ -142,7 +142,10 @@ body,
 
 /* ── Top bar ──────────────────────────────────────────────────────────── */
 .top-bar {
-  display: flex;
+  /* 1fr auto 1fr so the clock sits at the TRUE center of the bar regardless
+     of how wide the brand (left) and reserved zone (right) are */
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 1.25rem;
   height: 3.2rem;
@@ -158,6 +161,7 @@ body,
   align-items: center;
   gap: 0.9rem;
   min-width: 0;
+  justify-self: start;
 }
 
 .top-bar-logo {
@@ -187,7 +191,6 @@ body,
 }
 
 .top-bar-center {
-  flex: 1;
   display: flex;
   justify-content: center;
 }
@@ -227,6 +230,7 @@ body,
 .reserved-top {
   width: 16rem;
   height: 2.2rem;
+  justify-self: end;
 }
 .reserved-bottom {
   width: 22rem;
@@ -516,28 +520,41 @@ body,
 }
 
 /* With banner art: box-less — the banner IS the header, name tucked under its
-   long tail beside the gem head */
+   long tail beside the gem head. FIXED height so the radiant and dire columns
+   start their player cards at exactly the same y (the two banner images have
+   different aspect ratios — natural-height rendering desynced the columns). */
 .team-header.has-cap {
   display: block;
-  height: auto;
+  height: 4.8rem;
   padding: 0;
   border: none !important;
   border-radius: 0;
   background: none !important;
 }
 
-/* Banner art shown WHOLE at natural aspect across the full column width */
+/* Banner art shown WHOLE (contain) inside the fixed header box, anchored to
+   the column's outer edge so the gem head stays flush with the screen edge */
 .team-cap {
-  display: block;
+  position: absolute;
+  inset: 0;
   width: 100%;
-  height: auto;
+  height: 100%;
+  object-fit: contain;
+}
+.team-radiant .team-cap {
+  object-position: left top;
+}
+.team-dire .team-cap {
+  object-position: right top;
 }
 
 /* Tuck the name row under the banner's long tail: the gem head fills the
    outer ~28% of the art, the tail's lower edge sits around 65% height */
 .has-cap .team-heading {
-  margin-top: -1.9rem;
-  padding-bottom: 0.15rem;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0.15rem;
 }
 .team-radiant .team-header.has-cap .team-heading {
   padding-left: 30%;

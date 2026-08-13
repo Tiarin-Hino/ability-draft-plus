@@ -14,7 +14,9 @@ import i18n from './i18n'
 // central pool pedestal, stat strip along the bottom. Pure consumer of the SSE
 // state; no electron API, no zubridge, no local business logic.
 // Query params:
-//   ?bg=transparent (default) | chroma (#00ff00) | dark (solid broadcast look)
+//   ?bg=transparent | chroma (#00ff00) | dark (solid broadcast look). Default:
+//      transparent inside OBS browser sources (detected via window.obsstudio),
+//      dark in a normal browser — otherwise the page sits on white
 //   ?title=My%20Tournament   custom heading in the top bar
 //   ?demo=1                  fake full draft for OBS scene setup; outlines the
 //                            reserved zones productions can cover with their own
@@ -30,7 +32,11 @@ function param(name: string): string | null {
 
 function bgMode(): BgMode {
   const bg = param('bg')
-  return bg === 'chroma' || bg === 'dark' ? bg : 'transparent'
+  if (bg === 'transparent' || bg === 'chroma' || bg === 'dark') return bg
+  // No explicit choice: OBS browser sources (they inject window.obsstudio) get
+  // the transparent overlay look; a normal browser tab gets the dark broadcast
+  // backdrop instead of the board floating on a white page.
+  return 'obsstudio' in window ? 'transparent' : 'dark'
 }
 
 /**
