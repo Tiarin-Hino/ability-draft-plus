@@ -1,4 +1,4 @@
-import type { GsiPlayer, GsiSnapshot } from './types'
+import type { GsiMode, GsiPlayer, GsiSnapshot } from './types'
 
 // @DEV-GUIDE: Pure GSI payload parser — zero Electron/node imports, fixture-tested.
 // Tolerant by design: Valve's GSI payloads vary by game phase and data sections
@@ -138,4 +138,15 @@ export function parseGsiPayload(json: unknown): GsiSnapshot {
     localPlayer,
     localHeroNpcName,
   }
+}
+
+/**
+ * Classify how a snapshot was produced. Spectating payloads carry allplayers
+ * slots; playing payloads carry only the local player block; menu/loading
+ * payloads carry neither.
+ */
+export function gsiSnapshotMode(snapshot: GsiSnapshot): GsiMode {
+  if (snapshot.players.length > 0) return 'spectating'
+  if (snapshot.localPlayer !== null) return 'playing'
+  return 'unknown'
 }
