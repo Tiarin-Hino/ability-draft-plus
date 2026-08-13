@@ -20,7 +20,10 @@ import {
   STREAM_PICK_FEED_LENGTH,
 } from '@shared/constants/thresholds'
 import { abilityIconPath, heroIconPath } from '../stream/icon-urls'
-import { deriveHeroCdnName } from '../stream/hero-cdn-names'
+import {
+  deriveHeroCdnName,
+  heroCdnNameFromDisplayName,
+} from '../stream/hero-cdn-names'
 import {
   calculatePlayerDraftScore,
   type PairSynergyInput,
@@ -110,10 +113,14 @@ function buildHeroRows(
       (m) => m.heroOrder === heroOrder,
     )
 
-    const cdnName = deriveHeroCdnName([
-      ...rowStandard.map((s) => s.name),
-      rowUltimate?.name ?? null,
-    ])
+    // Ability-prefix derivation first; when too few row tiles were recognized
+    // for it, fall back to the identified hero's display name (npc-divergent
+    // names mapped in DISPLAY_SLUG_CDN_OVERRIDES)
+    const cdnName =
+      deriveHeroCdnName([
+        ...rowStandard.map((s) => s.name),
+        rowUltimate?.name ?? null,
+      ]) ?? (heroDisplayName ? heroCdnNameFromDisplayName(heroDisplayName) : null)
 
     rows.push({
       heroOrder,
@@ -145,17 +152,15 @@ function buildPlayerRows(
       (m) => m.heroOrder === assignment.poolHeroOrder,
     )
     if (!heroRow || !model || model.dbHeroId === null) continue
-    // Portrait: the row's ability-prefix derivation when available; otherwise a
-    // display-name slug ("Crystal Maiden" -> crystal_maiden), which matches the
-    // CDN for most heroes — the DB's concatenated name ("crystalmaiden") never does
-    const displaySlug = model.heroDisplayName
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '_')
-      .replace(/^_+|_+$/g, '')
+    // Portrait: the row's ability-prefix derivation when available; otherwise
+    // the display-name -> CDN mapping (handles npc-divergent names like
+    // "Outworld Destroyer" -> obsidian_destroyer)
     assignedByPlayer.set(assignment.playerIndex, {
       npcName: model.heroName,
       displayName: model.heroDisplayName,
-      portraitPath: heroRow.portraitPath ?? heroIconPath(displaySlug),
+      portraitPath:
+        heroRow.portraitPath ??
+        heroIconPath(heroCdnNameFromDisplayName(model.heroDisplayName)),
     })
   }
 

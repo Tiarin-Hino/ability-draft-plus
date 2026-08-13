@@ -12,9 +12,51 @@
 // impossible; if a real case surfaces, fix it in HERO_CDN_NAME_OVERRIDES.
 
 /** Derived-prefix → correct CDN name, for heroes where the ability prefix differs
- * from the npc short name (e.g. sandking_burrowstrike but npc_dota_hero_sand_king). */
+ * from the npc short name (e.g. sandking_burrowstrike but npc_dota_hero_sand_king).
+ * beastmaster_summon: both summon abilities share the extra "summon" segment, so
+ * a row where only those two are recognized over-extends the prefix (observed 404). */
 export const HERO_CDN_NAME_OVERRIDES: Readonly<Record<string, string>> = {
   sandking: 'sand_king',
+  beastmaster_summon: 'beastmaster',
+}
+
+/** Display-name slug → CDN name, for heroes whose English display name diverges
+ * from Valve's internal short name. Used by heroCdnNameFromDisplayName — the
+ * fallback when ability-prefix derivation fails (unrecognized row tiles). */
+const DISPLAY_SLUG_CDN_OVERRIDES: Readonly<Record<string, string>> = {
+  anti_mage: 'antimage',
+  centaur_warrunner: 'centaur',
+  clockwerk: 'rattletrap',
+  doom: 'doom_bringer',
+  io: 'wisp',
+  lifestealer: 'life_stealer',
+  magnus: 'magnataur',
+  natures_prophet: 'furion',
+  necrophos: 'necrolyte',
+  outworld_destroyer: 'obsidian_destroyer',
+  queen_of_pain: 'queenofpain',
+  shadow_fiend: 'nevermore',
+  timbersaw: 'shredder',
+  treant_protector: 'treant',
+  underlord: 'abyssal_underlord',
+  vengeful_spirit: 'vengefulspirit',
+  windranger: 'windrunner',
+  wraith_king: 'skeleton_king',
+  zeus: 'zuus',
+}
+
+/**
+ * CDN name from a hero's English display name ("Crystal Maiden" -> crystal_maiden,
+ * "Outworld Destroyer" -> obsidian_destroyer). Fallback for rows where ability-
+ * prefix derivation is impossible; identical to it for non-divergent names.
+ */
+export function heroCdnNameFromDisplayName(displayName: string): string {
+  const slug = displayName
+    .toLowerCase()
+    .replace(/['’]/g, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+  return DISPLAY_SLUG_CDN_OVERRIDES[slug] ?? slug
 }
 
 /**
