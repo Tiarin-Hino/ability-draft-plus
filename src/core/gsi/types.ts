@@ -34,3 +34,7 @@ export interface GsiSnapshot {
 }
 
 export const GSI_HERO_SELECTION_PHASE = 'DOTA_GAMERULES_STATE_HERO_SELECTION'
+
+/** How the snapshot's payload was produced: spectating carries allplayers slots,
+ * playing carries only the local player block. */
+export type GsiMode = 'spectating' | 'playing' | 'unknown'

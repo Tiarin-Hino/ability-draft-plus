@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseGsiPayload } from '@core/gsi/parser'
+import { parseGsiPayload, gsiSnapshotMode } from '@core/gsi/parser'
 
 // Fixtures are synthetic but shape-accurate for Dota GSI (provider/map/player sections).
 // The real-lobby capture spike (plan phase 4) replaces/extends these with recorded
@@ -226,5 +226,21 @@ describe('parseGsiPayload', () => {
   it('accepts clock_time of zero', () => {
     const snapshot = parseGsiPayload({ map: { clock_time: 0, game_state: 'X' } })
     expect(snapshot.clockTime).toBe(0)
+  })
+})
+
+describe('gsiSnapshotMode', () => {
+  it('classifies spectator payloads as spectating', () => {
+    expect(gsiSnapshotMode(parseGsiPayload(SPECTATOR_PAYLOAD))).toBe('spectating')
+  })
+
+  it('classifies local-player payloads as playing', () => {
+    expect(gsiSnapshotMode(parseGsiPayload(PLAYING_PAYLOAD))).toBe('playing')
+  })
+
+  it('classifies heartbeat payloads without player data as unknown', () => {
+    expect(
+      gsiSnapshotMode(parseGsiPayload({ provider: { name: 'Dota 2' } })),
+    ).toBe('unknown')
   })
 })
