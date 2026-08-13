@@ -77,6 +77,28 @@ export const REPLAY_CLOCK_REWIND_THRESHOLD_S = 10
 // slot) or a long-lived in-game overlay must not stall updates indefinitely.
 export const RESCAN_GUARD_MAX_CONSECUTIVE_REJECTIONS = 3
 
+// Cached-source game window capture (cached-window-capture-service.ts + the
+// overlay renderer's capture-agent.ts). desktopCapturer.getSources() thumbnails
+// EVERY open window to deliver one frame (measured 730-1075ms/scan, ~85% of
+// scan latency), so scans instead grab frames from a persistent getUserMedia
+// stream of the game window; getSources runs once per session (thumbnail-free)
+// only to resolve the window's source id.
+// Stream frame-rate cap: scans run at most every ~1.5s, so a frame up to
+// 1/10s stale is irrelevant while the capture stays cheap between scans.
+export const CAPTURE_STREAM_MAX_FPS = 10
+// Main-side wait for the renderer's frame response. Covers a cold stream start
+// (getUserMedia + the known ~300ms WGC first-attempt failure) with room to
+// spare; on expiry the scan falls back to the getSources path (~1s).
+export const CAPTURE_FRAME_TIMEOUT_MS = 4_000
+// Renderer-side wait for the FIRST frame after a stream starts. Must stay
+// below CAPTURE_FRAME_TIMEOUT_MS so the error response beats the main-side
+// timeout (a timed-out request ignores late responses).
+export const CAPTURE_FIRST_FRAME_TIMEOUT_MS = 3_000
+// No frame requested for this long -> the draft is over; stop the renderer
+// stream so the WGC capture session doesn't run for the whole match. The
+// cached source id survives (restarting the stream is cheap).
+export const CAPTURE_IDLE_STOP_MS = 30_000
+
 // Per-player draft score: score = clamp01(meanWinrate + weight * Σ clamped pair lifts).
 // MAX_PAIR_DELTA caps a single pair's contribution so one outlier synergy row
 // cannot dominate the whole score.
