@@ -30,14 +30,15 @@ const PLAYER_NAMES = [
   'Frost', 'Gale', 'Havoc', 'Iris', 'Jolt',
 ]
 
-// A few picks to demonstrate grey-out, player rows, and scores
-const PICKED: Array<{ player: number; name: string; display: string }> = [
+// A few picks to demonstrate grey-out, player rows, scores, and the ultimate box
+const PICKED: Array<{ player: number; name: string; display: string; ult?: true }> = [
   { player: 0, name: 'pudge_meat_hook', display: 'Meat Hook' },
   { player: 0, name: 'luna_moon_glaive', display: 'Moon Glaives' },
   { player: 3, name: 'kunkka_tidebringer', display: 'Tidebringer' },
   { player: 5, name: 'ursa_fury_swipes', display: 'Fury Swipes' },
   { player: 5, name: 'warlock_shadow_word', display: 'Shadow Word' },
   { player: 8, name: 'slark_essence_shift', display: 'Essence Shift' },
+  { player: 8, name: 'tidehunter_ravage', display: 'Ravage', ult: true },
 ]
 
 const PICKED_NAMES = new Set(PICKED.map((p) => p.name))
@@ -93,9 +94,15 @@ export function buildDemoState(): StreamBoardState {
   }))
 
   const players = PLAYER_NAMES.map((playerName, playerIndex) => {
-    const picks = PICKED.filter((p) => p.player === playerIndex).map((p) =>
-      slot(p.name, p.display, 0.52, { isPicked: false }),
-    )
+    // Positional pick boxes: standard picks fill 0-2, the ultimate sits in box 3
+    const picks: (StreamAbilitySlot | null)[] = [null, null, null, null]
+    let standardBox = 0
+    for (const p of PICKED.filter((p) => p.player === playerIndex)) {
+      const pickSlot = slot(p.name, p.display, 0.52, { isPicked: false })
+      if (p.ult) picks[3] = pickSlot
+      else if (standardBox < 3) picks[standardBox++] = pickSlot
+    }
+    const pickCount = picks.filter(Boolean).length
     const model =
       playerIndex % 3 !== 1
         ? {
@@ -111,12 +118,12 @@ export function buildDemoState(): StreamBoardState {
       model,
       picks,
       draftScore:
-        picks.length > 0
+        pickCount > 0
           ? {
               score: 0.47 + playerIndex * 0.012,
               base: 0.5,
               synergyAdjustment: 0.02,
-              confidence: (picks.length >= 2 ? 'medium' : 'low') as 'medium' | 'low',
+              confidence: (pickCount >= 2 ? 'medium' : 'low') as 'medium' | 'low',
             }
           : null,
     }
@@ -136,7 +143,7 @@ export function buildDemoState(): StreamBoardState {
       topWinrateInPool: [
         slot('luna_eclipse', 'Eclipse', 0.548),
         slot('oracle_false_promise', 'False Promise', 0.542),
-        slot('tidehunter_ravage', 'Ravage', 0.536),
+        slot('slark_shadow_dance', 'Shadow Dance', 0.536),
         slot('sandking_epicenter', 'Epicenter', 0.531),
         slot('warlock_rain_of_chaos', 'Chaotic Offering', 0.527),
         slot('brewmaster_cinder_brew', 'Cinder Brew', 0.522),

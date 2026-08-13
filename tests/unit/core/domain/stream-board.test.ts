@@ -269,10 +269,39 @@ describe('buildStreamBoardState', () => {
       portraitPath: '/icons/heroes/sand_king.png',
     })
     expect(state.players[1].model).toBeNull()
-    expect(state.players[0].picks.map((p) => p.name)).toEqual(['pudge_rot'])
-    expect(state.players[7].picks.map((p) => p.name)).toEqual(['hero1_slot1'])
-    expect(state.players[1].picks).toEqual([])
+    expect(state.players[0].picks.map((p) => p?.name ?? null)).toEqual([
+      'pudge_rot',
+      null,
+      null,
+      null,
+    ])
+    expect(state.players[7].picks.map((p) => p?.name ?? null)).toEqual([
+      'hero1_slot1',
+      null,
+      null,
+      null,
+    ])
+    expect(state.players[1].picks).toEqual([null, null, null, null])
     expect(state.players[1].draftScore).toBeNull()
+  })
+
+  it('places a picked ultimate in box 3 and standard picks in boxes 0-2', () => {
+    const latest = makeInitialPayload()
+    const scanData = latest.scanData
+    if (!scanData) throw new Error('fixture has scanData')
+    scanData.selectedAbilities = [
+      makeSlot('hero3_ult', 4, 0, true),
+      makeSlot('pudge_rot', 4, 0, false),
+      makeSlot('hero1_slot1', 4, 0, false),
+    ]
+
+    const state = buildStreamBoardState(makeInput({ latestPayload: latest }))
+    expect(state.players[4].picks.map((p) => p?.name ?? null)).toEqual([
+      'pudge_rot',
+      'hero1_slot1',
+      null,
+      'hero3_ult',
+    ])
   })
 
   it('places spectate GSI names/models only through slot-row mappings', () => {
@@ -367,7 +396,7 @@ describe('buildStreamBoardState', () => {
       makeSlot(null, 2, 1, false, { isUnknown: true }),
     ]
     const state = buildStreamBoardState(makeInput({ latestPayload: latest }))
-    expect(state.players[2].picks).toEqual([])
+    expect(state.players[2].picks).toEqual([null, null, null, null])
     expect(state.players[2].draftScore).toBeNull()
   })
 

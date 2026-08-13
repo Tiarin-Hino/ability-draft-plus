@@ -73,7 +73,9 @@ export interface StreamPlayerRow {
   /** Picked hero model from GSI (spectating: every player; playing: the local
    * player only); null until picked/unknown. */
   model: StreamPlayerModel | null
-  picks: StreamAbilitySlot[]
+  /** Fixed length 4, mirroring the in-game pick boxes: indexes 0–2 are standard
+   * picks (left to right), index 3 is the ultimate box; null = still empty. */
+  picks: (StreamAbilitySlot | null)[]
   draftScore: PlayerDraftScore | null
 }
 
