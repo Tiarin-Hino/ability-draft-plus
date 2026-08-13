@@ -645,13 +645,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1374,
-          "y": 198,
-          "hero_order": 5,
-          "is_ultimate": false
-        },
-        {
-          "x": 1324,
+          "x": 1223,
           "y": 198,
           "hero_order": 5,
           "is_ultimate": false
@@ -663,19 +657,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1223,
+          "x": 1324,
+          "y": 198,
+          "hero_order": 5,
+          "is_ultimate": false
+        },
+        {
+          "x": 1374,
           "y": 198,
           "hero_order": 5,
           "is_ultimate": true
         },
         {
-          "x": 1374,
-          "y": 338,
-          "hero_order": 6,
-          "is_ultimate": false
-        },
-        {
-          "x": 1324,
+          "x": 1223,
           "y": 338,
           "hero_order": 6,
           "is_ultimate": false
@@ -687,19 +681,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1223,
+          "x": 1324,
+          "y": 338,
+          "hero_order": 6,
+          "is_ultimate": false
+        },
+        {
+          "x": 1374,
           "y": 338,
           "hero_order": 6,
           "is_ultimate": true
         },
         {
-          "x": 1374,
-          "y": 478,
-          "hero_order": 7,
-          "is_ultimate": false
-        },
-        {
-          "x": 1324,
+          "x": 1223,
           "y": 478,
           "hero_order": 7,
           "is_ultimate": false
@@ -711,19 +705,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1223,
+          "x": 1324,
+          "y": 478,
+          "hero_order": 7,
+          "is_ultimate": false
+        },
+        {
+          "x": 1374,
           "y": 478,
           "hero_order": 7,
           "is_ultimate": true
         },
         {
-          "x": 1374,
-          "y": 618,
-          "hero_order": 8,
-          "is_ultimate": false
-        },
-        {
-          "x": 1324,
+          "x": 1223,
           "y": 618,
           "hero_order": 8,
           "is_ultimate": false
@@ -735,19 +729,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1223,
+          "x": 1324,
+          "y": 618,
+          "hero_order": 8,
+          "is_ultimate": false
+        },
+        {
+          "x": 1374,
           "y": 618,
           "hero_order": 8,
           "is_ultimate": true
         },
         {
-          "x": 1374,
-          "y": 758,
-          "hero_order": 9,
-          "is_ultimate": false
-        },
-        {
-          "x": 1324,
+          "x": 1223,
           "y": 758,
           "hero_order": 9,
           "is_ultimate": false
@@ -759,7 +753,13 @@
           "is_ultimate": false
         },
         {
-          "x": 1223,
+          "x": 1324,
+          "y": 758,
+          "hero_order": 9,
+          "is_ultimate": false
+        },
+        {
+          "x": 1374,
           "y": 758,
           "hero_order": 9,
           "is_ultimate": true
@@ -1411,13 +1411,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1720,
-          "y": 263,
-          "hero_order": 5,
-          "is_ultimate": false
-        },
-        {
-          "x": 1654,
+          "x": 1522,
           "y": 263,
           "hero_order": 5,
           "is_ultimate": false
@@ -1429,19 +1423,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1522,
+          "x": 1654,
+          "y": 263,
+          "hero_order": 5,
+          "is_ultimate": false
+        },
+        {
+          "x": 1720,
           "y": 263,
           "hero_order": 5,
           "is_ultimate": true
         },
         {
-          "x": 1720,
-          "y": 449,
-          "hero_order": 6,
-          "is_ultimate": false
-        },
-        {
-          "x": 1654,
+          "x": 1522,
           "y": 449,
           "hero_order": 6,
           "is_ultimate": false
@@ -1453,19 +1447,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1522,
+          "x": 1654,
+          "y": 449,
+          "hero_order": 6,
+          "is_ultimate": false
+        },
+        {
+          "x": 1720,
           "y": 449,
           "hero_order": 6,
           "is_ultimate": true
         },
         {
-          "x": 1720,
-          "y": 635,
-          "hero_order": 7,
-          "is_ultimate": false
-        },
-        {
-          "x": 1654,
+          "x": 1522,
           "y": 635,
           "hero_order": 7,
           "is_ultimate": false
@@ -1477,19 +1471,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1522,
+          "x": 1654,
+          "y": 635,
+          "hero_order": 7,
+          "is_ultimate": false
+        },
+        {
+          "x": 1720,
           "y": 635,
           "hero_order": 7,
           "is_ultimate": true
         },
         {
-          "x": 1720,
-          "y": 821,
-          "hero_order": 8,
-          "is_ultimate": false
-        },
-        {
-          "x": 1654,
+          "x": 1522,
           "y": 821,
           "hero_order": 8,
           "is_ultimate": false
@@ -1501,19 +1495,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1522,
+          "x": 1654,
+          "y": 821,
+          "hero_order": 8,
+          "is_ultimate": false
+        },
+        {
+          "x": 1720,
           "y": 821,
           "hero_order": 8,
           "is_ultimate": true
         },
         {
-          "x": 1720,
-          "y": 1007,
-          "hero_order": 9,
-          "is_ultimate": false
-        },
-        {
-          "x": 1654,
+          "x": 1522,
           "y": 1007,
           "hero_order": 9,
           "is_ultimate": false
@@ -1525,7 +1519,13 @@
           "is_ultimate": false
         },
         {
-          "x": 1522,
+          "x": 1654,
+          "y": 1007,
+          "hero_order": 9,
+          "is_ultimate": false
+        },
+        {
+          "x": 1720,
           "y": 1007,
           "hero_order": 9,
           "is_ultimate": true
@@ -4099,13 +4099,7 @@
           "is_ultimate": true
         },
         {
-          "x": 2199,
-          "y": 316,
-          "hero_order": 5,
-          "is_ultimate": false
-        },
-        {
-          "x": 2118,
+          "x": 1956,
           "y": 316,
           "hero_order": 5,
           "is_ultimate": false
@@ -4117,19 +4111,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1956,
+          "x": 2118,
+          "y": 316,
+          "hero_order": 5,
+          "is_ultimate": false
+        },
+        {
+          "x": 2199,
           "y": 316,
           "hero_order": 5,
           "is_ultimate": true
         },
         {
-          "x": 2199,
-          "y": 540,
-          "hero_order": 6,
-          "is_ultimate": false
-        },
-        {
-          "x": 2118,
+          "x": 1956,
           "y": 540,
           "hero_order": 6,
           "is_ultimate": false
@@ -4141,19 +4135,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1956,
+          "x": 2118,
+          "y": 540,
+          "hero_order": 6,
+          "is_ultimate": false
+        },
+        {
+          "x": 2199,
           "y": 540,
           "hero_order": 6,
           "is_ultimate": true
         },
         {
-          "x": 2199,
-          "y": 764,
-          "hero_order": 7,
-          "is_ultimate": false
-        },
-        {
-          "x": 2118,
+          "x": 1956,
           "y": 764,
           "hero_order": 7,
           "is_ultimate": false
@@ -4165,19 +4159,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1956,
+          "x": 2118,
+          "y": 764,
+          "hero_order": 7,
+          "is_ultimate": false
+        },
+        {
+          "x": 2199,
           "y": 764,
           "hero_order": 7,
           "is_ultimate": true
         },
         {
-          "x": 2199,
-          "y": 988,
-          "hero_order": 8,
-          "is_ultimate": false
-        },
-        {
-          "x": 2118,
+          "x": 1956,
           "y": 988,
           "hero_order": 8,
           "is_ultimate": false
@@ -4189,19 +4183,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1956,
+          "x": 2118,
+          "y": 988,
+          "hero_order": 8,
+          "is_ultimate": false
+        },
+        {
+          "x": 2199,
           "y": 988,
           "hero_order": 8,
           "is_ultimate": true
         },
         {
-          "x": 2199,
-          "y": 1212,
-          "hero_order": 9,
-          "is_ultimate": false
-        },
-        {
-          "x": 2118,
+          "x": 1956,
           "y": 1212,
           "hero_order": 9,
           "is_ultimate": false
@@ -4213,7 +4207,13 @@
           "is_ultimate": false
         },
         {
-          "x": 1956,
+          "x": 2118,
+          "y": 1212,
+          "hero_order": 9,
+          "is_ultimate": false
+        },
+        {
+          "x": 2199,
           "y": 1212,
           "hero_order": 9,
           "is_ultimate": true
@@ -4865,13 +4865,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1649,
-          "y": 237,
-          "hero_order": 5,
-          "is_ultimate": false
-        },
-        {
-          "x": 1589,
+          "x": 1467,
           "y": 237,
           "hero_order": 5,
           "is_ultimate": false
@@ -4883,19 +4877,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1467,
+          "x": 1589,
+          "y": 237,
+          "hero_order": 5,
+          "is_ultimate": false
+        },
+        {
+          "x": 1649,
           "y": 237,
           "hero_order": 5,
           "is_ultimate": true
         },
         {
-          "x": 1649,
-          "y": 405,
-          "hero_order": 6,
-          "is_ultimate": false
-        },
-        {
-          "x": 1589,
+          "x": 1467,
           "y": 405,
           "hero_order": 6,
           "is_ultimate": false
@@ -4907,19 +4901,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1467,
+          "x": 1589,
+          "y": 405,
+          "hero_order": 6,
+          "is_ultimate": false
+        },
+        {
+          "x": 1649,
           "y": 405,
           "hero_order": 6,
           "is_ultimate": true
         },
         {
-          "x": 1649,
-          "y": 573,
-          "hero_order": 7,
-          "is_ultimate": false
-        },
-        {
-          "x": 1589,
+          "x": 1467,
           "y": 573,
           "hero_order": 7,
           "is_ultimate": false
@@ -4931,19 +4925,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1467,
+          "x": 1589,
+          "y": 573,
+          "hero_order": 7,
+          "is_ultimate": false
+        },
+        {
+          "x": 1649,
           "y": 573,
           "hero_order": 7,
           "is_ultimate": true
         },
         {
-          "x": 1649,
-          "y": 741,
-          "hero_order": 8,
-          "is_ultimate": false
-        },
-        {
-          "x": 1589,
+          "x": 1467,
           "y": 741,
           "hero_order": 8,
           "is_ultimate": false
@@ -4955,19 +4949,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1467,
+          "x": 1589,
+          "y": 741,
+          "hero_order": 8,
+          "is_ultimate": false
+        },
+        {
+          "x": 1649,
           "y": 741,
           "hero_order": 8,
           "is_ultimate": true
         },
         {
-          "x": 1649,
-          "y": 909,
-          "hero_order": 9,
-          "is_ultimate": false
-        },
-        {
-          "x": 1589,
+          "x": 1467,
           "y": 909,
           "hero_order": 9,
           "is_ultimate": false
@@ -4979,7 +4973,13 @@
           "is_ultimate": false
         },
         {
-          "x": 1467,
+          "x": 1589,
+          "y": 909,
+          "hero_order": 9,
+          "is_ultimate": false
+        },
+        {
+          "x": 1649,
           "y": 909,
           "hero_order": 9,
           "is_ultimate": true
@@ -5631,13 +5631,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1176,
-          "y": 168,
-          "hero_order": 5,
-          "is_ultimate": false
-        },
-        {
-          "x": 1133,
+          "x": 1046,
           "y": 168,
           "hero_order": 5,
           "is_ultimate": false
@@ -5649,19 +5643,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1046,
+          "x": 1133,
+          "y": 168,
+          "hero_order": 5,
+          "is_ultimate": false
+        },
+        {
+          "x": 1176,
           "y": 168,
           "hero_order": 5,
           "is_ultimate": true
         },
         {
-          "x": 1176,
-          "y": 288,
-          "hero_order": 6,
-          "is_ultimate": false
-        },
-        {
-          "x": 1133,
+          "x": 1046,
           "y": 288,
           "hero_order": 6,
           "is_ultimate": false
@@ -5673,19 +5667,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1046,
+          "x": 1133,
+          "y": 288,
+          "hero_order": 6,
+          "is_ultimate": false
+        },
+        {
+          "x": 1176,
           "y": 288,
           "hero_order": 6,
           "is_ultimate": true
         },
         {
-          "x": 1176,
-          "y": 408,
-          "hero_order": 7,
-          "is_ultimate": false
-        },
-        {
-          "x": 1133,
+          "x": 1046,
           "y": 408,
           "hero_order": 7,
           "is_ultimate": false
@@ -5697,19 +5691,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1046,
+          "x": 1133,
+          "y": 408,
+          "hero_order": 7,
+          "is_ultimate": false
+        },
+        {
+          "x": 1176,
           "y": 408,
           "hero_order": 7,
           "is_ultimate": true
         },
         {
-          "x": 1176,
-          "y": 527,
-          "hero_order": 8,
-          "is_ultimate": false
-        },
-        {
-          "x": 1133,
+          "x": 1046,
           "y": 527,
           "hero_order": 8,
           "is_ultimate": false
@@ -5721,19 +5715,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1046,
+          "x": 1133,
+          "y": 527,
+          "hero_order": 8,
+          "is_ultimate": false
+        },
+        {
+          "x": 1176,
           "y": 527,
           "hero_order": 8,
           "is_ultimate": true
         },
         {
-          "x": 1176,
-          "y": 647,
-          "hero_order": 9,
-          "is_ultimate": false
-        },
-        {
-          "x": 1133,
+          "x": 1046,
           "y": 647,
           "hero_order": 9,
           "is_ultimate": false
@@ -5745,7 +5739,13 @@
           "is_ultimate": false
         },
         {
-          "x": 1046,
+          "x": 1133,
+          "y": 647,
+          "hero_order": 9,
+          "is_ultimate": false
+        },
+        {
+          "x": 1176,
           "y": 647,
           "hero_order": 9,
           "is_ultimate": true
@@ -6773,13 +6773,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1012,
-          "y": 146,
-          "hero_order": 5,
-          "is_ultimate": false
-        },
-        {
-          "x": 975,
+          "x": 900,
           "y": 146,
           "hero_order": 5,
           "is_ultimate": false
@@ -6791,19 +6785,19 @@
           "is_ultimate": false
         },
         {
-          "x": 900,
+          "x": 975,
+          "y": 146,
+          "hero_order": 5,
+          "is_ultimate": false
+        },
+        {
+          "x": 1012,
           "y": 146,
           "hero_order": 5,
           "is_ultimate": true
         },
         {
-          "x": 1012,
-          "y": 249,
-          "hero_order": 6,
-          "is_ultimate": false
-        },
-        {
-          "x": 975,
+          "x": 900,
           "y": 249,
           "hero_order": 6,
           "is_ultimate": false
@@ -6815,19 +6809,19 @@
           "is_ultimate": false
         },
         {
-          "x": 900,
+          "x": 975,
+          "y": 249,
+          "hero_order": 6,
+          "is_ultimate": false
+        },
+        {
+          "x": 1012,
           "y": 249,
           "hero_order": 6,
           "is_ultimate": true
         },
         {
-          "x": 1012,
-          "y": 352,
-          "hero_order": 7,
-          "is_ultimate": false
-        },
-        {
-          "x": 975,
+          "x": 900,
           "y": 352,
           "hero_order": 7,
           "is_ultimate": false
@@ -6839,19 +6833,19 @@
           "is_ultimate": false
         },
         {
-          "x": 900,
+          "x": 975,
+          "y": 352,
+          "hero_order": 7,
+          "is_ultimate": false
+        },
+        {
+          "x": 1012,
           "y": 352,
           "hero_order": 7,
           "is_ultimate": true
         },
         {
-          "x": 1012,
-          "y": 456,
-          "hero_order": 8,
-          "is_ultimate": false
-        },
-        {
-          "x": 975,
+          "x": 900,
           "y": 456,
           "hero_order": 8,
           "is_ultimate": false
@@ -6863,19 +6857,19 @@
           "is_ultimate": false
         },
         {
-          "x": 900,
+          "x": 975,
+          "y": 456,
+          "hero_order": 8,
+          "is_ultimate": false
+        },
+        {
+          "x": 1012,
           "y": 456,
           "hero_order": 8,
           "is_ultimate": true
         },
         {
-          "x": 1012,
-          "y": 559,
-          "hero_order": 9,
-          "is_ultimate": false
-        },
-        {
-          "x": 975,
+          "x": 900,
           "y": 559,
           "hero_order": 9,
           "is_ultimate": false
@@ -6887,7 +6881,13 @@
           "is_ultimate": false
         },
         {
-          "x": 900,
+          "x": 975,
+          "y": 559,
+          "hero_order": 9,
+          "is_ultimate": false
+        },
+        {
+          "x": 1012,
           "y": 559,
           "hero_order": 9,
           "is_ultimate": true
@@ -7539,13 +7539,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1170,
-          "y": 169,
-          "hero_order": 5,
-          "is_ultimate": false
-        },
-        {
-          "x": 1127,
+          "x": 1041,
           "y": 169,
           "hero_order": 5,
           "is_ultimate": false
@@ -7557,19 +7551,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1041,
+          "x": 1127,
+          "y": 169,
+          "hero_order": 5,
+          "is_ultimate": false
+        },
+        {
+          "x": 1170,
           "y": 169,
           "hero_order": 5,
           "is_ultimate": true
         },
         {
-          "x": 1170,
-          "y": 288,
-          "hero_order": 6,
-          "is_ultimate": false
-        },
-        {
-          "x": 1127,
+          "x": 1041,
           "y": 288,
           "hero_order": 6,
           "is_ultimate": false
@@ -7581,19 +7575,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1041,
+          "x": 1127,
+          "y": 288,
+          "hero_order": 6,
+          "is_ultimate": false
+        },
+        {
+          "x": 1170,
           "y": 288,
           "hero_order": 6,
           "is_ultimate": true
         },
         {
-          "x": 1170,
-          "y": 407,
-          "hero_order": 7,
-          "is_ultimate": false
-        },
-        {
-          "x": 1127,
+          "x": 1041,
           "y": 407,
           "hero_order": 7,
           "is_ultimate": false
@@ -7605,19 +7599,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1041,
+          "x": 1127,
+          "y": 407,
+          "hero_order": 7,
+          "is_ultimate": false
+        },
+        {
+          "x": 1170,
           "y": 407,
           "hero_order": 7,
           "is_ultimate": true
         },
         {
-          "x": 1170,
-          "y": 527,
-          "hero_order": 8,
-          "is_ultimate": false
-        },
-        {
-          "x": 1127,
+          "x": 1041,
           "y": 527,
           "hero_order": 8,
           "is_ultimate": false
@@ -7629,19 +7623,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1041,
+          "x": 1127,
+          "y": 527,
+          "hero_order": 8,
+          "is_ultimate": false
+        },
+        {
+          "x": 1170,
           "y": 527,
           "hero_order": 8,
           "is_ultimate": true
         },
         {
-          "x": 1170,
-          "y": 646,
-          "hero_order": 9,
-          "is_ultimate": false
-        },
-        {
-          "x": 1127,
+          "x": 1041,
           "y": 646,
           "hero_order": 9,
           "is_ultimate": false
@@ -7653,7 +7647,13 @@
           "is_ultimate": false
         },
         {
-          "x": 1041,
+          "x": 1127,
+          "y": 646,
+          "hero_order": 9,
+          "is_ultimate": false
+        },
+        {
+          "x": 1170,
           "y": 646,
           "hero_order": 9,
           "is_ultimate": true
@@ -8305,13 +8305,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1099,
-          "y": 158,
-          "hero_order": 5,
-          "is_ultimate": false
-        },
-        {
-          "x": 1059,
+          "x": 978,
           "y": 158,
           "hero_order": 5,
           "is_ultimate": false
@@ -8323,19 +8317,19 @@
           "is_ultimate": false
         },
         {
-          "x": 978,
+          "x": 1059,
+          "y": 158,
+          "hero_order": 5,
+          "is_ultimate": false
+        },
+        {
+          "x": 1099,
           "y": 158,
           "hero_order": 5,
           "is_ultimate": true
         },
         {
-          "x": 1099,
-          "y": 270,
-          "hero_order": 6,
-          "is_ultimate": false
-        },
-        {
-          "x": 1059,
+          "x": 978,
           "y": 270,
           "hero_order": 6,
           "is_ultimate": false
@@ -8347,19 +8341,19 @@
           "is_ultimate": false
         },
         {
-          "x": 978,
+          "x": 1059,
+          "y": 270,
+          "hero_order": 6,
+          "is_ultimate": false
+        },
+        {
+          "x": 1099,
           "y": 270,
           "hero_order": 6,
           "is_ultimate": true
         },
         {
-          "x": 1099,
-          "y": 382,
-          "hero_order": 7,
-          "is_ultimate": false
-        },
-        {
-          "x": 1059,
+          "x": 978,
           "y": 382,
           "hero_order": 7,
           "is_ultimate": false
@@ -8371,19 +8365,19 @@
           "is_ultimate": false
         },
         {
-          "x": 978,
+          "x": 1059,
+          "y": 382,
+          "hero_order": 7,
+          "is_ultimate": false
+        },
+        {
+          "x": 1099,
           "y": 382,
           "hero_order": 7,
           "is_ultimate": true
         },
         {
-          "x": 1099,
-          "y": 494,
-          "hero_order": 8,
-          "is_ultimate": false
-        },
-        {
-          "x": 1059,
+          "x": 978,
           "y": 494,
           "hero_order": 8,
           "is_ultimate": false
@@ -8395,19 +8389,19 @@
           "is_ultimate": false
         },
         {
-          "x": 978,
+          "x": 1059,
+          "y": 494,
+          "hero_order": 8,
+          "is_ultimate": false
+        },
+        {
+          "x": 1099,
           "y": 494,
           "hero_order": 8,
           "is_ultimate": true
         },
         {
-          "x": 1099,
-          "y": 606,
-          "hero_order": 9,
-          "is_ultimate": false
-        },
-        {
-          "x": 1059,
+          "x": 978,
           "y": 606,
           "hero_order": 9,
           "is_ultimate": false
@@ -8419,7 +8413,13 @@
           "is_ultimate": false
         },
         {
-          "x": 978,
+          "x": 1059,
+          "y": 606,
+          "hero_order": 9,
+          "is_ultimate": false
+        },
+        {
+          "x": 1099,
           "y": 606,
           "hero_order": 9,
           "is_ultimate": true
@@ -9071,13 +9071,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1418,
-          "y": 172,
-          "hero_order": 5,
-          "is_ultimate": false
-        },
-        {
-          "x": 1375,
+          "x": 1286,
           "y": 172,
           "hero_order": 5,
           "is_ultimate": false
@@ -9089,19 +9083,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1286,
+          "x": 1375,
+          "y": 172,
+          "hero_order": 5,
+          "is_ultimate": false
+        },
+        {
+          "x": 1418,
           "y": 172,
           "hero_order": 5,
           "is_ultimate": true
         },
         {
-          "x": 1418,
-          "y": 295,
-          "hero_order": 6,
-          "is_ultimate": false
-        },
-        {
-          "x": 1375,
+          "x": 1286,
           "y": 295,
           "hero_order": 6,
           "is_ultimate": false
@@ -9113,19 +9107,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1286,
+          "x": 1375,
+          "y": 295,
+          "hero_order": 6,
+          "is_ultimate": false
+        },
+        {
+          "x": 1418,
           "y": 295,
           "hero_order": 6,
           "is_ultimate": true
         },
         {
-          "x": 1418,
-          "y": 417,
-          "hero_order": 7,
-          "is_ultimate": false
-        },
-        {
-          "x": 1375,
+          "x": 1286,
           "y": 417,
           "hero_order": 7,
           "is_ultimate": false
@@ -9137,19 +9131,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1286,
+          "x": 1375,
+          "y": 417,
+          "hero_order": 7,
+          "is_ultimate": false
+        },
+        {
+          "x": 1418,
           "y": 417,
           "hero_order": 7,
           "is_ultimate": true
         },
         {
-          "x": 1418,
-          "y": 539,
-          "hero_order": 8,
-          "is_ultimate": false
-        },
-        {
-          "x": 1375,
+          "x": 1286,
           "y": 539,
           "hero_order": 8,
           "is_ultimate": false
@@ -9161,19 +9155,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1286,
+          "x": 1375,
+          "y": 539,
+          "hero_order": 8,
+          "is_ultimate": false
+        },
+        {
+          "x": 1418,
           "y": 539,
           "hero_order": 8,
           "is_ultimate": true
         },
         {
-          "x": 1418,
-          "y": 662,
-          "hero_order": 9,
-          "is_ultimate": false
-        },
-        {
-          "x": 1375,
+          "x": 1286,
           "y": 662,
           "hero_order": 9,
           "is_ultimate": false
@@ -9185,7 +9179,13 @@
           "is_ultimate": false
         },
         {
-          "x": 1286,
+          "x": 1375,
+          "y": 662,
+          "hero_order": 9,
+          "is_ultimate": false
+        },
+        {
+          "x": 1418,
           "y": 662,
           "hero_order": 9,
           "is_ultimate": true
@@ -9897,15 +9897,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1720,
-          "y": 382,
-          "width": 0,
-          "height": 0,
-          "hero_order": 5,
-          "is_ultimate": false
-        },
-        {
-          "x": 1654,
+          "x": 1522,
           "y": 382,
           "width": 0,
           "height": 0,
@@ -9921,7 +9913,15 @@
           "is_ultimate": false
         },
         {
-          "x": 1522,
+          "x": 1654,
+          "y": 382,
+          "width": 0,
+          "height": 0,
+          "hero_order": 5,
+          "is_ultimate": false
+        },
+        {
+          "x": 1720,
           "y": 382,
           "width": 0,
           "height": 0,
@@ -9929,15 +9929,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1720,
-          "y": 571,
-          "width": 0,
-          "height": 0,
-          "hero_order": 6,
-          "is_ultimate": false
-        },
-        {
-          "x": 1654,
+          "x": 1522,
           "y": 571,
           "width": 0,
           "height": 0,
@@ -9953,7 +9945,15 @@
           "is_ultimate": false
         },
         {
-          "x": 1522,
+          "x": 1654,
+          "y": 571,
+          "width": 0,
+          "height": 0,
+          "hero_order": 6,
+          "is_ultimate": false
+        },
+        {
+          "x": 1720,
           "y": 571,
           "width": 0,
           "height": 0,
@@ -9961,15 +9961,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1720,
-          "y": 760,
-          "width": 0,
-          "height": 0,
-          "hero_order": 7,
-          "is_ultimate": false
-        },
-        {
-          "x": 1654,
+          "x": 1522,
           "y": 760,
           "width": 0,
           "height": 0,
@@ -9985,7 +9977,15 @@
           "is_ultimate": false
         },
         {
-          "x": 1522,
+          "x": 1654,
+          "y": 760,
+          "width": 0,
+          "height": 0,
+          "hero_order": 7,
+          "is_ultimate": false
+        },
+        {
+          "x": 1720,
           "y": 760,
           "width": 0,
           "height": 0,
@@ -9993,15 +9993,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1720,
-          "y": 949,
-          "width": 0,
-          "height": 0,
-          "hero_order": 8,
-          "is_ultimate": false
-        },
-        {
-          "x": 1654,
+          "x": 1522,
           "y": 949,
           "width": 0,
           "height": 0,
@@ -10017,7 +10009,15 @@
           "is_ultimate": false
         },
         {
-          "x": 1522,
+          "x": 1654,
+          "y": 949,
+          "width": 0,
+          "height": 0,
+          "hero_order": 8,
+          "is_ultimate": false
+        },
+        {
+          "x": 1720,
           "y": 949,
           "width": 0,
           "height": 0,
@@ -10025,15 +10025,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1720,
-          "y": 1138,
-          "width": 0,
-          "height": 0,
-          "hero_order": 9,
-          "is_ultimate": false
-        },
-        {
-          "x": 1654,
+          "x": 1522,
           "y": 1138,
           "width": 0,
           "height": 0,
@@ -10049,7 +10041,15 @@
           "is_ultimate": false
         },
         {
-          "x": 1522,
+          "x": 1654,
+          "y": 1138,
+          "width": 0,
+          "height": 0,
+          "hero_order": 9,
+          "is_ultimate": false
+        },
+        {
+          "x": 1720,
           "y": 1138,
           "width": 0,
           "height": 0,
@@ -10703,13 +10703,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1505,
-          "y": 230,
-          "hero_order": 5,
-          "is_ultimate": false
-        },
-        {
-          "x": 1447,
+          "x": 1332,
           "y": 230,
           "hero_order": 5,
           "is_ultimate": false
@@ -10721,19 +10715,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1332,
+          "x": 1447,
+          "y": 230,
+          "hero_order": 5,
+          "is_ultimate": false
+        },
+        {
+          "x": 1505,
           "y": 230,
           "hero_order": 5,
           "is_ultimate": true
         },
         {
-          "x": 1505,
-          "y": 393,
-          "hero_order": 6,
-          "is_ultimate": false
-        },
-        {
-          "x": 1447,
+          "x": 1332,
           "y": 393,
           "hero_order": 6,
           "is_ultimate": false
@@ -10745,19 +10739,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1332,
+          "x": 1447,
+          "y": 393,
+          "hero_order": 6,
+          "is_ultimate": false
+        },
+        {
+          "x": 1505,
           "y": 393,
           "hero_order": 6,
           "is_ultimate": true
         },
         {
-          "x": 1505,
-          "y": 556,
-          "hero_order": 7,
-          "is_ultimate": false
-        },
-        {
-          "x": 1447,
+          "x": 1332,
           "y": 556,
           "hero_order": 7,
           "is_ultimate": false
@@ -10769,19 +10763,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1332,
+          "x": 1447,
+          "y": 556,
+          "hero_order": 7,
+          "is_ultimate": false
+        },
+        {
+          "x": 1505,
           "y": 556,
           "hero_order": 7,
           "is_ultimate": true
         },
         {
-          "x": 1505,
-          "y": 718,
-          "hero_order": 8,
-          "is_ultimate": false
-        },
-        {
-          "x": 1447,
+          "x": 1332,
           "y": 718,
           "hero_order": 8,
           "is_ultimate": false
@@ -10793,19 +10787,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1332,
+          "x": 1447,
+          "y": 718,
+          "hero_order": 8,
+          "is_ultimate": false
+        },
+        {
+          "x": 1505,
           "y": 718,
           "hero_order": 8,
           "is_ultimate": true
         },
         {
-          "x": 1505,
-          "y": 881,
-          "hero_order": 9,
-          "is_ultimate": false
-        },
-        {
-          "x": 1447,
+          "x": 1332,
           "y": 881,
           "hero_order": 9,
           "is_ultimate": false
@@ -10817,7 +10811,13 @@
           "is_ultimate": false
         },
         {
-          "x": 1332,
+          "x": 1447,
+          "y": 881,
+          "hero_order": 9,
+          "is_ultimate": false
+        },
+        {
+          "x": 1505,
           "y": 881,
           "hero_order": 9,
           "is_ultimate": true
@@ -11529,15 +11529,7 @@
           "is_ultimate": true
         },
         {
-          "x": 917,
-          "y": 204,
-          "width": 0,
-          "height": 0,
-          "hero_order": 5,
-          "is_ultimate": false
-        },
-        {
-          "x": 882,
+          "x": 812,
           "y": 204,
           "width": 0,
           "height": 0,
@@ -11553,7 +11545,15 @@
           "is_ultimate": false
         },
         {
-          "x": 812,
+          "x": 882,
+          "y": 204,
+          "width": 0,
+          "height": 0,
+          "hero_order": 5,
+          "is_ultimate": false
+        },
+        {
+          "x": 917,
           "y": 204,
           "width": 0,
           "height": 0,
@@ -11561,15 +11561,7 @@
           "is_ultimate": true
         },
         {
-          "x": 917,
-          "y": 305,
-          "width": 0,
-          "height": 0,
-          "hero_order": 6,
-          "is_ultimate": false
-        },
-        {
-          "x": 882,
+          "x": 812,
           "y": 305,
           "width": 0,
           "height": 0,
@@ -11585,7 +11577,15 @@
           "is_ultimate": false
         },
         {
-          "x": 812,
+          "x": 882,
+          "y": 305,
+          "width": 0,
+          "height": 0,
+          "hero_order": 6,
+          "is_ultimate": false
+        },
+        {
+          "x": 917,
           "y": 305,
           "width": 0,
           "height": 0,
@@ -11593,15 +11593,7 @@
           "is_ultimate": true
         },
         {
-          "x": 917,
-          "y": 405,
-          "width": 0,
-          "height": 0,
-          "hero_order": 7,
-          "is_ultimate": false
-        },
-        {
-          "x": 882,
+          "x": 812,
           "y": 405,
           "width": 0,
           "height": 0,
@@ -11617,7 +11609,15 @@
           "is_ultimate": false
         },
         {
-          "x": 812,
+          "x": 882,
+          "y": 405,
+          "width": 0,
+          "height": 0,
+          "hero_order": 7,
+          "is_ultimate": false
+        },
+        {
+          "x": 917,
           "y": 405,
           "width": 0,
           "height": 0,
@@ -11625,15 +11625,7 @@
           "is_ultimate": true
         },
         {
-          "x": 917,
-          "y": 506,
-          "width": 0,
-          "height": 0,
-          "hero_order": 8,
-          "is_ultimate": false
-        },
-        {
-          "x": 882,
+          "x": 812,
           "y": 506,
           "width": 0,
           "height": 0,
@@ -11649,7 +11641,15 @@
           "is_ultimate": false
         },
         {
-          "x": 812,
+          "x": 882,
+          "y": 506,
+          "width": 0,
+          "height": 0,
+          "hero_order": 8,
+          "is_ultimate": false
+        },
+        {
+          "x": 917,
           "y": 506,
           "width": 0,
           "height": 0,
@@ -11657,15 +11657,7 @@
           "is_ultimate": true
         },
         {
-          "x": 917,
-          "y": 607,
-          "width": 0,
-          "height": 0,
-          "hero_order": 9,
-          "is_ultimate": false
-        },
-        {
-          "x": 882,
+          "x": 812,
           "y": 607,
           "width": 0,
           "height": 0,
@@ -11681,7 +11673,15 @@
           "is_ultimate": false
         },
         {
-          "x": 812,
+          "x": 882,
+          "y": 607,
+          "width": 0,
+          "height": 0,
+          "hero_order": 9,
+          "is_ultimate": false
+        },
+        {
+          "x": 917,
           "y": 607,
           "width": 0,
           "height": 0,
@@ -12395,15 +12395,7 @@
           "is_ultimate": true
         },
         {
-          "x": 573,
-          "y": 127,
-          "width": 0,
-          "height": 0,
-          "hero_order": 5,
-          "is_ultimate": false
-        },
-        {
-          "x": 551,
+          "x": 507,
           "y": 127,
           "width": 0,
           "height": 0,
@@ -12419,7 +12411,15 @@
           "is_ultimate": false
         },
         {
-          "x": 507,
+          "x": 551,
+          "y": 127,
+          "width": 0,
+          "height": 0,
+          "hero_order": 5,
+          "is_ultimate": false
+        },
+        {
+          "x": 573,
           "y": 127,
           "width": 0,
           "height": 0,
@@ -12427,15 +12427,7 @@
           "is_ultimate": true
         },
         {
-          "x": 573,
-          "y": 190,
-          "width": 0,
-          "height": 0,
-          "hero_order": 6,
-          "is_ultimate": false
-        },
-        {
-          "x": 551,
+          "x": 507,
           "y": 190,
           "width": 0,
           "height": 0,
@@ -12451,7 +12443,15 @@
           "is_ultimate": false
         },
         {
-          "x": 507,
+          "x": 551,
+          "y": 190,
+          "width": 0,
+          "height": 0,
+          "hero_order": 6,
+          "is_ultimate": false
+        },
+        {
+          "x": 573,
           "y": 190,
           "width": 0,
           "height": 0,
@@ -12459,15 +12459,7 @@
           "is_ultimate": true
         },
         {
-          "x": 573,
-          "y": 253,
-          "width": 0,
-          "height": 0,
-          "hero_order": 7,
-          "is_ultimate": false
-        },
-        {
-          "x": 551,
+          "x": 507,
           "y": 253,
           "width": 0,
           "height": 0,
@@ -12483,7 +12475,15 @@
           "is_ultimate": false
         },
         {
-          "x": 507,
+          "x": 551,
+          "y": 253,
+          "width": 0,
+          "height": 0,
+          "hero_order": 7,
+          "is_ultimate": false
+        },
+        {
+          "x": 573,
           "y": 253,
           "width": 0,
           "height": 0,
@@ -12491,15 +12491,7 @@
           "is_ultimate": true
         },
         {
-          "x": 573,
-          "y": 316,
-          "width": 0,
-          "height": 0,
-          "hero_order": 8,
-          "is_ultimate": false
-        },
-        {
-          "x": 551,
+          "x": 507,
           "y": 316,
           "width": 0,
           "height": 0,
@@ -12515,7 +12507,15 @@
           "is_ultimate": false
         },
         {
-          "x": 507,
+          "x": 551,
+          "y": 316,
+          "width": 0,
+          "height": 0,
+          "hero_order": 8,
+          "is_ultimate": false
+        },
+        {
+          "x": 573,
           "y": 316,
           "width": 0,
           "height": 0,
@@ -12523,15 +12523,7 @@
           "is_ultimate": true
         },
         {
-          "x": 573,
-          "y": 379,
-          "width": 0,
-          "height": 0,
-          "hero_order": 9,
-          "is_ultimate": false
-        },
-        {
-          "x": 551,
+          "x": 507,
           "y": 379,
           "width": 0,
           "height": 0,
@@ -12547,7 +12539,15 @@
           "is_ultimate": false
         },
         {
-          "x": 507,
+          "x": 551,
+          "y": 379,
+          "width": 0,
+          "height": 0,
+          "hero_order": 9,
+          "is_ultimate": false
+        },
+        {
+          "x": 573,
           "y": 379,
           "width": 0,
           "height": 0,
@@ -13261,15 +13261,7 @@
           "is_ultimate": true
         },
         {
-          "x": 664,
-          "y": 153,
-          "width": 0,
-          "height": 0,
-          "hero_order": 5,
-          "is_ultimate": false
-        },
-        {
-          "x": 638,
+          "x": 585,
           "y": 153,
           "width": 0,
           "height": 0,
@@ -13285,7 +13277,15 @@
           "is_ultimate": false
         },
         {
-          "x": 585,
+          "x": 638,
+          "y": 153,
+          "width": 0,
+          "height": 0,
+          "hero_order": 5,
+          "is_ultimate": false
+        },
+        {
+          "x": 664,
           "y": 153,
           "width": 0,
           "height": 0,
@@ -13293,15 +13293,7 @@
           "is_ultimate": true
         },
         {
-          "x": 664,
-          "y": 228,
-          "width": 0,
-          "height": 0,
-          "hero_order": 6,
-          "is_ultimate": false
-        },
-        {
-          "x": 638,
+          "x": 585,
           "y": 228,
           "width": 0,
           "height": 0,
@@ -13317,7 +13309,15 @@
           "is_ultimate": false
         },
         {
-          "x": 585,
+          "x": 638,
+          "y": 228,
+          "width": 0,
+          "height": 0,
+          "hero_order": 6,
+          "is_ultimate": false
+        },
+        {
+          "x": 664,
           "y": 228,
           "width": 0,
           "height": 0,
@@ -13325,15 +13325,7 @@
           "is_ultimate": true
         },
         {
-          "x": 664,
-          "y": 304,
-          "width": 0,
-          "height": 0,
-          "hero_order": 7,
-          "is_ultimate": false
-        },
-        {
-          "x": 638,
+          "x": 585,
           "y": 304,
           "width": 0,
           "height": 0,
@@ -13349,7 +13341,15 @@
           "is_ultimate": false
         },
         {
-          "x": 585,
+          "x": 638,
+          "y": 304,
+          "width": 0,
+          "height": 0,
+          "hero_order": 7,
+          "is_ultimate": false
+        },
+        {
+          "x": 664,
           "y": 304,
           "width": 0,
           "height": 0,
@@ -13357,15 +13357,7 @@
           "is_ultimate": true
         },
         {
-          "x": 664,
-          "y": 380,
-          "width": 0,
-          "height": 0,
-          "hero_order": 8,
-          "is_ultimate": false
-        },
-        {
-          "x": 638,
+          "x": 585,
           "y": 380,
           "width": 0,
           "height": 0,
@@ -13381,7 +13373,15 @@
           "is_ultimate": false
         },
         {
-          "x": 585,
+          "x": 638,
+          "y": 380,
+          "width": 0,
+          "height": 0,
+          "hero_order": 8,
+          "is_ultimate": false
+        },
+        {
+          "x": 664,
           "y": 380,
           "width": 0,
           "height": 0,
@@ -13389,15 +13389,7 @@
           "is_ultimate": true
         },
         {
-          "x": 664,
-          "y": 455,
-          "width": 0,
-          "height": 0,
-          "hero_order": 9,
-          "is_ultimate": false
-        },
-        {
-          "x": 638,
+          "x": 585,
           "y": 455,
           "width": 0,
           "height": 0,
@@ -13413,7 +13405,15 @@
           "is_ultimate": false
         },
         {
-          "x": 585,
+          "x": 638,
+          "y": 455,
+          "width": 0,
+          "height": 0,
+          "hero_order": 9,
+          "is_ultimate": false
+        },
+        {
+          "x": 664,
           "y": 455,
           "width": 0,
           "height": 0,
@@ -14127,15 +14127,7 @@
           "is_ultimate": true
         },
         {
-          "x": 717,
-          "y": 159,
-          "width": 0,
-          "height": 0,
-          "hero_order": 5,
-          "is_ultimate": false
-        },
-        {
-          "x": 689,
+          "x": 634,
           "y": 159,
           "width": 0,
           "height": 0,
@@ -14151,7 +14143,15 @@
           "is_ultimate": false
         },
         {
-          "x": 634,
+          "x": 689,
+          "y": 159,
+          "width": 0,
+          "height": 0,
+          "hero_order": 5,
+          "is_ultimate": false
+        },
+        {
+          "x": 717,
           "y": 159,
           "width": 0,
           "height": 0,
@@ -14159,15 +14159,7 @@
           "is_ultimate": true
         },
         {
-          "x": 717,
-          "y": 238,
-          "width": 0,
-          "height": 0,
-          "hero_order": 6,
-          "is_ultimate": false
-        },
-        {
-          "x": 689,
+          "x": 634,
           "y": 238,
           "width": 0,
           "height": 0,
@@ -14183,7 +14175,15 @@
           "is_ultimate": false
         },
         {
-          "x": 634,
+          "x": 689,
+          "y": 238,
+          "width": 0,
+          "height": 0,
+          "hero_order": 6,
+          "is_ultimate": false
+        },
+        {
+          "x": 717,
           "y": 238,
           "width": 0,
           "height": 0,
@@ -14191,15 +14191,7 @@
           "is_ultimate": true
         },
         {
-          "x": 717,
-          "y": 317,
-          "width": 0,
-          "height": 0,
-          "hero_order": 7,
-          "is_ultimate": false
-        },
-        {
-          "x": 689,
+          "x": 634,
           "y": 317,
           "width": 0,
           "height": 0,
@@ -14215,7 +14207,15 @@
           "is_ultimate": false
         },
         {
-          "x": 634,
+          "x": 689,
+          "y": 317,
+          "width": 0,
+          "height": 0,
+          "hero_order": 7,
+          "is_ultimate": false
+        },
+        {
+          "x": 717,
           "y": 317,
           "width": 0,
           "height": 0,
@@ -14223,15 +14223,7 @@
           "is_ultimate": true
         },
         {
-          "x": 717,
-          "y": 395,
-          "width": 0,
-          "height": 0,
-          "hero_order": 8,
-          "is_ultimate": false
-        },
-        {
-          "x": 689,
+          "x": 634,
           "y": 395,
           "width": 0,
           "height": 0,
@@ -14247,7 +14239,15 @@
           "is_ultimate": false
         },
         {
-          "x": 634,
+          "x": 689,
+          "y": 395,
+          "width": 0,
+          "height": 0,
+          "hero_order": 8,
+          "is_ultimate": false
+        },
+        {
+          "x": 717,
           "y": 395,
           "width": 0,
           "height": 0,
@@ -14255,15 +14255,7 @@
           "is_ultimate": true
         },
         {
-          "x": 717,
-          "y": 474,
-          "width": 0,
-          "height": 0,
-          "hero_order": 9,
-          "is_ultimate": false
-        },
-        {
-          "x": 689,
+          "x": 634,
           "y": 474,
           "width": 0,
           "height": 0,
@@ -14279,7 +14271,15 @@
           "is_ultimate": false
         },
         {
-          "x": 634,
+          "x": 689,
+          "y": 474,
+          "width": 0,
+          "height": 0,
+          "hero_order": 9,
+          "is_ultimate": false
+        },
+        {
+          "x": 717,
           "y": 474,
           "width": 0,
           "height": 0,
@@ -14993,15 +14993,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1032,
-          "y": 229,
-          "width": 0,
-          "height": 0,
-          "hero_order": 5,
-          "is_ultimate": false
-        },
-        {
-          "x": 992,
+          "x": 913,
           "y": 229,
           "width": 0,
           "height": 0,
@@ -15017,7 +15009,15 @@
           "is_ultimate": false
         },
         {
-          "x": 913,
+          "x": 992,
+          "y": 229,
+          "width": 0,
+          "height": 0,
+          "hero_order": 5,
+          "is_ultimate": false
+        },
+        {
+          "x": 1032,
           "y": 229,
           "width": 0,
           "height": 0,
@@ -15025,15 +15025,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1032,
-          "y": 343,
-          "width": 0,
-          "height": 0,
-          "hero_order": 6,
-          "is_ultimate": false
-        },
-        {
-          "x": 992,
+          "x": 913,
           "y": 343,
           "width": 0,
           "height": 0,
@@ -15049,7 +15041,15 @@
           "is_ultimate": false
         },
         {
-          "x": 913,
+          "x": 992,
+          "y": 343,
+          "width": 0,
+          "height": 0,
+          "hero_order": 6,
+          "is_ultimate": false
+        },
+        {
+          "x": 1032,
           "y": 343,
           "width": 0,
           "height": 0,
@@ -15057,15 +15057,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1032,
-          "y": 456,
-          "width": 0,
-          "height": 0,
-          "hero_order": 7,
-          "is_ultimate": false
-        },
-        {
-          "x": 992,
+          "x": 913,
           "y": 456,
           "width": 0,
           "height": 0,
@@ -15081,7 +15073,15 @@
           "is_ultimate": false
         },
         {
-          "x": 913,
+          "x": 992,
+          "y": 456,
+          "width": 0,
+          "height": 0,
+          "hero_order": 7,
+          "is_ultimate": false
+        },
+        {
+          "x": 1032,
           "y": 456,
           "width": 0,
           "height": 0,
@@ -15089,15 +15089,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1032,
-          "y": 569,
-          "width": 0,
-          "height": 0,
-          "hero_order": 8,
-          "is_ultimate": false
-        },
-        {
-          "x": 992,
+          "x": 913,
           "y": 569,
           "width": 0,
           "height": 0,
@@ -15113,7 +15105,15 @@
           "is_ultimate": false
         },
         {
-          "x": 913,
+          "x": 992,
+          "y": 569,
+          "width": 0,
+          "height": 0,
+          "hero_order": 8,
+          "is_ultimate": false
+        },
+        {
+          "x": 1032,
           "y": 569,
           "width": 0,
           "height": 0,
@@ -15121,15 +15121,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1032,
-          "y": 683,
-          "width": 0,
-          "height": 0,
-          "hero_order": 9,
-          "is_ultimate": false
-        },
-        {
-          "x": 992,
+          "x": 913,
           "y": 683,
           "width": 0,
           "height": 0,
@@ -15145,7 +15137,15 @@
           "is_ultimate": false
         },
         {
-          "x": 913,
+          "x": 992,
+          "y": 683,
+          "width": 0,
+          "height": 0,
+          "hero_order": 9,
+          "is_ultimate": false
+        },
+        {
+          "x": 1032,
           "y": 683,
           "width": 0,
           "height": 0,
@@ -15859,15 +15859,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1180,
-          "y": 272,
-          "width": 0,
-          "height": 0,
-          "hero_order": 5,
-          "is_ultimate": false
-        },
-        {
-          "x": 1134,
+          "x": 1040,
           "y": 272,
           "width": 0,
           "height": 0,
@@ -15883,7 +15875,15 @@
           "is_ultimate": false
         },
         {
-          "x": 1040,
+          "x": 1134,
+          "y": 272,
+          "width": 0,
+          "height": 0,
+          "hero_order": 5,
+          "is_ultimate": false
+        },
+        {
+          "x": 1180,
           "y": 272,
           "width": 0,
           "height": 0,
@@ -15891,15 +15891,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1180,
-          "y": 406,
-          "width": 0,
-          "height": 0,
-          "hero_order": 6,
-          "is_ultimate": false
-        },
-        {
-          "x": 1134,
+          "x": 1040,
           "y": 406,
           "width": 0,
           "height": 0,
@@ -15915,7 +15907,15 @@
           "is_ultimate": false
         },
         {
-          "x": 1040,
+          "x": 1134,
+          "y": 406,
+          "width": 0,
+          "height": 0,
+          "hero_order": 6,
+          "is_ultimate": false
+        },
+        {
+          "x": 1180,
           "y": 406,
           "width": 0,
           "height": 0,
@@ -15923,15 +15923,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1180,
-          "y": 540,
-          "width": 0,
-          "height": 0,
-          "hero_order": 7,
-          "is_ultimate": false
-        },
-        {
-          "x": 1134,
+          "x": 1040,
           "y": 540,
           "width": 0,
           "height": 0,
@@ -15947,7 +15939,15 @@
           "is_ultimate": false
         },
         {
-          "x": 1040,
+          "x": 1134,
+          "y": 540,
+          "width": 0,
+          "height": 0,
+          "hero_order": 7,
+          "is_ultimate": false
+        },
+        {
+          "x": 1180,
           "y": 540,
           "width": 0,
           "height": 0,
@@ -15955,15 +15955,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1180,
-          "y": 675,
-          "width": 0,
-          "height": 0,
-          "hero_order": 8,
-          "is_ultimate": false
-        },
-        {
-          "x": 1134,
+          "x": 1040,
           "y": 675,
           "width": 0,
           "height": 0,
@@ -15979,7 +15971,15 @@
           "is_ultimate": false
         },
         {
-          "x": 1040,
+          "x": 1134,
+          "y": 675,
+          "width": 0,
+          "height": 0,
+          "hero_order": 8,
+          "is_ultimate": false
+        },
+        {
+          "x": 1180,
           "y": 675,
           "width": 0,
           "height": 0,
@@ -15987,15 +15987,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1180,
-          "y": 809,
-          "width": 0,
-          "height": 0,
-          "hero_order": 9,
-          "is_ultimate": false
-        },
-        {
-          "x": 1134,
+          "x": 1040,
           "y": 809,
           "width": 0,
           "height": 0,
@@ -16011,7 +16003,15 @@
           "is_ultimate": false
         },
         {
-          "x": 1040,
+          "x": 1134,
+          "y": 809,
+          "width": 0,
+          "height": 0,
+          "hero_order": 9,
+          "is_ultimate": false
+        },
+        {
+          "x": 1180,
           "y": 809,
           "width": 0,
           "height": 0,
@@ -16725,15 +16725,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1147,
-          "y": 255,
-          "width": 0,
-          "height": 0,
-          "hero_order": 5,
-          "is_ultimate": false
-        },
-        {
-          "x": 1103,
+          "x": 1015,
           "y": 255,
           "width": 0,
           "height": 0,
@@ -16749,7 +16741,15 @@
           "is_ultimate": false
         },
         {
-          "x": 1015,
+          "x": 1103,
+          "y": 255,
+          "width": 0,
+          "height": 0,
+          "hero_order": 5,
+          "is_ultimate": false
+        },
+        {
+          "x": 1147,
           "y": 255,
           "width": 0,
           "height": 0,
@@ -16757,15 +16757,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1147,
-          "y": 381,
-          "width": 0,
-          "height": 0,
-          "hero_order": 6,
-          "is_ultimate": false
-        },
-        {
-          "x": 1103,
+          "x": 1015,
           "y": 381,
           "width": 0,
           "height": 0,
@@ -16781,7 +16773,15 @@
           "is_ultimate": false
         },
         {
-          "x": 1015,
+          "x": 1103,
+          "y": 381,
+          "width": 0,
+          "height": 0,
+          "hero_order": 6,
+          "is_ultimate": false
+        },
+        {
+          "x": 1147,
           "y": 381,
           "width": 0,
           "height": 0,
@@ -16789,15 +16789,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1147,
-          "y": 507,
-          "width": 0,
-          "height": 0,
-          "hero_order": 7,
-          "is_ultimate": false
-        },
-        {
-          "x": 1103,
+          "x": 1015,
           "y": 507,
           "width": 0,
           "height": 0,
@@ -16813,7 +16805,15 @@
           "is_ultimate": false
         },
         {
-          "x": 1015,
+          "x": 1103,
+          "y": 507,
+          "width": 0,
+          "height": 0,
+          "hero_order": 7,
+          "is_ultimate": false
+        },
+        {
+          "x": 1147,
           "y": 507,
           "width": 0,
           "height": 0,
@@ -16821,15 +16821,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1147,
-          "y": 633,
-          "width": 0,
-          "height": 0,
-          "hero_order": 8,
-          "is_ultimate": false
-        },
-        {
-          "x": 1103,
+          "x": 1015,
           "y": 633,
           "width": 0,
           "height": 0,
@@ -16845,7 +16837,15 @@
           "is_ultimate": false
         },
         {
-          "x": 1015,
+          "x": 1103,
+          "y": 633,
+          "width": 0,
+          "height": 0,
+          "hero_order": 8,
+          "is_ultimate": false
+        },
+        {
+          "x": 1147,
           "y": 633,
           "width": 0,
           "height": 0,
@@ -16853,15 +16853,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1147,
-          "y": 759,
-          "width": 0,
-          "height": 0,
-          "hero_order": 9,
-          "is_ultimate": false
-        },
-        {
-          "x": 1103,
+          "x": 1015,
           "y": 759,
           "width": 0,
           "height": 0,
@@ -16877,7 +16869,15 @@
           "is_ultimate": false
         },
         {
-          "x": 1015,
+          "x": 1103,
+          "y": 759,
+          "width": 0,
+          "height": 0,
+          "hero_order": 9,
+          "is_ultimate": false
+        },
+        {
+          "x": 1147,
           "y": 759,
           "width": 0,
           "height": 0,
@@ -17591,15 +17591,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1290,
-          "y": 287,
-          "width": 0,
-          "height": 0,
-          "hero_order": 5,
-          "is_ultimate": false
-        },
-        {
-          "x": 1241,
+          "x": 1142,
           "y": 287,
           "width": 0,
           "height": 0,
@@ -17615,7 +17607,15 @@
           "is_ultimate": false
         },
         {
-          "x": 1142,
+          "x": 1241,
+          "y": 287,
+          "width": 0,
+          "height": 0,
+          "hero_order": 5,
+          "is_ultimate": false
+        },
+        {
+          "x": 1290,
           "y": 287,
           "width": 0,
           "height": 0,
@@ -17623,15 +17623,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1290,
-          "y": 428,
-          "width": 0,
-          "height": 0,
-          "hero_order": 6,
-          "is_ultimate": false
-        },
-        {
-          "x": 1241,
+          "x": 1142,
           "y": 428,
           "width": 0,
           "height": 0,
@@ -17647,7 +17639,15 @@
           "is_ultimate": false
         },
         {
-          "x": 1142,
+          "x": 1241,
+          "y": 428,
+          "width": 0,
+          "height": 0,
+          "hero_order": 6,
+          "is_ultimate": false
+        },
+        {
+          "x": 1290,
           "y": 428,
           "width": 0,
           "height": 0,
@@ -17655,15 +17655,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1290,
-          "y": 570,
-          "width": 0,
-          "height": 0,
-          "hero_order": 7,
-          "is_ultimate": false
-        },
-        {
-          "x": 1241,
+          "x": 1142,
           "y": 570,
           "width": 0,
           "height": 0,
@@ -17679,7 +17671,15 @@
           "is_ultimate": false
         },
         {
-          "x": 1142,
+          "x": 1241,
+          "y": 570,
+          "width": 0,
+          "height": 0,
+          "hero_order": 7,
+          "is_ultimate": false
+        },
+        {
+          "x": 1290,
           "y": 570,
           "width": 0,
           "height": 0,
@@ -17687,15 +17687,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1290,
-          "y": 712,
-          "width": 0,
-          "height": 0,
-          "hero_order": 8,
-          "is_ultimate": false
-        },
-        {
-          "x": 1241,
+          "x": 1142,
           "y": 712,
           "width": 0,
           "height": 0,
@@ -17711,7 +17703,15 @@
           "is_ultimate": false
         },
         {
-          "x": 1142,
+          "x": 1241,
+          "y": 712,
+          "width": 0,
+          "height": 0,
+          "hero_order": 8,
+          "is_ultimate": false
+        },
+        {
+          "x": 1290,
           "y": 712,
           "width": 0,
           "height": 0,
@@ -17719,15 +17719,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1290,
-          "y": 854,
-          "width": 0,
-          "height": 0,
-          "hero_order": 9,
-          "is_ultimate": false
-        },
-        {
-          "x": 1241,
+          "x": 1142,
           "y": 854,
           "width": 0,
           "height": 0,
@@ -17743,7 +17735,15 @@
           "is_ultimate": false
         },
         {
-          "x": 1142,
+          "x": 1241,
+          "y": 854,
+          "width": 0,
+          "height": 0,
+          "hero_order": 9,
+          "is_ultimate": false
+        },
+        {
+          "x": 1290,
           "y": 854,
           "width": 0,
           "height": 0,
@@ -18397,13 +18397,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1449,
-          "y": 224,
-          "hero_order": 5,
-          "is_ultimate": false
-        },
-        {
-          "x": 1392,
+          "x": 1280,
           "y": 224,
           "hero_order": 5,
           "is_ultimate": false
@@ -18415,19 +18409,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1280,
+          "x": 1392,
+          "y": 224,
+          "hero_order": 5,
+          "is_ultimate": false
+        },
+        {
+          "x": 1449,
           "y": 224,
           "hero_order": 5,
           "is_ultimate": true
         },
         {
-          "x": 1449,
-          "y": 383,
-          "hero_order": 6,
-          "is_ultimate": false
-        },
-        {
-          "x": 1392,
+          "x": 1280,
           "y": 383,
           "hero_order": 6,
           "is_ultimate": false
@@ -18439,19 +18433,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1280,
+          "x": 1392,
+          "y": 383,
+          "hero_order": 6,
+          "is_ultimate": false
+        },
+        {
+          "x": 1449,
           "y": 383,
           "hero_order": 6,
           "is_ultimate": true
         },
         {
-          "x": 1449,
-          "y": 542,
-          "hero_order": 7,
-          "is_ultimate": false
-        },
-        {
-          "x": 1392,
+          "x": 1280,
           "y": 542,
           "hero_order": 7,
           "is_ultimate": false
@@ -18463,19 +18457,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1280,
+          "x": 1392,
+          "y": 542,
+          "hero_order": 7,
+          "is_ultimate": false
+        },
+        {
+          "x": 1449,
           "y": 542,
           "hero_order": 7,
           "is_ultimate": true
         },
         {
-          "x": 1449,
-          "y": 701,
-          "hero_order": 8,
-          "is_ultimate": false
-        },
-        {
-          "x": 1392,
+          "x": 1280,
           "y": 701,
           "hero_order": 8,
           "is_ultimate": false
@@ -18487,19 +18481,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1280,
+          "x": 1392,
+          "y": 701,
+          "hero_order": 8,
+          "is_ultimate": false
+        },
+        {
+          "x": 1449,
           "y": 701,
           "hero_order": 8,
           "is_ultimate": true
         },
         {
-          "x": 1449,
-          "y": 859,
-          "hero_order": 9,
-          "is_ultimate": false
-        },
-        {
-          "x": 1392,
+          "x": 1280,
           "y": 859,
           "hero_order": 9,
           "is_ultimate": false
@@ -18511,7 +18505,13 @@
           "is_ultimate": false
         },
         {
-          "x": 1280,
+          "x": 1392,
+          "y": 859,
+          "hero_order": 9,
+          "is_ultimate": false
+        },
+        {
+          "x": 1449,
           "y": 859,
           "hero_order": 9,
           "is_ultimate": true
@@ -19163,13 +19163,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1290,
-          "y": 197,
-          "hero_order": 5,
-          "is_ultimate": false
-        },
-        {
-          "x": 1241,
+          "x": 1142,
           "y": 197,
           "hero_order": 5,
           "is_ultimate": false
@@ -19181,19 +19175,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1142,
+          "x": 1241,
+          "y": 197,
+          "hero_order": 5,
+          "is_ultimate": false
+        },
+        {
+          "x": 1290,
           "y": 197,
           "hero_order": 5,
           "is_ultimate": true
         },
         {
-          "x": 1290,
-          "y": 337,
-          "hero_order": 6,
-          "is_ultimate": false
-        },
-        {
-          "x": 1241,
+          "x": 1142,
           "y": 337,
           "hero_order": 6,
           "is_ultimate": false
@@ -19205,19 +19199,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1142,
+          "x": 1241,
+          "y": 337,
+          "hero_order": 6,
+          "is_ultimate": false
+        },
+        {
+          "x": 1290,
           "y": 337,
           "hero_order": 6,
           "is_ultimate": true
         },
         {
-          "x": 1290,
-          "y": 476,
-          "hero_order": 7,
-          "is_ultimate": false
-        },
-        {
-          "x": 1241,
+          "x": 1142,
           "y": 476,
           "hero_order": 7,
           "is_ultimate": false
@@ -19229,19 +19223,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1142,
+          "x": 1241,
+          "y": 476,
+          "hero_order": 7,
+          "is_ultimate": false
+        },
+        {
+          "x": 1290,
           "y": 476,
           "hero_order": 7,
           "is_ultimate": true
         },
         {
-          "x": 1290,
-          "y": 616,
-          "hero_order": 8,
-          "is_ultimate": false
-        },
-        {
-          "x": 1241,
+          "x": 1142,
           "y": 616,
           "hero_order": 8,
           "is_ultimate": false
@@ -19253,19 +19247,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1142,
+          "x": 1241,
+          "y": 616,
+          "hero_order": 8,
+          "is_ultimate": false
+        },
+        {
+          "x": 1290,
           "y": 616,
           "hero_order": 8,
           "is_ultimate": true
         },
         {
-          "x": 1290,
-          "y": 755,
-          "hero_order": 9,
-          "is_ultimate": false
-        },
-        {
-          "x": 1241,
+          "x": 1142,
           "y": 755,
           "hero_order": 9,
           "is_ultimate": false
@@ -19277,7 +19271,13 @@
           "is_ultimate": false
         },
         {
-          "x": 1142,
+          "x": 1241,
+          "y": 755,
+          "hero_order": 9,
+          "is_ultimate": false
+        },
+        {
+          "x": 1290,
           "y": 755,
           "hero_order": 9,
           "is_ultimate": true
@@ -19989,15 +19989,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1288,
-          "y": 208,
-          "width": 0,
-          "height": 0,
-          "hero_order": 5,
-          "is_ultimate": false
-        },
-        {
-          "x": 1234,
+          "x": 1126,
           "y": 208,
           "width": 0,
           "height": 0,
@@ -20013,7 +20005,15 @@
           "is_ultimate": false
         },
         {
-          "x": 1126,
+          "x": 1234,
+          "y": 208,
+          "width": 0,
+          "height": 0,
+          "hero_order": 5,
+          "is_ultimate": false
+        },
+        {
+          "x": 1288,
           "y": 208,
           "width": 0,
           "height": 0,
@@ -20021,15 +20021,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1288,
-          "y": 358,
-          "width": 0,
-          "height": 0,
-          "hero_order": 6,
-          "is_ultimate": false
-        },
-        {
-          "x": 1234,
+          "x": 1126,
           "y": 358,
           "width": 0,
           "height": 0,
@@ -20045,7 +20037,15 @@
           "is_ultimate": false
         },
         {
-          "x": 1126,
+          "x": 1234,
+          "y": 358,
+          "width": 0,
+          "height": 0,
+          "hero_order": 6,
+          "is_ultimate": false
+        },
+        {
+          "x": 1288,
           "y": 358,
           "width": 0,
           "height": 0,
@@ -20053,15 +20053,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1288,
-          "y": 508,
-          "width": 0,
-          "height": 0,
-          "hero_order": 7,
-          "is_ultimate": false
-        },
-        {
-          "x": 1234,
+          "x": 1126,
           "y": 508,
           "width": 0,
           "height": 0,
@@ -20077,7 +20069,15 @@
           "is_ultimate": false
         },
         {
-          "x": 1126,
+          "x": 1234,
+          "y": 508,
+          "width": 0,
+          "height": 0,
+          "hero_order": 7,
+          "is_ultimate": false
+        },
+        {
+          "x": 1288,
           "y": 508,
           "width": 0,
           "height": 0,
@@ -20085,15 +20085,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1288,
-          "y": 658,
-          "width": 0,
-          "height": 0,
-          "hero_order": 8,
-          "is_ultimate": false
-        },
-        {
-          "x": 1234,
+          "x": 1126,
           "y": 658,
           "width": 0,
           "height": 0,
@@ -20109,7 +20101,15 @@
           "is_ultimate": false
         },
         {
-          "x": 1126,
+          "x": 1234,
+          "y": 658,
+          "width": 0,
+          "height": 0,
+          "hero_order": 8,
+          "is_ultimate": false
+        },
+        {
+          "x": 1288,
           "y": 658,
           "width": 0,
           "height": 0,
@@ -20117,15 +20117,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1288,
-          "y": 808,
-          "width": 0,
-          "height": 0,
-          "hero_order": 9,
-          "is_ultimate": false
-        },
-        {
-          "x": 1234,
+          "x": 1126,
           "y": 808,
           "width": 0,
           "height": 0,
@@ -20141,7 +20133,15 @@
           "is_ultimate": false
         },
         {
-          "x": 1126,
+          "x": 1234,
+          "y": 808,
+          "width": 0,
+          "height": 0,
+          "hero_order": 9,
+          "is_ultimate": false
+        },
+        {
+          "x": 1288,
           "y": 808,
           "width": 0,
           "height": 0,
@@ -20795,13 +20795,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1126,
-          "y": 168,
-          "hero_order": 5,
-          "is_ultimate": false
-        },
-        {
-          "x": 1084,
+          "x": 1000,
           "y": 168,
           "hero_order": 5,
           "is_ultimate": false
@@ -20813,19 +20807,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1000,
+          "x": 1084,
+          "y": 168,
+          "hero_order": 5,
+          "is_ultimate": false
+        },
+        {
+          "x": 1126,
           "y": 168,
           "hero_order": 5,
           "is_ultimate": true
         },
         {
-          "x": 1126,
-          "y": 287,
-          "hero_order": 6,
-          "is_ultimate": false
-        },
-        {
-          "x": 1084,
+          "x": 1000,
           "y": 287,
           "hero_order": 6,
           "is_ultimate": false
@@ -20837,19 +20831,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1000,
+          "x": 1084,
+          "y": 287,
+          "hero_order": 6,
+          "is_ultimate": false
+        },
+        {
+          "x": 1126,
           "y": 287,
           "hero_order": 6,
           "is_ultimate": true
         },
         {
-          "x": 1126,
-          "y": 406,
-          "hero_order": 7,
-          "is_ultimate": false
-        },
-        {
-          "x": 1084,
+          "x": 1000,
           "y": 406,
           "hero_order": 7,
           "is_ultimate": false
@@ -20861,19 +20855,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1000,
+          "x": 1084,
+          "y": 406,
+          "hero_order": 7,
+          "is_ultimate": false
+        },
+        {
+          "x": 1126,
           "y": 406,
           "hero_order": 7,
           "is_ultimate": true
         },
         {
-          "x": 1126,
-          "y": 525,
-          "hero_order": 8,
-          "is_ultimate": false
-        },
-        {
-          "x": 1084,
+          "x": 1000,
           "y": 525,
           "hero_order": 8,
           "is_ultimate": false
@@ -20885,19 +20879,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1000,
+          "x": 1084,
+          "y": 525,
+          "hero_order": 8,
+          "is_ultimate": false
+        },
+        {
+          "x": 1126,
           "y": 525,
           "hero_order": 8,
           "is_ultimate": true
         },
         {
-          "x": 1126,
-          "y": 644,
-          "hero_order": 9,
-          "is_ultimate": false
-        },
-        {
-          "x": 1084,
+          "x": 1000,
           "y": 644,
           "hero_order": 9,
           "is_ultimate": false
@@ -20909,7 +20903,13 @@
           "is_ultimate": false
         },
         {
-          "x": 1000,
+          "x": 1084,
+          "y": 644,
+          "hero_order": 9,
+          "is_ultimate": false
+        },
+        {
+          "x": 1126,
           "y": 644,
           "hero_order": 9,
           "is_ultimate": true
@@ -21561,13 +21561,7 @@
           "is_ultimate": true
         },
         {
-          "x": 1147,
-          "y": 175,
-          "hero_order": 5,
-          "is_ultimate": false
-        },
-        {
-          "x": 1103,
+          "x": 1015,
           "y": 175,
           "hero_order": 5,
           "is_ultimate": false
@@ -21579,19 +21573,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1015,
+          "x": 1103,
+          "y": 175,
+          "hero_order": 5,
+          "is_ultimate": false
+        },
+        {
+          "x": 1147,
           "y": 175,
           "hero_order": 5,
           "is_ultimate": true
         },
         {
-          "x": 1147,
-          "y": 299,
-          "hero_order": 6,
-          "is_ultimate": false
-        },
-        {
-          "x": 1103,
+          "x": 1015,
           "y": 299,
           "hero_order": 6,
           "is_ultimate": false
@@ -21603,19 +21597,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1015,
+          "x": 1103,
+          "y": 299,
+          "hero_order": 6,
+          "is_ultimate": false
+        },
+        {
+          "x": 1147,
           "y": 299,
           "hero_order": 6,
           "is_ultimate": true
         },
         {
-          "x": 1147,
-          "y": 423,
-          "hero_order": 7,
-          "is_ultimate": false
-        },
-        {
-          "x": 1103,
+          "x": 1015,
           "y": 423,
           "hero_order": 7,
           "is_ultimate": false
@@ -21627,19 +21621,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1015,
+          "x": 1103,
+          "y": 423,
+          "hero_order": 7,
+          "is_ultimate": false
+        },
+        {
+          "x": 1147,
           "y": 423,
           "hero_order": 7,
           "is_ultimate": true
         },
         {
-          "x": 1147,
-          "y": 547,
-          "hero_order": 8,
-          "is_ultimate": false
-        },
-        {
-          "x": 1103,
+          "x": 1015,
           "y": 547,
           "hero_order": 8,
           "is_ultimate": false
@@ -21651,19 +21645,19 @@
           "is_ultimate": false
         },
         {
-          "x": 1015,
+          "x": 1103,
+          "y": 547,
+          "hero_order": 8,
+          "is_ultimate": false
+        },
+        {
+          "x": 1147,
           "y": 547,
           "hero_order": 8,
           "is_ultimate": true
         },
         {
-          "x": 1147,
-          "y": 671,
-          "hero_order": 9,
-          "is_ultimate": false
-        },
-        {
-          "x": 1103,
+          "x": 1015,
           "y": 671,
           "hero_order": 9,
           "is_ultimate": false
@@ -21675,7 +21669,13 @@
           "is_ultimate": false
         },
         {
-          "x": 1015,
+          "x": 1103,
+          "y": 671,
+          "hero_order": 9,
+          "is_ultimate": false
+        },
+        {
+          "x": 1147,
           "y": 671,
           "hero_order": 9,
           "is_ultimate": true
@@ -22387,15 +22387,7 @@
           "is_ultimate": true
         },
         {
-          "x": 645,
-          "y": 105,
-          "width": 0,
-          "height": 0,
-          "hero_order": 5,
-          "is_ultimate": false
-        },
-        {
-          "x": 618,
+          "x": 564,
           "y": 105,
           "width": 0,
           "height": 0,
@@ -22411,7 +22403,15 @@
           "is_ultimate": false
         },
         {
-          "x": 564,
+          "x": 618,
+          "y": 105,
+          "width": 0,
+          "height": 0,
+          "hero_order": 5,
+          "is_ultimate": false
+        },
+        {
+          "x": 645,
           "y": 105,
           "width": 0,
           "height": 0,
@@ -22419,15 +22419,7 @@
           "is_ultimate": true
         },
         {
-          "x": 645,
-          "y": 182,
-          "width": 0,
-          "height": 0,
-          "hero_order": 6,
-          "is_ultimate": false
-        },
-        {
-          "x": 618,
+          "x": 564,
           "y": 182,
           "width": 0,
           "height": 0,
@@ -22443,7 +22435,15 @@
           "is_ultimate": false
         },
         {
-          "x": 564,
+          "x": 618,
+          "y": 182,
+          "width": 0,
+          "height": 0,
+          "hero_order": 6,
+          "is_ultimate": false
+        },
+        {
+          "x": 645,
           "y": 182,
           "width": 0,
           "height": 0,
@@ -22451,15 +22451,7 @@
           "is_ultimate": true
         },
         {
-          "x": 645,
-          "y": 259,
-          "width": 0,
-          "height": 0,
-          "hero_order": 7,
-          "is_ultimate": false
-        },
-        {
-          "x": 618,
+          "x": 564,
           "y": 259,
           "width": 0,
           "height": 0,
@@ -22475,7 +22467,15 @@
           "is_ultimate": false
         },
         {
-          "x": 564,
+          "x": 618,
+          "y": 259,
+          "width": 0,
+          "height": 0,
+          "hero_order": 7,
+          "is_ultimate": false
+        },
+        {
+          "x": 645,
           "y": 259,
           "width": 0,
           "height": 0,
@@ -22483,15 +22483,7 @@
           "is_ultimate": true
         },
         {
-          "x": 645,
-          "y": 336,
-          "width": 0,
-          "height": 0,
-          "hero_order": 8,
-          "is_ultimate": false
-        },
-        {
-          "x": 618,
+          "x": 564,
           "y": 336,
           "width": 0,
           "height": 0,
@@ -22507,7 +22499,15 @@
           "is_ultimate": false
         },
         {
-          "x": 564,
+          "x": 618,
+          "y": 336,
+          "width": 0,
+          "height": 0,
+          "hero_order": 8,
+          "is_ultimate": false
+        },
+        {
+          "x": 645,
           "y": 336,
           "width": 0,
           "height": 0,
@@ -22515,15 +22515,7 @@
           "is_ultimate": true
         },
         {
-          "x": 645,
-          "y": 413,
-          "width": 0,
-          "height": 0,
-          "hero_order": 9,
-          "is_ultimate": false
-        },
-        {
-          "x": 618,
+          "x": 564,
           "y": 413,
           "width": 0,
           "height": 0,
@@ -22539,7 +22531,15 @@
           "is_ultimate": false
         },
         {
-          "x": 564,
+          "x": 618,
+          "y": 413,
+          "width": 0,
+          "height": 0,
+          "hero_order": 9,
+          "is_ultimate": false
+        },
+        {
+          "x": 645,
           "y": 413,
           "width": 0,
           "height": 0,

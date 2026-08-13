@@ -85,6 +85,32 @@ describe('validateCoordinates', () => {
     expect(result.errors.some((e) => e.includes('Expected 36'))).toBe(true)
   })
 
+  // Pick rows are NOT mirrored in-game (only the pool is): for every player on
+  // both teams the boxes run left to right with the ultimate box rightmost.
+  // The stream board's positional pick placement trusts this preset convention
+  // (see stream-board.ts), so a preset export that lists dire boxes
+  // right-to-left or misplaces is_ultimate must fail CI.
+  it('lists every selected-abilities row left-to-right with the ultimate box last', () => {
+    for (const [key, layout] of Object.entries(config.resolutions)) {
+      const selectedCoords = layout.selected_abilities_coords ?? []
+      expect(selectedCoords, `${key} has selected-abilities coords`).toHaveLength(40)
+      for (let player = 0; player < 10; player++) {
+        const boxes = selectedCoords.filter((c) => c.hero_order === player)
+        expect(boxes, `${key} player ${player} box count`).toHaveLength(4)
+        for (let i = 1; i < boxes.length; i++) {
+          expect(
+            boxes[i].x,
+            `${key} player ${player} boxes must ascend left-to-right`,
+          ).toBeGreaterThan(boxes[i - 1].x)
+        }
+        expect(
+          boxes.map((b) => b.is_ultimate === true),
+          `${key} player ${player} ultimate flag must mark only the rightmost box`,
+        ).toEqual([false, false, false, true])
+      }
+    }
+  })
+
   it('passes when coordinates touch screen boundary exactly', () => {
     const layout = createValidLayout()
     // Set a slot to exactly touch the right edge
