@@ -8,7 +8,8 @@ import type {
 } from '@shared/types/ml'
 import type { ScanResult, SlotCoordinate, ResolutionLayout } from '@shared/types'
 import { createOnnxClassifier } from '@core/ml/onnx-classifier'
-import { preprocessBatch } from '@core/ml/preprocessing'
+import { decodeScreenshot, preprocessBatch } from '@core/ml/preprocessing'
+import type { DecodedScreenshot } from '@core/ml/preprocessing'
 import type { ClassifierResult } from '@core/ml/classifier'
 
 // @DEV-GUIDE: ML Worker thread entry point. Runs as a Node.js worker_thread, spawned by MlService.
@@ -22,12 +23,15 @@ import type { ClassifierResult } from '@core/ml/classifier'
 //   activeClassNames (DB ability names) masks model classes for removed-from-pool abilities.
 // - Main → { type: 'dispose' } → Worker releases ONNX session
 //
-// Scan pipeline: receive screenshot buffer → extract slot images (sharp crop+resize to 96x96) →
-// convert to float32 (raw 0-255 — the model's internal Rescaling layer maps to [-1,1])
-// → ONNX batch inference → filter by confidence → return ScanResult[].
+// Scan pipeline: receive screenshot buffer → decode PNG ONCE to raw RGB → extract slot
+// images from the decoded bitmap (sharp crop+resize to 96x96) → convert to float32
+// (raw 0-255 — the model's internal Rescaling layer maps to [-1,1]) → ONNX batch
+// inference → filter by confidence → return ScanResult[]. The single decode matters:
+// cropping from the PNG buffer re-decoded the full screenshot per slot (~1.1s/scan
+// at 1440p vs ~110ms).
 //
 // For initial scan: processes ultimate + standard slots, extracts heroDefiningAbilities (ability_order===2).
-// For rescan: processes only selected ability slots (much faster).
+// For rescan: processes only the selected-ability slots.
 
 if (!parentPort) {
   throw new Error('ml-worker must run as a worker thread')
@@ -99,7 +103,8 @@ async function handleScan(payload: {
     isInitialScan,
     activeClassNames,
   } = payload
-  const buffer = Buffer.from(screenshotBuffer)
+  // Decode the PNG once; every slot crop reads from this raw bitmap.
+  const screenshot = await decodeScreenshot(Buffer.from(screenshotBuffer))
 
   const activeSet =
     activeClassNames && activeClassNames.length > 0
@@ -110,14 +115,14 @@ async function handleScan(payload: {
 
   if (isInitialScan) {
     results = await performInitialScan(
-      buffer,
+      screenshot,
       coords,
       confidenceThreshold,
       activeSet,
     )
   } else {
     results = await performSelectedAbilitiesScan(
-      buffer,
+      screenshot,
       coords,
       confidenceThreshold,
       activeSet,
@@ -137,7 +142,7 @@ async function handleScan(payload: {
 // These hero-defining abilities are used by the scan processor to identify which hero each
 // draft slot belongs to (hero identification by their second ability).
 async function performInitialScan(
-  screenshotBuffer: Buffer,
+  screenshot: DecodedScreenshot,
   coords: ResolutionLayout,
   confidenceThreshold: number,
   activeClassNames?: ReadonlySet<string>,
@@ -145,13 +150,13 @@ async function performInitialScan(
   const [ultimates, standard] = await Promise.all([
     identifySlots(
       coords.ultimate_slots_coords,
-      screenshotBuffer,
+      screenshot,
       confidenceThreshold,
       activeClassNames,
     ),
     identifySlots(
       coords.standard_slots_coords,
-      screenshotBuffer,
+      screenshot,
       confidenceThreshold,
       activeClassNames,
     ),
@@ -170,7 +175,7 @@ async function performInitialScan(
 }
 
 async function performSelectedAbilitiesScan(
-  screenshotBuffer: Buffer,
+  screenshot: DecodedScreenshot,
   coords: ResolutionLayout,
   confidenceThreshold: number,
   activeClassNames?: ReadonlySet<string>,
@@ -187,25 +192,25 @@ async function performSelectedAbilitiesScan(
 
   return identifySlots(
     slotsToScan,
-    screenshotBuffer,
+    screenshot,
     confidenceThreshold,
     activeClassNames,
   )
 }
 
 // @DEV-GUIDE: Core ML pipeline for a batch of slots. preprocessBatch crops each slot from the
-// screenshot and resizes to 96x96 (model input size). validIndices tracks which slots had
-// enough image data to process. Slots that failed preprocessing get default (null) results.
+// decoded screenshot bitmap and resizes to 96x96 (model input size). validIndices tracks which
+// slots had enough image data to process. Slots that failed preprocessing get default (null) results.
 async function identifySlots(
   slots: SlotCoordinate[],
-  screenshotBuffer: Buffer,
+  screenshot: DecodedScreenshot,
   confidenceThreshold: number,
   activeClassNames?: ReadonlySet<string>,
 ): Promise<ScanResult[]> {
   if (slots.length === 0) return []
 
   const { batch, validIndices } = await preprocessBatch(
-    screenshotBuffer,
+    screenshot,
     slots,
   )
   if (validIndices.length === 0) return slots.map(makeDefaultResult)
