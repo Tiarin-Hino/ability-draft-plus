@@ -182,19 +182,24 @@ function buildPlayerRows(
 
   const rows: StreamPlayerRow[] = []
   for (let playerIndex = 0; playerIndex < PLAYER_COUNT; playerIndex++) {
-    const pickSlots = selected
-      .filter(
-        (s) =>
-          s.hero_order === playerIndex && s.name !== null && s.isUnknown !== true,
-      )
-      .sort((a, b) => a.ability_order - b.ability_order)
+    const pickSlots = selected.filter(
+      (s) => s.hero_order === playerIndex && s.name !== null && s.isUnknown !== true,
+    )
 
+    // Positional pick boxes mirroring the in-game row: standard picks fill
+    // boxes 0-2 in scan (left-to-right) order, the ultimate always sits in
+    // box 3 (the layout flags the 4th selected coord is_ultimate).
     // Picked-slot tiles are never "picked from the pool" themselves; render them plainly.
-    const picks = pickSlots.map((s) => toStreamSlot(s, new Set()))
+    const picks: (StreamAbilitySlot | null)[] = [null, null, null, null]
+    let standardBox = 0
+    for (const s of pickSlots) {
+      if (s.is_ultimate) picks[3] = toStreamSlot(s, new Set())
+      else if (standardBox < 3) picks[standardBox++] = toStreamSlot(s, new Set())
+    }
 
     const pickNames = pickSlots.map((s) => s.name as string)
     const draftScore =
-      picks.length > 0
+      pickSlots.length > 0
         ? calculatePlayerDraftScore(
             pickSlots.map((s) => ({
               name: s.name as string,

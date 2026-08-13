@@ -25,7 +25,7 @@ function resolveEntries(board: StreamBoardState, t: (k: string, o?: object) => s
   }
   for (const player of board.players) {
     for (const slot of player.picks) {
-      if (slot.name) displayByName.set(slot.name, slot.displayName)
+      if (slot?.name) displayByName.set(slot.name, slot.displayName)
     }
   }
 

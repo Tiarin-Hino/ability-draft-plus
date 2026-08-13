@@ -45,12 +45,14 @@ function PlayerCard({ player }: { player: StreamPlayerRow }) {
           </span>
         </div>
         <div className="player-picks">
-          {player.picks.map((slot, i) => (
-            <AbilityTile key={i} slot={slot} size="small" />
-          ))}
-          {Array.from({ length: 4 - player.picks.length }, (_, i) => (
-            <div className="tile tile-small tile-empty" key={`e${i}`} />
-          ))}
+          {/* picks is positional (box 3 = ultimate); render empties in place */}
+          {player.picks.map((slot, i) =>
+            slot ? (
+              <AbilityTile key={i} slot={slot} size="small" />
+            ) : (
+              <div className="tile tile-small tile-empty" key={i} />
+            ),
+          )}
         </div>
       </div>
 

@@ -50,13 +50,22 @@ function HeroMini({ row }: { row: StreamHeroRow | undefined }) {
   )
 }
 
-function HalfRow({ row }: { row: StreamHeroRow | undefined }) {
+/** Mirrors the in-game pedestal: left half-rows carry the hero portrait on the
+ * LEFT of the abilities, right half-rows carry it on the RIGHT. */
+function HalfRow({
+  row,
+  heroSide,
+}: {
+  row: StreamHeroRow | undefined
+  heroSide: 'left' | 'right'
+}) {
   return (
     <div className="pool-half-row">
-      <HeroMini row={row} />
+      {heroSide === 'left' && <HeroMini row={row} />}
       {(row?.standard ?? []).map((slot, i) => (
         <AbilityTile key={i} slot={slot} />
       ))}
+      {heroSide === 'right' && <HeroMini row={row} />}
     </div>
   )
 }
@@ -108,9 +117,9 @@ export function PoolBoard({ heroes }: { heroes: StreamHeroRow[] }) {
       <div className="pool-standard">
         {STD_PAIRS.map(([left, right], r) => (
           <div className="pool-std-row" key={r}>
-            <HalfRow row={byOrder.get(left)} />
+            <HalfRow row={byOrder.get(left)} heroSide="left" />
             <div className="pool-row-divider" />
-            <HalfRow row={byOrder.get(right)} />
+            <HalfRow row={byOrder.get(right)} heroSide="right" />
           </div>
         ))}
       </div>

@@ -31,7 +31,9 @@ export const DEFAULT_TRAP_THRESHOLD = 0.05
 export const MODEL_INPUT_SIZE = 96
 
 // Streamer view
-export const STREAM_PROTOCOL_VERSION = 1
+// v2: StreamPlayerRow.picks became a fixed-length-4 positional array (nulls for
+// empty boxes, index 3 = ultimate box) instead of a compact list.
+export const STREAM_PROTOCOL_VERSION = 2
 export const DEFAULT_STREAM_PORT = 58873
 export const STREAM_TOP_WINRATE_COUNT = 8
 export const STREAM_MAX_COMBO_PANEL_ENTRIES = 8
