@@ -14,7 +14,10 @@ export interface MlWorkerInitRequest {
 export interface MlWorkerScanRequest {
   type: 'scan'
   payload: {
+    /** RAW RGB bitmap (3 channels), transferred — NOT an encoded image. */
     screenshotBuffer: ArrayBuffer
+    screenshotWidth: number
+    screenshotHeight: number
     layout: ResolutionLayout
     confidenceThreshold: number
     isInitialScan: boolean

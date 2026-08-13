@@ -146,20 +146,32 @@ export function createAutoRescanService(
       logger.info('Draft clock identified', { clockTime: snapshot.clockTime })
     }
 
-    // Pick-phase anchor: clock_time runs -59 -> 0 during the preview; the first
-    // turn starts at 0. While the clock reports positive values the anchor is
-    // continuously re-derived (self-corrects pauses/drift); a clock frozen at 0
-    // sets it exactly once, at the crossing.
-    if (
-      snapshot.clockTime >= 0 &&
-      (pickAnchorMs === null || snapshot.clockTime > 0)
-    ) {
-      if (pickAnchorMs === null) {
-        logger.info('Pick phase anchored (clock crossed zero)', {
-          clockTime: snapshot.clockTime,
-        })
+    // Pick-phase anchor. Empirical clock behavior (live-validated): the preview
+    // ramp counts -59 -> 0 (1:1 with wall time), the first turn starts at 0,
+    // and DURING picking the clock shows a PER-TURN -7..0 countdown — it never
+    // goes positive. So the anchor is PREDICTED from any preview snapshot
+    // (anchor = now - clock, a moment in the future) and refreshed while that
+    // prediction is still ahead of us; this survives GSI missing the ~1s window
+    // where the preview clock reads exactly 0. Once wall time passes the
+    // anchor, negative clocks are turn timers and must never touch it.
+    const now = Date.now()
+    if (snapshot.clockTime < 0) {
+      if (pickAnchorMs === null || now < pickAnchorMs) {
+        if (pickAnchorMs === null) {
+          logger.info('Pick phase anchor predicted from preview clock', {
+            clockTime: snapshot.clockTime,
+            startsInS: -snapshot.clockTime,
+          })
+        }
+        pickAnchorMs = now - snapshot.clockTime * 1000
       }
-      pickAnchorMs = Date.now() - snapshot.clockTime * 1000
+    } else if (pickAnchorMs === null || now < pickAnchorMs) {
+      // Clock at 0 (or hypothetically positive) while the start is still
+      // pending — the authoritative crossing; snap the anchor to it.
+      logger.info('Pick phase anchored (clock crossed zero)', {
+        clockTime: snapshot.clockTime,
+      })
+      pickAnchorMs = now - snapshot.clockTime * 1000
     }
   })
 

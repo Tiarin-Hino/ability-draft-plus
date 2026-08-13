@@ -6,6 +6,7 @@ import type { MlService } from './ml-service'
 import type { DatabaseService } from './database-service'
 import type { LayoutService } from './layout-service'
 import type { ScreenshotService } from './screenshot-service'
+import type { DecodedScreenshot } from '@core/ml/preprocessing'
 import type { WindowManager } from './window-manager'
 import type { ScanProcessingService } from './scan-processing-service'
 import type { WindowTrackerService } from './window-tracker-service'
@@ -17,8 +18,9 @@ import type { InitialScanResults } from '@shared/types/ml'
 // @DEV-GUIDE: The single scan pipeline, factored out of the ml:scan IPC handler so the
 // experimental auto-rescan service can trigger scans WITHOUT round-tripping through the
 // overlay renderer (previous flow: globalShortcut -> renderer -> ml:scan -> here).
-// Pipeline: capture -> (lazy ML init) -> layout -> crop to game window -> inference ->
-// broadcast raw results -> ScanProcessingService enrichment + overlay:data fan-out.
+// Pipeline: capture (raw RGB, no PNG round-trip) -> (lazy ML init) -> layout -> crop to
+// game window -> inference -> broadcast raw results -> ScanProcessingService enrichment
+// + overlay:data fan-out.
 // Hover-tooltip contamination is handled downstream by the scan-processor's rescan
 // guard (rejected scans leave state untouched) — the pipeline itself never touches
 // the user's mouse. performScan resolves after enrichment is fully dispatched, so
@@ -94,14 +96,14 @@ export function createScanTriggerService(
           (gameBounds.width >= physicalScreen.width &&
             gameBounds.height >= physicalScreen.height)
 
-        let screenshotBuffer: Buffer | null = null
+        let screenshot: DecodedScreenshot | null = null
         if (isFullscreen) {
-          screenshotBuffer = await screenshotService.captureWindow(
+          screenshot = await screenshotService.captureWindow(
             GAME_WINDOW_TITLE,
             physicalScreen,
           )
         }
-        screenshotBuffer ??= await screenshotService.capture()
+        screenshot ??= await screenshotService.capture()
 
         const layout = layoutService.getLayout(resolution)
         if (!layout) {
@@ -114,22 +116,30 @@ export function createScanTriggerService(
 
         // In windowed mode, crop the full-screen screenshot to the game window
         // so that JSON coordinates (relative to the game window) align correctly
-        if (gameBounds) {
-          const meta = await sharp(screenshotBuffer).metadata()
-          const screenW = meta.width ?? 0
-          const screenH = meta.height ?? 0
-          if (
-            gameBounds.width < screenW ||
-            gameBounds.height < screenH
-          ) {
-            screenshotBuffer = await sharp(screenshotBuffer)
-              .extract({
-                left: gameBounds.x,
-                top: gameBounds.y,
-                width: gameBounds.width,
-                height: gameBounds.height,
-              })
-              .toBuffer()
+        if (
+          gameBounds &&
+          (gameBounds.width < screenshot.width ||
+            gameBounds.height < screenshot.height)
+        ) {
+          const cropped = await sharp(screenshot.data, {
+            raw: {
+              width: screenshot.width,
+              height: screenshot.height,
+              channels: 3,
+            },
+          })
+            .extract({
+              left: gameBounds.x,
+              top: gameBounds.y,
+              width: gameBounds.width,
+              height: gameBounds.height,
+            })
+            .raw()
+            .toBuffer()
+          screenshot = {
+            data: cropped,
+            width: gameBounds.width,
+            height: gameBounds.height,
           }
         }
 
@@ -137,7 +147,7 @@ export function createScanTriggerService(
         // outside this list (removed abilities kept in the model in case they
         // return) are masked and can never be predicted.
         const result = await mlService.scan(
-          screenshotBuffer,
+          screenshot,
           layout,
           isInitialScan,
           dbService.abilities.getAllNames(),
@@ -148,8 +158,9 @@ export function createScanTriggerService(
 
         // Remember exactly what the model saw so "Report Failed Recognition"
         // snapshots the misclassified screenshot, not a fresh capture
+        // (raw bitmap; the feedback service PNG-encodes lazily on report)
         feedbackService.recordScanContext({
-          screenshot: screenshotBuffer,
+          screenshot,
           resolution,
           isInitialScan,
           results: result.results,

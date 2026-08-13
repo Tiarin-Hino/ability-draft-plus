@@ -8,7 +8,7 @@ import type {
 } from '@shared/types/ml'
 import type { ScanResult, SlotCoordinate, ResolutionLayout } from '@shared/types'
 import { createOnnxClassifier } from '@core/ml/onnx-classifier'
-import { decodeScreenshot, preprocessBatch, cropTile } from '@core/ml/preprocessing'
+import { preprocessBatch, cropTile } from '@core/ml/preprocessing'
 import type { DecodedScreenshot } from '@core/ml/preprocessing'
 import type { ClassifierResult } from '@core/ml/classifier'
 import { MODEL_TILE_COMPARE_SIZE } from '@shared/constants/thresholds'
@@ -24,12 +24,12 @@ import { MODEL_TILE_COMPARE_SIZE } from '@shared/constants/thresholds'
 //   activeClassNames (DB ability names) masks model classes for removed-from-pool abilities.
 // - Main → { type: 'dispose' } → Worker releases ONNX session
 //
-// Scan pipeline: receive screenshot buffer → decode PNG ONCE to raw RGB → extract slot
-// images from the decoded bitmap (sharp crop+resize to 96x96) → convert to float32
-// (raw 0-255 — the model's internal Rescaling layer maps to [-1,1]) → ONNX batch
-// inference → filter by confidence → return ScanResult[]. The single decode matters:
-// cropping from the PNG buffer re-decoded the full screenshot per slot (~1.1s/scan
-// at 1440p vs ~110ms).
+// Scan pipeline: receive a transferred RAW RGB bitmap (+dimensions — no PNG anywhere:
+// the encode/decode round-trip cost ~145ms/scan) → extract slot images from it (sharp
+// crop+resize to 96x96) → convert to float32 (raw 0-255 — the model's internal
+// Rescaling layer maps to [-1,1]) → ONNX batch inference → filter by confidence →
+// return ScanResult[]. Slot crops MUST read from the single shared bitmap: cropping
+// from an encoded buffer re-decoded the full screenshot per slot (~1.1s/scan at 1440p).
 //
 // For initial scan: processes ultimate + standard slots, extracts heroDefiningAbilities (ability_order===2).
 // For rescan: processes only the selected-ability slots.
@@ -91,6 +91,8 @@ async function handleInit(payload: {
 
 async function handleScan(payload: {
   screenshotBuffer: ArrayBuffer
+  screenshotWidth: number
+  screenshotHeight: number
   layout: ResolutionLayout
   confidenceThreshold: number
   isInitialScan: boolean
@@ -103,14 +105,21 @@ async function handleScan(payload: {
 
   const {
     screenshotBuffer,
+    screenshotWidth,
+    screenshotHeight,
     layout: coords,
     confidenceThreshold,
     isInitialScan,
     activeClassNames,
     heroOrders,
   } = payload
-  // Decode the PNG once; every slot crop reads from this raw bitmap.
-  const screenshot = await decodeScreenshot(Buffer.from(screenshotBuffer))
+  // The buffer arrives as a transferred RAW RGB bitmap — no decode step;
+  // every slot crop reads from it directly.
+  const screenshot: DecodedScreenshot = {
+    data: Buffer.from(screenshotBuffer),
+    width: screenshotWidth,
+    height: screenshotHeight,
+  }
 
   const activeSet =
     activeClassNames && activeClassNames.length > 0

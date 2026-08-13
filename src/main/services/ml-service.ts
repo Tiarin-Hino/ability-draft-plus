@@ -10,6 +10,7 @@ import type {
   MlWorkerErrorResponse,
 } from '@shared/types/ml'
 import type { ResolutionLayout } from '@shared/types'
+import type { DecodedScreenshot } from '@core/ml/preprocessing'
 import {
   ML_WORKER_MAX_RESTART_ATTEMPTS,
   ML_WORKER_RESTART_COOLDOWN,
@@ -37,6 +38,8 @@ const logger = log.scope('ml-service')
 export interface MlService {
   initialize(): Promise<void>
   /**
+   * @param screenshot Raw RGB bitmap; the underlying buffer is copied and
+   * transferred to the worker (no PNG round-trip).
    * @param activeClassNames Ability internal names currently in the DB. Model
    * classes outside this list (removed-from-pool abilities) are masked and can
    * never be predicted. Omitted/empty → no masking.
@@ -44,7 +47,7 @@ export interface MlService {
    * these player rows (targeted auto-rescan). Omitted → all rows.
    */
   scan(
-    screenshotBuffer: Buffer,
+    screenshot: DecodedScreenshot,
     layout: ResolutionLayout,
     isInitialScan: boolean,
     activeClassNames?: string[],
@@ -177,7 +180,7 @@ export function createMlService(): MlService {
   }
 
   async function scan(
-    screenshotBuffer: Buffer,
+    screenshot: DecodedScreenshot,
     layout: ResolutionLayout,
     isInitialScan: boolean,
     activeClassNames?: string[],
@@ -209,15 +212,17 @@ export function createMlService(): MlService {
       }
 
       // Create a copy of the ArrayBuffer for transfer
-      const bufferCopy = screenshotBuffer.buffer.slice(
-        screenshotBuffer.byteOffset,
-        screenshotBuffer.byteOffset + screenshotBuffer.byteLength,
+      const bufferCopy = screenshot.data.buffer.slice(
+        screenshot.data.byteOffset,
+        screenshot.data.byteOffset + screenshot.data.byteLength,
       )
 
       const message: MlWorkerRequest = {
         type: 'scan',
         payload: {
           screenshotBuffer: bufferCopy,
+          screenshotWidth: screenshot.width,
+          screenshotHeight: screenshot.height,
           layout,
           confidenceThreshold: ML_CONFIDENCE_THRESHOLD,
           isInitialScan,

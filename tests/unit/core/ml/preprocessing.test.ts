@@ -20,7 +20,7 @@ vi.mock('sharp', () => ({
 
 import {
   bufferToFloat32,
-  decodeScreenshot,
+  cropTile,
   preprocessSlot,
   preprocessBatch,
 } from '@core/ml/preprocessing'
@@ -73,24 +73,29 @@ describe('preprocessing', () => {
     })
   })
 
-  describe('decodeScreenshot', () => {
-    it('decodes the PNG once to a raw RGB bitmap with dimensions', async () => {
-      const rawData = Buffer.alloc(4 * 2 * 3, 9)
-      mockSharpChain.toBuffer.mockResolvedValueOnce({
-        data: rawData,
-        info: { width: 4, height: 2 },
-      })
+  describe('cropTile', () => {
+    it('crops from the raw bitmap and resizes to the requested square', async () => {
+      const expectedOutput = Buffer.alloc(48 * 48 * 3, 7)
+      mockSharpChain.toBuffer.mockResolvedValueOnce(expectedOutput)
 
-      const png = Buffer.alloc(50)
-      const result = await decodeScreenshot(png)
+      const screenshot = makeDecoded(8, 6)
+      const result = await cropTile(
+        screenshot,
+        { x: 1, y: 2, width: 4, height: 3, hero_order: 5 },
+        48,
+      )
 
-      expect(mockSharp).toHaveBeenCalledWith(png)
-      expect(mockSharpChain.removeAlpha).toHaveBeenCalled()
-      expect(mockSharpChain.raw).toHaveBeenCalled()
-      expect(mockSharpChain.toBuffer).toHaveBeenCalledWith({
-        resolveWithObject: true,
+      expect(mockSharp).toHaveBeenCalledWith(screenshot.data, {
+        raw: { width: 8, height: 6, channels: 3 },
       })
-      expect(result).toEqual({ data: rawData, width: 4, height: 2 })
+      expect(mockSharpChain.extract).toHaveBeenCalledWith({
+        left: 1,
+        top: 2,
+        width: 4,
+        height: 3,
+      })
+      expect(mockSharpChain.resize).toHaveBeenCalledWith(48, 48, { kernel: 'linear' })
+      expect(result).toBe(expectedOutput)
     })
   })
 
