@@ -27,8 +27,14 @@ export interface GsiSnapshot {
   matchId: string | null
   /** Empty while playing (only spectators receive allplayers data). */
   players: GsiPlayer[]
-  /** The local player when Dota reports one (playing, not spectating). */
-  localPlayer: { name: string; accountId: string | null } | null
+  /** The local player when Dota reports one (playing, not spectating).
+   * slotIndex is the scan convention (0-4 radiant, 5-9 dire), derived from
+   * team_name + team_slot; null when either is absent. */
+  localPlayer: {
+    name: string
+    accountId: string | null
+    slotIndex: number | null
+  } | null
   /** The local player's picked hero model (playing only); npc short name. */
   localHeroNpcName: string | null
 }

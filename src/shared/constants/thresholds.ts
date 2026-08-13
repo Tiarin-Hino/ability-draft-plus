@@ -37,8 +37,17 @@ export const STREAM_TOP_WINRATE_COUNT = 8
 export const STREAM_MAX_COMBO_PANEL_ENTRIES = 8
 export const STREAM_PICK_FEED_LENGTH = 20
 
-// Experimental auto-rescan (GSI-driven draft tracking)
-export const AUTO_RESCAN_INTERVAL_MS = 5_000
+// Experimental auto-rescan (GSI-driven draft tracking).
+// The tick only CHECKS the turn clock; scans fire when a turn ends (~7s apart),
+// so a 1s tick costs nothing between turns but keeps boundary latency low.
+export const AUTO_RESCAN_TICK_MS = 1_000
+// Wait after a turn ends before scanning — the game UI needs a moment to render
+// the picked ability icon into the player's row.
+export const AUTO_RESCAN_PICK_VISIBLE_DELAY_S = 1
+// A targeted rescan blocked by the contamination guard (hover tooltip over the
+// rows) retries every tick; after this many attempts the pending rows are
+// dropped — the next round-break full reconciliation scan will catch the pick.
+export const AUTO_RESCAN_MAX_TARGET_RETRIES = 10
 // Contamination guard: after this many CONSECUTIVE rejected rescans, accept the
 // next one and re-baseline — a poisoned baseline (confident misread of an empty
 // slot) or a long-lived in-game overlay must not stall updates indefinitely.

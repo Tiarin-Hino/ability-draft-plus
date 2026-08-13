@@ -91,6 +91,7 @@ async function handleScan(payload: {
   confidenceThreshold: number
   isInitialScan: boolean
   activeClassNames?: string[]
+  heroOrders?: number[]
 }): Promise<void> {
   if (!classifier.isReady()) {
     throw new Error('ML Worker not initialized')
@@ -102,6 +103,7 @@ async function handleScan(payload: {
     confidenceThreshold,
     isInitialScan,
     activeClassNames,
+    heroOrders,
   } = payload
   // Decode the PNG once; every slot crop reads from this raw bitmap.
   const screenshot = await decodeScreenshot(Buffer.from(screenshotBuffer))
@@ -126,6 +128,7 @@ async function handleScan(payload: {
       coords,
       confidenceThreshold,
       activeSet,
+      heroOrders && heroOrders.length > 0 ? new Set(heroOrders) : undefined,
     )
   }
 
@@ -179,12 +182,18 @@ async function performSelectedAbilitiesScan(
   coords: ResolutionLayout,
   confidenceThreshold: number,
   activeClassNames?: ReadonlySet<string>,
+  heroOrders?: ReadonlySet<number>,
 ): Promise<ScanResult[]> {
   const selectedCoords = coords.selected_abilities_coords
   if (!selectedCoords || selectedCoords.length === 0) return []
 
   const params = coords.selected_abilities_params
-  const slotsToScan: SlotCoordinate[] = selectedCoords.map((c) => ({
+  // heroOrders restricts a targeted rescan to specific player rows; the
+  // partial results merge into the baseline downstream (scan-processor).
+  const relevantCoords = heroOrders
+    ? selectedCoords.filter((c) => heroOrders.has(c.hero_order))
+    : selectedCoords
+  const slotsToScan: SlotCoordinate[] = relevantCoords.map((c) => ({
     ...c,
     width: params?.width ?? c.width,
     height: params?.height ?? c.height,

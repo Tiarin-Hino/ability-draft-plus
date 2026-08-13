@@ -39,6 +39,10 @@ export function createScanProcessingService(
     import('./stream-server-service').StreamServerService,
     'onScanProcessed'
   >,
+  spotDetection?: Pick<
+    import('./spot-detection-service').SpotDetectionService,
+    'onInitialScanProcessed'
+  >,
 ): ScanProcessingService {
   // Enrichment failures must reach the overlay: without this broadcast the renderer's
   // scanState stays pinned at 'scanning' with every button disabled.
@@ -109,6 +113,7 @@ export function createScanProcessingService(
           selectedAbilitiesCache: output.updatedState.selectedAbilitiesCache,
           rescanRejectionStreak: output.updatedState.rescanRejectionStreak,
           lastRescanRejected: output.rescanRejected === true,
+          lastRescanHasty: output.rescanHasty === true,
         })
 
         if (output.rescanRejected) {
@@ -138,6 +143,10 @@ export function createScanProcessingService(
 
         // Third consumer: the streamer-view server (caches its own last payload)
         streamService?.onScanProcessed(output.overlayPayload, isInitialScan)
+
+        // Initial scans reset the spot selection — give GSI auto spot detection
+        // a chance to re-apply it from the local player's team slot
+        if (isInitialScan) spotDetection?.onInitialScanProcessed()
 
         const durationMs = Math.round(performance.now() - start)
         logger.info('Scan processing complete', { durationMs, isInitialScan })

@@ -9,32 +9,38 @@ import { GSI_HERO_SELECTION_PHASE } from '@core/gsi/types'
 import { gsiSnapshotMode } from '@core/gsi/parser'
 import {
   buildTurnSchedule,
-  elapsedTurnsBetween,
+  turnsEndedBetween,
   type TurnWindow,
 } from '@core/gsi/draft-clock'
-import { attributePicks } from '@core/domain/pick-attribution'
-import { AUTO_RESCAN_INTERVAL_MS } from '@shared/constants/thresholds'
+import { attributePicksByRow } from '@core/domain/pick-attribution'
+import {
+  AUTO_RESCAN_TICK_MS,
+  AUTO_RESCAN_PICK_VISIBLE_DELAY_S,
+  AUTO_RESCAN_MAX_TARGET_RETRIES,
+} from '@shared/constants/thresholds'
 
-// @DEV-GUIDE: EXPERIMENTAL GSI-driven auto-rescan + pick attribution (disabled by
-// default — experimentalAutoDraftTracking setting). Every 5s during an active draft it
-// triggers the same rescan pipeline as Ctrl+Shift+R and attributes pool departures to
-// players via the draft turn clock.
+// @DEV-GUIDE: EXPERIMENTAL GSI-driven TURN-CLOCK auto-rescan (disabled by default —
+// experimentalAutoDraftTracking setting). Instead of blind full rescans on a timer,
+// scans fire when the draft clock says a pick just happened, and cover ONLY the rows
+// that can have changed:
+// - The pick phase is anchored to GSI map.clock_time crossing 0 (the -59..0 ramp is
+//   the preview; see draft-clock.ts for the validated schedule constants).
+// - When a turn ends (+AUTO_RESCAN_PICK_VISIBLE_DELAY_S for the icon to render),
+//   that player's row is queued and a TARGETED rescan of the queued rows runs
+//   (~4 slots instead of 40).
+// - When a round's last turn ends, a FULL 40-slot reconciliation rescan runs in the
+//   5s round break, catching anything the targeted scans missed (clock drift, hasty
+//   retries that hit the cap).
+// - Attribution is a ROW DIFF (pick-attribution.ts): a new name in row X IS player
+//   X's pick. The clock never guesses who picked what — it only decides when/where
+//   to look, so clock drift can delay detection but never mis-attribute.
+// Contaminated captures (hover tooltip; scan-processor guard) and hasty no-ops keep
+// the queued rows and retry next tick, up to AUTO_RESCAN_MAX_TARGET_RETRIES.
 //
-// Gates per tick (ALL must hold): setting on, overlay active, GSI connected and in
-// hero selection, an initial scan done (the pool grid is still the user's Ctrl+Shift+S),
-// and ML idle. The capture is NEVER protected by moving the user's mouse — instead the
-// scan-processor's contamination guard discards any rescan where a previously
-// confident pick slot reads unknown (an in-game hover tooltip covered the tiles), and
-// this service skips attribution for that tick (DraftStore.lastRescanRejected) and
-// simply retries a few seconds later.
-//
-// Draft sessions are keyed by GSI matchid (replay seeking flaps game_state); the
-// anchor is wall clock at the first hero-selection entry per match. Turn schedule
-// constants are still being validated against captures (see draft-clock.ts).
-//
-// Known drift source: manual rescans between ticks shrink the pool outside our
-// prev/next diff, surfacing later as spurious model markers. Logged, accepted for v1;
-// attribution is recomputable and the board's snapshot grouping is unaffected.
+// Gates per tick (ALL must hold): setting on, overlay active, initial scan done
+// (the pool grid is still the user's Ctrl+Shift+S), ML idle, GSI connected and in
+// hero selection, pick-phase anchor set. Draft sessions are keyed by GSI matchid
+// (replay seeking flaps game_state); clock/pending state resets per new match.
 
 const logger = log.scope('auto-rescan')
 
@@ -54,13 +60,47 @@ export function createAutoRescanService(
   let tickRunning = false
 
   const schedule: TurnWindow[] = buildTurnSchedule()
-  let draftAnchorMs: number | null = null
-  let lastAttributedS = 0
-  let nextSeq = 0
-  let lastPhase: string | null = null
+  const scheduleEndS = schedule[schedule.length - 1].endS
+
   let draftMatchId: string | null = null
+  let lastPhase: string | null = null
+  /** Wall-clock ms of the pick-phase start (GSI clock_time crossing 0). */
+  let pickAnchorMs: number | null = null
+  /** Seconds (pick-phase relative) up to which turn ends have been queued. */
+  let queuedUpToS = 0
+  /** Player rows queued for a targeted rescan (turn ended, pick not yet read). */
+  const pendingRows = new Set<number>()
+  /** True when a queued turn completed a round — escalate to a full rescan. */
+  let fullScanDue = false
+  let targetRetries = 0
+
+  function resetDraftSession(): void {
+    pickAnchorMs = null
+    queuedUpToS = 0
+    pendingRows.clear()
+    fullScanDue = false
+    targetRetries = 0
+  }
 
   streamService.onGsiSnapshot((snapshot) => {
+    // Pick-phase anchor: clock_time runs -59 -> 0 during the preview; the first
+    // turn starts at 0. While the clock reports positive values the anchor is
+    // continuously re-derived (self-corrects pauses/drift); a clock frozen at 0
+    // sets it exactly once, at the crossing.
+    if (
+      snapshot.gamePhase === GSI_HERO_SELECTION_PHASE &&
+      snapshot.clockTime !== null &&
+      snapshot.clockTime >= 0 &&
+      (pickAnchorMs === null || snapshot.clockTime > 0)
+    ) {
+      if (pickAnchorMs === null) {
+        logger.info('Pick phase anchored (clock crossed zero)', {
+          clockTime: snapshot.clockTime,
+        })
+      }
+      pickAnchorMs = Date.now() - snapshot.clockTime * 1000
+    }
+
     if (snapshot.gamePhase === lastPhase) return
     const prevPhase = lastPhase
     lastPhase = snapshot.gamePhase
@@ -70,7 +110,7 @@ export function createAutoRescanService(
       // selection every few seconds. Only a DIFFERENT matchid (or the very first
       // entry) is a new draft; re-entries keep the anchor and timeline.
       const isSameDraft =
-        draftAnchorMs !== null &&
+        draftMatchId !== null &&
         snapshot.matchId !== null &&
         snapshot.matchId === draftMatchId
       if (isSameDraft) {
@@ -79,10 +119,8 @@ export function createAutoRescanService(
         })
         return
       }
-      draftAnchorMs = Date.now()
       draftMatchId = snapshot.matchId
-      lastAttributedS = 0
-      nextSeq = 0
+      resetDraftSession()
       draftStore.getState().clearDraftTimeline()
       logger.info('Draft started (GSI hero selection)', {
         prevPhase,
@@ -111,7 +149,7 @@ export function createAutoRescanService(
       if (!settings.experimentalAutoDraftTracking) return
       if (!appStore.getState().overlayActive) return
       if (appStore.getState().mlStatus !== 'ready') return
-      if (draftAnchorMs === null) return
+      if (pickAnchorMs === null) return
 
       const { snapshot, connected } = streamService.getGsiState()
       if (!connected || snapshot?.gamePhase !== GSI_HERO_SELECTION_PHASE) return
@@ -119,62 +157,68 @@ export function createAutoRescanService(
       // The pool grid is still the user's manual initial scan (Ctrl+Shift+S)
       if (poolNames().length === 0) return
 
-      const elapsedS = (Date.now() - draftAnchorMs) / 1000
-
-      const scheduleEndS = schedule[schedule.length - 1].endS
+      const elapsedS = (Date.now() - pickAnchorMs) / 1000
       if (elapsedS > scheduleEndS + 30) {
         // Draft is definitely over even if GSI hasn't left hero selection yet
         return
       }
 
-      const prevPool = poolNames()
-      await scanTrigger.performScan(false)
+      // Queue rows whose turn ended long enough ago for the icon to be visible
+      const visibleUpToS = elapsedS - AUTO_RESCAN_PICK_VISIBLE_DELAY_S
+      if (visibleUpToS > queuedUpToS) {
+        const ended = turnsEndedBetween(schedule, queuedUpToS, visibleUpToS)
+        for (const turn of ended) {
+          pendingRows.add(turn.playerIndex)
+          // Last turn of a round -> reconcile the whole board in the 5s break
+          if (turn.seq % 10 === 9) fullScanDue = true
+        }
+        queuedUpToS = visibleUpToS
+      }
 
-      if (draftStore.getState().lastRescanRejected) {
-        // Contamination guard fired (hover tooltip over the pick slots) — this
-        // capture is void. Do not advance attribution; retry next tick.
-        logger.info('Rescan discarded by contamination guard; retrying next tick')
+      if (pendingRows.size === 0 && !fullScanDue) return
+
+      const store = draftStore.getState()
+      const prevSelected = store.selectedAbilitiesCache
+      const heroOrders = fullScanDue ? undefined : [...pendingRows]
+
+      await scanTrigger.performScan(false, { heroOrders })
+
+      const after = draftStore.getState()
+      if (after.lastRescanRejected || after.lastRescanHasty) {
+        // Tooltip over the rows — capture void, state untouched. Retry next
+        // tick; past the cap, drop and let the round-break full scan catch up.
+        targetRetries += 1
+        if (targetRetries > AUTO_RESCAN_MAX_TARGET_RETRIES) {
+          logger.warn('Targeted rescan retry cap hit; deferring to round break', {
+            rows: [...pendingRows],
+          })
+          pendingRows.clear()
+          fullScanDue = false
+          targetRetries = 0
+        }
         return
       }
 
-      const newPool = poolNames()
-
-      // Attribution is DEPARTURE-driven: a scan without pool departures carries
-      // no pick information (picks land ~7s apart vs the 5s scan cadence), so
-      // turns simply keep accumulating until the next departure shows up.
-      // Model picks are observed directly via GSI now, so no synthetic
-      // modelSelectionMarker events are emitted from clock guesses anymore —
-      // elapsed turns are capped to the number of departures.
-      const newPoolSet = new Set(newPool)
-      const departedCount = prevPool.filter((n) => !newPoolSet.has(n)).length
-      if (departedCount === 0) {
-        return
-      }
-
-      const elapsedTurns = elapsedTurnsBetween(
-        schedule,
-        lastAttributedS,
-        elapsedS,
-      ).slice(0, departedCount)
-
-      const { events, unattributed } = attributePicks({
-        prevPoolNames: prevPool,
-        newPoolNames: newPool,
-        elapsedTurns,
-        nextSeq,
+      const events = attributePicksByRow({
+        prevSelected,
+        nextSelected: after.selectedAbilitiesCache,
+        nextSeq: after.draftTimeline.length,
         clockTime: snapshot.clockTime,
       })
-      lastAttributedS = elapsedS
-      nextSeq += events.length
+
+      logger.info('Turn-driven rescan complete', {
+        targeted: heroOrders ?? 'full',
+        newPicks: events.length,
+        clockTime: snapshot.clockTime,
+        elapsedS: Math.round(elapsedS),
+      })
+
+      pendingRows.clear()
+      fullScanDue = false
+      targetRetries = 0
 
       if (events.length > 0) {
         draftStore.getState().appendPickEvents(events)
-        logger.info('Attributed picks', { events: events.length })
-      }
-      if (unattributed.length > 0) {
-        logger.warn('Unattributed pool departures (attribution drift)', {
-          abilities: unattributed,
-        })
       }
       streamService.refresh()
     } catch (error) {
@@ -189,7 +233,7 @@ export function createAutoRescanService(
   return {
     start(): void {
       if (timer) return
-      timer = setInterval(() => void tick(), AUTO_RESCAN_INTERVAL_MS)
+      timer = setInterval(() => void tick(), AUTO_RESCAN_TICK_MS)
       logger.info('Auto-rescan service armed (gated by experimental setting)')
     },
     stop(): void {

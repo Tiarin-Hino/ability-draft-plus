@@ -53,6 +53,9 @@ const PLAYING_PAYLOAD = {
     name: 'LocalHero',
     activity: 'playing',
     kills: 0,
+    team_name: 'radiant',
+    player_slot: 0,
+    team_slot: 0,
   },
   hero: { facet: 0, id: 56, name: 'npc_dota_hero_clinkz' },
 }
@@ -79,9 +82,26 @@ describe('parseGsiPayload', () => {
     expect(snapshot.localPlayer).toEqual({
       name: 'LocalHero',
       accountId: '40000001',
+      slotIndex: 0,
     })
     expect(snapshot.gamePhase).toBe('DOTA_GAMERULES_STATE_GAME_IN_PROGRESS')
     expect(snapshot.clockTime).toBe(42)
+  })
+
+  it('maps the local dire player to scan slots 5-9', () => {
+    const snapshot = parseGsiPayload({
+      player: { name: 'DirePlayer', team_name: 'dire', team_slot: 3 },
+    })
+    expect(snapshot.localPlayer?.slotIndex).toBe(8)
+  })
+
+  it('leaves localPlayer slotIndex null when team data is absent', () => {
+    const snapshot = parseGsiPayload({ player: { name: 'MenuPlayer' } })
+    expect(snapshot.localPlayer).toEqual({
+      name: 'MenuPlayer',
+      accountId: null,
+      slotIndex: null,
+    })
   })
 
   it('attaches spectator hero models to players by slot (empty names = unpicked)', () => {

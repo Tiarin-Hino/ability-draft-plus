@@ -30,6 +30,8 @@ export interface DraftSessionSlice {
   rescanRejectionStreak: number
   /** True when the most recent rescan was discarded by the contamination guard. */
   lastRescanRejected: boolean
+  /** True when the most recent rescan was a hasty no-op (contaminated, no new info). */
+  lastRescanHasty: boolean
   /** Attributed pick events (experimental auto-rescan); empty otherwise. */
   draftTimeline: PickEvent[]
 }
@@ -56,6 +58,7 @@ export function createDraftStore() {
     selectedAbilitiesCache: [],
     rescanRejectionStreak: 0,
     lastRescanRejected: false,
+    lastRescanHasty: false,
     draftTimeline: [],
 
     // Actions
@@ -70,6 +73,7 @@ export function createDraftStore() {
         selectedAbilitiesCache: [],
         rescanRejectionStreak: 0,
         lastRescanRejected: false,
+        lastRescanHasty: false,
         draftTimeline: [],
       }),
 

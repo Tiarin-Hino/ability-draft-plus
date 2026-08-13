@@ -40,12 +40,15 @@ export interface MlService {
    * @param activeClassNames Ability internal names currently in the DB. Model
    * classes outside this list (removed-from-pool abilities) are masked and can
    * never be predicted. Omitted/empty → no masking.
+   * @param heroOrders Rescan only: restrict the selected-abilities scan to
+   * these player rows (targeted auto-rescan). Omitted → all rows.
    */
   scan(
     screenshotBuffer: Buffer,
     layout: ResolutionLayout,
     isInitialScan: boolean,
     activeClassNames?: string[],
+    heroOrders?: number[],
   ): Promise<MlWorkerSuccessResponse>
   terminate(): Promise<void>
   isReady(): boolean
@@ -178,6 +181,7 @@ export function createMlService(): MlService {
     layout: ResolutionLayout,
     isInitialScan: boolean,
     activeClassNames?: string[],
+    heroOrders?: number[],
   ): Promise<MlWorkerSuccessResponse> {
     if (!worker || !ready) {
       throw new Error('ML Worker not ready')
@@ -218,6 +222,7 @@ export function createMlService(): MlService {
           confidenceThreshold: ML_CONFIDENCE_THRESHOLD,
           isInitialScan,
           activeClassNames,
+          heroOrders,
         },
       }
 

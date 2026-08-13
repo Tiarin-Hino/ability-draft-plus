@@ -27,7 +27,17 @@ function makeScanResult(
     hero_order: heroOrder,
     ability_order: abilityOrder,
     is_ultimate: isUltimate,
-    coord: { x: 0, y: 0, width: 64, height: 64, hero_order: heroOrder, ability_order: abilityOrder },
+    // Unique per slot, stable across scans — mirrors the real layout JSON, where
+    // the coordinate is the only reliable slot identity (selected-abilities
+    // slots share ability_order) and the rescan merge keys on it.
+    coord: {
+      x: heroOrder * 100 + abilityOrder * 10,
+      y: isUltimate ? 0 : 50,
+      width: 64,
+      height: 64,
+      hero_order: heroOrder,
+      ability_order: abilityOrder,
+    },
   }
 }
 
@@ -366,9 +376,36 @@ describe('processScanResults', () => {
         ).toEqual(['fireball'])
       })
 
-      it('rejects a rescan where a previously seen pick tile is missing entirely', () => {
+      it('accepts a PARTIAL rescan covering only one player row (targeted scan)', () => {
+        // Targeted auto-rescan scans only player 1's slots; player 0's cached
+        // pick is absent from the scan — that is valid coverage, not
+        // contamination, and the results merge into the baseline.
+        const first = acceptedFirstRescan()
+        const partial = rescanWith(first.updatedState, [
+          makeScanResult('ice_blast', 1, 1, false),
+        ])
+        expect(partial.rescanRejected).toBe(false)
+        expect(partial.rescanHasty).toBe(false)
+        expect(
+          partial.updatedState.selectedAbilitiesCache.map((s) => s.name).sort(),
+        ).toEqual(['fireball', 'ice_blast'])
+        // Pool subtraction covers ALL known picks, not just this scan's subset
+        const poolNames = partial.updatedState.initialPoolAbilitiesCache.standard.map(
+          (s) => s.name,
+        )
+        expect(poolNames).not.toContain('ice_blast')
+        expect(poolNames).not.toContain('fireball')
+        // Enriched payload renders the full merged pick state
+        expect(
+          partial.overlayPayload.scanData!.selectedAbilities.map((s) => s.name).sort(),
+        ).toEqual(['fireball', 'ice_blast'])
+      })
+
+      it('a partial rescan is judged for contamination only within its own slots', () => {
+        // Player 0's cached pick reads unknown IN the scanned subset -> still guarded
         const first = acceptedFirstRescan()
         const contaminated = rescanWith(first.updatedState, [
+          makeScanResult(null, 0, 1, false, 0.4),
           makeScanResult('ice_blast', 1, 1, false),
         ])
         expect(contaminated.rescanRejected).toBe(true)

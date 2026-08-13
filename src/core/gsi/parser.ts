@@ -53,6 +53,20 @@ function resolveSlotIndex(
   return isDire && rawIndex < 5 ? rawIndex + 5 : rawIndex
 }
 
+/**
+ * Playing-mode local player block -> scan slot index 0-9, from the authoritative
+ * team_name ("radiant"/"dire") + team_slot (0-4 within the team). Null when either
+ * is absent (menus, spectating) — callers treat that as "slot unknown".
+ */
+function localSlotIndex(player: Record<string, unknown>): number | null {
+  const teamName = asString(player['team_name'])
+  const teamSlot = asNumber(player['team_slot'])
+  if (teamSlot === null || teamSlot < 0 || teamSlot > 4) return null
+  if (teamName === 'radiant') return teamSlot
+  if (teamName === 'dire') return 5 + teamSlot
+  return null
+}
+
 function parseTeamPlayers(
   team: unknown,
   into: GsiPlayer[],
@@ -123,7 +137,11 @@ export function parseGsiPayload(json: unknown): GsiSnapshot {
     } else {
       const name = asString(playerBlock['name'])
       if (name) {
-        localPlayer = { name, accountId: asString(playerBlock['accountid']) }
+        localPlayer = {
+          name,
+          accountId: asString(playerBlock['accountid']),
+          slotIndex: localSlotIndex(playerBlock),
+        }
       }
       // Playing: the hero block is the local player's own model
       localHeroNpcName = heroBlock ? heroNpcShortName(heroBlock['name']) : null

@@ -27,7 +27,14 @@ import type { InitialScanResults } from '@shared/types/ml'
 const logger = log.scope('scan-trigger')
 
 export interface ScanTriggerService {
-  performScan(isInitialScan: boolean): Promise<void>
+  /**
+   * @param options.heroOrders Rescan only: restrict the selected-abilities
+   * scan to these player rows (targeted auto-rescan). Omitted → all rows.
+   */
+  performScan(
+    isInitialScan: boolean,
+    options?: { heroOrders?: number[] },
+  ): Promise<void>
 }
 
 export function createScanTriggerService(
@@ -42,7 +49,7 @@ export function createScanTriggerService(
   dbService: DatabaseService,
 ): ScanTriggerService {
   return {
-    async performScan(isInitialScan): Promise<void> {
+    async performScan(isInitialScan, options): Promise<void> {
       try {
         // Read resolution from app store (set at overlay activation)
         const resolution = appStore.getState().activeResolution
@@ -134,6 +141,7 @@ export function createScanTriggerService(
           layout,
           isInitialScan,
           dbService.abilities.getAllNames(),
+          isInitialScan ? undefined : options?.heroOrders,
         )
 
         appStore.setState({ mlStatus: 'ready' })

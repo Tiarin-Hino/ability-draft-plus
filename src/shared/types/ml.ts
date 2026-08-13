@@ -25,6 +25,12 @@ export interface MlWorkerScanRequest {
      * Omitted/empty → no masking.
      */
     activeClassNames?: string[]
+    /**
+     * Rescan only: restrict the selected-abilities scan to these player rows
+     * (hero_order 0-9). Omitted → scan all rows. Ignored for initial scans.
+     * Used by the GSI turn-driven auto-rescan to scan ~4 slots instead of 40.
+     */
+    heroOrders?: number[]
   }
 }
 
