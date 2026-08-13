@@ -182,20 +182,23 @@ function buildPlayerRows(
 
   const rows: StreamPlayerRow[] = []
   for (let playerIndex = 0; playerIndex < PLAYER_COUNT; playerIndex++) {
-    const pickSlots = selected.filter(
-      (s) => s.hero_order === playerIndex && s.name !== null && s.isUnknown !== true,
+    // The in-game card is copied box-for-box in SCREEN order (left to right);
+    // the ultimate box is the rightmost for BOTH teams — the game does not
+    // mirror dire pick rows. Position comes from the scanned coords' x, never
+    // from array order or the preset's is_ultimate flag: several dire presets
+    // list these boxes right-to-left, so both lie about position.
+    const playerBoxes = selected
+      .filter((s) => s.hero_order === playerIndex)
+      .sort((a, b) => a.coord.x - b.coord.x)
+    const pickSlots = playerBoxes.filter(
+      (s) => s.name !== null && s.isUnknown !== true,
     )
 
-    // Positional pick boxes mirroring the in-game row: standard picks fill
-    // boxes 0-2 in scan (left-to-right) order, the ultimate always sits in
-    // box 3 (the layout flags the 4th selected coord is_ultimate).
     // Picked-slot tiles are never "picked from the pool" themselves; render them plainly.
     const picks: (StreamAbilitySlot | null)[] = [null, null, null, null]
-    let standardBox = 0
-    for (const s of pickSlots) {
-      if (s.is_ultimate) picks[3] = toStreamSlot(s, new Set())
-      else if (standardBox < 3) picks[standardBox++] = toStreamSlot(s, new Set())
-    }
+    playerBoxes.slice(0, 4).forEach((s, i) => {
+      if (s.name !== null && s.isUnknown !== true) picks[i] = toStreamSlot(s, new Set())
+    })
 
     const pickNames = pickSlots.map((s) => s.name as string)
     const draftScore =
