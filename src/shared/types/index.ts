@@ -156,6 +156,8 @@ export interface HeroSynergyDisplay {
 }
 
 export interface HeroModelDisplay {
+  /** True when tile-diff detection saw this model get picked (never reverts). */
+  isPicked?: boolean
   heroOrder: number
   heroName: string
   heroDisplayName: string

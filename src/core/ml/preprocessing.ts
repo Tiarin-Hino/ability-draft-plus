@@ -57,6 +57,25 @@ export async function preprocessSlot(
 }
 
 /**
+ * Crops one slot from a decoded screenshot and resizes to an arbitrary square —
+ * used for model-tile capture (picked-model diff detection), where the size is
+ * a comparison normalization, not a model input.
+ */
+export async function cropTile(
+  screenshot: DecodedScreenshot,
+  slot: SlotCoordinate,
+  size: number,
+): Promise<Buffer> {
+  return sharp(screenshot.data, {
+    raw: { width: screenshot.width, height: screenshot.height, channels: 3 },
+  })
+    .extract({ left: slot.x, top: slot.y, width: slot.width, height: slot.height })
+    .resize(size, size, { kernel: 'linear' })
+    .raw()
+    .toBuffer()
+}
+
+/**
  * Converts a raw uint8 RGB buffer to Float32Array.
  * Values are kept as 0-255 floats -- the model's Rescaling layer maps them to [-1, 1]
  * internally (x/127.5 - 1).

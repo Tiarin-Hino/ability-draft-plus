@@ -27,6 +27,7 @@ export interface ScanProcessingService {
     isInitialScan: boolean,
     resolution: string,
     scaleFactor: number,
+    modelTiles?: import('@core/domain/model-pick-detection').ModelTileCapture[],
   ): void
 }
 
@@ -59,7 +60,7 @@ export function createScanProcessingService(
   }
 
   return {
-    handleScanResults(results, isInitialScan, resolution, scaleFactor) {
+    handleScanResults(results, isInitialScan, resolution, scaleFactor, modelTiles) {
       const start = performance.now()
 
       try {
@@ -75,6 +76,7 @@ export function createScanProcessingService(
         const output = processScanResults({
           rawResults: results,
           isInitialScan,
+          modelTiles,
           state: {
             initialPoolAbilitiesCache: state.initialPoolAbilitiesCache,
             identifiedHeroModelsCache: state.identifiedHeroModelsCache,
@@ -84,6 +86,9 @@ export function createScanProcessingService(
             mySelectedModelHeroOrder: state.mySelectedModelHeroOrder,
             selectedAbilitiesCache: state.selectedAbilitiesCache,
             rescanRejectionStreak: state.rescanRejectionStreak,
+            modelTileBaselines: state.modelTileBaselines,
+            pendingModelChanges: state.pendingModelChanges,
+            pickedModelHeroOrders: state.pickedModelHeroOrders,
           },
           deps: {
             heroes: dbService.heroes,
@@ -114,7 +119,23 @@ export function createScanProcessingService(
           rescanRejectionStreak: output.updatedState.rescanRejectionStreak,
           lastRescanRejected: output.rescanRejected === true,
           lastRescanHasty: output.rescanHasty === true,
+          modelTileBaselines: output.updatedState.modelTileBaselines,
+          pendingModelChanges: output.updatedState.pendingModelChanges,
+          pickedModelHeroOrders: output.updatedState.pickedModelHeroOrders,
         })
+
+        if (output.newlyPickedModels && output.newlyPickedModels.length > 0) {
+          // Cross-check against the GSI local-hero log line when playing:
+          // your own pick must show up here within a scan or two of the
+          // 'GSI local player' heroModel update
+          const names = output.newlyPickedModels.map((order) => {
+            const model = output.updatedState.identifiedHeroModelsCache.find(
+              (m) => m.heroOrder === order,
+            )
+            return model ? `${order}:${model.heroDisplayName}` : `${order}:?`
+          })
+          logger.info('Model picks detected (tile diff)', { models: names })
+        }
 
         if (output.rescanRejected) {
           logger.warn(

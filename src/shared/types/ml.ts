@@ -51,6 +51,13 @@ export interface MlWorkerSuccessResponse {
   status: 'success'
   results: InitialScanResults | ScanResult[]
   isInitialScan: boolean
+  /**
+   * Normalized crops of the 12 model portrait tiles (raw RGB at
+   * MODEL_TILE_COMPARE_SIZE²), captured on every scan for picked-model diff
+   * detection. Buffers are transferred, not copied. Absent when the layout has
+   * no models_coords or a tile crop failed.
+   */
+  modelTiles?: { heroOrder: number; tile: ArrayBuffer }[]
 }
 
 export interface MlWorkerErrorResponse {

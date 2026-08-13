@@ -37,6 +37,14 @@ export const STREAM_TOP_WINRATE_COUNT = 8
 export const STREAM_MAX_COMBO_PANEL_ENTRIES = 8
 export const STREAM_PICK_FEED_LENGTH = 20
 
+// Picked-model detection via model-tile diffing. The 12 model portrait tiles on
+// the draft stage are pixel-STATIC while unpicked (measured mean abs diff 0.0
+// across scans) and change drastically when picked (measured 35-120). Tiles are
+// normalized to a small square for comparison; the threshold sits in the huge
+// gap between "identical" and "changed".
+export const MODEL_TILE_COMPARE_SIZE = 48
+export const MODEL_PICK_DIFF_THRESHOLD = 10
+
 // Experimental auto-rescan (GSI-driven draft tracking).
 // Fallback auto INITIAL scan: fires this long after the draft clock is first
 // identified (hero selection + clock_time present) when the user hasn't run

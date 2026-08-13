@@ -8,9 +8,10 @@ import type {
 } from '@shared/types/ml'
 import type { ScanResult, SlotCoordinate, ResolutionLayout } from '@shared/types'
 import { createOnnxClassifier } from '@core/ml/onnx-classifier'
-import { decodeScreenshot, preprocessBatch } from '@core/ml/preprocessing'
+import { decodeScreenshot, preprocessBatch, cropTile } from '@core/ml/preprocessing'
 import type { DecodedScreenshot } from '@core/ml/preprocessing'
 import type { ClassifierResult } from '@core/ml/classifier'
+import { MODEL_TILE_COMPARE_SIZE } from '@shared/constants/thresholds'
 
 // @DEV-GUIDE: ML Worker thread entry point. Runs as a Node.js worker_thread, spawned by MlService.
 // Handles two operations: init (load ONNX model) and scan (classify ability icons).
@@ -32,6 +33,9 @@ import type { ClassifierResult } from '@core/ml/classifier'
 //
 // For initial scan: processes ultimate + standard slots, extracts heroDefiningAbilities (ability_order===2).
 // For rescan: processes only the selected-ability slots.
+// Every scan additionally captures the 12 model portrait tiles (models_coords) as
+// normalized raw crops — the scan-processor diffs them against the initial-scan
+// baseline to detect picked models (see core/domain/model-pick-detection.ts).
 
 if (!parentPort) {
   throw new Error('ml-worker must run as a worker thread')
@@ -132,12 +136,44 @@ async function handleScan(payload: {
     )
   }
 
+  // Model portrait tiles for picked-model diff detection — captured every scan
+  // (~10ms for 12 small crops from the already-decoded bitmap)
+  const modelTiles = await captureModelTiles(screenshot, coords)
+
   const response: MlWorkerSuccessResponse = {
     status: 'success',
     results,
     isInitialScan,
+    modelTiles,
   }
-  parentPort!.postMessage(response)
+  parentPort!.postMessage(
+    response,
+    modelTiles?.map((t) => t.tile) ?? [],
+  )
+}
+
+/** Crop + normalize the 12 model portrait tiles; undefined when unavailable. */
+async function captureModelTiles(
+  screenshot: DecodedScreenshot,
+  coords: ResolutionLayout,
+): Promise<{ heroOrder: number; tile: ArrayBuffer }[] | undefined> {
+  const modelCoords = coords.models_coords
+  if (!modelCoords || modelCoords.length === 0) return undefined
+
+  const tiles: { heroOrder: number; tile: ArrayBuffer }[] = []
+  for (const c of modelCoords) {
+    if (c.width <= 0 || c.height <= 0) continue
+    try {
+      const raw = await cropTile(screenshot, c, MODEL_TILE_COMPARE_SIZE)
+      tiles.push({
+        heroOrder: c.hero_order,
+        tile: raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength),
+      })
+    } catch {
+      // Out-of-bounds crop (layout drift) — skip this tile
+    }
+  }
+  return tiles.length > 0 ? tiles : undefined
 }
 
 // @DEV-GUIDE: Initial scan processes ultimate + standard ability slots in parallel, then

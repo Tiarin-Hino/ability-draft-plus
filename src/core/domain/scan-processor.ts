@@ -27,6 +27,8 @@ import {
   filterRelevantHeroTraps,
 } from './op-trap-filter'
 import { determineTopTierEntities } from './top-tier'
+import { detectModelPicks } from './model-pick-detection'
+import type { ModelTileCapture } from './model-pick-detection'
 import { RESCAN_GUARD_MAX_CONSECUTIVE_REJECTIONS } from '@shared/constants/thresholds'
 
 // @DEV-GUIDE: Central business logic — transforms raw ML scan results into a fully-enriched
@@ -62,6 +64,12 @@ export interface ScanProcessorInput {
   heroesParams: { width: number; height: number }
   targetResolution: string
   scaleFactor: number
+  /**
+   * Normalized model portrait tiles captured with this scan. Initial scan:
+   * stored as the unpicked baseline. Rescan: diffed against the baseline to
+   * detect picked models (see model-pick-detection.ts).
+   */
+  modelTiles?: ModelTileCapture[]
 }
 
 export interface ScanProcessorOutput {
@@ -74,6 +82,8 @@ export interface ScanProcessorOutput {
    * callers (auto-rescan) must not treat the scan as fresh evidence.
    */
   rescanRejected?: boolean
+  /** Pool hero orders whose model pick was committed by THIS scan. */
+  newlyPickedModels?: number[]
   /**
    * True when the guard hit RESCAN_GUARD_MAX_CONSECUTIVE_REJECTIONS and this
    * (still-contaminated-looking) rescan was accepted as the new baseline —
@@ -152,6 +162,8 @@ export function processScanResults(
   let rescanRebaselined = false
   let rescanHasty = false
 
+  let newlyPickedModels: number[] = []
+
   if (isInitialScan) {
     const initial = rawResults as InitialScanResults
     ultimates = initial.ultimates
@@ -159,6 +171,11 @@ export function processScanResults(
     selectedAbilities = initial.selectedAbilities
     state.selectedAbilitiesCache = [...selectedAbilities]
     state.rescanRejectionStreak = 0
+
+    // Model-tile baseline: the unpicked reference state for pick detection
+    state.modelTileBaselines = input.modelTiles ?? []
+    state.pendingModelChanges = []
+    state.pickedModelHeroOrders = []
 
     // Cache pool for future rescans
     state.initialPoolAbilitiesCache = {
@@ -236,6 +253,21 @@ export function processScanResults(
 
     ultimates = state.initialPoolAbilitiesCache.ultimates
     standard = state.initialPoolAbilitiesCache.standard
+
+    // Picked-model detection runs on every rescan, independent of the ability
+    // contamination verdict (the model arcs are separate screen regions and
+    // the two-scan persistence rule absorbs capture glitches)
+    if (input.modelTiles && state.modelTileBaselines.length > 0) {
+      const detection = detectModelPicks({
+        baselines: state.modelTileBaselines,
+        current: input.modelTiles,
+        pending: state.pendingModelChanges,
+        picked: state.pickedModelHeroOrders,
+      })
+      state.pickedModelHeroOrders = detection.picked
+      state.pendingModelChanges = detection.pending
+      newlyPickedModels = detection.newlyPicked
+    }
   }
 
   // --- Phase 2: Collect ability names ---
@@ -455,6 +487,7 @@ export function processScanResults(
     heroModelSynergyMap,
     topTierLookup,
     allScoredEntities,
+    new Set(state.pickedModelHeroOrders),
   )
 
   const heroesForMySpotUI = buildHeroesForMySpotUI(
@@ -490,6 +523,7 @@ export function processScanResults(
     rescanRejected,
     rescanRebaselined,
     rescanHasty,
+    newlyPickedModels,
   }
 }
 
@@ -512,6 +546,9 @@ function cloneState(state: DraftSessionState): DraftSessionState {
     mySelectedModelHeroOrder: state.mySelectedModelHeroOrder,
     selectedAbilitiesCache: [...state.selectedAbilitiesCache],
     rescanRejectionStreak: state.rescanRejectionStreak,
+    modelTileBaselines: [...state.modelTileBaselines],
+    pendingModelChanges: [...state.pendingModelChanges],
+    pickedModelHeroOrders: [...state.pickedModelHeroOrders],
   }
 }
 
@@ -681,6 +718,7 @@ function enrichHeroModels(
   heroModelSynergyMap: HeroSynergyMap,
   topTierLookup: Map<string, import('./types').TopTierEntity>,
   allScoredEntities: ScoredEntity[],
+  pickedModelHeroOrders: ReadonlySet<number>,
 ): HeroModelDisplay[] {
   const scoredHeroLookup = new Map(
     allScoredEntities
@@ -693,6 +731,7 @@ function enrichHeroModels(
     const synergies = heroModelSynergyMap.get(model.heroName)
 
     return {
+      isPicked: pickedModelHeroOrders.has(model.heroOrder),
       heroOrder: model.heroOrder,
       heroName: model.heroName,
       heroDisplayName: model.heroDisplayName,

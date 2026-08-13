@@ -168,6 +168,10 @@ export function createScanTriggerService(
           result.isInitialScan,
           resolution,
           scaleFactor,
+          result.modelTiles?.map((t) => ({
+            heroOrder: t.heroOrder,
+            tile: new Uint8Array(t.tile),
+          })),
         )
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
