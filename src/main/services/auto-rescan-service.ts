@@ -6,6 +6,7 @@ import type { StreamServerService } from './stream-server-service'
 import type { ScanTriggerService } from './scan-trigger-service'
 import type { AppStore } from '../store/app-store'
 import { GSI_HERO_SELECTION_PHASE } from '@core/gsi/types'
+import { gsiSnapshotMode } from '@core/gsi/parser'
 import {
   buildTurnSchedule,
   elapsedTurnsBetween,
@@ -86,6 +87,7 @@ export function createAutoRescanService(
       logger.info('Draft started (GSI hero selection)', {
         prevPhase,
         matchId: snapshot.matchId,
+        mode: gsiSnapshotMode(snapshot),
       })
     } else if (prevPhase === GSI_HERO_SELECTION_PHASE) {
       logger.info('Left hero selection (session retained for possible re-entry)', {
