@@ -6,7 +6,9 @@ import type { DecodedScreenshot } from '@core/ml/preprocessing'
 // - capture(): full primary display at PHYSICAL resolution (mapper/calibration and
 //   the windowed-mode scan fallback — windowed scans crop to game bounds downstream).
 // - captureWindow(title, expectedSize): a single window source by exact title —
-//   the scan path for fullscreen/borderless Dota. Capturing only the game window
+//   the scan FALLBACK for fullscreen/borderless Dota (the primary path is
+//   cached-window-capture-service, which avoids the per-scan getSources
+//   enumeration measured at 730-1075ms). Capturing only the game window
 //   avoids the full-display Windows Graphics Capture session that hitches the game
 //   (and briefly the cursor) every auto-rescan tick. Returns null when the source
 //   is missing or the captured size deviates from expectedSize (e.g. windowed mode,

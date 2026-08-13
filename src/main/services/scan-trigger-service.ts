@@ -6,6 +6,7 @@ import type { MlService } from './ml-service'
 import type { DatabaseService } from './database-service'
 import type { LayoutService } from './layout-service'
 import type { ScreenshotService } from './screenshot-service'
+import type { CachedWindowCaptureService } from './cached-window-capture-service'
 import type { DecodedScreenshot } from '@core/ml/preprocessing'
 import type { WindowManager } from './window-manager'
 import type { ScanProcessingService } from './scan-processing-service'
@@ -43,6 +44,7 @@ export function createScanTriggerService(
   mlService: MlService,
   layoutService: LayoutService,
   screenshotService: ScreenshotService,
+  cachedWindowCapture: CachedWindowCaptureService,
   windowManager: WindowManager,
   scanProcessingService: ScanProcessingService,
   appStore: AppStore,
@@ -96,9 +98,16 @@ export function createScanTriggerService(
           (gameBounds.width >= physicalScreen.width &&
             gameBounds.height >= physicalScreen.height)
 
+        // Capture cascade: cached-source frame grab (persistent renderer
+        // stream, ~10-50ms) -> per-scan getSources window capture (~1s) ->
+        // full-display capture. Each step returns null to hand off downward.
         let screenshot: DecodedScreenshot | null = null
         if (isFullscreen) {
-          screenshot = await screenshotService.captureWindow(
+          screenshot = await cachedWindowCapture.captureFrame(
+            GAME_WINDOW_TITLE,
+            physicalScreen,
+          )
+          screenshot ??= await screenshotService.captureWindow(
             GAME_WINDOW_TITLE,
             physicalScreen,
           )

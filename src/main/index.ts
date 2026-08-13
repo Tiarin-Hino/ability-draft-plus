@@ -7,6 +7,7 @@ import { createBackupService } from './services/backup-service'
 import { createMlService } from './services/ml-service'
 import { createLayoutService } from './services/layout-service'
 import { createScreenshotService } from './services/screenshot-service'
+import { createCachedWindowCaptureService } from './services/cached-window-capture-service'
 import { createScanProcessingService } from './services/scan-processing-service'
 import { createStreamServerService } from './services/stream-server-service'
 import { createIconCacheService } from './services/icon-cache-service'
@@ -123,6 +124,9 @@ app.whenReady().then(async () => {
   const mlService = createMlService()
   const layoutService = createLayoutService()
   const screenshotService = createScreenshotService()
+  // Fast scan capture: cached game-window source + overlay-renderer frame
+  // grabs; screenshotService stays the fallback (see the service dev-guide)
+  const cachedWindowCapture = createCachedWindowCaptureService(windowManager)
   const draftStore = createDraftStore()
 
   // @DEV-GUIDE: @zubridge bridge wires the Zustand AppStore in main to all subscribed
@@ -233,6 +237,7 @@ app.whenReady().then(async () => {
     mlService,
     layoutService,
     screenshotService,
+    cachedWindowCapture,
     windowManager,
     scanProcessingService,
     appStore,
@@ -283,6 +288,7 @@ app.whenReady().then(async () => {
     updateService.stopPeriodicChecks()
     windowTracker.stopTracking()
     autoRescanService.stop()
+    cachedWindowCapture.dispose()
     bridge.destroy()
     await streamService.stop()
     await mlService.terminate()
