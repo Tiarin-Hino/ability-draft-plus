@@ -60,10 +60,14 @@ export const AUTO_RESCAN_PICK_VISIBLE_DELAY_S = 1
 // rows) retries every tick; after this many attempts the pending rows are
 // dropped — the next round-break full reconciliation scan will catch the pick.
 export const AUTO_RESCAN_MAX_TARGET_RETRIES = 10
-// SPECTATING: DotaTV delivers game state in buffered chunks and seeking rewinds
-// the draft clock, so the turn schedule cannot be trusted — spectated drafts
-// fall back to plain periodic FULL rescans at this interval.
-export const AUTO_RESCAN_SPECTATE_INTERVAL_MS = 5_000
+// REPLAYS: seeking rewinds the draft clock and playback is chunked, so the turn
+// schedule cannot be trusted — replay sessions fall back to plain periodic FULL
+// rescans at this interval. Live spectating stays turn-driven.
+export const AUTO_RESCAN_REPLAY_INTERVAL_MS = 5_000
+// A spectated draft whose clock jumps BACKWARD by more than this is a replay
+// being seeked (the per-turn -7..0 countdown legitimately rewinds by exactly 7s,
+// so the threshold must sit above that).
+export const REPLAY_CLOCK_REWIND_THRESHOLD_S = 10
 // Contamination guard: after this many CONSECUTIVE rejected rescans, accept the
 // next one and re-baseline — a poisoned baseline (confident misread of an empty
 // slot) or a long-lived in-game overlay must not stall updates indefinitely.

@@ -18,7 +18,8 @@ import {
   AUTO_RESCAN_TICK_MS,
   AUTO_RESCAN_PICK_VISIBLE_DELAY_S,
   AUTO_RESCAN_MAX_TARGET_RETRIES,
-  AUTO_RESCAN_SPECTATE_INTERVAL_MS,
+  AUTO_RESCAN_REPLAY_INTERVAL_MS,
+  REPLAY_CLOCK_REWIND_THRESHOLD_S,
 } from '@shared/constants/thresholds'
 
 // @DEV-GUIDE: EXPERIMENTAL GSI-driven TURN-CLOCK auto-rescan (disabled by default —
@@ -43,10 +44,18 @@ import {
 // the pool is scanned automatically autoInitialScanDelayS (setting) after the draft
 // clock is first identified (hero selection + clock_time present) — one attempt per draft.
 //
-// SPECTATING is different: DotaTV playback buffers state into chunks and seeking
-// rewinds the clock, so the turn schedule is meaningless — spectated drafts use
-// plain periodic FULL rescans (AUTO_RESCAN_SPECTATE_INTERVAL_MS) instead, with the
-// same row-diff attribution. Model picks come from GSI there, not tile diffing.
+// Three session kinds:
+// - PLAYING: turn-driven targeted scanning (the headline path).
+// - SPECTATING (live): same turn-driven scanning — a live spectated draft runs on
+//   the real turn clock.
+// - REPLAY: auto-detected, not a GSI mode — a spectated draft whose clock REWINDS
+//   by more than REPLAY_CLOCK_REWIND_THRESHOLD_S (seeking; observed live: clock
+//   back at -59 with the schedule at 38s). Sticky for the rest of the draft
+//   session; falls back to plain periodic FULL rescans
+//   (AUTO_RESCAN_REPLAY_INTERVAL_MS) with the same row-diff attribution.
+// Model picks come from GSI in both spectator kinds (tile diffing is disabled by
+// scan-processing-service there — the spectator screen's coordinate offsets make
+// tile diffs unreliable).
 //
 // Gates per tick (ALL must hold): setting on, overlay active, ML idle, GSI
 // connected and in hero selection; the turn logic additionally needs an initial
@@ -88,8 +97,12 @@ export function createAutoRescanService(
   /** True when a queued turn completed a round — escalate to a full rescan. */
   let fullScanDue = false
   let targetRetries = 0
-  /** Wall-clock ms of the last spectate-mode periodic full rescan. */
-  let lastSpectateScanMs = 0
+  /** Wall-clock ms of the last replay-mode periodic full rescan. */
+  let lastReplayScanMs = 0
+  /** Previous clock_time inside hero selection — rewind detector input. */
+  let lastClockTime: number | null = null
+  /** Sticky per draft session: a big clock rewind marked this as a replay. */
+  let replayDetected = false
 
   function resetDraftSession(): void {
     draftClockSeenAtMs = null
@@ -99,6 +112,9 @@ export function createAutoRescanService(
     pendingRows.clear()
     fullScanDue = false
     targetRetries = 0
+    lastReplayScanMs = 0
+    lastClockTime = null
+    replayDetected = false
   }
 
   function handlePhaseChange(snapshot: GsiSnapshot): void {
@@ -152,6 +168,24 @@ export function createAutoRescanService(
       draftClockSeenAtMs = Date.now()
       logger.info('Draft clock identified', { clockTime: snapshot.clockTime })
     }
+
+    // Replay detector: a spectated draft whose clock jumps BACKWARD beyond the
+    // per-turn countdown depth is being seeked — the turn schedule is void for
+    // the rest of this session. (Playing-mode clocks legitimately rewind by
+    // exactly 7s per turn, hence the gate and the threshold.)
+    if (
+      !replayDetected &&
+      gsiSnapshotMode(snapshot) === 'spectating' &&
+      lastClockTime !== null &&
+      snapshot.clockTime < lastClockTime - REPLAY_CLOCK_REWIND_THRESHOLD_S
+    ) {
+      replayDetected = true
+      logger.info('Replay detected (draft clock rewound) — periodic rescans', {
+        from: lastClockTime,
+        to: snapshot.clockTime,
+      })
+    }
+    lastClockTime = snapshot.clockTime
 
     // Pick-phase anchor. Empirical clock behavior (live-validated): the preview
     // ramp counts -59 -> 0 (1:1 with wall time), the first turn starts at 0,
@@ -221,18 +255,14 @@ export function createAutoRescanService(
         return
       }
 
-      // SPECTATING: DotaTV playback delivers state in buffered chunks and
-      // seeking rewinds the clock (observed live: clock back at -59 with the
-      // schedule at 38s) — the turn schedule cannot be trusted. Fall back to
+      // REPLAY (auto-detected via clock rewind): the turn schedule is void —
       // plain periodic FULL rescans; attribution stays row-diff-correct.
-      if (gsiSnapshotMode(snapshot) === 'spectating') {
-        if (
-          Date.now() - lastSpectateScanMs <
-          AUTO_RESCAN_SPECTATE_INTERVAL_MS
-        ) {
+      // Live spectating (no rewind seen) runs the turn-driven path below.
+      if (replayDetected) {
+        if (Date.now() - lastReplayScanMs < AUTO_RESCAN_REPLAY_INTERVAL_MS) {
           return
         }
-        lastSpectateScanMs = Date.now()
+        lastReplayScanMs = Date.now()
         pendingRows.clear()
         fullScanDue = false
         await runRescan(undefined, snapshot.clockTime, null)
@@ -310,7 +340,7 @@ export function createAutoRescanService(
       targeted: heroOrders ?? 'full',
       newPicks: events.length,
       clockTime,
-      ...(elapsedS !== null ? { elapsedS: Math.round(elapsedS) } : { spectate: true }),
+      ...(elapsedS !== null ? { elapsedS: Math.round(elapsedS) } : { replay: true }),
     })
 
     pendingRows.clear()
