@@ -73,7 +73,7 @@ function App(): React.ReactElement {
   if (!board || board.phase === 'waiting') {
     return (
       <div className={`board bg-${bgMode()}`}>
-        <ArtLayer name="waiting-bg" />
+        <ArtLayer name="board-bg" />
         <div
           className={`connection connection-${connection}`}
           title={t(`connection.${connection}`)}
