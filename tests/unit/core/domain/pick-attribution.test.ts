@@ -1,111 +1,131 @@
 import { describe, it, expect } from 'vitest'
-import { attributePicks } from '@core/domain/pick-attribution'
-import type { TurnWindow } from '@core/gsi/draft-clock'
+import { attributePicksByRow } from '@core/domain/pick-attribution'
+import type { ScanResult } from '@shared/types'
 
-function turn(seq: number, playerIndex: number): TurnWindow {
-  return { seq, playerIndex, startS: seq * 10, endS: seq * 10 + 10 }
+function slot(
+  hero_order: number,
+  name: string | null,
+  is_ultimate = false,
+): ScanResult {
+  return {
+    name,
+    confidence: name ? 0.99 : 0,
+    hero_order,
+    ability_order: 0,
+    is_ultimate,
+    coord: { x: hero_order * 100, y: is_ultimate ? 0 : 50, width: 46, height: 46, hero_order },
+  }
 }
 
-const POOL = ['a', 'b', 'c', 'd', 'e']
+describe('attributePicksByRow', () => {
+  it('attributes a new name in a row to that row player', () => {
+    const prev = [slot(3, null)]
+    const next = [slot(3, 'sven_storm_bolt')]
 
-describe('attributePicks', () => {
-  it('attributes a single departure to the single elapsed turn', () => {
-    const result = attributePicks({
-      prevPoolNames: POOL,
-      newPoolNames: ['a', 'c', 'd', 'e'],
-      elapsedTurns: [turn(0, 3)],
-      nextSeq: 0,
+    const events = attributePicksByRow({
+      prevSelected: prev,
+      nextSelected: next,
+      nextSeq: 7,
       clockTime: 42,
     })
-    expect(result.events).toEqual([
-      { seq: 0, playerIndex: 3, abilityName: 'b', kind: 'ability', clockTime: 42 },
-    ])
-    expect(result.unattributed).toEqual([])
-  })
 
-  it('attributes two departures across two elapsed turns in order (post-suppression catch-up)', () => {
-    const result = attributePicks({
-      prevPoolNames: POOL,
-      newPoolNames: ['a', 'd', 'e'],
-      elapsedTurns: [turn(4, 4), turn(5, 5)],
-      nextSeq: 7,
-      clockTime: null,
-    })
-    expect(result.events.map((e) => [e.seq, e.playerIndex, e.abilityName])).toEqual([
-      [7, 4, 'b'],
-      [8, 5, 'c'],
-    ])
-  })
-
-  it('emits model markers for elapsed turns without departures', () => {
-    const result = attributePicks({
-      prevPoolNames: POOL,
-      newPoolNames: POOL,
-      elapsedTurns: [turn(2, 7)],
-      nextSeq: 3,
-      clockTime: 10,
-    })
-    expect(result.events).toEqual([
+    expect(events).toEqual([
       {
-        seq: 3,
-        playerIndex: 7,
-        abilityName: null,
-        kind: 'modelSelectionMarker',
-        clockTime: 10,
+        seq: 7,
+        playerIndex: 3,
+        abilityName: 'sven_storm_bolt',
+        kind: 'ability',
+        clockTime: 42,
       },
     ])
   })
 
-  it('mixes abilities (earliest turns) and markers (remaining turns)', () => {
-    const result = attributePicks({
-      prevPoolNames: POOL,
-      newPoolNames: ['a', 'c', 'd', 'e'],
-      elapsedTurns: [turn(0, 1), turn(1, 2)],
-      nextSeq: 0,
-      clockTime: null,
+  it('emits nothing when rows are unchanged', () => {
+    const prev = [slot(0, 'sven_storm_bolt'), slot(1, null)]
+    const next = [slot(0, 'sven_storm_bolt'), slot(1, null)]
+
+    expect(
+      attributePicksByRow({
+        prevSelected: prev,
+        nextSelected: next,
+        nextSeq: 0,
+        clockTime: null,
+      }),
+    ).toEqual([])
+  })
+
+  it('attributes multiple new picks across rows with sequential seq', () => {
+    const prev = [slot(0, 'lion_impale'), slot(5, null), slot(9, null)]
+    const next = [
+      slot(0, 'lion_impale'),
+      slot(5, 'axe_culling_blade', true),
+      slot(9, 'lina_laguna_blade', true),
+    ]
+
+    const events = attributePicksByRow({
+      prevSelected: prev,
+      nextSelected: next,
+      nextSeq: 10,
+      clockTime: 100,
     })
-    expect(result.events.map((e) => e.kind)).toEqual([
-      'ability',
-      'modelSelectionMarker',
+
+    expect(events.map((e) => [e.seq, e.playerIndex, e.abilityName])).toEqual([
+      [10, 5, 'axe_culling_blade'],
+      [11, 9, 'lina_laguna_blade'],
     ])
-    expect(result.events[0].abilityName).toBe('b')
-    expect(result.events[1].playerIndex).toBe(2)
   })
 
-  it('returns surplus departures as unattributed (drift)', () => {
-    const result = attributePicks({
-      prevPoolNames: POOL,
-      newPoolNames: ['a', 'e'],
-      elapsedTurns: [turn(0, 0)],
+  it('the same ability appearing in a DIFFERENT row is a new pick for that row', () => {
+    // Misread correction moved a name between rows — the new row gets the event
+    const prev = [slot(2, 'juggernaut_blade_fury'), slot(4, null)]
+    const next = [slot(2, 'juggernaut_blade_fury'), slot(4, 'juggernaut_blade_fury')]
+
+    const events = attributePicksByRow({
+      prevSelected: prev,
+      nextSelected: next,
       nextSeq: 0,
       clockTime: null,
     })
-    expect(result.events).toHaveLength(1)
-    expect(result.events[0].abilityName).toBe('b')
-    expect(result.unattributed).toEqual(['c', 'd'])
+
+    expect(events).toHaveLength(1)
+    expect(events[0].playerIndex).toBe(4)
   })
 
-  it('handles no elapsed turns and no departures', () => {
-    const result = attributePicks({
-      prevPoolNames: POOL,
-      newPoolNames: POOL,
-      elapsedTurns: [],
+  it('deduplicates repeated names within the same row', () => {
+    // Two slots of the same row misread as the same ability -> one event
+    const prev = [slot(6, null), slot(6, null, true)]
+    const next = [slot(6, 'pudge_meat_hook'), slot(6, 'pudge_meat_hook', true)]
+
+    const events = attributePicksByRow({
+      prevSelected: prev,
+      nextSelected: next,
       nextSeq: 0,
       clockTime: null,
     })
-    expect(result.events).toEqual([])
-    expect(result.unattributed).toEqual([])
+
+    expect(events).toHaveLength(1)
   })
 
-  it('reports departures with no elapsed turns entirely as unattributed', () => {
-    const result = attributePicks({
-      prevPoolNames: POOL,
-      newPoolNames: ['a', 'b', 'c', 'd'],
-      elapsedTurns: [],
-      nextSeq: 0,
-      clockTime: null,
+  it('works with partial next state (only rescanned rows present)', () => {
+    // Targeted rescan returns only row 8's slots; prev holds the full board
+    const prev = [slot(0, 'lion_impale'), slot(8, null)]
+    const next = [slot(8, 'zuus_arc_lightning')]
+
+    const events = attributePicksByRow({
+      prevSelected: prev,
+      nextSelected: next,
+      nextSeq: 3,
+      clockTime: -5,
     })
-    expect(result.events).toEqual([])
-    expect(result.unattributed).toEqual(['e'])
+
+    expect(events).toEqual([
+      {
+        seq: 3,
+        playerIndex: 8,
+        abilityName: 'zuus_arc_lightning',
+        kind: 'ability',
+        clockTime: -5,
+      },
+    ])
   })
 })

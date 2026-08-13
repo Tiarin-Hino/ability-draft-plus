@@ -111,6 +111,7 @@ function makeInitialPayload(): OverlayDataPayload {
     heroesCoords: [],
     heroesParams: { width: 0, height: 0 },
     modelsCoords: [],
+    autoDraftTrackingEnabled: false,
   }
 }
 
@@ -129,6 +130,47 @@ function makeInput(overrides: Partial<StreamBoardBuildInput> = {}): StreamBoardB
 // ---------------------------------------------------------------------------
 
 describe('buildStreamBoardState', () => {
+  it('marks pool hero rows whose model was drafted, from the LATEST payload', () => {
+    // isPicked flips on rescans (tile-diff detection), so it must be read from
+    // the latest payload, not the frozen initial one
+    const latest = makeInitialPayload()
+    latest.heroModels[3] = makeHeroModel(3, { isPicked: true })
+    const state = buildStreamBoardState(makeInput({ latestPayload: latest }))
+    expect(state.heroes[3].modelPicked).toBe(true)
+    expect(state.heroes[0].modelPicked).toBe(false)
+  })
+
+  it('fills player-row models from scan attribution when GSI has none', () => {
+    const state = buildStreamBoardState(
+      makeInput({
+        modelAssignments: [{ poolHeroOrder: 3, playerIndex: 1 }],
+      }),
+    )
+    const player1 = state.players[1]
+    expect(player1.model).not.toBeNull()
+    expect(player1.model?.displayName).toBe('Hero 3')
+    // Other players untouched
+    expect(state.players[0].model).toBeNull()
+  })
+
+  it('GSI player models win over scan attribution', () => {
+    const state = buildStreamBoardState(
+      makeInput({
+        modelAssignments: [{ poolHeroOrder: 3, playerIndex: 1 }],
+        gsi: {
+          connected: true,
+          gamePhase: 'DOTA_GAMERULES_STATE_HERO_SELECTION',
+          clockTime: 0,
+          playerNames: [],
+          playerModels: Object.assign(Array.from({ length: 10 }, () => null), {
+            1: { npcName: 'sand_king', displayName: 'Sand King' },
+          }),
+        },
+      }),
+    )
+    expect(state.players[1].model?.displayName).toBe('Sand King')
+  })
+
   it('returns waiting phase with empty board when no scan has happened', () => {
     const state = buildStreamBoardState(makeInput({ initialPayload: null }))
     expect(state.phase).toBe('waiting')

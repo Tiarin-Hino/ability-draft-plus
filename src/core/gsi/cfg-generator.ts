@@ -20,6 +20,8 @@ export function buildGsiCfg(port: number): string {
         "map"           "1"
         "player"        "1"
         "hero"          "1"
+        "abilities"     "1"
+        "draft"         "1"
         "allplayers"    "1"
     }
 }

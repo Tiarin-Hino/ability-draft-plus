@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { deriveHeroCdnName } from '@core/stream/hero-cdn-names'
+import {
+  deriveHeroCdnName,
+  heroCdnNameFromDisplayName,
+} from '@core/stream/hero-cdn-names'
 
 describe('deriveHeroCdnName', () => {
   it('derives a single-word hero name', () => {
@@ -70,5 +73,32 @@ describe('deriveHeroCdnName', () => {
     expect(
       deriveHeroCdnName(['pudge_meat_hook', 'lina_laguna_blade']),
     ).toBeNull()
+  })
+
+  it('collapses the beastmaster_summon over-extended prefix', () => {
+    expect(
+      deriveHeroCdnName([
+        'beastmaster_summon_raptor',
+        'beastmaster_summon_razorback',
+      ]),
+    ).toBe('beastmaster')
+  })
+})
+
+describe('heroCdnNameFromDisplayName', () => {
+  it('slugs simple display names', () => {
+    expect(heroCdnNameFromDisplayName('Crystal Maiden')).toBe('crystal_maiden')
+    expect(heroCdnNameFromDisplayName('Invoker')).toBe('invoker')
+    expect(heroCdnNameFromDisplayName('Rubick')).toBe('rubick')
+  })
+
+  it('maps npc-divergent display names to the CDN name', () => {
+    expect(heroCdnNameFromDisplayName('Outworld Destroyer')).toBe('obsidian_destroyer')
+    expect(heroCdnNameFromDisplayName("Nature's Prophet")).toBe('furion')
+    expect(heroCdnNameFromDisplayName('Shadow Fiend')).toBe('nevermore')
+    expect(heroCdnNameFromDisplayName('Windranger')).toBe('windrunner')
+    expect(heroCdnNameFromDisplayName('Zeus')).toBe('zuus')
+    expect(heroCdnNameFromDisplayName('Io')).toBe('wisp')
+    expect(heroCdnNameFromDisplayName('Wraith King')).toBe('skeleton_king')
   })
 })

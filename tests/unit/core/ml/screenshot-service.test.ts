@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import sharp from 'sharp'
 
 // Mock electron's desktopCapturer + screen
 const mockGetSources = vi.fn()
@@ -82,19 +81,17 @@ describe('ScreenshotService (desktopCapturer)', () => {
       })
     })
 
-    it('encodes the BGRA bitmap into a PNG with swapped channels', async () => {
+    it('converts the BGRA bitmap to raw RGB with swapped channels, no alpha', async () => {
       const service = createScreenshotService()
-      const png = await service.capture()
+      const raw = await service.capture()
 
-      const { data, info } = await sharp(png)
-        .raw()
-        .toBuffer({ resolveWithObject: true })
-      expect(info.width).toBe(2)
-      expect(info.height).toBe(2)
-      // BGRA (10,20,30) must come out as RGB (30,20,10)
-      expect(data[0]).toBe(30)
-      expect(data[1]).toBe(20)
-      expect(data[2]).toBe(10)
+      expect(raw.width).toBe(2)
+      expect(raw.height).toBe(2)
+      expect(raw.data.length).toBe(2 * 2 * 3)
+      // BGRA (10,20,30,255) must come out as RGB (30,20,10)
+      expect(raw.data[0]).toBe(30)
+      expect(raw.data[1]).toBe(20)
+      expect(raw.data[2]).toBe(10)
     })
 
     it('selects the source matching the primary display id among several', async () => {
@@ -104,9 +101,8 @@ describe('ScreenshotService (desktopCapturer)', () => {
       ])
 
       const service = createScreenshotService()
-      const png = await service.capture()
-      const meta = await sharp(png).metadata()
-      expect(meta.width).toBe(2)
+      const raw = await service.capture()
+      expect(raw.width).toBe(2)
     })
 
     it('throws when no screen sources are available', async () => {
@@ -132,15 +128,15 @@ describe('ScreenshotService (desktopCapturer)', () => {
       ])
 
       const service = createScreenshotService()
-      const png = await service.captureWindow('Dota 2', { width: 2, height: 2 })
+      const raw = await service.captureWindow('Dota 2', { width: 2, height: 2 })
 
       expect(mockGetSources).toHaveBeenCalledWith({
         types: ['window'],
         thumbnailSize: { width: 2, height: 2 },
       })
-      expect(png).not.toBeNull()
-      const meta = await sharp(png as Buffer).metadata()
-      expect(meta.width).toBe(2)
+      expect(raw).not.toBeNull()
+      expect(raw?.width).toBe(2)
+      expect(raw?.data[0]).toBe(30)
     })
 
     it('returns null when the window is not among the sources', async () => {

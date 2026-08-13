@@ -46,6 +46,7 @@ export function createMetadataRepository(db: SQLJsDatabase): MetadataRepository 
       const streamPort = get('stream_port')
       const streamAutostart = get('stream_autostart')
       const autoDraftTracking = get('experimental_auto_draft_tracking')
+      const autoInitialScanDelayS = get('auto_initial_scan_delay_s')
 
       return {
         opThreshold:
@@ -81,6 +82,10 @@ export function createMetadataRepository(db: SQLJsDatabase): MetadataRepository 
           autoDraftTracking !== null
             ? autoDraftTracking === 'true'
             : DEFAULT_SETTINGS.experimentalAutoDraftTracking,
+        autoInitialScanDelayS:
+          autoInitialScanDelayS !== null
+            ? parseInt(autoInitialScanDelayS, 10)
+            : DEFAULT_SETTINGS.autoInitialScanDelayS,
       }
     },
 
@@ -114,6 +119,9 @@ export function createMetadataRepository(db: SQLJsDatabase): MetadataRepository 
           'experimental_auto_draft_tracking',
           String(settings.experimentalAutoDraftTracking),
         )
+      }
+      if (settings.autoInitialScanDelayS !== undefined) {
+        set('auto_initial_scan_delay_s', String(settings.autoInitialScanDelayS))
       }
     },
 

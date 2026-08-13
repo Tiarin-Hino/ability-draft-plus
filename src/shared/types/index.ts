@@ -56,8 +56,12 @@ export interface AppSettings {
   overlayAnchor: 'left' | 'right'
   streamPort: number
   streamAutostart: boolean
-  /** EXPERIMENTAL: GSI-driven auto-rescan + pick attribution. Default off. */
+  /** GSI-driven automatic draft tracking (auto initial scan, auto spot/model,
+   * turn-driven rescans + pick attribution). Default off. */
   experimentalAutoDraftTracking: boolean
+  /** Seconds to wait after the draft clock is identified before the automatic
+   * initial scan (slower PCs need the draft screen fully rendered). */
+  autoInitialScanDelayS: number
 }
 
 export interface SlotCoordinate {
@@ -129,6 +133,9 @@ export interface OverlayDataPayload {
   heroesCoords: SlotCoordinate[]
   heroesParams: { width: number; height: number }
   modelsCoords: SlotCoordinate[]
+  /** When automatic draft tracking is on, the overlay hides the manual
+   * My Spot / My Model buttons (both are selected automatically via GSI). */
+  autoDraftTrackingEnabled: boolean
 }
 
 export interface ThirdAbilitySuggestion {
@@ -156,6 +163,8 @@ export interface HeroSynergyDisplay {
 }
 
 export interface HeroModelDisplay {
+  /** True when tile-diff detection saw this model get picked (never reverts). */
+  isPicked?: boolean
   heroOrder: number
   heroName: string
   heroDisplayName: string

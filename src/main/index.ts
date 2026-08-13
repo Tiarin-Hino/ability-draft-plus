@@ -11,6 +11,7 @@ import { createScanProcessingService } from './services/scan-processing-service'
 import { createStreamServerService } from './services/stream-server-service'
 import { createIconCacheService } from './services/icon-cache-service'
 import { createGsiCfgService } from './services/gsi-cfg-service'
+import { createSpotDetectionService } from './services/spot-detection-service'
 import { createScanTriggerService } from './services/scan-trigger-service'
 import { createAutoRescanService } from './services/auto-rescan-service'
 import { createUpdateService } from './services/update-service'
@@ -138,6 +139,13 @@ app.whenReady().then(async () => {
     appStore,
     iconCache,
     () => draftStore.getState().draftTimeline,
+    () => draftStore.getState().modelAssignments,
+  )
+  // Auto "My Spot" from GSI (playing mode) — re-applied after each initial scan
+  const spotDetectionService = createSpotDetectionService(
+    draftStore,
+    windowManager,
+    streamService,
   )
   const scanProcessingService = createScanProcessingService(
     draftStore,
@@ -145,6 +153,7 @@ app.whenReady().then(async () => {
     layoutService,
     windowManager,
     streamService,
+    spotDetectionService,
   )
   const appHandlers = createAppStoreHandlers(appStore)
   const bridge = createZustandBridge(appStore, { handlers: appHandlers })

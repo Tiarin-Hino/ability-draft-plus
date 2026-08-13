@@ -2,10 +2,11 @@ import sharp from 'sharp'
 import { MODEL_INPUT_SIZE } from '@shared/constants/thresholds'
 import type { SlotCoordinate } from '@shared/types'
 
-// @DEV-GUIDE: Image preprocessing for ML inference. The screenshot arrives PNG-encoded;
-// decodeScreenshot() decodes it ONCE to a raw RGB bitmap, and every slot crop then reads
-// from that bitmap. (Cropping straight from the PNG buffer re-decoded the full 2560x1440
-// image per slot — ~1.1s for a 48-slot scan vs ~110ms with the single decode.)
+// @DEV-GUIDE: Image preprocessing for ML inference. The screenshot arrives as a RAW
+// 3-channel RGB bitmap (the capture path never PNG-encodes; the worker receives the
+// bitmap as a transferred ArrayBuffer) and every slot crop reads from it directly.
+// NEVER crop from an encoded buffer: that re-decoded the full 2560x1440 image per
+// slot — ~1.1s for a 48-slot scan vs ~110ms from the shared bitmap.
 // preprocessSlot crops one slot and resizes to 96x96; output is float32 KEPT AT RAW
 // 0-255 — deliberately NOT normalized. The ONNX graph contains a
 // Rescaling(1/127.5, offset=-1) layer that maps 0-255 to [-1, 1] internally, matching
@@ -13,25 +14,11 @@ import type { SlotCoordinate } from '@shared/types'
 
 const PIXELS_PER_IMAGE = MODEL_INPUT_SIZE * MODEL_INPUT_SIZE * 3
 
-/** A screenshot decoded once to raw RGB, ready for cheap per-slot cropping. */
+/** A raw RGB screenshot bitmap, ready for cheap per-slot cropping. */
 export interface DecodedScreenshot {
   data: Buffer
   width: number
   height: number
-}
-
-/**
- * Decodes a PNG screenshot buffer to a raw 3-channel RGB bitmap.
- * Do this once per scan; all slot crops read from the decoded bitmap.
- */
-export async function decodeScreenshot(
-  screenshotBuffer: Buffer,
-): Promise<DecodedScreenshot> {
-  const { data, info } = await sharp(screenshotBuffer)
-    .removeAlpha()
-    .raw()
-    .toBuffer({ resolveWithObject: true })
-  return { data, width: info.width, height: info.height }
 }
 
 /**
@@ -52,6 +39,25 @@ export async function preprocessSlot(
     // borderline classes from ~0.7-0.9 confidence to ~0.26-0.72 (below the 0.9
     // threshold → rendered as Unknown). Train/serve resize kernels must match.
     .resize(MODEL_INPUT_SIZE, MODEL_INPUT_SIZE, { kernel: 'linear' })
+    .raw()
+    .toBuffer()
+}
+
+/**
+ * Crops one slot from a decoded screenshot and resizes to an arbitrary square —
+ * used for model-tile capture (picked-model diff detection), where the size is
+ * a comparison normalization, not a model input.
+ */
+export async function cropTile(
+  screenshot: DecodedScreenshot,
+  slot: SlotCoordinate,
+  size: number,
+): Promise<Buffer> {
+  return sharp(screenshot.data, {
+    raw: { width: screenshot.width, height: screenshot.height, channels: 3 },
+  })
+    .extract({ left: slot.x, top: slot.y, width: slot.width, height: slot.height })
+    .resize(size, size, { kernel: 'linear' })
     .raw()
     .toBuffer()
 }

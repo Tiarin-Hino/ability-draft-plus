@@ -39,7 +39,8 @@ const API_CONFIG: ApiConfig = {
 
 function makeContext(overrides: Partial<Parameters<ReturnType<typeof createFeedbackService>['recordScanContext']>[0]> = {}) {
   return {
-    screenshot: Buffer.from('fake-png-bytes'),
+    // Raw 2x2 RGB bitmap — the service PNG-encodes lazily on saveSnapshot
+    screenshot: { data: Buffer.alloc(2 * 2 * 3, 128), width: 2, height: 2 },
     resolution: '1920x1080',
     isInitialScan: true,
     results: { ultimates: [{ name: 'test_ability', confidence: 0.97 }] },

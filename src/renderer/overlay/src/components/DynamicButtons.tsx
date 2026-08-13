@@ -14,6 +14,9 @@ export function DynamicButtons({
   selectedModelHeroOrder,
 }: DynamicButtonsProps): React.ReactElement | null {
   if (!overlayData.scanData) return null
+  // Automatic draft tracking selects spot and model from GSI — the manual
+  // buttons would only clutter (and fight) the automated flow
+  if (overlayData.autoDraftTrackingEnabled) return null
 
   const {
     heroesForMySpotUI,

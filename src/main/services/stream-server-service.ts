@@ -7,7 +7,7 @@ import type { OverlayDataPayload } from '@shared/types'
 import type { StreamServerStatusInfo, StreamStateMessage } from '@shared/types/stream'
 import { STREAM_PROTOCOL_VERSION } from '@shared/constants/thresholds'
 import { buildStreamBoardState } from '@core/domain/stream-board'
-import { parseGsiPayload } from '@core/gsi/parser'
+import { parseGsiPayload, gsiSnapshotMode } from '@core/gsi/parser'
 import type { GsiSnapshot } from '@core/gsi/types'
 import type { PickEvent, StreamGsiInfo } from '@shared/types/stream'
 import type { DatabaseService } from './database-service'
@@ -82,6 +82,7 @@ export function createStreamServerService(
   appStore: AppStore,
   iconCache: IconCacheService,
   getPickEvents?: () => PickEvent[],
+  getModelAssignments?: () => Array<{ poolHeroOrder: number; playerIndex: number }>,
 ): StreamServerService {
   let server: Server | null = null
   let activePort: number | null = null
@@ -98,10 +99,13 @@ export function createStreamServerService(
   let gsiBroadcastTimer: NodeJS.Timeout | null = null
   const gsiListeners: Array<(snapshot: GsiSnapshot) => void> = []
   // Raw-payload capture for empirical validation (slot ordering, phase names,
-  // AD turn timings): latest payload per game_state, overwritten, throttled.
+  // AD turn timings): latest payload per mode+game_state, overwritten, throttled.
+  // Mode prefix keeps playing captures from overwriting spectating ones.
   const gsiCaptureDir = join(app.getPath('userData'), 'gsi-captures')
   const gsiCaptureLastWrite = new Map<string, number>()
   let gsiLastPlayersLog = ''
+  let gsiLastLocalLog = ''
+  let gsiLastLoggedPhase: string | null = null
 
   // Same path convention as window-manager's loadWindowContent: resolve renderer
   // output relative to the compiled main bundle (out/main -> out/renderer). Works in
@@ -133,6 +137,7 @@ export function createStreamServerService(
     const playerModels: ({ npcName: string; displayName: string } | null)[] =
       Array.from({ length: 10 }, () => null)
     if (gsiSnapshot) {
+      // Spectating: allplayers carries every slot
       for (const player of gsiSnapshot.players) {
         if (player.slotIndex >= 0 && player.slotIndex < 10) {
           playerNames[player.slotIndex] = player.name
@@ -141,6 +146,23 @@ export function createStreamServerService(
               npcName: player.heroNpcName,
               displayName: heroDisplayName(player.heroNpcName),
             }
+          }
+        }
+      }
+      // Playing: GSI only knows the LOCAL player (name via team_slot, model via
+      // the hero block) — merge them so the board isn't all placeholders
+      const local = gsiSnapshot.localPlayer
+      if (
+        local &&
+        local.slotIndex !== null &&
+        local.slotIndex >= 0 &&
+        local.slotIndex < 10
+      ) {
+        playerNames[local.slotIndex] ??= local.name
+        if (gsiSnapshot.localHeroNpcName && !playerModels[local.slotIndex]) {
+          playerModels[local.slotIndex] = {
+            npcName: gsiSnapshot.localHeroNpcName,
+            displayName: heroDisplayName(gsiSnapshot.localHeroNpcName),
           }
         }
       }
@@ -169,6 +191,7 @@ export function createStreamServerService(
       latestPayload,
       gsi: gsiInfo(),
       pickEvents: getPickEvents?.(),
+      modelAssignments: getModelAssignments?.(),
       meta: {
         language: appStore.getState().language,
         appVersion: app.getVersion(),
@@ -251,6 +274,42 @@ export function createStreamServerService(
     }
   }
 
+  /**
+   * Bundled broadcast art (resources/data/stream): /art/<name> tries .png then
+   * .jpg. 404s are expected when optional art was not shipped — the SPA falls
+   * back to its CSS gradients.
+   */
+  async function handleArt(urlPath: string, res: ServerResponse): Promise<void> {
+    const match = /^\/art\/([a-z0-9-]+)$/.exec(urlPath)
+    if (!match) {
+      res.writeHead(404)
+      res.end()
+      return
+    }
+    // __dirname convention (out/main -> project root), NOT app.getAppPath():
+    // the latter resolves to the default_app wrapper under `electron <file.js>`
+    const artDir = app.isPackaged
+      ? join(process.resourcesPath, 'data', 'stream')
+      : join(__dirname, '..', '..', 'resources', 'data', 'stream')
+
+    for (const ext of ['png', 'jpg'] as const) {
+      try {
+        const content = await fs.readFile(join(artDir, `${match[1]}.${ext}`))
+        res.writeHead(200, {
+          'Content-Type': ext === 'png' ? 'image/png' : 'image/jpeg',
+          'Cache-Control': 'public, max-age=3600',
+          'Access-Control-Allow-Origin': '*',
+        })
+        res.end(content)
+        return
+      } catch {
+        // try next extension
+      }
+    }
+    res.writeHead(404)
+    res.end()
+  }
+
   async function handleIcon(urlPath: string, res: ServerResponse): Promise<void> {
     // /icons/<abilities|heroes>/<safe_name>.png — anything else is a 404.
     const match = /^\/icons\/(abilities|heroes)\/([a-z0-9_]+)\.png$/.exec(urlPath)
@@ -268,15 +327,20 @@ export function createStreamServerService(
     res.end(data)
   }
 
-  function captureGsiPayload(rawBody: string, phase: string | null): void {
+  function captureGsiPayload(
+    rawBody: string,
+    phase: string | null,
+    mode: string,
+  ): void {
     const safePhase = (phase ?? 'unknown').replace(/[^A-Za-z0-9_]/g, '_')
+    const captureKey = `${mode}_${safePhase}`
     const now = Date.now()
-    const lastWrite = gsiCaptureLastWrite.get(safePhase) ?? 0
+    const lastWrite = gsiCaptureLastWrite.get(captureKey) ?? 0
     if (now - lastWrite < 5_000) return
-    gsiCaptureLastWrite.set(safePhase, now)
+    gsiCaptureLastWrite.set(captureKey, now)
     void fs
       .mkdir(gsiCaptureDir, { recursive: true })
-      .then(() => fs.writeFile(join(gsiCaptureDir, `${safePhase}.json`), rawBody))
+      .then(() => fs.writeFile(join(gsiCaptureDir, `${captureKey}.json`), rawBody))
       .catch((error: unknown) => {
         logger.warn('GSI capture write failed', {
           error: error instanceof Error ? error.message : String(error),
@@ -292,6 +356,40 @@ export function createStreamServerService(
     if (mapping !== gsiLastPlayersLog) {
       gsiLastPlayersLog = mapping
       logger.info('GSI player slots', { mapping })
+    }
+  }
+
+  // DEBUG (playing-mode validation): the two logs below make the main log answer
+  // "did GSI see the draft while PLAYING (not spectating)?" — logParsedPlayers is
+  // silent in playing mode (no allplayers block), so without these the log can't
+  // distinguish a working playing-mode feed from a dead one.
+  function logPhaseTransition(snapshot: GsiSnapshot): void {
+    if (snapshot.gamePhase === gsiLastLoggedPhase) return
+    const from = gsiLastLoggedPhase
+    gsiLastLoggedPhase = snapshot.gamePhase
+    logger.info('GSI phase transition', {
+      from,
+      to: snapshot.gamePhase,
+      mode: gsiSnapshotMode(snapshot),
+      matchId: snapshot.matchId,
+      clockTime: snapshot.clockTime,
+      playerCount: snapshot.players.length,
+      localPlayer: snapshot.localPlayer?.name ?? null,
+    })
+  }
+
+  function logLocalPlayer(snapshot: GsiSnapshot): void {
+    if (!snapshot.localPlayer) return
+    const line = `${snapshot.localPlayer.name}${
+      snapshot.localHeroNpcName ? `=${snapshot.localHeroNpcName}` : ''
+    }`
+    if (line !== gsiLastLocalLog) {
+      gsiLastLocalLog = line
+      logger.info('GSI local player (playing mode)', {
+        name: snapshot.localPlayer.name,
+        accountId: snapshot.localPlayer.accountId,
+        heroModel: snapshot.localHeroNpcName,
+      })
     }
   }
 
@@ -333,8 +431,10 @@ export function createStreamServerService(
         const wasConnected = gsiConnected()
         gsiSnapshot = parseGsiPayload(json)
         gsiLastAt = Date.now()
-        captureGsiPayload(rawBody, gsiSnapshot.gamePhase)
+        captureGsiPayload(rawBody, gsiSnapshot.gamePhase, gsiSnapshotMode(gsiSnapshot))
         logParsedPlayers(gsiSnapshot)
+        logPhaseTransition(gsiSnapshot)
+        logLocalPlayer(gsiSnapshot)
         if (!wasConnected) {
           appStore.setState({ gsiConnected: true })
           logger.info('GSI connected')
@@ -383,12 +483,20 @@ export function createStreamServerService(
       return
     }
 
+    if (urlPath.startsWith('/art/')) {
+      void handleArt(urlPath, res)
+      return
+    }
+
     // Dev: the SPA bundle lives on the electron-vite dev server, not on disk.
+    // Preserve the caller's query params (?demo=1&bg=...&title=...) — only the
+    // api origin is appended for the split-origin SSE connection.
     const devRendererUrl = !app.isPackaged && process.env['ELECTRON_RENDERER_URL']
     if (devRendererUrl && (urlPath === '/' || urlPath === '/stream' || urlPath === '/stream/')) {
-      const api = encodeURIComponent(`http://127.0.0.1:${activePort}`)
+      const query = new URLSearchParams((req.url ?? '').split('?')[1] ?? '')
+      query.set('api', `http://127.0.0.1:${activePort}`)
       res.writeHead(302, {
-        Location: `${devRendererUrl}/stream/index.html?api=${api}`,
+        Location: `${devRendererUrl}/stream/index.html?${query.toString()}`,
       })
       res.end()
       return

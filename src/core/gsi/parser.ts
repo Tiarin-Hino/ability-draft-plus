@@ -1,4 +1,4 @@
-import type { GsiPlayer, GsiSnapshot } from './types'
+import type { GsiMode, GsiPlayer, GsiSnapshot } from './types'
 
 // @DEV-GUIDE: Pure GSI payload parser — zero Electron/node imports, fixture-tested.
 // Tolerant by design: Valve's GSI payloads vary by game phase and data sections
@@ -51,6 +51,20 @@ function resolveSlotIndex(
   const rawIndex = slotIndexFromKey(key)
   if (rawIndex === null) return null
   return isDire && rawIndex < 5 ? rawIndex + 5 : rawIndex
+}
+
+/**
+ * Playing-mode local player block -> scan slot index 0-9, from the authoritative
+ * team_name ("radiant"/"dire") + team_slot (0-4 within the team). Null when either
+ * is absent (menus, spectating) — callers treat that as "slot unknown".
+ */
+function localSlotIndex(player: Record<string, unknown>): number | null {
+  const teamName = asString(player['team_name'])
+  const teamSlot = asNumber(player['team_slot'])
+  if (teamSlot === null || teamSlot < 0 || teamSlot > 4) return null
+  if (teamName === 'radiant') return teamSlot
+  if (teamName === 'dire') return 5 + teamSlot
+  return null
 }
 
 function parseTeamPlayers(
@@ -123,7 +137,11 @@ export function parseGsiPayload(json: unknown): GsiSnapshot {
     } else {
       const name = asString(playerBlock['name'])
       if (name) {
-        localPlayer = { name, accountId: asString(playerBlock['accountid']) }
+        localPlayer = {
+          name,
+          accountId: asString(playerBlock['accountid']),
+          slotIndex: localSlotIndex(playerBlock),
+        }
       }
       // Playing: the hero block is the local player's own model
       localHeroNpcName = heroBlock ? heroNpcShortName(heroBlock['name']) : null
@@ -138,4 +156,15 @@ export function parseGsiPayload(json: unknown): GsiSnapshot {
     localPlayer,
     localHeroNpcName,
   }
+}
+
+/**
+ * Classify how a snapshot was produced. Spectating payloads carry allplayers
+ * slots; playing payloads carry only the local player block; menu/loading
+ * payloads carry neither.
+ */
+export function gsiSnapshotMode(snapshot: GsiSnapshot): GsiMode {
+  if (snapshot.players.length > 0) return 'spectating'
+  if (snapshot.localPlayer !== null) return 'playing'
+  return 'unknown'
 }

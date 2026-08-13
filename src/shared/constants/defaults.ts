@@ -1,4 +1,9 @@
-import { DEFAULT_OP_THRESHOLD, DEFAULT_TRAP_THRESHOLD, DEFAULT_STREAM_PORT } from './thresholds'
+import {
+  DEFAULT_OP_THRESHOLD,
+  DEFAULT_TRAP_THRESHOLD,
+  DEFAULT_STREAM_PORT,
+  AUTO_INITIAL_SCAN_DELAY_S,
+} from './thresholds'
 import type { AppSettings } from '../types'
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -11,6 +16,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   streamPort: DEFAULT_STREAM_PORT,
   streamAutostart: false,
   experimentalAutoDraftTracking: false,
+  autoInitialScanDelayS: AUTO_INITIAL_SCAN_DELAY_S,
 }
 
 export const SUPPORTED_LANGUAGES = ['en', 'ru'] as const

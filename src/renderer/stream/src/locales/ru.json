@@ -1,17 +1,28 @@
 {
+  "wordmark": "ABILITY DRAFT",
   "waiting": "Ожидание драфта — запустите скан в Ability Draft Plus",
+  "demo": "ДЕМО",
+  "reservedZone": "Место для вашего оверлея",
   "connection": {
     "connecting": "Подключение…",
     "connected": "В эфире",
     "disconnected": "Переподключение…"
   },
+  "pool": {
+    "ultimates": "Ульты",
+    "standard": "Обычные способности",
+    "modelPicked": "Выбран"
+  },
   "panels": {
     "topWinrate": "Лучший винрейт",
     "opCombos": "Сильнейшие комбинации",
     "trapCombos": "Комбинации-ловушки",
-    "topTier": "Лучшие пики"
+    "topTier": "Лучшие пики",
+    "latestPicks": "Последние пики"
   },
+  "avgPick": "Обычно берут около #{{n}}",
   "player": "Игрок {{num}}",
+  "noHero": "Героя нет",
   "team": {
     "radiant": "Свет",
     "dire": "Тьма"
@@ -20,6 +31,7 @@
   "unknownHero": "Неизвестный герой",
   "score": {
     "label": "Оценка драфта",
+    "teamAverage": "Оценка драфта команды",
     "confidence": {
       "low": "низк.",
       "medium": "средн.",
