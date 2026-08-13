@@ -13,6 +13,7 @@ import { createStreamServerService } from './services/stream-server-service'
 import { createIconCacheService } from './services/icon-cache-service'
 import { createGsiCfgService } from './services/gsi-cfg-service'
 import { createSpotDetectionService } from './services/spot-detection-service'
+import { createSlotMappingService } from './services/slot-mapping-service'
 import { createScanTriggerService } from './services/scan-trigger-service'
 import { createAutoRescanService } from './services/auto-rescan-service'
 import { createUpdateService } from './services/update-service'
@@ -144,6 +145,7 @@ app.whenReady().then(async () => {
     iconCache,
     () => draftStore.getState().draftTimeline,
     () => draftStore.getState().modelAssignments,
+    () => draftStore.getState().slotRowMappings,
   )
   // Auto "My Spot" from GSI (playing mode) — re-applied after each initial scan
   const spotDetectionService = createSpotDetectionService(
@@ -151,6 +153,8 @@ app.whenReady().then(async () => {
     windowManager,
     streamService,
   )
+  // GSI slot <-> scan row correlation (spectate/replay name placement)
+  const slotMappingService = createSlotMappingService(draftStore, streamService)
   const scanProcessingService = createScanProcessingService(
     draftStore,
     dbService,
@@ -158,6 +162,7 @@ app.whenReady().then(async () => {
     windowManager,
     streamService,
     spotDetectionService,
+    slotMappingService,
   )
   const appHandlers = createAppStoreHandlers(appStore)
   const bridge = createZustandBridge(appStore, { handlers: appHandlers })
@@ -275,6 +280,7 @@ app.whenReady().then(async () => {
     gsiCfgService,
     feedbackService,
     scanTrigger,
+    slotMappingService,
   )
 
   // Streamer view autostart (opt-in setting)

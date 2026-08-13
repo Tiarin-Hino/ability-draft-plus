@@ -192,6 +192,10 @@ export function createScanTriggerService(
             heroOrder: t.heroOrder,
             tile: new Uint8Array(t.tile),
           })),
+          result.playerCardTiles?.map((t) => ({
+            row: t.row,
+            tile: new Uint8Array(t.tile),
+          })),
         )
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)

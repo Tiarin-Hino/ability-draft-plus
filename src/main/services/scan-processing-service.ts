@@ -28,6 +28,7 @@ export interface ScanProcessingService {
     resolution: string,
     scaleFactor: number,
     modelTiles?: import('@core/domain/model-pick-detection').ModelTileCapture[],
+    playerCardTiles?: import('@core/domain/slot-row-correlation').PlayerCardCapture[],
   ): void
 }
 
@@ -43,6 +44,10 @@ export function createScanProcessingService(
   spotDetection?: Pick<
     import('./spot-detection-service').SpotDetectionService,
     'onInitialScanProcessed'
+  >,
+  slotMapping?: Pick<
+    import('./slot-mapping-service').SlotMappingService,
+    'onCardTiles'
   >,
 ): ScanProcessingService {
   // Enrichment failures must reach the overlay: without this broadcast the renderer's
@@ -60,7 +65,14 @@ export function createScanProcessingService(
   }
 
   return {
-    handleScanResults(results, isInitialScan, resolution, scaleFactor, modelTiles) {
+    handleScanResults(
+      results,
+      isInitialScan,
+      resolution,
+      scaleFactor,
+      modelTiles,
+      playerCardTiles,
+    ) {
       const start = performance.now()
 
       try {
@@ -72,6 +84,11 @@ export function createScanProcessingService(
           broadcastError(`No layout coordinates for resolution: ${resolution}`)
           return
         }
+
+        // Player-card change detection + GSI slot correlation runs on EVERY
+        // capture — the cards are spatially separate from the ability rows, so
+        // the contamination guard's verdict below is irrelevant to them.
+        slotMapping?.onCardTiles(playerCardTiles, isInitialScan)
 
         // While SPECTATING, GSI is the authoritative model-pick source and the
         // spectator draft screen's coordinate offsets make tile diffs garbage

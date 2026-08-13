@@ -176,6 +176,7 @@ export function buildDemoState(): StreamBoardState {
       connected: true,
       gamePhase: 'DOTA_GAMERULES_STATE_HERO_SELECTION',
       clockTime: -42,
+      spectating: true,
       playerNames: PLAYER_NAMES,
       playerModels: players.map((p) =>
         p.model ? { npcName: p.model.npcName, displayName: p.model.displayName } : null,

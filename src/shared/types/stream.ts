@@ -119,9 +119,18 @@ export interface StreamGsiInfo {
   connected: boolean
   gamePhase: string | null
   clockTime: number | null
-  /** Player names by player index 0–9; empty or sparse until GSI reports them. */
+  /**
+   * True when GSI carries allplayers data (spectate/replay). In that case the
+   * arrays below are indexed by GSI SLOT — whose within-team order does NOT
+   * match the draft screen's row order — and entries may only be placed on
+   * board rows through a learned slot->row mapping (see
+   * core/domain/slot-row-correlation.ts). When false (playing), the index is
+   * the scan row directly (local player's team_slot placement is validated).
+   */
+  spectating: boolean
+  /** Player names by slot/player index 0–9; empty or sparse until GSI reports them. */
   playerNames: (string | null)[]
-  /** Picked hero models by player index 0–9 (npcName + resolved display name). */
+  /** Picked hero models by slot/player index 0–9 (npcName + resolved display name). */
   playerModels: ({ npcName: string; displayName: string } | null)[]
 }
 

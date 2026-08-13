@@ -28,6 +28,7 @@ import { registerStreamHandlers } from './stream-handlers'
 import { loadApiConfig } from '../services/api-config'
 import type { FeedbackService } from '../services/feedback-service'
 import type { ScanTriggerService } from '../services/scan-trigger-service'
+import type { SlotMappingService } from '../services/slot-mapping-service'
 
 // @DEV-GUIDE: Central IPC handler registration. All renderer↔main communication goes through
 // typed IPC channels following the domain:action naming convention (e.g. 'ml:scan', 'hero:getAll').
@@ -68,6 +69,7 @@ export function registerIpcHandlers(
   gsiCfgService: GsiCfgService,
   feedbackService: FeedbackService,
   scanTrigger: ScanTriggerService,
+  slotMappingService: SlotMappingService,
 ): void {
   logger.info('Registering IPC handlers...')
 
@@ -200,6 +202,7 @@ export function registerIpcHandlers(
       appStore.setState({ overlayActive: false, activeResolution: null, activeResolutionSource: null })
       draftStore.getState().resetSession()
       streamService.onSessionReset()
+      slotMappingService.onSessionReset()
       pendingOverlayData = null
 
       const cp = windowManager.getControlPanelWindow()
@@ -224,6 +227,7 @@ export function registerIpcHandlers(
   ipcMain.on('overlay:reset', () => {
     draftStore.getState().resetSession()
     streamService.onSessionReset()
+    slotMappingService.onSessionReset()
   })
 
   ipcMain.on(
