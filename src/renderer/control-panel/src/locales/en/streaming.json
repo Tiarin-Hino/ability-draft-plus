@@ -36,6 +36,7 @@
     "writeSuccess": "Config written to {{path}}. Restart Dota 2 for it to take effect.",
     "errorDotaNotFound": "Could not locate the Dota 2 installation. Use Browse to pick the \"dota 2 beta\" folder.",
     "errorWriteFailed": "Failed to write the config file. Check the logs for details.",
+    "portMismatch": "The installed config points at port {{cfgPort}}, but the stream server uses port {{streamPort}} — Dota can't reach the app. Reinstall the config file and restart Dota 2.",
     "portNote": "The config pins the current server port — reinstall it after changing the port.",
     "spectatorNote": "All 10 player names are only available while spectating/casting. When playing, Dota reports only your own name."
   },
