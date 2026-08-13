@@ -38,6 +38,10 @@ export const STREAM_MAX_COMBO_PANEL_ENTRIES = 8
 export const STREAM_PICK_FEED_LENGTH = 20
 
 // Experimental auto-rescan (GSI-driven draft tracking).
+// Fallback auto INITIAL scan: fires this long after the draft clock is first
+// identified (hero selection + clock_time present) when the user hasn't run
+// the initial scan themselves — deep in the preview, pool fully rendered.
+export const AUTO_INITIAL_SCAN_DELAY_S = 15
 // The tick only CHECKS the turn clock; scans fire when a turn ends (~7s apart),
 // so a 1s tick costs nothing between turns but keeps boundary latency low.
 export const AUTO_RESCAN_TICK_MS = 1_000

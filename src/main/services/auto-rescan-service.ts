@@ -6,6 +6,7 @@ import type { StreamServerService } from './stream-server-service'
 import type { ScanTriggerService } from './scan-trigger-service'
 import type { AppStore } from '../store/app-store'
 import { GSI_HERO_SELECTION_PHASE } from '@core/gsi/types'
+import type { GsiSnapshot } from '@core/gsi/types'
 import { gsiSnapshotMode } from '@core/gsi/parser'
 import {
   buildTurnSchedule,
@@ -17,6 +18,7 @@ import {
   AUTO_RESCAN_TICK_MS,
   AUTO_RESCAN_PICK_VISIBLE_DELAY_S,
   AUTO_RESCAN_MAX_TARGET_RETRIES,
+  AUTO_INITIAL_SCAN_DELAY_S,
 } from '@shared/constants/thresholds'
 
 // @DEV-GUIDE: EXPERIMENTAL GSI-driven TURN-CLOCK auto-rescan (disabled by default —
@@ -37,9 +39,13 @@ import {
 // Contaminated captures (hover tooltip; scan-processor guard) and hasty no-ops keep
 // the queued rows and retry next tick, up to AUTO_RESCAN_MAX_TARGET_RETRIES.
 //
-// Gates per tick (ALL must hold): setting on, overlay active, initial scan done
-// (the pool grid is still the user's Ctrl+Shift+S), ML idle, GSI connected and in
-// hero selection, pick-phase anchor set. Draft sessions are keyed by GSI matchid
+// Fallback auto INITIAL scan: if the user never pressed the initial-scan hotkey,
+// the pool is scanned automatically AUTO_INITIAL_SCAN_DELAY_S after the draft clock
+// is first identified (hero selection + clock_time present) — one attempt per draft.
+//
+// Gates per tick (ALL must hold): setting on, overlay active, ML idle, GSI
+// connected and in hero selection; the turn logic additionally needs an initial
+// scan done and the pick-phase anchor set. Draft sessions are keyed by GSI matchid
 // (replay seeking flaps game_state); clock/pending state resets per new match.
 
 const logger = log.scope('auto-rescan')
@@ -64,6 +70,10 @@ export function createAutoRescanService(
 
   let draftMatchId: string | null = null
   let lastPhase: string | null = null
+  /** Wall-clock ms when a hero-selection clock was first seen (draft identified). */
+  let draftClockSeenAtMs: number | null = null
+  /** One fallback auto initial scan per draft session. */
+  let autoInitialScanAttempted = false
   /** Wall-clock ms of the pick-phase start (GSI clock_time crossing 0). */
   let pickAnchorMs: number | null = null
   /** Seconds (pick-phase relative) up to which turn ends have been queued. */
@@ -75,6 +85,8 @@ export function createAutoRescanService(
   let targetRetries = 0
 
   function resetDraftSession(): void {
+    draftClockSeenAtMs = null
+    autoInitialScanAttempted = false
     pickAnchorMs = null
     queuedUpToS = 0
     pendingRows.clear()
@@ -82,25 +94,7 @@ export function createAutoRescanService(
     targetRetries = 0
   }
 
-  streamService.onGsiSnapshot((snapshot) => {
-    // Pick-phase anchor: clock_time runs -59 -> 0 during the preview; the first
-    // turn starts at 0. While the clock reports positive values the anchor is
-    // continuously re-derived (self-corrects pauses/drift); a clock frozen at 0
-    // sets it exactly once, at the crossing.
-    if (
-      snapshot.gamePhase === GSI_HERO_SELECTION_PHASE &&
-      snapshot.clockTime !== null &&
-      snapshot.clockTime >= 0 &&
-      (pickAnchorMs === null || snapshot.clockTime > 0)
-    ) {
-      if (pickAnchorMs === null) {
-        logger.info('Pick phase anchored (clock crossed zero)', {
-          clockTime: snapshot.clockTime,
-        })
-      }
-      pickAnchorMs = Date.now() - snapshot.clockTime * 1000
-    }
-
+  function handlePhaseChange(snapshot: GsiSnapshot): void {
     if (snapshot.gamePhase === lastPhase) return
     const prevPhase = lastPhase
     lastPhase = snapshot.gamePhase
@@ -132,6 +126,41 @@ export function createAutoRescanService(
         nextPhase: snapshot.gamePhase,
       })
     }
+  }
+
+  streamService.onGsiSnapshot((snapshot) => {
+    // Session identity FIRST, so a new draft's reset cannot clobber clock state
+    // derived from the same snapshot (mid-draft joins report a clock immediately)
+    handlePhaseChange(snapshot)
+
+    if (
+      snapshot.gamePhase !== GSI_HERO_SELECTION_PHASE ||
+      snapshot.clockTime === null
+    ) {
+      return
+    }
+
+    // Draft clock identified — starts the fallback auto-initial-scan countdown
+    if (draftClockSeenAtMs === null) {
+      draftClockSeenAtMs = Date.now()
+      logger.info('Draft clock identified', { clockTime: snapshot.clockTime })
+    }
+
+    // Pick-phase anchor: clock_time runs -59 -> 0 during the preview; the first
+    // turn starts at 0. While the clock reports positive values the anchor is
+    // continuously re-derived (self-corrects pauses/drift); a clock frozen at 0
+    // sets it exactly once, at the crossing.
+    if (
+      snapshot.clockTime >= 0 &&
+      (pickAnchorMs === null || snapshot.clockTime > 0)
+    ) {
+      if (pickAnchorMs === null) {
+        logger.info('Pick phase anchored (clock crossed zero)', {
+          clockTime: snapshot.clockTime,
+        })
+      }
+      pickAnchorMs = Date.now() - snapshot.clockTime * 1000
+    }
   })
 
   function poolNames(): string[] {
@@ -149,13 +178,30 @@ export function createAutoRescanService(
       if (!settings.experimentalAutoDraftTracking) return
       if (!appStore.getState().overlayActive) return
       if (appStore.getState().mlStatus !== 'ready') return
-      if (pickAnchorMs === null) return
 
       const { snapshot, connected } = streamService.getGsiState()
       if (!connected || snapshot?.gamePhase !== GSI_HERO_SELECTION_PHASE) return
 
-      // The pool grid is still the user's manual initial scan (Ctrl+Shift+S)
-      if (poolNames().length === 0) return
+      if (poolNames().length === 0) {
+        // Fallback auto INITIAL scan: the user hasn't scanned the pool yet —
+        // do it for them once, AUTO_INITIAL_SCAN_DELAY_S after the draft clock
+        // was identified (deep enough into the preview for the grid to render)
+        if (
+          !autoInitialScanAttempted &&
+          draftClockSeenAtMs !== null &&
+          Date.now() - draftClockSeenAtMs >= AUTO_INITIAL_SCAN_DELAY_S * 1000
+        ) {
+          autoInitialScanAttempted = true
+          logger.info('Auto initial scan (no manual scan yet)', {
+            clockTime: snapshot.clockTime,
+          })
+          await scanTrigger.performScan(true)
+        }
+        // Turn logic needs the pool baseline either way
+        return
+      }
+
+      if (pickAnchorMs === null) return
 
       const elapsedS = (Date.now() - pickAnchorMs) / 1000
       if (elapsedS > scheduleEndS + 30) {
