@@ -111,6 +111,7 @@ function makeInitialPayload(): OverlayDataPayload {
     heroesCoords: [],
     heroesParams: { width: 0, height: 0 },
     modelsCoords: [],
+    autoDraftTrackingEnabled: false,
   }
 }
 
@@ -129,6 +130,16 @@ function makeInput(overrides: Partial<StreamBoardBuildInput> = {}): StreamBoardB
 // ---------------------------------------------------------------------------
 
 describe('buildStreamBoardState', () => {
+  it('marks pool hero rows whose model was drafted, from the LATEST payload', () => {
+    // isPicked flips on rescans (tile-diff detection), so it must be read from
+    // the latest payload, not the frozen initial one
+    const latest = makeInitialPayload()
+    latest.heroModels[3] = makeHeroModel(3, { isPicked: true })
+    const state = buildStreamBoardState(makeInput({ latestPayload: latest }))
+    expect(state.heroes[3].modelPicked).toBe(true)
+    expect(state.heroes[0].modelPicked).toBe(false)
+  })
+
   it('returns waiting phase with empty board when no scan has happened', () => {
     const state = buildStreamBoardState(makeInput({ initialPayload: null }))
     expect(state.phase).toBe('waiting')

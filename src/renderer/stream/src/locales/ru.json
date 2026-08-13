@@ -10,7 +10,8 @@
   },
   "pool": {
     "ultimates": "Ульты",
-    "standard": "Обычные способности"
+    "standard": "Обычные способности",
+    "modelPicked": "Выбран"
   },
   "panels": {
     "topWinrate": "Лучший винрейт",

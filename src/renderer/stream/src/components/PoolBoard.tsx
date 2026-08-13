@@ -29,9 +29,13 @@ function HeroMini({ row }: { row: StreamHeroRow | undefined }) {
   const { t } = useTranslation()
   const [failed, setFailed] = useState(false)
   const name = row?.heroDisplayName ?? t('unknownHero')
+  const picked = row?.modelPicked === true
 
   return (
-    <div className="pool-hero-mini" title={name}>
+    <div
+      className={`pool-hero-mini${picked ? ' pool-hero-mini-picked' : ''}`}
+      title={picked ? `${name} — ${t('pool.modelPicked')}` : name}
+    >
       {row?.portraitPath && !failed ? (
         <img
           src={`${apiBase()}${row.portraitPath}`}
@@ -41,6 +45,7 @@ function HeroMini({ row }: { row: StreamHeroRow | undefined }) {
       ) : (
         <span className="pool-hero-mini-fallback">{name.charAt(0)}</span>
       )}
+      {picked && <span className="pool-hero-mini-picked-mark" aria-hidden="true" />}
     </div>
   )
 }

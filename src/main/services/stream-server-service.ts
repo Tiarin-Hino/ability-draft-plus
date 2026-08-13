@@ -136,6 +136,7 @@ export function createStreamServerService(
     const playerModels: ({ npcName: string; displayName: string } | null)[] =
       Array.from({ length: 10 }, () => null)
     if (gsiSnapshot) {
+      // Spectating: allplayers carries every slot
       for (const player of gsiSnapshot.players) {
         if (player.slotIndex >= 0 && player.slotIndex < 10) {
           playerNames[player.slotIndex] = player.name
@@ -144,6 +145,23 @@ export function createStreamServerService(
               npcName: player.heroNpcName,
               displayName: heroDisplayName(player.heroNpcName),
             }
+          }
+        }
+      }
+      // Playing: GSI only knows the LOCAL player (name via team_slot, model via
+      // the hero block) — merge them so the board isn't all placeholders
+      const local = gsiSnapshot.localPlayer
+      if (
+        local &&
+        local.slotIndex !== null &&
+        local.slotIndex >= 0 &&
+        local.slotIndex < 10
+      ) {
+        playerNames[local.slotIndex] ??= local.name
+        if (gsiSnapshot.localHeroNpcName && !playerModels[local.slotIndex]) {
+          playerModels[local.slotIndex] = {
+            npcName: gsiSnapshot.localHeroNpcName,
+            displayName: heroDisplayName(gsiSnapshot.localHeroNpcName),
           }
         }
       }

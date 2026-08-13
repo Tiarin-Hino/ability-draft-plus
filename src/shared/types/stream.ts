@@ -47,6 +47,9 @@ export interface StreamHeroRow {
   /** ability_order 1–3 (Q/W/E), sorted. */
   standard: StreamAbilitySlot[]
   ultimate: StreamAbilitySlot | null
+  /** True once this hero MODEL was drafted by a player (tile-diff detection while
+   * playing, GSI while spectating feeds the player rows instead). */
+  modelPicked: boolean
 }
 
 export type StreamTeam = 'radiant' | 'dire'
@@ -67,7 +70,8 @@ export interface StreamPlayerRow {
   team: StreamTeam
   /** From GSI when available; null until known. */
   playerName: string | null
-  /** Picked hero model from GSI (spectating); null until picked/unknown. */
+  /** Picked hero model from GSI (spectating: every player; playing: the local
+   * player only); null until picked/unknown. */
   model: StreamPlayerModel | null
   picks: StreamAbilitySlot[]
   draftScore: PlayerDraftScore | null

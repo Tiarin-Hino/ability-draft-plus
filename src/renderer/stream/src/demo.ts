@@ -79,6 +79,8 @@ export function buildDemoState(): StreamBoardState {
   const heroes = HERO_SETS.map((hero, order) => ({
     heroOrder: order,
     heroDisplayName: hero.display,
+    // A few models already drafted, mirroring a mid-draft board
+    modelPicked: order % 4 === 2,
     portraitPath: `/icons/heroes/${hero.npc}.png`,
     standard: hero.abilities.map((name, i) =>
       slot(name, titleCase(name), winrates[(order + i) % winrates.length], {

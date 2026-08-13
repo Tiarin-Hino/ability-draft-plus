@@ -81,6 +81,7 @@ function toStreamSlot(
 
 function buildHeroRows(
   initialPayload: OverlayDataPayload,
+  latestPayload: OverlayDataPayload | null,
   pickedNames: ReadonlySet<string>,
 ): StreamHeroRow[] {
   const scanData = initialPayload.scanData
@@ -100,6 +101,12 @@ function buildHeroRows(
     const heroDisplayName =
       model && model.dbHeroId !== null ? model.heroDisplayName : null
 
+    // Picked-model state updates on RESCANS (tile-diff detection), so it must
+    // come from the latest payload, not the frozen initial one
+    const latestModel = latestPayload?.heroModels.find(
+      (m) => m.heroOrder === heroOrder,
+    )
+
     const cdnName = deriveHeroCdnName([
       ...rowStandard.map((s) => s.name),
       rowUltimate?.name ?? null,
@@ -111,6 +118,7 @@ function buildHeroRows(
       portraitPath: cdnName ? heroIconPath(cdnName) : null,
       standard: rowStandard.map((s) => toStreamSlot(s, pickedNames)),
       ultimate: rowUltimate ? toStreamSlot(rowUltimate, pickedNames) : null,
+      modelPicked: latestModel?.isPicked ?? model?.isPicked ?? false,
     })
   }
   return rows
@@ -246,7 +254,7 @@ export function buildStreamBoardState(
 
   return {
     phase: 'drafting',
-    heroes: buildHeroRows(initialPayload, pickedNames),
+    heroes: buildHeroRows(initialPayload, latestPayload, pickedNames),
     players: buildPlayerRows(latestPayload, gsi, getPairSynergies),
     panels: buildPanels(latestPayload, pickedNames),
     gsi,
