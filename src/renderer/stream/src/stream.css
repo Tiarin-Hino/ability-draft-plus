@@ -568,21 +568,24 @@ body:has(.bg-dark) {
   color: var(--text-dim);
 }
 
+/* Full-width bottom band (a corner nub was illegible at small tile sizes) */
 .tile-winrate {
   position: absolute;
   bottom: 0;
+  left: 0;
   right: 0;
-  padding: 0 0.24rem;
-  font-size: 0.7rem;
+  text-align: center;
+  padding: 0.05rem 0 0.02rem;
+  font-size: 0.85rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  background: rgba(0, 0, 0, 0.78);
-  border-top-left-radius: 0.25rem;
+  background: rgba(0, 0, 0, 0.82);
   color: var(--text);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
 }
 
 .tile-small .tile-winrate {
-  font-size: 0.62rem;
+  font-size: 0.74rem;
 }
 
 .tile-top-tier {
