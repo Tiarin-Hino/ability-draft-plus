@@ -4,13 +4,17 @@ import { useTranslation } from 'react-i18next'
 // @DEV-GUIDE: ?edit=1 layout tuning mode. Editing works on element TYPES, not
 // individual elements: adjusting any pool tile adjusts every pool tile, dragging
 // one player name moves all ten, etc. Interactions: drag = move the type, mouse
-// wheel = scale it (Alt = fine steps), double-click = reset it. Transforms are
-// applied through ONE injected <style> tag keyed by the selectors below — they
-// survive React re-renders untouched, persist in localStorage, and are applied
-// on load even without ?edit=1. The panel shows the values as JSON to copy back
-// to the developer, whose job is then to bake them into stream.css as real
-// sizes/offsets. NOTE: localStorage is per-browser-profile — an OBS browser
-// source does not see what was tuned in a desktop browser.
+// wheel = scale it (Alt = fine steps), double-click = reset it. Two symmetry
+// rules keep the board broadcast-clean: horizontal moves MIRROR across the
+// radiant/dire sides (stored x is the LEFT-side value; dragging a right-side
+// instance inverts the delta so the dragged element follows the cursor), and
+// scaling a tile type also widens its containers' flex gap so tiles spread
+// instead of overlapping. Everything lands in ONE injected <style> tag keyed by
+// the selectors below — it survives React re-renders, persists in localStorage,
+// and is applied on load even without ?edit=1. The panel shows the values as
+// JSON to copy back to the developer, whose job is to bake them into stream.css
+// as real sizes/offsets. NOTE: localStorage is per-browser-profile — an OBS
+// browser source does not see what was tuned in a desktop browser.
 
 export interface EditTransform {
   x: number
@@ -19,16 +23,70 @@ export interface EditTransform {
 }
 export type EditLayout = Record<string, EditTransform>
 
+interface GapDef {
+  /** Flex container whose gap must grow with the scale. */
+  selector: string
+  /** The container's authored gap (rem). */
+  baseGap: number
+  /** The scaled element's base size along the row axis (rem). */
+  baseSize: number
+}
+
+interface GroupDef {
+  key: string
+  /** Every instance (event hit-testing + un-mirrored rule). */
+  selector: string
+  /** Set on side-mirrored types: left instances get +x, right instances -x. */
+  left?: string
+  right?: string
+  /** Containers whose gap absorbs the scale so instances don't overlap. */
+  gaps?: GapDef[]
+}
+
 /** The tunable element types. Order matters: the first selector that contains
  * the event target wins, so more specific contexts must precede generic ones. */
-const GROUPS: Array<{ key: string; selector: string }> = [
-  { key: 'top-winrate-ability', selector: '.panel-tiles .top-winrate-entry' },
+const GROUPS: GroupDef[] = [
+  {
+    key: 'top-winrate-ability',
+    selector: '.panel-tiles .top-winrate-entry',
+    gaps: [{ selector: '.panel-tiles', baseGap: 0.45, baseSize: 3.05 }],
+  },
   { key: 'combo-pair', selector: '.combo-entry' },
-  { key: 'card-ability', selector: '.player-picks .tile' },
-  { key: 'hero-name', selector: '.player-hero-line' },
-  { key: 'player-name', selector: '.player-name-line' },
-  { key: 'pool-hero', selector: '.pool-hero-mini' },
-  { key: 'pool-ability', selector: '.pool-board .tile' },
+  {
+    key: 'card-ability',
+    selector: '.player-picks .tile',
+    left: '.team-radiant .player-picks .tile',
+    right: '.team-dire .player-picks .tile',
+    gaps: [{ selector: '.player-picks', baseGap: 0.32, baseSize: 3.05 }],
+  },
+  {
+    key: 'hero-name',
+    selector: '.player-hero-line',
+    left: '.team-radiant .player-hero-line',
+    right: '.team-dire .player-hero-line',
+  },
+  {
+    key: 'player-name',
+    selector: '.player-name-line',
+    left: '.team-radiant .player-name-line',
+    right: '.team-dire .player-name-line',
+  },
+  {
+    key: 'pool-hero',
+    selector: '.pool-hero-mini',
+    left: '.pool-half-left .pool-hero-mini',
+    right: '.pool-half-right .pool-hero-mini',
+  },
+  {
+    key: 'pool-ability',
+    selector: '.pool-board .tile',
+    left: '.pool-half-left .tile, .pool-ult-row .tile:nth-child(-n + 3)',
+    right: '.pool-half-right .tile, .pool-ult-row .tile:nth-child(n + 4)',
+    gaps: [
+      { selector: '.pool-half-row', baseGap: 0.45, baseSize: 4.1 },
+      { selector: '.pool-ult-row', baseGap: 0.55, baseSize: 4.75 },
+    ],
+  },
 ]
 
 const STORAGE_KEY = 'adplus-stream-layout'
@@ -51,15 +109,30 @@ export function applyLayout(layout: EditLayout): void {
     style.id = STYLE_ID
     document.head.appendChild(style)
   }
-  style.textContent = GROUPS.filter((g) => {
+  const rules: string[] = []
+  for (const g of GROUPS) {
     const t = layout[g.key]
-    return t && (t.x !== 0 || t.y !== 0 || t.s !== 1)
-  })
-    .map((g) => {
-      const t = layout[g.key]
-      return `${g.selector} { transform: translate(${t.x}px, ${t.y}px) scale(${t.s}); }`
-    })
-    .join('\n')
+    if (!t || (t.x === 0 && t.y === 0 && t.s === 1)) continue
+    if (g.left && g.right && t.x !== 0) {
+      rules.push(
+        `${g.left} { transform: translate(${t.x}px, ${t.y}px) scale(${t.s}); }`,
+        `${g.right} { transform: translate(${-t.x}px, ${t.y}px) scale(${t.s}); }`,
+      )
+    } else {
+      rules.push(`${g.selector} { transform: translate(${t.x}px, ${t.y}px) scale(${t.s}); }`)
+    }
+    if (t.s !== 1 && g.gaps) {
+      // A scaled element still occupies its unscaled layout box, so neighbors
+      // encroach by baseSize*(s-1); grow the gap proportionally AND absorb the
+      // overlap, clamped at zero for downscales
+      for (const gap of g.gaps) {
+        rules.push(
+          `${gap.selector} { gap: max(0px, calc(${gap.baseGap}rem * ${t.s} + ${gap.baseSize}rem * ${t.s - 1})); }`,
+        )
+      }
+    }
+  }
+  style.textContent = rules.join('\n')
 }
 
 const round1 = (n: number) => Math.round(n * 10) / 10
@@ -81,17 +154,21 @@ export function EditMode() {
   useEffect(() => {
     document.body.classList.add('edit-active')
 
-    const groupOf = (e: Event): string | null => {
+    const groupOf = (e: Event): GroupDef | null => {
       const el = e.target as HTMLElement
       if (el.closest('.edit-panel')) return null
       for (const g of GROUPS) {
-        if (el.closest(g.selector)) return g.key
+        if (el.closest(g.selector)) return g
       }
       return null
     }
 
     let drag: {
       key: string
+      /** -1 when a right-side instance is dragged: stored x is the LEFT-side
+       * value, so the delta inverts to keep the dragged element under the
+       * cursor while the other side mirrors. */
+      xFactor: number
       startX: number
       startY: number
       baseX: number
@@ -99,25 +176,35 @@ export function EditMode() {
     } | null = null
 
     const onPointerDown = (e: PointerEvent) => {
-      const key = groupOf(e)
-      if (!key) return
+      const group = groupOf(e)
+      if (!group) return
       e.preventDefault()
-      const base = layoutRef.current[key] ?? IDENTITY
-      drag = { key, startX: e.clientX, startY: e.clientY, baseX: base.x, baseY: base.y }
+      const base = layoutRef.current[group.key] ?? IDENTITY
+      const onRightSide =
+        group.right !== undefined &&
+        (e.target as HTMLElement).closest(group.right) !== null
+      drag = {
+        key: group.key,
+        xFactor: onRightSide ? -1 : 1,
+        startX: e.clientX,
+        startY: e.clientY,
+        baseX: base.x,
+        baseY: base.y,
+      }
     }
     const onPointerMove = (e: PointerEvent) => {
       if (drag) {
-        const { key, startX, startY, baseX, baseY } = drag
+        const { key, xFactor, startX, startY, baseX, baseY } = drag
         setLayout((prev) => ({
           ...prev,
           [key]: {
             ...(prev[key] ?? IDENTITY),
-            x: round1(baseX + e.clientX - startX),
+            x: round1(baseX + (e.clientX - startX) * xFactor),
             y: round1(baseY + e.clientY - startY),
           },
         }))
       } else {
-        const key = groupOf(e)
+        const key = groupOf(e)?.key ?? null
         setHovered(key)
         if (key) document.body.dataset.editHover = key
         else delete document.body.dataset.editHover
@@ -127,7 +214,7 @@ export function EditMode() {
       drag = null
     }
     const onWheel = (e: WheelEvent) => {
-      const key = groupOf(e)
+      const key = groupOf(e)?.key
       if (!key) return
       e.preventDefault()
       const step = (e.altKey ? 0.01 : 0.05) * (e.deltaY < 0 ? 1 : -1)
@@ -138,7 +225,7 @@ export function EditMode() {
       })
     }
     const onDblClick = (e: MouseEvent) => {
-      const key = groupOf(e)
+      const key = groupOf(e)?.key
       if (!key) return
       e.preventDefault()
       setLayout((prev) => {
@@ -211,6 +298,7 @@ export function EditMode() {
         {t('edit.title')}
       </div>
       <div className="edit-panel-hint">{t('edit.hintType')}</div>
+      <div className="edit-panel-hint">{t('edit.hintMirror')}</div>
       <div className="edit-panel-hint">{t('edit.hintMove')}</div>
       <div className="edit-panel-hint">{t('edit.hintScale')}</div>
       <div className="edit-panel-hint">{t('edit.hintReset')}</div>

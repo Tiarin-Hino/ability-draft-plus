@@ -47,6 +47,7 @@
     "copied": "Copied!",
     "resetAll": "Reset all",
     "empty": "No adjustments yet — drag or scroll over an element.",
-    "hintType": "Changes apply to every element of a type"
+    "hintType": "Changes apply to every element of a type",
+    "hintMirror": "Horizontal moves mirror across the two sides"
   }
 }
