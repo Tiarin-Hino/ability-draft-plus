@@ -63,6 +63,23 @@ export async function cropTile(
 }
 
 /**
+ * Decodes an icon image FILE (PNG) and resizes to a square raw RGB vector —
+ * used to build pick-slot template-matching candidates from the cached
+ * official CDN icons. Alpha is stripped so vectors align with screenshot crops.
+ */
+export async function loadIconVector(
+  filePath: string,
+  size: number,
+): Promise<Uint8Array> {
+  const raw = await sharp(filePath)
+    .resize(size, size, { kernel: 'linear' })
+    .removeAlpha()
+    .raw()
+    .toBuffer()
+  return new Uint8Array(raw.buffer, raw.byteOffset, raw.byteLength)
+}
+
+/**
  * Converts a raw uint8 RGB buffer to Float32Array.
  * Values are kept as 0-255 floats -- the model's Rescaling layer maps them to [-1, 1]
  * internally (x/127.5 - 1).

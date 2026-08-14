@@ -8,6 +8,13 @@ export interface MlWorkerInitRequest {
     modelPath: string
     classNamesPath: string
     useDirectML: boolean
+    /**
+     * Directory of official ability icons (userData/stream-icons/abilities,
+     * maintained by icon-cache-service). When present, picked-ability slots
+     * are identified by template matching against these icons instead of the
+     * classifier; absent/unreadable → classifier fallback for pick slots.
+     */
+    pickIconsDir?: string
   }
 }
 
@@ -34,6 +41,13 @@ export interface MlWorkerScanRequest {
      * Used by the GSI turn-driven auto-rescan to scan ~4 slots instead of 40.
      */
     heroOrders?: number[]
+    /**
+     * Rescan only: ability names the current draft can actually contain (the
+     * initial pool + already-picked names). Scopes pick-slot template matching
+     * to these icons so winner margins stay wide. Omitted/empty → match
+     * against every cached icon.
+     */
+    pickCandidateNames?: string[]
   }
 }
 

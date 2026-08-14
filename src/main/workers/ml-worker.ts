@@ -1,4 +1,6 @@
 import { parentPort } from 'worker_threads'
+import { readdir } from 'fs/promises'
+import { join } from 'path'
 import type {
   MlWorkerRequest,
   MlWorkerReadyResponse,
@@ -8,12 +10,16 @@ import type {
 } from '@shared/types/ml'
 import type { ScanResult, SlotCoordinate, ResolutionLayout } from '@shared/types'
 import { createOnnxClassifier } from '@core/ml/onnx-classifier'
-import { preprocessBatch, cropTile } from '@core/ml/preprocessing'
+import { preprocessBatch, cropTile, loadIconVector } from '@core/ml/preprocessing'
 import type { DecodedScreenshot } from '@core/ml/preprocessing'
 import type { ClassifierResult } from '@core/ml/classifier'
+import { makeIconTemplate, matchPickSlot } from '@core/ml/template-matcher'
+import type { IconTemplate } from '@core/ml/template-matcher'
 import {
   MODEL_TILE_COMPARE_SIZE,
   PLAYER_CARD_COMPARE_SIZE,
+  PICK_TEMPLATE_COMPARE_SIZE,
+  PICK_TEMPLATE_CROP_INSET_RATIO,
 } from '@shared/constants/thresholds'
 
 // @DEV-GUIDE: ML Worker thread entry point. Runs as a Node.js worker_thread, spawned by MlService.
@@ -35,7 +41,13 @@ import {
 // from an encoded buffer re-decoded the full screenshot per slot (~1.1s/scan at 1440p).
 //
 // For initial scan: processes ultimate + standard slots, extracts heroDefiningAbilities (ability_order===2).
-// For rescan: processes only the selected-ability slots.
+// For rescan: processes only the selected-ability slots. Those PICK slots are identified by
+// TEMPLATE MATCHING (core/ml/template-matcher.ts) against the official CDN icons in
+// payload.pickIconsDir (userData/stream-icons/abilities): pick boxes render icons flat, so a
+// border-inset crop NCC-matched against the cache beats the classifier, which regressed on
+// exactly these crops (missed picks + one confident misread on a real board). Templates load
+// lazily on the first rescan and pick up newly cached icons via a per-scan readdir diff.
+// The classifier remains the pick-slot path only when no templates are available.
 // Every scan additionally captures the 12 model portrait tiles (models_coords) as
 // normalized raw crops — the scan-processor diffs them against the initial-scan
 // baseline to detect picked models (see core/domain/model-pick-detection.ts) —
@@ -47,6 +59,41 @@ if (!parentPort) {
 }
 
 const classifier = createOnnxClassifier()
+
+// Pick-slot icon templates, keyed by ability name. Loaded lazily from
+// pickIconsDir on the first selected-abilities scan; each later scan diffs the
+// directory listing and loads only new files (the icon cache is append-only).
+let pickIconsDir: string | null = null
+const pickTemplates = new Map<string, IconTemplate>()
+let pickTemplatesDirBroken = false
+
+async function refreshPickTemplates(): Promise<IconTemplate[]> {
+  if (pickIconsDir === null || pickTemplatesDirBroken) return []
+  let files: string[]
+  try {
+    files = await readdir(pickIconsDir)
+  } catch {
+    // Missing/unreadable icon cache — classifier fallback for this session
+    pickTemplatesDirBroken = true
+    return []
+  }
+  for (const file of files) {
+    if (!file.endsWith('.png')) continue
+    const name = file.slice(0, -4)
+    if (pickTemplates.has(name)) continue
+    try {
+      const vec = await loadIconVector(
+        join(pickIconsDir, file),
+        PICK_TEMPLATE_COMPARE_SIZE,
+      )
+      pickTemplates.set(name, makeIconTemplate(name, vec))
+    } catch {
+      // Undecodable file — skip; the name stays eligible for a later retry
+      // only if the cache rewrites it, which it never does. Acceptable.
+    }
+  }
+  return [...pickTemplates.values()]
+}
 
 parentPort.on('message', async (message: MlWorkerRequest) => {
   try {
@@ -75,8 +122,10 @@ async function handleInit(payload: {
   modelPath: string
   classNamesPath: string
   useDirectML: boolean
+  pickIconsDir?: string
 }): Promise<void> {
   try {
+    pickIconsDir = payload.pickIconsDir ?? null
     await classifier.initialize(payload)
     const response: MlWorkerReadyResponse = {
       status: 'ready',
@@ -103,6 +152,7 @@ async function handleScan(payload: {
   isInitialScan: boolean
   activeClassNames?: string[]
   heroOrders?: number[]
+  pickCandidateNames?: string[]
 }): Promise<void> {
   if (!classifier.isReady()) {
     throw new Error('ML Worker not initialized')
@@ -117,6 +167,7 @@ async function handleScan(payload: {
     isInitialScan,
     activeClassNames,
     heroOrders,
+    pickCandidateNames,
   } = payload
   // The buffer arrives as a transferred RAW RGB bitmap — no decode step;
   // every slot crop reads from it directly.
@@ -149,6 +200,9 @@ async function handleScan(payload: {
       confidenceThreshold,
       activeSet,
       heroOrders ? new Set(heroOrders) : undefined,
+      pickCandidateNames && pickCandidateNames.length > 0
+        ? new Set(pickCandidateNames)
+        : undefined,
     )
   }
 
@@ -270,6 +324,7 @@ async function performSelectedAbilitiesScan(
   confidenceThreshold: number,
   activeClassNames?: ReadonlySet<string>,
   heroOrders?: ReadonlySet<number>,
+  pickCandidateNames?: ReadonlySet<string>,
 ): Promise<ScanResult[]> {
   const selectedCoords = coords.selected_abilities_coords
   if (!selectedCoords || selectedCoords.length === 0) return []
@@ -286,12 +341,65 @@ async function performSelectedAbilitiesScan(
     height: params?.height ?? c.height,
   }))
 
-  return identifySlots(
-    slotsToScan,
-    screenshot,
-    confidenceThreshold,
-    activeClassNames,
-  )
+  const templates = await refreshPickTemplates()
+  if (templates.length === 0) {
+    // No icon cache — classifier fallback (pre-template-matching behavior)
+    return identifySlots(
+      slotsToScan,
+      screenshot,
+      confidenceThreshold,
+      activeClassNames,
+    )
+  }
+
+  return matchPickSlots(slotsToScan, screenshot, templates, pickCandidateNames)
+}
+
+/** Template-matches pick-box slots against the official-icon templates. */
+async function matchPickSlots(
+  slots: SlotCoordinate[],
+  screenshot: DecodedScreenshot,
+  templates: IconTemplate[],
+  candidateNames?: ReadonlySet<string>,
+): Promise<ScanResult[]> {
+  const results: ScanResult[] = []
+  for (const slot of slots) {
+    let result = makeDefaultResult(slot)
+    if (slot.width > 0 && slot.height > 0) {
+      // Shave the pick box's border ring + rounded corners — off-distribution
+      // pixels for icons and classifier alike (see PICK_TEMPLATE_CROP_INSET_RATIO)
+      const inset = Math.round(slot.width * PICK_TEMPLATE_CROP_INSET_RATIO)
+      const insetSlot = {
+        ...slot,
+        x: slot.x + inset,
+        y: slot.y + inset,
+        width: slot.width - inset * 2,
+        height: slot.height - inset * 2,
+      }
+      try {
+        const crop = await cropTile(
+          screenshot,
+          insetSlot,
+          PICK_TEMPLATE_COMPARE_SIZE,
+        )
+        const match = matchPickSlot(
+          new Uint8Array(crop.buffer, crop.byteOffset, crop.byteLength),
+          templates,
+          candidateNames,
+        )
+        result = {
+          ...result,
+          name: match.name,
+          // NCC in [-1,1]; clamp so downstream confidence semantics (>= 0) hold
+          confidence: Math.max(0, match.score),
+        }
+      } catch {
+        // Out-of-bounds crop (layout drift) — keep the default null result
+      }
+    }
+    results.push(result)
+  }
+  return results
 }
 
 // @DEV-GUIDE: Core ML pipeline for a batch of slots. preprocessBatch crops each slot from the

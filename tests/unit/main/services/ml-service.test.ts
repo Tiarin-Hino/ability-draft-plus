@@ -6,6 +6,7 @@ vi.mock('electron', () => ({
   app: {
     isPackaged: false,
     getAppPath: () => '/mock/app/path',
+    getPath: () => '/mock/user-data',
   },
 }))
 
@@ -79,6 +80,7 @@ describe('MlService', () => {
           modelPath: expect.stringContaining('ability_classifier_fp16.onnx'),
           classNamesPath: expect.stringContaining('class_names.json'),
           useDirectML: false,
+          pickIconsDir: expect.stringContaining('stream-icons'),
         },
       })
 

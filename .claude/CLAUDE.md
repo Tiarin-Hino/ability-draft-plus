@@ -40,6 +40,12 @@ maintenance spec — the authoritative map of what IS, not a build plan.
   validates class count against the model's output width at init. There is NO hardcoded class count
 - Preprocessing feeds RAW 0–255 float32 — the graph's Rescaling layer normalizes internally.
   Do not add normalization
+- The classifier handles POOL slots only. PICKED-ability slots are identified by template
+  matching (`core/ml/template-matcher.ts`): NCC against the official CDN icons cached in
+  `userData/stream-icons/abilities` (pick boxes render icons flat; crops are border-inset).
+  Candidates are scoped to pool + picked names; the classifier is the pick-slot fallback
+  only when no icons are cached. Went 40/40 on a board where the classifier missed 3 picks
+  and confidently misread a 4th
 - Retraining: `training/train.py` (+ isolated `training/gate.py`) via the "Retrain ML model"
   workflow → opens a model PR. FP16 only; INT8 collapsed accuracy twice (documented) — do not
   reintroduce quantization without beating the gate across multiple training runs

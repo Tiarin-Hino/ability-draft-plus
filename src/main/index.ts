@@ -249,6 +249,8 @@ app.whenReady().then(async () => {
     windowTracker,
     feedbackService,
     dbService,
+    draftStore,
+    iconCache,
   )
 
   // EXPERIMENTAL: GSI-driven auto-rescan + pick attribution (setting-gated, default off)
