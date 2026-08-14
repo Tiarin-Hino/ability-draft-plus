@@ -415,13 +415,13 @@ body:has(.bg-dark) {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.45rem;
+  gap: 1rem;
   padding: 0.25rem 0 0.5rem;
 }
 
 .pool-ult-row {
   display: flex;
-  gap: 0.55rem;
+  gap: 1.15rem;
 }
 
 .pool-standard {
@@ -443,18 +443,18 @@ body:has(.bg-dark) {
 .pool-half-row {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 1.15rem;
 }
 
 .pool-row-divider {
-  width: 2.6rem;
+  width: 2.15rem;
   flex-shrink: 0;
 }
 
 .pool-hero-mini {
   /* Valve hero art is 16:9 — keep the aspect so faces aren't cropped */
-  width: 4.5rem;
-  height: 2.55rem;
+  width: 6.3rem;
+  height: 3.55rem;
   border-radius: 0.3rem;
   overflow: hidden;
   border: 1px solid var(--bezel);
@@ -499,10 +499,10 @@ body:has(.bg-dark) {
       unknown, engraved-emblem empty. ── */
 .tile {
   position: relative;
-  width: 4.1rem;
-  height: 4.1rem;
+  width: 4.9rem;
+  height: 4.9rem;
   background: var(--bezel-dark);
-  border: 0.32rem solid transparent;
+  border: 0.38rem solid transparent;
   border-image: url('./assets/ui/tile-frame-normal.png') 84 stretch;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
   overflow: hidden;
@@ -510,15 +510,15 @@ body:has(.bg-dark) {
 }
 
 .tile-large {
-  width: 4.75rem;
-  height: 4.75rem;
-  border-width: 0.4rem;
+  width: 5.2rem;
+  height: 5.2rem;
+  border-width: 0.44rem;
 }
 
 .tile-small {
-  width: 3.05rem;
-  height: 3.05rem;
-  border-width: 0.28rem;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-width: 0.32rem;
 }
 
 .tile-icon {
@@ -771,9 +771,10 @@ body:has(.bg-dark) {
   align-items: flex-end;
 }
 
-/* Mockup-derived hierarchy: small gold hero name over a BIG white player name */
+/* Mockup-derived hierarchy: gold hero name over a BIG white player name,
+   stagger-indented from the card's outer edge (tuned via ?edit=1) */
 .player-hero-line {
-  font-size: 0.76rem;
+  font-size: 1.02rem;
   font-weight: 800;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -796,7 +797,7 @@ body:has(.bg-dark) {
 }
 
 .player-name {
-  font-size: 1.2rem;
+  font-size: 1.38rem;
   font-weight: 700;
   color: var(--text);
   overflow: hidden;
@@ -857,6 +858,26 @@ body:has(.bg-dark) {
 .player-picks {
   display: flex;
   gap: 0.32rem;
+  margin-top: 0.35rem;
+}
+.team-accent-radiant .player-picks {
+  margin-left: 0.25rem;
+}
+.team-accent-dire .player-picks {
+  margin-right: 0.25rem;
+}
+/* Stagger indents from the card's outer edge (mirrored) */
+.team-accent-radiant .player-hero-line {
+  margin-left: 2.75rem;
+}
+.team-accent-dire .player-hero-line {
+  margin-right: 2.75rem;
+}
+.team-accent-radiant .player-name-line {
+  margin-left: 1.25rem;
+}
+.team-accent-dire .player-name-line {
+  margin-right: 1.25rem;
 }
 
 /* ── Latest-picks ticker (only when the pick feed exists) ─────────────── */
@@ -1055,6 +1076,16 @@ body:has(.bg-dark) {
   display: flex;
   flex-wrap: wrap;
   gap: 0.45rem;
+  margin-top: 0.55rem;
+}
+/* Top-winrate tiles run larger than the other small tiles (tuned 1.3x) */
+.panel-tiles .tile {
+  width: 4rem;
+  height: 4rem;
+  border-width: 0.36rem;
+}
+.panel-tiles .tile-winrate {
+  font-size: 0.9rem;
 }
 
 .top-winrate-entry {
@@ -1065,7 +1096,7 @@ body:has(.bg-dark) {
 }
 
 .avg-pick {
-  font-size: 0.68rem;
+  font-size: 0.88rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--text-dim);

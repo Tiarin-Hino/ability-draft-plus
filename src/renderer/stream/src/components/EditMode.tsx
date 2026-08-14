@@ -77,7 +77,7 @@ const GROUPS: GroupDef[] = [
   {
     key: 'top-winrate-ability',
     selector: '.panel-tiles .top-winrate-entry',
-    gaps: [{ selector: '.panel-tiles', baseGap: 0.45, baseSize: 3.05 }],
+    gaps: [{ selector: '.panel-tiles', baseGap: 0.45, baseSize: 4 }],
   },
   { key: 'combo-pair', selector: '.combo-entry' },
   {
@@ -85,7 +85,7 @@ const GROUPS: GroupDef[] = [
     selector: '.player-picks .tile',
     left: '.team-radiant .player-picks .tile',
     right: '.team-dire .player-picks .tile',
-    gaps: [{ selector: '.player-picks', baseGap: 0.32, baseSize: 3.05 }],
+    gaps: [{ selector: '.player-picks', baseGap: 0.32, baseSize: 3.5 }],
   },
   {
     key: 'hero-name',
@@ -110,7 +110,9 @@ const GROUPS: GroupDef[] = [
 
 const KNOWN_KEYS = new Set(GROUPS.map((g) => g.key))
 
-const STORAGE_KEY = 'adplus-stream-layout'
+// v2: the v1 tuning round was baked into stream.css (2026-08); a new key keeps
+// stale stored transforms from double-applying on top of the baked layout
+const STORAGE_KEY = 'adplus-stream-layout-v2'
 const STYLE_ID = 'edit-layout-style'
 const IDENTITY: EditTransform = { x: 0, y: 0, s: 1 }
 
