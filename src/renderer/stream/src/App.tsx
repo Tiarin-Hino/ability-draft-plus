@@ -74,12 +74,12 @@ function App(): React.ReactElement {
     }
   }, [language])
 
-  // Outside edit mode, still honor a previously tuned layout after every
-  // render (EditMode owns application while it is mounted)
-  const updatedAt = board?.meta.updatedAt
+  // Outside edit mode, still honor a previously tuned layout (the injected
+  // stylesheet is selector-based, so applying once on mount is enough;
+  // EditMode owns application while it is mounted)
   useEffect(() => {
     if (!edit) applyLayout(loadStoredLayout())
-  }, [edit, updatedAt])
+  }, [edit])
 
   if (!board || board.phase === 'waiting') {
     return (
@@ -128,7 +128,7 @@ function App(): React.ReactElement {
         </div>
       </footer>
 
-      {edit && <EditMode boardRev={board.meta.updatedAt} />}
+      {edit && <EditMode />}
     </div>
   )
 }

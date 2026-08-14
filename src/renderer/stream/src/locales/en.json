@@ -40,12 +40,13 @@
   },
   "edit": {
     "title": "EDIT MODE",
-    "hintMove": "Drag a section to move it",
-    "hintScale": "Mouse wheel over a section to scale (Alt = fine)",
-    "hintReset": "Double-click a section to reset it",
+    "hintMove": "Drag any element to move it",
+    "hintScale": "Mouse wheel over an element to scale (Alt = fine)",
+    "hintReset": "Double-click an element to reset it",
     "copy": "Copy JSON",
     "copied": "Copied!",
     "resetAll": "Reset all",
-    "empty": "No adjustments yet — drag something."
+    "empty": "No adjustments yet — drag or scroll over an element.",
+    "hintType": "Changes apply to every element of a type"
   }
 }

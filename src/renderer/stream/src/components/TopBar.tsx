@@ -48,7 +48,7 @@ export function TopBar({
   const clock = formatClock(gsi.clockTime)
 
   return (
-    <header className="top-bar" data-edit-key="top-bar">
+    <header className="top-bar">
       <div className="top-bar-brand">
         <LogoPlate />
         <span className="top-bar-wordmark">{t('wordmark')}</span>

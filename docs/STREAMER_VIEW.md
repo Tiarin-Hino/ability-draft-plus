@@ -24,7 +24,7 @@ Customization via query parameters:
 | `?bg=chroma` | `#00FF00` green screen |
 | `?title=My%20Tournament` | Tournament name in the top bar |
 | `?demo=1` | Fake full draft — build your OBS scene without a live game |
-| `?edit=1` | Layout tuning: drag sections to move, mouse-wheel to scale (Alt = fine steps), double-click to reset. Adjustments persist in the browser and show as copyable JSON — combine with `?demo=1` |
+| `?edit=1` | Layout tuning by element TYPE (pool ability tiles, pool hero portraits, card pick tiles, hero/player names, top-winrate tiles, combo rows): drag any instance to move the whole type, mouse-wheel to scale it (Alt = fine steps), double-click to reset. Adjustments persist in the browser and show as copyable JSON — combine with `?demo=1` |
 
 The layout scales fluidly with the source size (720p/1080p/1440p all render
 proportionally). Two zones are intentionally left empty for your own overlays —

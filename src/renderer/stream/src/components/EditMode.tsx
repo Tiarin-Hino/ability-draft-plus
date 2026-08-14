@@ -1,15 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-// @DEV-GUIDE: ?edit=1 layout tuning mode. Every section carrying a data-edit-key
-// attribute becomes draggable (move), wheel-scalable (resize; Alt = fine steps),
-// and double-click-resettable. Transforms are visual-only (CSS transform, no
-// layout reflow), persist in localStorage, and are ALWAYS applied on load — even
-// without ?edit=1 — so a tuned browser view keeps its layout across refreshes.
-// The panel shows the adjustments as JSON to copy-paste back to the developer,
-// whose job is then to bake the numbers into stream.css as real layout. NOTE:
-// localStorage is per-browser-profile — an OBS browser source does not see what
-// was tuned in a desktop browser; this is a tuning tool, not a settings store.
+// @DEV-GUIDE: ?edit=1 layout tuning mode. Editing works on element TYPES, not
+// individual elements: adjusting any pool tile adjusts every pool tile, dragging
+// one player name moves all ten, etc. Interactions: drag = move the type, mouse
+// wheel = scale it (Alt = fine steps), double-click = reset it. Transforms are
+// applied through ONE injected <style> tag keyed by the selectors below — they
+// survive React re-renders untouched, persist in localStorage, and are applied
+// on load even without ?edit=1. The panel shows the values as JSON to copy back
+// to the developer, whose job is then to bake them into stream.css as real
+// sizes/offsets. NOTE: localStorage is per-browser-profile — an OBS browser
+// source does not see what was tuned in a desktop browser.
 
 export interface EditTransform {
   x: number
@@ -18,7 +19,20 @@ export interface EditTransform {
 }
 export type EditLayout = Record<string, EditTransform>
 
+/** The tunable element types. Order matters: the first selector that contains
+ * the event target wins, so more specific contexts must precede generic ones. */
+const GROUPS: Array<{ key: string; selector: string }> = [
+  { key: 'top-winrate-ability', selector: '.panel-tiles .top-winrate-entry' },
+  { key: 'combo-pair', selector: '.combo-entry' },
+  { key: 'card-ability', selector: '.player-picks .tile' },
+  { key: 'hero-name', selector: '.player-hero-line' },
+  { key: 'player-name', selector: '.player-name-line' },
+  { key: 'pool-hero', selector: '.pool-hero-mini' },
+  { key: 'pool-ability', selector: '.pool-board .tile' },
+]
+
 const STORAGE_KEY = 'adplus-stream-layout'
+const STYLE_ID = 'edit-layout-style'
 const IDENTITY: EditTransform = { x: 0, y: 0, s: 1 }
 
 export function loadStoredLayout(): EditLayout {
@@ -29,52 +43,34 @@ export function loadStoredLayout(): EditLayout {
   }
 }
 
-/** Stamp the stored transforms onto the current DOM (idempotent). */
+/** Materialize the layout as one injected stylesheet (idempotent). */
 export function applyLayout(layout: EditLayout): void {
-  for (const el of document.querySelectorAll<HTMLElement>('[data-edit-key]')) {
-    const t = layout[el.dataset.editKey as string]
-    el.style.transform =
-      t && (t.x !== 0 || t.y !== 0 || t.s !== 1)
-        ? `translate(${t.x}px, ${t.y}px) scale(${t.s})`
-        : ''
+  let style = document.getElementById(STYLE_ID)
+  if (!style) {
+    style = document.createElement('style')
+    style.id = STYLE_ID
+    document.head.appendChild(style)
   }
+  style.textContent = GROUPS.filter((g) => {
+    const t = layout[g.key]
+    return t && (t.x !== 0 || t.y !== 0 || t.s !== 1)
+  })
+    .map((g) => {
+      const t = layout[g.key]
+      return `${g.selector} { transform: translate(${t.x}px, ${t.y}px) scale(${t.s}); }`
+    })
+    .join('\n')
 }
 
 const round1 = (n: number) => Math.round(n * 10) / 10
 
-/**
- * boardRev: bump on every board state update so transforms are re-stamped after
- * React re-renders the sections (inline styles on unmanaged attributes survive
- * reconciliation, but not element re-creation).
- */
-interface Chip {
-  key: string
-  x: number
-  y: number
-}
-
-export function EditMode({ boardRev }: { boardRev: number }) {
+export function EditMode() {
   const { t } = useTranslation()
   const [layout, setLayout] = useState<EditLayout>(loadStoredLayout)
+  const [hovered, setHovered] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
-  const [chips, setChips] = useState<Chip[]>([])
   const [panelPos, setPanelPos] = useState<{ x: number; y: number } | null>(null)
   const layoutRef = useRef(layout)
-
-  // Label chips track each target's top-left corner (recomputed after drags,
-  // scales, and board re-renders — they need not follow live during a drag)
-  useEffect(() => {
-    const compute = () =>
-      setChips(
-        [...document.querySelectorAll<HTMLElement>('[data-edit-key]')].map((el) => {
-          const r = el.getBoundingClientRect()
-          return { key: el.dataset.editKey as string, x: r.left + 4, y: r.top + 2 }
-        }),
-      )
-    compute()
-    window.addEventListener('resize', compute)
-    return () => window.removeEventListener('resize', compute)
-  }, [layout, boardRev])
 
   useEffect(() => {
     layoutRef.current = layout
@@ -83,12 +79,16 @@ export function EditMode({ boardRev }: { boardRev: number }) {
   }, [layout])
 
   useEffect(() => {
-    applyLayout(layoutRef.current)
-  }, [boardRev])
+    document.body.classList.add('edit-active')
 
-  useEffect(() => {
-    const targets = [...document.querySelectorAll<HTMLElement>('[data-edit-key]')]
-    for (const el of targets) el.classList.add('edit-target')
+    const groupOf = (e: Event): string | null => {
+      const el = e.target as HTMLElement
+      if (el.closest('.edit-panel')) return null
+      for (const g of GROUPS) {
+        if (el.closest(g.selector)) return g.key
+      }
+      return null
+    }
 
     let drag: {
       key: string
@@ -98,34 +98,36 @@ export function EditMode({ boardRev }: { boardRev: number }) {
       baseY: number
     } | null = null
 
-    const keyOf = (e: Event): string | null =>
-      (e.target as HTMLElement).closest<HTMLElement>('[data-edit-key]')?.dataset
-        .editKey ?? null
-
     const onPointerDown = (e: PointerEvent) => {
-      const key = keyOf(e)
-      if (!key || (e.target as HTMLElement).closest('.edit-panel')) return
+      const key = groupOf(e)
+      if (!key) return
       e.preventDefault()
       const base = layoutRef.current[key] ?? IDENTITY
       drag = { key, startX: e.clientX, startY: e.clientY, baseX: base.x, baseY: base.y }
     }
     const onPointerMove = (e: PointerEvent) => {
-      if (!drag) return
-      const { key, startX, startY, baseX, baseY } = drag
-      setLayout((prev) => ({
-        ...prev,
-        [key]: {
-          ...(prev[key] ?? IDENTITY),
-          x: round1(baseX + e.clientX - startX),
-          y: round1(baseY + e.clientY - startY),
-        },
-      }))
+      if (drag) {
+        const { key, startX, startY, baseX, baseY } = drag
+        setLayout((prev) => ({
+          ...prev,
+          [key]: {
+            ...(prev[key] ?? IDENTITY),
+            x: round1(baseX + e.clientX - startX),
+            y: round1(baseY + e.clientY - startY),
+          },
+        }))
+      } else {
+        const key = groupOf(e)
+        setHovered(key)
+        if (key) document.body.dataset.editHover = key
+        else delete document.body.dataset.editHover
+      }
     }
     const onPointerUp = () => {
       drag = null
     }
     const onWheel = (e: WheelEvent) => {
-      const key = keyOf(e)
+      const key = groupOf(e)
       if (!key) return
       e.preventDefault()
       const step = (e.altKey ? 0.01 : 0.05) * (e.deltaY < 0 ? 1 : -1)
@@ -136,7 +138,7 @@ export function EditMode({ boardRev }: { boardRev: number }) {
       })
     }
     const onDblClick = (e: MouseEvent) => {
-      const key = keyOf(e)
+      const key = groupOf(e)
       if (!key) return
       e.preventDefault()
       setLayout((prev) => {
@@ -146,14 +148,15 @@ export function EditMode({ boardRev }: { boardRev: number }) {
       })
     }
 
-    // Capture phase so the sections' own content never swallows the events
+    // Capture phase so the elements' own content never swallows the events
     document.addEventListener('pointerdown', onPointerDown, true)
     document.addEventListener('pointermove', onPointerMove, true)
     document.addEventListener('pointerup', onPointerUp, true)
     document.addEventListener('wheel', onWheel, { capture: true, passive: false })
     document.addEventListener('dblclick', onDblClick, true)
     return () => {
-      for (const el of targets) el.classList.remove('edit-target')
+      document.body.classList.remove('edit-active')
+      delete document.body.dataset.editHover
       document.removeEventListener('pointerdown', onPointerDown, true)
       document.removeEventListener('pointermove', onPointerMove, true)
       document.removeEventListener('pointerup', onPointerUp, true)
@@ -162,8 +165,11 @@ export function EditMode({ boardRev }: { boardRev: number }) {
     }
   }, [])
 
-  const entries = Object.entries(layout)
-  const json = JSON.stringify(layout)
+  const adjusted = Object.fromEntries(
+    Object.entries(layout).filter(([, tr]) => tr.x !== 0 || tr.y !== 0 || tr.s !== 1),
+  )
+  const json = JSON.stringify(adjusted)
+  const hasAdjustments = Object.keys(adjusted).length > 0
 
   const copy = () => {
     void navigator.clipboard
@@ -178,7 +184,7 @@ export function EditMode({ boardRev }: { boardRev: number }) {
   }
 
   // The panel itself is draggable by its title so it can be moved off whatever
-  // section it happens to cover
+  // it happens to cover
   const dragPanel = (e: React.PointerEvent) => {
     e.preventDefault()
     const panel = (e.target as HTMLElement).closest<HTMLElement>('.edit-panel')
@@ -197,34 +203,36 @@ export function EditMode({ boardRev }: { boardRev: number }) {
   }
 
   return (
-    <>
-      <div className="edit-chips" aria-hidden="true">
-        {chips.map((chip) => (
-          <span key={chip.key} className="edit-chip" style={{ left: chip.x, top: chip.y }}>
-            {chip.key}
-          </span>
-        ))}
+    <aside
+      className="edit-panel"
+      style={panelPos ? { left: panelPos.x, top: panelPos.y, bottom: 'auto' } : undefined}
+    >
+      <div className="edit-panel-title" onPointerDown={dragPanel}>
+        {t('edit.title')}
       </div>
-      <aside
-        className="edit-panel"
-        style={panelPos ? { left: panelPos.x, top: panelPos.y, bottom: 'auto' } : undefined}
-      >
-      <div className="edit-panel-title" onPointerDown={dragPanel}>{t('edit.title')}</div>
+      <div className="edit-panel-hint">{t('edit.hintType')}</div>
       <div className="edit-panel-hint">{t('edit.hintMove')}</div>
       <div className="edit-panel-hint">{t('edit.hintScale')}</div>
       <div className="edit-panel-hint">{t('edit.hintReset')}</div>
-      {entries.length > 0 ? (
+      <div className="edit-panel-list">
+        {GROUPS.map(({ key }) => {
+          const tr = layout[key] ?? IDENTITY
+          const touched = tr.x !== 0 || tr.y !== 0 || tr.s !== 1
+          return (
+            <div
+              key={key}
+              className={`edit-panel-row${hovered === key ? ' edit-panel-row-hovered' : ''}`}
+            >
+              <span className="edit-panel-key">{key}</span>
+              <span className={`edit-panel-values${touched ? '' : ' edit-panel-values-idle'}`}>
+                {tr.x}, {tr.y} × {tr.s}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+      {hasAdjustments && (
         <>
-          <div className="edit-panel-list">
-            {entries.map(([key, tr]) => (
-              <div key={key} className="edit-panel-row">
-                <span className="edit-panel-key">{key}</span>
-                <span className="edit-panel-values">
-                  {tr.x}, {tr.y} × {tr.s}
-                </span>
-              </div>
-            ))}
-          </div>
           <textarea className="edit-panel-json" readOnly value={json} rows={3} />
           <div className="edit-panel-actions">
             <button type="button" onClick={copy}>
@@ -235,10 +243,7 @@ export function EditMode({ boardRev }: { boardRev: number }) {
             </button>
           </div>
         </>
-      ) : (
-        <div className="edit-panel-hint edit-panel-empty">{t('edit.empty')}</div>
       )}
-      </aside>
-    </>
+    </aside>
   )
 }

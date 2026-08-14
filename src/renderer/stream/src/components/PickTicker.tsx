@@ -49,7 +49,7 @@ export function PickTicker({ board }: { board: StreamBoardState }) {
   if (entries.length === 0) return null
 
   return (
-    <div className="pick-ticker" aria-label={t('panels.latestPicks')} data-edit-key="latest-picks">
+    <div className="pick-ticker" aria-label={t('panels.latestPicks')}>
       <span className="pick-ticker-label">{t('panels.latestPicks')}</span>
       {entries.map((entry) => (
         <span className="pick-ticker-entry" key={entry.key}>

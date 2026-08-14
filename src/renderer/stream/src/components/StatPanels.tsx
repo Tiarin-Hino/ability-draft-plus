@@ -37,7 +37,7 @@ export function StatPanels({ panels }: { panels: StreamPanels }) {
   const { t } = useTranslation()
   return (
     <aside className="panels" aria-label="Draft statistics">
-      <div className="panel" data-edit-key="top-winrate">
+      <div className="panel">
         <h2 className="panel-title">{t('panels.topWinrate')}</h2>
         <div className="panel-tiles">
           {panels.topWinrateInPool.map((slot, i) => (
@@ -54,7 +54,7 @@ export function StatPanels({ panels }: { panels: StreamPanels }) {
       </div>
 
       {panels.opCombos.length > 0 && (
-        <div className="panel panel-op" data-edit-key="op-combos">
+        <div className="panel panel-op">
           <h2 className="panel-title">{t('panels.opCombos')}</h2>
           {panels.opCombos.slice(0, COMBO_ROWS_SHOWN).map((combo, i) => (
             <ComboEntry key={i} combo={combo} />
@@ -63,7 +63,7 @@ export function StatPanels({ panels }: { panels: StreamPanels }) {
       )}
 
       {panels.trapCombos.length > 0 && (
-        <div className="panel panel-trap" data-edit-key="trap-combos">
+        <div className="panel panel-trap">
           <h2 className="panel-title">{t('panels.trapCombos')}</h2>
           {panels.trapCombos.slice(0, COMBO_ROWS_SHOWN).map((combo, i) => (
             <ComboEntry key={i} combo={combo} />

@@ -907,36 +907,29 @@ body:has(.bg-dark) {
   font-weight: 600;
 }
 
-/* ── ?edit=1 layout tuning mode (see EditMode.tsx) ────────────────────── */
-.edit-target {
-  position: relative;
-  outline: 1px dashed rgba(201, 163, 76, 0.5);
-  outline-offset: 2px;
+/* ── ?edit=1 layout tuning mode (see EditMode.tsx) ─────────────────────────
+   Editing targets element TYPES: hovering any instance highlights every
+   element of that type (body[data-edit-hover] is set by EditMode), and the
+   adjustment applies to the whole type via one injected stylesheet. */
+.edit-active .panel-tiles .top-winrate-entry,
+.edit-active .combo-entry,
+.edit-active .player-picks .tile,
+.edit-active .player-hero-line,
+.edit-active .player-name-line,
+.edit-active .pool-hero-mini,
+.edit-active .pool-board .tile {
   cursor: move;
   user-select: none;
 }
-.edit-target:hover {
+body[data-edit-hover='top-winrate-ability'] .panel-tiles .top-winrate-entry,
+body[data-edit-hover='combo-pair'] .combo-entry,
+body[data-edit-hover='card-ability'] .player-picks .tile,
+body[data-edit-hover='hero-name'] .player-hero-line,
+body[data-edit-hover='player-name'] .player-name-line,
+body[data-edit-hover='pool-hero'] .pool-hero-mini,
+body[data-edit-hover='pool-ability'] .pool-board .tile {
   outline: 2px solid var(--gold);
-}
-/* Section labels live in their own fixed layer — a ::before chip would merge
-   with sections that already use ::before (the pool board's pedestal glass) */
-.edit-chips {
-  position: fixed;
-  inset: 0;
-  z-index: 45;
-  pointer-events: none;
-}
-.edit-chip {
-  position: absolute;
-  padding: 0 0.3rem;
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: #0b0d11;
-  background: var(--gold);
-  border-radius: 0.2rem;
-  opacity: 0.85;
-  white-space: nowrap;
+  outline-offset: 1px;
 }
 
 .edit-panel {
@@ -984,9 +977,15 @@ body:has(.bg-dark) {
 .edit-panel-key {
   color: var(--gold);
 }
+.edit-panel-row-hovered .edit-panel-key {
+  color: var(--text);
+}
 .edit-panel-values {
   font-variant-numeric: tabular-nums;
   color: var(--text-dim);
+}
+.edit-panel-values-idle {
+  opacity: 0.4;
 }
 .edit-panel-json {
   width: 100%;
