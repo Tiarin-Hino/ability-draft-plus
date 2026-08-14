@@ -45,6 +45,9 @@ export interface MlService {
    * never be predicted. Omitted/empty → no masking.
    * @param heroOrders Rescan only: restrict the selected-abilities scan to
    * these player rows (targeted auto-rescan). Omitted → all rows.
+   * @param pickCandidateNames Rescan only: names the draft can actually
+   * contain (pool + picked), scoping pick-slot template matching. Omitted →
+   * match against every cached icon.
    */
   scan(
     screenshot: DecodedScreenshot,
@@ -52,6 +55,7 @@ export interface MlService {
     isInitialScan: boolean,
     activeClassNames?: string[],
     heroOrders?: number[],
+    pickCandidateNames?: string[],
   ): Promise<MlWorkerSuccessResponse>
   terminate(): Promise<void>
   isReady(): boolean
@@ -84,6 +88,12 @@ export function createMlService(): MlService {
       ? process.resourcesPath
       : join(app.getAppPath(), 'resources')
     return join(basePath, 'model', 'class_names.json')
+  }
+
+  // Official-icon cache written by icon-cache-service; the worker template-
+  // matches pick slots against it (falls back to the classifier when absent)
+  function getPickIconsDir(): string {
+    return join(app.getPath('userData'), 'stream-icons', 'abilities')
   }
 
   // @DEV-GUIDE: Single message router for all worker responses. Uses status field to distinguish
@@ -164,6 +174,7 @@ export function createMlService(): MlService {
           modelPath: getModelPath(),
           classNamesPath: getClassNamesPath(),
           useDirectML: false,
+          pickIconsDir: getPickIconsDir(),
         },
       }
       worker.postMessage(initMessage)
@@ -185,6 +196,7 @@ export function createMlService(): MlService {
     isInitialScan: boolean,
     activeClassNames?: string[],
     heroOrders?: number[],
+    pickCandidateNames?: string[],
   ): Promise<MlWorkerSuccessResponse> {
     if (!worker || !ready) {
       throw new Error('ML Worker not ready')
@@ -228,6 +240,7 @@ export function createMlService(): MlService {
           isInitialScan,
           activeClassNames,
           heroOrders,
+          pickCandidateNames,
         },
       }
 

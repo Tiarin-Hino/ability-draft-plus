@@ -12,7 +12,10 @@ import type { WindowManager } from './window-manager'
 import type { ScanProcessingService } from './scan-processing-service'
 import type { WindowTrackerService } from './window-tracker-service'
 import type { FeedbackService } from './feedback-service'
+import type { IconCacheService } from './icon-cache-service'
 import type { AppStore } from '../store/app-store'
+import type { StoreApi } from 'zustand/vanilla'
+import type { DraftStore } from '../store/draft-store'
 import type { ScanResult } from '@shared/types'
 import type { InitialScanResults } from '@shared/types/ml'
 
@@ -26,6 +29,10 @@ import type { InitialScanResults } from '@shared/types/ml'
 // guard (rejected scans leave state untouched) — the pipeline itself never touches
 // the user's mouse. performScan resolves after enrichment is fully dispatched, so
 // callers can read the updated DraftStore pool immediately after awaiting it.
+// Pick-slot template matching support: rescans pass the draft's candidate names
+// (pool + picked, from DraftStore) to scope icon matching, and each initial scan
+// prefetches the pool's official icons so the worker's template set is warm
+// before the first pick — independent of the streamer view.
 
 const logger = log.scope('scan-trigger')
 
@@ -51,7 +58,28 @@ export function createScanTriggerService(
   windowTracker: WindowTrackerService,
   feedbackService: FeedbackService,
   dbService: DatabaseService,
+  draftStore: StoreApi<DraftStore>,
+  iconCache: IconCacheService,
 ): ScanTriggerService {
+  // Pick-slot template-matching candidates: the draft can only contain the
+  // initial pool plus names already picked (the pool cache removes picked
+  // names, so the union reconstructs the original 48). Empty before the first
+  // initial scan → the worker matches against every cached icon instead.
+  function getPickCandidateNames(): string[] {
+    const state = draftStore.getState()
+    const names = new Set<string>()
+    for (const slot of state.initialPoolAbilitiesCache.ultimates) {
+      if (slot.name) names.add(slot.name)
+    }
+    for (const slot of state.initialPoolAbilitiesCache.standard) {
+      if (slot.name) names.add(slot.name)
+    }
+    for (const slot of state.selectedAbilitiesCache) {
+      if (slot.name) names.add(slot.name)
+    }
+    return [...names]
+  }
+
   return {
     async performScan(isInitialScan, options): Promise<void> {
       try {
@@ -161,6 +189,7 @@ export function createScanTriggerService(
           isInitialScan,
           dbService.abilities.getAllNames(),
           isInitialScan ? undefined : options?.heroOrders,
+          isInitialScan ? undefined : getPickCandidateNames(),
         )
 
         appStore.setState({ mlStatus: 'ready' })
@@ -197,6 +226,21 @@ export function createScanTriggerService(
             tile: new Uint8Array(t.tile),
           })),
         )
+
+        // Warm the icon cache for the recognized pool so pick-slot template
+        // matching has its candidates before the first pick lands — even with
+        // the streamer view (the cache's other consumer) turned off.
+        // Fire-and-forget: rescans fall back to the classifier until icons land.
+        if (isInitialScan) {
+          const poolNames = getPickCandidateNames()
+          if (poolNames.length > 0) {
+            void iconCache.prefetchAbilities(poolNames).catch((error) => {
+              logger.warn('Pool icon prefetch failed', {
+                error: error instanceof Error ? error.message : String(error),
+              })
+            })
+          }
+        }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
         logger.error('Scan failed', { error: message })

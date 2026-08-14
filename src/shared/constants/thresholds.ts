@@ -8,6 +8,28 @@ export const ML_CONFIDENCE_THRESHOLD = 0.9
 export const ML_CLASS_THRESHOLD_OVERRIDES: Readonly<Record<string, number>> = {
   crystal_maiden_crystal_nova: 0.5,
 }
+// Picked-slot recognition via template matching against official CDN icons
+// (core/ml/template-matcher.ts). Pick boxes render the icon FLAT (unlike the
+// skewed pool slots), so a normalized-cross-correlation match against the
+// stream-icons cache beats the classifier there: on a real 40-slot board the
+// classifier missed 3 picks and confidently misread a 4th; template matching
+// went 40/40 (2026-08-14, sample-2026-08-13T23-08-21-287Z).
+export const PICK_TEMPLATE_COMPARE_SIZE = 48
+// Pick boxes have a border ring + rounded corners the model/icons never saw;
+// insetting the crop by ~8% of the slot width (6px at 1440p's 73px) removes
+// them. Measured: shadowraze2 NCC 0.773 inset vs argmax LOST without inset.
+export const PICK_TEMPLATE_CROP_INSET_RATIO = 0.08
+// Acceptance: best NCC at or above MIN_NCC and ahead of the runner-up by
+// MIN_MARGIN, else the slot renders Unknown. Correct matches measured
+// 0.518-0.924 NCC with a +0.026 worst-case margin against all 539 icons;
+// margins widen when candidates are scoped to the scanned pool.
+export const PICK_TEMPLATE_MIN_NCC = 0.45
+export const PICK_TEMPLATE_MIN_MARGIN = 0.02
+// An empty pick box is near-uniform dark pixels: measured std 0.8 vs 54+ for
+// any real icon. Detected before matching — empties never reach the matcher
+// (the classifier used to argmax tusk_snowball 0.33-0.52 on them).
+export const PICK_TEMPLATE_EMPTY_STD = 5
+
 export const ML_MODEL_INIT_TIMEOUT = 30_000
 export const ML_PREDICTION_TIMEOUT = 10_000
 export const ML_WORKER_MAX_RESTART_ATTEMPTS = 3
