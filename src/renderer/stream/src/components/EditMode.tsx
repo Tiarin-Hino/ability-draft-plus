@@ -43,6 +43,34 @@ interface GroupDef {
   gaps?: GapDef[]
 }
 
+/** Pool ability tiles are tuned as MIRRORED PAIRS, decoupled from each other:
+ * every tile pairs only with its geometric twin on the opposite side, so
+ * position and size can roam freely per pair while the board stays symmetric.
+ * Standard rows: half-row children are [portrait, t1, t2, t3] on the left and
+ * [t1, t2, t3, portrait] on the right, so pair c (1 = outermost) is left
+ * nth-child(1+c) vs right nth-child(4-c). Ultimate rows are 6 tiles wide, so
+ * pair c is nth-child(c) vs nth-child(7-c). */
+function poolPairGroups(): GroupDef[] {
+  const groups: GroupDef[] = []
+  for (let r = 1; r <= 6; r++) {
+    for (let c = 1; c <= 3; c++) {
+      const row = `.pool-standard .pool-std-row:nth-child(${r})`
+      const left = `${row} .pool-half-left .tile:nth-child(${1 + c})`
+      const right = `${row} .pool-half-right .tile:nth-child(${4 - c})`
+      groups.push({ key: `pool-std-r${r}-c${c}`, selector: `${left}, ${right}`, left, right })
+    }
+  }
+  for (let r = 1; r <= 2; r++) {
+    for (let c = 1; c <= 3; c++) {
+      const row = `.pool-ultimates .pool-ult-row:nth-child(${r})`
+      const left = `${row} .tile:nth-child(${c})`
+      const right = `${row} .tile:nth-child(${7 - c})`
+      groups.push({ key: `pool-ult-r${r}-c${c}`, selector: `${left}, ${right}`, left, right })
+    }
+  }
+  return groups
+}
+
 /** The tunable element types. Order matters: the first selector that contains
  * the event target wins, so more specific contexts must precede generic ones. */
 const GROUPS: GroupDef[] = [
@@ -77,17 +105,10 @@ const GROUPS: GroupDef[] = [
     left: '.pool-half-left .pool-hero-mini',
     right: '.pool-half-right .pool-hero-mini',
   },
-  {
-    key: 'pool-ability',
-    selector: '.pool-board .tile',
-    left: '.pool-half-left .tile, .pool-ult-row .tile:nth-child(-n + 3)',
-    right: '.pool-half-right .tile, .pool-ult-row .tile:nth-child(n + 4)',
-    gaps: [
-      { selector: '.pool-half-row', baseGap: 0.45, baseSize: 4.1 },
-      { selector: '.pool-ult-row', baseGap: 0.55, baseSize: 4.75 },
-    ],
-  },
+  ...poolPairGroups(),
 ]
+
+const KNOWN_KEYS = new Set(GROUPS.map((g) => g.key))
 
 const STORAGE_KEY = 'adplus-stream-layout'
 const STYLE_ID = 'edit-layout-style'
@@ -153,6 +174,16 @@ export function EditMode() {
 
   useEffect(() => {
     document.body.classList.add('edit-active')
+
+    // Hover highlighting for every group (incl. the generated pool pairs) —
+    // one rule per group keyed off body[data-edit-hover]
+    const hoverStyle = document.createElement('style')
+    hoverStyle.id = 'edit-hover-style'
+    hoverStyle.textContent = GROUPS.map(
+      (g) =>
+        `body[data-edit-hover='${g.key}'] :is(${g.selector}) { outline: 2px solid var(--gold); outline-offset: 1px; }`,
+    ).join('\n')
+    document.head.appendChild(hoverStyle)
 
     const groupOf = (e: Event): GroupDef | null => {
       const el = e.target as HTMLElement
@@ -244,6 +275,7 @@ export function EditMode() {
     return () => {
       document.body.classList.remove('edit-active')
       delete document.body.dataset.editHover
+      hoverStyle.remove()
       document.removeEventListener('pointerdown', onPointerDown, true)
       document.removeEventListener('pointermove', onPointerMove, true)
       document.removeEventListener('pointerup', onPointerUp, true)
@@ -253,7 +285,9 @@ export function EditMode() {
   }, [])
 
   const adjusted = Object.fromEntries(
-    Object.entries(layout).filter(([, tr]) => tr.x !== 0 || tr.y !== 0 || tr.s !== 1),
+    Object.entries(layout).filter(
+      ([key, tr]) => KNOWN_KEYS.has(key) && (tr.x !== 0 || tr.y !== 0 || tr.s !== 1),
+    ),
   )
   const json = JSON.stringify(adjusted)
   const hasAdjustments = Object.keys(adjusted).length > 0
@@ -302,22 +336,26 @@ export function EditMode() {
       <div className="edit-panel-hint">{t('edit.hintMove')}</div>
       <div className="edit-panel-hint">{t('edit.hintScale')}</div>
       <div className="edit-panel-hint">{t('edit.hintReset')}</div>
+      {/* 30 groups (24 of them pool pairs) would flood a full list: show the
+          hovered group live, plus only the touched entries */}
       <div className="edit-panel-list">
-        {GROUPS.map(({ key }) => {
-          const tr = layout[key] ?? IDENTITY
-          const touched = tr.x !== 0 || tr.y !== 0 || tr.s !== 1
-          return (
-            <div
-              key={key}
-              className={`edit-panel-row${hovered === key ? ' edit-panel-row-hovered' : ''}`}
-            >
-              <span className="edit-panel-key">{key}</span>
-              <span className={`edit-panel-values${touched ? '' : ' edit-panel-values-idle'}`}>
-                {tr.x}, {tr.y} × {tr.s}
-              </span>
-            </div>
-          )
-        })}
+        <div className="edit-panel-row edit-panel-row-hovered">
+          <span className="edit-panel-key">{hovered ?? '—'}</span>
+          {hovered && (
+            <span className="edit-panel-values">
+              {(layout[hovered] ?? IDENTITY).x}, {(layout[hovered] ?? IDENTITY).y} ×{' '}
+              {(layout[hovered] ?? IDENTITY).s}
+            </span>
+          )}
+        </div>
+        {Object.entries(adjusted).map(([key, tr]) => (
+          <div key={key} className="edit-panel-row">
+            <span className="edit-panel-key">{key}</span>
+            <span className="edit-panel-values">
+              {tr.x}, {tr.y} × {tr.s}
+            </span>
+          </div>
+        ))}
       </div>
       {hasAdjustments && (
         <>

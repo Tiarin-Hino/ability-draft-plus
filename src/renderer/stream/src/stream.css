@@ -921,16 +921,8 @@ body:has(.bg-dark) {
   cursor: move;
   user-select: none;
 }
-body[data-edit-hover='top-winrate-ability'] .panel-tiles .top-winrate-entry,
-body[data-edit-hover='combo-pair'] .combo-entry,
-body[data-edit-hover='card-ability'] .player-picks .tile,
-body[data-edit-hover='hero-name'] .player-hero-line,
-body[data-edit-hover='player-name'] .player-name-line,
-body[data-edit-hover='pool-hero'] .pool-hero-mini,
-body[data-edit-hover='pool-ability'] .pool-board .tile {
-  outline: 2px solid var(--gold);
-  outline-offset: 1px;
-}
+/* Hover highlighting is injected by EditMode (one rule per group, including
+   the 24 generated pool mirror-pairs) — see edit-hover-style */
 
 .edit-panel {
   position: fixed;
