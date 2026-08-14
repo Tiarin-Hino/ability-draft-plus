@@ -156,7 +156,7 @@ export function mirrorElementsToRight(
 
   const offset = heroOrderOffset[elementType]
 
-  return leftElements.map((elem) => {
+  const mirrored = leftElements.map((elem) => {
     const width = options.hasDimensions ? elem.width : (options.elementWidth ?? 0)
     const height = options.hasDimensions ? elem.height : (options.elementHeight ?? 0)
 
@@ -182,6 +182,28 @@ export function mirrorElementsToRight(
 
     return result
   })
+
+  if (elementType !== 'selected_abilities') return mirrored
+
+  // Pick rows are NOT mirrored in-game (only the pool is): each player's boxes
+  // still run left-to-right with the ultimate box RIGHTMOST. Mirroring reversed
+  // the visual order, so restore screen order per player and re-derive the flag
+  // (the convention every preset follows; see validation.test.ts).
+  const byPlayer = new Map<number, SlotCoordinate[]>()
+  for (const coord of mirrored) {
+    const group = byPlayer.get(coord.hero_order) ?? []
+    group.push(coord)
+    byPlayer.set(coord.hero_order, group)
+  }
+  const normalized: SlotCoordinate[] = []
+  for (const group of byPlayer.values()) {
+    group.sort((a, b) => a.x - b.x)
+    group.forEach((coord, i) => {
+      coord.is_ultimate = i === group.length - 1
+    })
+    normalized.push(...group)
+  }
+  return normalized
 }
 
 /**

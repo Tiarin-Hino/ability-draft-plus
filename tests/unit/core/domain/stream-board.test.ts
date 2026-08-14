@@ -285,18 +285,20 @@ describe('buildStreamBoardState', () => {
     expect(state.players[1].draftScore).toBeNull()
   })
 
-  it('places a picked ultimate in box 3 and standard picks in boxes 0-2', () => {
+  it('normalizes pick boxes: standard picks fill 0-2, the ultimate sits in box 3', () => {
     const latest = makeInitialPayload()
     const scanData = latest.scanData
     if (!scanData) throw new Error('fixture has scanData')
+    // Dire row in preset order: screen-order boxes with the ultimate flagged last
     scanData.selectedAbilities = [
-      makeSlot('hero3_ult', 4, 0, true),
-      makeSlot('pudge_rot', 4, 0, false),
-      makeSlot('hero1_slot1', 4, 0, false),
+      makeSlot('pudge_rot', 7, 0, false),
+      makeSlot('hero1_slot1', 7, 0, false),
+      makeSlot(null, 7, 0, false),
+      makeSlot('hero3_ult', 7, 0, true),
     ]
 
     const state = buildStreamBoardState(makeInput({ latestPayload: latest }))
-    expect(state.players[4].picks.map((p) => p?.name ?? null)).toEqual([
+    expect(state.players[7].picks.map((p) => p?.name ?? null)).toEqual([
       'pudge_rot',
       'hero1_slot1',
       null,

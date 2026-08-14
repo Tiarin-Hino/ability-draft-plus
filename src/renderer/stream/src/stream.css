@@ -9,6 +9,51 @@
   box-sizing: border-box;
 }
 
+/* Custom fonts built from design/fonts/ sheets by scripts/build-stream-fonts.mjs.
+   Display: chiseled caps (A-Z, 0-9, basic punctuation) for headings — ONLY safe
+   on uppercase(d) text; there is no lowercase, and non-Latin glyphs (RU locale,
+   player names) fall back to the system stack per glyph.
+   Score: condensed tabular digits + %:.- for winrates, scores, and the clock. */
+@font-face {
+  font-family: 'ADPlus Display';
+  src: url('./assets/fonts/adplus-display.otf') format('opentype');
+  font-display: block;
+}
+@font-face {
+  font-family: 'ADPlus Score';
+  src: url('./assets/fonts/adplus-score.otf') format('opentype');
+  font-display: block;
+}
+
+:root {
+  --font-display: 'ADPlus Display', 'Trebuchet MS', serif;
+  --font-score: 'ADPlus Score', 'Segoe UI', sans-serif;
+}
+
+/* Display face on every all-caps heading element */
+.top-bar-wordmark,
+.top-bar-title,
+.waiting-wordmark,
+.pool-section-title,
+.team-title,
+.player-hero-line,
+.panel-title,
+.pick-ticker-label,
+.demo-badge,
+.reserved-zone {
+  font-family: var(--font-display);
+}
+
+/* Score face on every numeric readout */
+.tile-winrate,
+.player-score,
+.team-score,
+.clock-chip,
+.avg-pick,
+.combo-winrate {
+  font-family: var(--font-score);
+}
+
 :root {
   /* Palette: Dota-adjacent graphite + team identities */
   --bg-deep: #0b0d11;
@@ -47,6 +92,11 @@ body,
   overflow: hidden;
 }
 
+/* Flex so the letterboxed .board's margin:auto centers it both ways */
+#root {
+  display: flex;
+}
+
 .board {
   position: relative;
   /* Establishes a stacking context so the negative-z .board-art layer paints
@@ -55,9 +105,21 @@ body,
   z-index: 0;
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  /* The layout is designed for 16:9. On wider/taller canvases, letterbox to
+     those proportions and center — stretching the flex layout across an
+     ultrawide canvas spreads the board thin while type keeps scaling by
+     height, which made everything look tiny. */
+  width: min(100vw, calc(100vh * 16 / 9));
+  height: min(100vh, calc(100vw * 9 / 16));
+  margin: auto;
   padding: 0.75rem 1rem 0.9rem;
   gap: 0.7rem;
+}
+
+/* Fill the pillar/letterbox areas outside the 16:9 board in dark mode (the
+   transparent/chroma modes must keep the page background untouched for OBS) */
+body:has(.bg-dark) {
+  background: var(--bg-deep);
 }
 
 /* Bundled broadcast art behind the UI (paints above .board's own background,
@@ -142,15 +204,25 @@ body,
 
 /* ── Top bar ──────────────────────────────────────────────────────────── */
 .top-bar {
-  display: flex;
+  /* 1fr auto 1fr so the clock sits at the TRUE center of the bar regardless
+     of how wide the brand (left) and reserved zone (right) are */
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 1.25rem;
   height: 3.2rem;
   padding: 0 1.1rem;
   background: var(--panel);
   border: 1px solid var(--panel-border);
+  /* Double gold hairline, broadcast-frame style */
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.4),
+    inset 0 0 0 2px rgba(201, 163, 76, 0.22);
   border-radius: 0.55rem;
   flex-shrink: 0;
+  /* The clock medallion hangs below the bar and must paint over the board */
+  position: relative;
+  z-index: 5;
 }
 
 .top-bar-brand {
@@ -158,6 +230,7 @@ body,
   align-items: center;
   gap: 0.9rem;
   min-width: 0;
+  justify-self: start;
 }
 
 .top-bar-logo {
@@ -187,21 +260,40 @@ body,
 }
 
 .top-bar-center {
-  flex: 1;
   display: flex;
+  align-items: center;
   justify-content: center;
+  gap: 0.7rem;
 }
 
-.clock-chip {
-  padding: 0.15rem 0.85rem;
-  background: rgba(0, 0, 0, 0.45);
-  border: 1px solid var(--panel-border);
-  border-radius: 0.35rem;
-  font-size: 1.05rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.08em;
+/* Gold laurel medallion (design/ui/clock-medallion.png) hanging through the
+   bar's bottom edge; the sprite is ~359x384 with the ring's center around 43%
+   of its height, so the time is anchored there, not at the box center. The
+   bar needs z-index so the hanging part paints over the board below. */
+.clock-medallion {
+  width: 3.7rem;
+  height: 3.96rem;
+  margin-bottom: -1.6rem;
+  transform: translateY(-0.25rem);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: top center;
+  position: relative;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.6));
 }
+.clock-time {
+  position: absolute;
+  top: 43%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: var(--font-score);
+  font-size: 0.98rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--gold);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
 
 .demo-badge {
   align-self: center;
@@ -227,6 +319,7 @@ body,
 .reserved-top {
   width: 16rem;
   height: 2.2rem;
+  justify-self: end;
 }
 .reserved-bottom {
   width: 22rem;
@@ -304,7 +397,7 @@ body,
   align-items: center;
   gap: 0.8rem;
   color: var(--gold);
-  font-size: 0.78rem;
+  font-size: 0.92rem;
   font-weight: 700;
   letter-spacing: 0.28em;
   text-transform: uppercase;
@@ -322,13 +415,13 @@ body,
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.45rem;
+  gap: 1rem;
   padding: 0.25rem 0 0.5rem;
 }
 
 .pool-ult-row {
   display: flex;
-  gap: 0.55rem;
+  gap: 1.15rem;
 }
 
 .pool-standard {
@@ -350,18 +443,18 @@ body,
 .pool-half-row {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 1.15rem;
 }
 
 .pool-row-divider {
-  width: 3.2rem;
+  width: 2.15rem;
   flex-shrink: 0;
 }
 
 .pool-hero-mini {
   /* Valve hero art is 16:9 — keep the aspect so faces aren't cropped */
-  width: 3.9rem;
-  height: 2.2rem;
+  width: 6.3rem;
+  height: 3.55rem;
   border-radius: 0.3rem;
   overflow: hidden;
   border: 1px solid var(--bezel);
@@ -400,31 +493,32 @@ body,
   );
 }
 
-/* ── Tiles (kept from the original board: winrate badge, gold top-tier,
-      grey picked, amber unknown) with a stone-bezel frame like the game ── */
+/* ── Tiles: carved stone-and-gold frames cut from design/ui/tile-frames.png
+      (border-image keeps only the frame ring; the icon fills the content box).
+      States swap the frame source: gold glow top-tier, silvered picked, ember
+      unknown, engraved-emblem empty. ── */
 .tile {
   position: relative;
-  width: 3.55rem;
-  height: 3.55rem;
-  border-radius: 0.3rem;
+  width: 4.9rem;
+  height: 4.9rem;
   background: var(--bezel-dark);
-  border: 2px solid var(--bezel);
-  box-shadow:
-    inset 0 0 0 1px rgba(0, 0, 0, 0.7),
-    0 2px 5px rgba(0, 0, 0, 0.5);
+  border: 0.38rem solid transparent;
+  border-image: url('./assets/ui/tile-frame-normal.png') 84 stretch;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
   overflow: hidden;
   flex-shrink: 0;
 }
 
 .tile-large {
-  width: 4.15rem;
-  height: 4.15rem;
+  width: 5.2rem;
+  height: 5.2rem;
+  border-width: 0.44rem;
 }
 
 .tile-small {
-  width: 2.7rem;
-  height: 2.7rem;
-  border-width: 1px;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-width: 0.32rem;
 }
 
 .tile-icon {
@@ -445,44 +539,63 @@ body,
   color: var(--text-dim);
 }
 
+/* Full-width bottom band (a corner nub was illegible at small tile sizes) */
 .tile-winrate {
   position: absolute;
   bottom: 0;
+  left: 0;
   right: 0;
-  padding: 0 0.22rem;
-  font-size: 0.6rem;
+  text-align: center;
+  padding: 0.05rem 0 0.02rem;
+  font-size: 0.85rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  background: rgba(0, 0, 0, 0.78);
-  border-top-left-radius: 0.25rem;
+  background: rgba(0, 0, 0, 0.82);
   color: var(--text);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
 }
 
 .tile-small .tile-winrate {
-  font-size: 0.53rem;
+  font-size: 0.74rem;
 }
 
 .tile-top-tier {
-  border-color: var(--gold);
-  box-shadow:
-    inset 0 0 0 1px rgba(0, 0, 0, 0.7),
-    0 0 9px rgba(201, 163, 76, 0.45);
+  border-image-source: url('./assets/ui/tile-frame-toptier.png');
+  box-shadow: 0 0 9px rgba(201, 163, 76, 0.45);
 }
 
 .tile-unknown {
-  border-color: var(--unknown);
-  border-style: dashed;
+  border-image-source: url('./assets/ui/tile-frame-unknown.png');
 }
 
 .tile-picked {
+  border-image-source: url('./assets/ui/tile-frame-picked.png');
   opacity: var(--picked-opacity);
   filter: grayscale(1);
 }
 
+/* Empty slot: the full engraved-emblem frame art as background (no icon to
+   make room for), plus a faint team sigil watermark inside team columns */
 .tile-empty {
-  background: rgba(20, 24, 31, 0.55);
-  border: 1px dashed rgba(255, 255, 255, 0.13);
+  border: 0;
+  border-image: none;
+  background:
+    url('./assets/ui/tile-frame-empty.png') center / 100% 100% no-repeat,
+    rgba(20, 24, 31, 0.55);
   box-shadow: none;
+}
+.tile-empty::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: center / 46% no-repeat;
+  opacity: 0.2;
+}
+.team-radiant .tile-empty::after {
+  background-image: url('./assets/ui/sigil-radiant.png');
+}
+.team-dire .tile-empty::after {
+  background-image: url('./assets/ui/sigil-dire.png');
 }
 
 /* ── Team columns ─────────────────────────────────────────────────────── */
@@ -516,28 +629,41 @@ body,
 }
 
 /* With banner art: box-less — the banner IS the header, name tucked under its
-   long tail beside the gem head */
+   long tail beside the gem head. FIXED height so the radiant and dire columns
+   start their player cards at exactly the same y (the two banner images have
+   different aspect ratios — natural-height rendering desynced the columns). */
 .team-header.has-cap {
   display: block;
-  height: auto;
+  height: 4.8rem;
   padding: 0;
   border: none !important;
   border-radius: 0;
   background: none !important;
 }
 
-/* Banner art shown WHOLE at natural aspect across the full column width */
+/* Banner art shown WHOLE (contain) inside the fixed header box, anchored to
+   the column's outer edge so the gem head stays flush with the screen edge */
 .team-cap {
-  display: block;
+  position: absolute;
+  inset: 0;
   width: 100%;
-  height: auto;
+  height: 100%;
+  object-fit: contain;
+}
+.team-radiant .team-cap {
+  object-position: left top;
+}
+.team-dire .team-cap {
+  object-position: right top;
 }
 
 /* Tuck the name row under the banner's long tail: the gem head fills the
    outer ~28% of the art, the tail's lower edge sits around 65% height */
 .has-cap .team-heading {
-  margin-top: -1.9rem;
-  padding-bottom: 0.15rem;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0.15rem;
 }
 .team-radiant .team-header.has-cap .team-heading {
   padding-left: 30%;
@@ -564,7 +690,7 @@ body,
 }
 
 .team-title {
-  font-size: 0.95rem;
+  font-size: 1.08rem;
   font-weight: 700;
   letter-spacing: 0.22em;
   text-transform: uppercase;
@@ -645,10 +771,12 @@ body,
   align-items: flex-end;
 }
 
+/* Mockup-derived hierarchy: gold hero name over a BIG white player name,
+   stagger-indented from the card's outer edge (tuned via ?edit=1) */
 .player-hero-line {
-  font-size: 0.82rem;
+  font-size: 1.02rem;
   font-weight: 800;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -656,11 +784,8 @@ body,
   max-width: 100%;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
-.team-accent-radiant .player-hero-line {
-  color: var(--radiant);
-}
-.team-accent-dire .player-hero-line {
-  color: var(--dire);
+.player-hero-line {
+  color: var(--gold);
 }
 
 .player-name-line {
@@ -672,13 +797,30 @@ body,
 }
 
 .player-name {
-  font-size: 0.92rem;
-  font-weight: 600;
+  font-size: 1.38rem;
+  font-weight: 700;
   color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+/* No model picked yet: a faint team crest fills the art side of the card */
+.player-card-vacant::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: center right 0.6rem / auto 78% no-repeat;
+  opacity: 0.14;
+}
+.team-accent-radiant.player-card-vacant::before {
+  background-image: url('./assets/ui/crest-radiant.png');
+}
+.team-accent-dire.player-card-vacant::before {
+  background-image: url('./assets/ui/crest-dire.png');
+  background-position: center left 0.6rem;
 }
 
 /* Gold score medallion pinned to the card's outer edge */
@@ -716,6 +858,26 @@ body,
 .player-picks {
   display: flex;
   gap: 0.32rem;
+  margin-top: 0.35rem;
+}
+.team-accent-radiant .player-picks {
+  margin-left: 0.25rem;
+}
+.team-accent-dire .player-picks {
+  margin-right: 0.25rem;
+}
+/* Stagger indents from the card's outer edge (mirrored) */
+.team-accent-radiant .player-hero-line {
+  margin-left: 2.75rem;
+}
+.team-accent-dire .player-hero-line {
+  margin-right: 2.75rem;
+}
+.team-accent-radiant .player-name-line {
+  margin-left: 1.25rem;
+}
+.team-accent-dire .player-name-line {
+  margin-right: 1.25rem;
 }
 
 /* ── Latest-picks ticker (only when the pick feed exists) ─────────────── */
@@ -733,7 +895,7 @@ body,
   overflow: hidden;
 }
 .pick-ticker-label {
-  font-size: 0.68rem;
+  font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 0.22em;
   text-transform: uppercase;
@@ -754,7 +916,7 @@ body,
   border: 1px solid var(--bezel);
 }
 .pick-ticker-player {
-  font-size: 0.78rem;
+  font-size: 0.88rem;
   color: var(--text-dim);
 }
 .pick-ticker-arrow {
@@ -762,8 +924,112 @@ body,
   font-weight: 700;
 }
 .pick-ticker-ability {
-  font-size: 0.78rem;
+  font-size: 0.88rem;
   font-weight: 600;
+}
+
+/* ── ?edit=1 layout tuning mode (see EditMode.tsx) ─────────────────────────
+   Editing targets element TYPES: hovering any instance highlights every
+   element of that type (body[data-edit-hover] is set by EditMode), and the
+   adjustment applies to the whole type via one injected stylesheet. */
+.edit-active .panel-tiles .top-winrate-entry,
+.edit-active .combo-entry,
+.edit-active .player-picks .tile,
+.edit-active .player-hero-line,
+.edit-active .player-name-line,
+.edit-active .pool-hero-mini,
+.edit-active .pool-board .tile {
+  cursor: move;
+  user-select: none;
+}
+/* Hover highlighting is injected by EditMode (one rule per group, including
+   the 24 generated pool mirror-pairs) — see edit-hover-style */
+
+.edit-panel {
+  position: fixed;
+  left: 0.8rem;
+  bottom: 0.8rem;
+  z-index: 60;
+  width: 17rem;
+  padding: 0.6rem 0.75rem;
+  background: rgba(10, 12, 16, 0.95);
+  border: 1px solid var(--gold-soft);
+  border-radius: 0.45rem;
+  font-size: 0.72rem;
+  color: var(--text);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+}
+.edit-panel-title {
+  font-family: var(--font-display);
+  color: var(--gold);
+  font-size: 0.8rem;
+  letter-spacing: 0.2em;
+  margin-bottom: 0.35rem;
+  cursor: grab;
+  user-select: none;
+}
+.edit-panel-hint {
+  color: var(--text-dim);
+  font-size: 0.66rem;
+  line-height: 1.4;
+}
+.edit-panel-empty {
+  margin-top: 0.3rem;
+}
+.edit-panel-list {
+  margin: 0.4rem 0 0.3rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 0.3rem;
+}
+.edit-panel-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.08rem 0;
+}
+.edit-panel-key {
+  color: var(--gold);
+}
+.edit-panel-row-hovered .edit-panel-key {
+  color: var(--text);
+}
+.edit-panel-values {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+}
+.edit-panel-values-idle {
+  opacity: 0.4;
+}
+.edit-panel-json {
+  width: 100%;
+  resize: none;
+  background: rgba(0, 0, 0, 0.5);
+  color: var(--text-dim);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.25rem;
+  font-size: 0.6rem;
+  font-family: monospace;
+  padding: 0.25rem;
+  margin-bottom: 0.35rem;
+}
+.edit-panel-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+.edit-panel-actions button {
+  flex: 1;
+  padding: 0.25rem 0;
+  background: rgba(201, 163, 76, 0.15);
+  color: var(--gold);
+  border: 1px solid var(--gold-soft);
+  border-radius: 0.3rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+.edit-panel-actions button:hover {
+  background: rgba(201, 163, 76, 0.3);
 }
 
 /* ── Bottom stat strip ────────────────────────────────────────────────── */
@@ -792,7 +1058,7 @@ body,
 }
 
 .panel-title {
-  font-size: 0.72rem;
+  font-size: 0.82rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.18em;
@@ -810,6 +1076,16 @@ body,
   display: flex;
   flex-wrap: wrap;
   gap: 0.45rem;
+  margin-top: 0.55rem;
+}
+/* Top-winrate tiles run larger than the other small tiles (tuned 1.3x) */
+.panel-tiles .tile {
+  width: 4rem;
+  height: 4rem;
+  border-width: 0.36rem;
+}
+.panel-tiles .tile-winrate {
+  font-size: 0.9rem;
 }
 
 .top-winrate-entry {
@@ -820,7 +1096,7 @@ body,
 }
 
 .avg-pick {
-  font-size: 0.6rem;
+  font-size: 0.88rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--text-dim);
@@ -867,14 +1143,14 @@ body,
 }
 
 .combo-name {
-  font-size: 0.72rem;
+  font-size: 0.82rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .combo-winrate {
-  font-size: 0.85rem;
+  font-size: 0.98rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;

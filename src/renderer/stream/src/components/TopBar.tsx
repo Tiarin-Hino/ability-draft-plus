@@ -3,11 +3,12 @@ import { useTranslation } from 'react-i18next'
 import type { StreamGsiInfo } from '@shared/types/stream'
 import { apiBase } from '../hooks/use-stream-state'
 import type { StreamConnectionState } from '../hooks/use-stream-state'
+import medallionUrl from '../assets/ui/clock-medallion.png'
 
 // @DEV-GUIDE: Broadcast top bar: ABILITY DRAFT wordmark + optional tournament title
-// (?title= query param), a phase/clock chip fed by GSI, and the connection dot.
-// The right side is intentionally EMPTY — a reserved zone where productions stack
-// their own OBS sources (sponsor logos, series score). ?demo=1 outlines it.
+// (?title= query param), the gold medallion draft clock (GSI), and the connection
+// dot. The right side is intentionally EMPTY — a reserved zone where productions
+// stack their own OBS sources (sponsor logos, series score). ?demo=1 outlines it.
 
 function formatClock(clockTime: number | null): string | null {
   if (clockTime === null) return null
@@ -56,7 +57,14 @@ export function TopBar({
       </div>
 
       <div className="top-bar-center">
-        {gsi.connected && clock && <span className="clock-chip">{clock}</span>}
+        {gsi.connected && clock && (
+          <div
+            className="clock-medallion"
+            style={{ backgroundImage: `url(${medallionUrl})` }}
+          >
+            <span className="clock-time">{clock}</span>
+          </div>
+        )}
       </div>
 
       <div className={`reserved-zone reserved-top${demo ? ' reserved-visible' : ''}`}>

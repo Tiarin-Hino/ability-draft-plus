@@ -148,11 +148,17 @@ describe('mirrorElementsToRight', () => {
     expect(rightModels[0].hero_order).toBe(11)
   })
 
-  it('preserves ability_order and is_ultimate', () => {
-    const leftSlots = [
-      { x: 216, y: 237, width: 0, height: 0, hero_order: 0, is_ultimate: false },
-      { x: 398, y: 237, width: 0, height: 0, hero_order: 0, is_ultimate: true },
-    ]
+  it('keeps mirrored pick rows in screen order with the ultimate box rightmost', () => {
+    // Pick rows are NOT mirrored in-game: after mirroring the positions, each
+    // player's boxes must still ascend left-to-right with the ultimate last
+    const leftSlots = [216, 277, 338, 398].map((x, i) => ({
+      x,
+      y: 237,
+      width: 0,
+      height: 0,
+      hero_order: 0,
+      is_ultimate: i === 3,
+    }))
 
     const rightSlots = mirrorElementsToRight(leftSlots, 1920, 'selected_abilities', {
       hasDimensions: false,
@@ -160,8 +166,12 @@ describe('mirrorElementsToRight', () => {
       elementHeight: 55,
     })
 
-    expect(rightSlots[0].is_ultimate).toBe(false)
-    expect(rightSlots[1].is_ultimate).toBe(true)
+    expect(rightSlots).toHaveLength(4)
+    expect(rightSlots.every((s) => s.hero_order === 5)).toBe(true)
+    for (let i = 1; i < rightSlots.length; i++) {
+      expect(rightSlots[i].x).toBeGreaterThan(rightSlots[i - 1].x)
+    }
+    expect(rightSlots.map((s) => s.is_ultimate)).toEqual([false, false, false, true])
   })
 })
 

@@ -31,7 +31,9 @@ function PlayerCard({ player }: { player: StreamPlayerRow }) {
   const score = player.draftScore
 
   return (
-    <div className={`player-card team-accent-${player.team}`}>
+    <div
+      className={`player-card team-accent-${player.team}${player.model ? '' : ' player-card-vacant'}`}
+    >
       {player.model && <CardArt model={player.model} />}
       <div className="card-shade" />
 

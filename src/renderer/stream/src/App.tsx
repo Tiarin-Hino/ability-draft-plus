@@ -7,6 +7,7 @@ import { PoolBoard } from './components/PoolBoard'
 import { PlayerColumn } from './components/PlayerRows'
 import { StatPanels } from './components/StatPanels'
 import { PickTicker } from './components/PickTicker'
+import { EditMode, applyLayout, loadStoredLayout } from './components/EditMode'
 import i18n from './i18n'
 
 // @DEV-GUIDE: Root of the stream SPA (OBS browser source) — a tournament-style
@@ -14,11 +15,15 @@ import i18n from './i18n'
 // central pool pedestal, stat strip along the bottom. Pure consumer of the SSE
 // state; no electron API, no zubridge, no local business logic.
 // Query params:
-//   ?bg=transparent (default) | chroma (#00ff00) | dark (solid broadcast look)
+//   ?bg=transparent | chroma (#00ff00) | dark (solid broadcast look). Default:
+//      transparent inside OBS browser sources (detected via window.obsstudio),
+//      dark in a normal browser — otherwise the page sits on white
 //   ?title=My%20Tournament   custom heading in the top bar
 //   ?demo=1                  fake full draft for OBS scene setup; outlines the
 //                            reserved zones productions can cover with their own
 //                            sources (sponsors, caster cam)
+//   ?edit=1                  layout tuning mode: drag/scale the major sections,
+//                            copy the resulting JSON (see EditMode.tsx)
 //   ?api=<origin>            dev-mode only: origin of the stream server
 // Language follows StreamBoardState.meta.language (the app's language setting).
 
@@ -30,7 +35,11 @@ function param(name: string): string | null {
 
 function bgMode(): BgMode {
   const bg = param('bg')
-  return bg === 'chroma' || bg === 'dark' ? bg : 'transparent'
+  if (bg === 'transparent' || bg === 'chroma' || bg === 'dark') return bg
+  // No explicit choice: OBS browser sources (they inject window.obsstudio) get
+  // the transparent overlay look; a normal browser tab gets the dark broadcast
+  // backdrop instead of the board floating on a white page.
+  return 'obsstudio' in window ? 'transparent' : 'dark'
 }
 
 /**
@@ -56,6 +65,7 @@ function App(): React.ReactElement {
   const { t } = useTranslation()
   const { board, connection } = useStreamState()
   const demo = isDemoMode()
+  const edit = param('edit') === '1'
 
   const language = board?.meta.language
   useEffect(() => {
@@ -64,10 +74,17 @@ function App(): React.ReactElement {
     }
   }, [language])
 
+  // Outside edit mode, still honor a previously tuned layout (the injected
+  // stylesheet is selector-based, so applying once on mount is enough;
+  // EditMode owns application while it is mounted)
+  useEffect(() => {
+    if (!edit) applyLayout(loadStoredLayout())
+  }, [edit])
+
   if (!board || board.phase === 'waiting') {
     return (
       <div className={`board bg-${bgMode()}`}>
-        <ArtLayer name="waiting-bg" />
+        <ArtLayer name="board-bg" />
         <div
           className={`connection connection-${connection}`}
           title={t(`connection.${connection}`)}
@@ -110,6 +127,8 @@ function App(): React.ReactElement {
           {demo && <span>{t('reservedZone')}</span>}
         </div>
       </footer>
+
+      {edit && <EditMode />}
     </div>
   )
 }

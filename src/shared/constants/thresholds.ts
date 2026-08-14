@@ -5,8 +5,13 @@ export const ML_CONFIDENCE_THRESHOLD = 0.9
 // when it wins the argmax at or above ITS threshold, even below the global one.
 // Crystal Nova consistently scores 0.55-0.9 on live boards while every other
 // class sits at 0.95+, so a nova argmax above 0.5 is virtually always correct.
+// Gorgon Grasp and Shadowraze regressed to 0.58/0.63 on live boards with the
+// dataset-v8 model (correct argmax, runner-up at ~0.25) — override until the
+// classes get more training data and a retrain wins them back above 0.9.
 export const ML_CLASS_THRESHOLD_OVERRIDES: Readonly<Record<string, number>> = {
   crystal_maiden_crystal_nova: 0.5,
+  medusa_gorgon_grasp: 0.5,
+  nevermore_shadowraze2: 0.5,
 }
 // Picked-slot recognition via template matching against official CDN icons
 // (core/ml/template-matcher.ts). Pick boxes render the icon FLAT (unlike the

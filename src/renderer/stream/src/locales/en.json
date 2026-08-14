@@ -37,5 +37,17 @@
       "medium": "med",
       "high": "high"
     }
+  },
+  "edit": {
+    "title": "EDIT MODE",
+    "hintMove": "Drag any element to move it",
+    "hintScale": "Mouse wheel over an element to scale (Alt = fine)",
+    "hintReset": "Double-click an element to reset it",
+    "copy": "Copy JSON",
+    "copied": "Copied!",
+    "resetAll": "Reset all",
+    "empty": "No adjustments yet — drag or scroll over an element.",
+    "hintType": "Changes apply to every element of a type",
+    "hintMirror": "Sides mirror; each pool ability pairs only with its mirror twin"
   }
 }

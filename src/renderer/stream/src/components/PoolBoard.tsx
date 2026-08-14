@@ -60,7 +60,7 @@ function HalfRow({
   heroSide: 'left' | 'right'
 }) {
   return (
-    <div className="pool-half-row">
+    <div className={`pool-half-row pool-half-${heroSide}`}>
       {heroSide === 'left' && <HeroMini row={row} />}
       {(row?.standard ?? []).map((slot, i) => (
         <AbilityTile key={i} slot={slot} />

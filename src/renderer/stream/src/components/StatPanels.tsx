@@ -3,6 +3,11 @@ import type { StreamComboDisplay, StreamPanels } from '@shared/types/stream'
 import { AbilityTile } from './AbilityTile'
 import { apiBase } from '../hooks/use-stream-state'
 
+// The footer strip is fixed-height (8.2rem): title + 3 combo rows fill it
+// exactly; the server may send up to STREAM_MAX_COMBO_PANEL_ENTRIES, and
+// rendering them all left a half-clipped row at the panel bottom.
+const COMBO_ROWS_SHOWN = 3
+
 function ComboEntry({ combo }: { combo: StreamComboDisplay }) {
   return (
     <div className="combo-entry">
@@ -51,7 +56,7 @@ export function StatPanels({ panels }: { panels: StreamPanels }) {
       {panels.opCombos.length > 0 && (
         <div className="panel panel-op">
           <h2 className="panel-title">{t('panels.opCombos')}</h2>
-          {panels.opCombos.map((combo, i) => (
+          {panels.opCombos.slice(0, COMBO_ROWS_SHOWN).map((combo, i) => (
             <ComboEntry key={i} combo={combo} />
           ))}
         </div>
@@ -60,7 +65,7 @@ export function StatPanels({ panels }: { panels: StreamPanels }) {
       {panels.trapCombos.length > 0 && (
         <div className="panel panel-trap">
           <h2 className="panel-title">{t('panels.trapCombos')}</h2>
-          {panels.trapCombos.map((combo, i) => (
+          {panels.trapCombos.slice(0, COMBO_ROWS_SHOWN).map((combo, i) => (
             <ComboEntry key={i} combo={combo} />
           ))}
         </div>

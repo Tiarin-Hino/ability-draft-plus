@@ -186,9 +186,11 @@ function buildPlayerRows(
       (s) => s.hero_order === playerIndex && s.name !== null && s.isUnknown !== true,
     )
 
-    // Positional pick boxes mirroring the in-game row: standard picks fill
-    // boxes 0-2 in scan (left-to-right) order, the ultimate always sits in
-    // box 3 (the layout flags the 4th selected coord is_ultimate).
+    // Pick rows are NOT mirrored in-game (only the pool is): for both teams
+    // the ultimate box is the rightmost and standard picks fill the 3 left
+    // boxes. The presets list every player's boxes in screen order with the
+    // ultimate box last/is_ultimate (enforced by layout-coordinates.test.ts),
+    // so: standard picks -> boxes 0-2 in array order, ultimate -> box 3.
     // Picked-slot tiles are never "picked from the pool" themselves; render them plainly.
     const picks: (StreamAbilitySlot | null)[] = [null, null, null, null]
     let standardBox = 0
