@@ -167,11 +167,15 @@ export function createScanTriggerService(
 
         // Remember exactly what the model saw so "Report Failed Recognition"
         // snapshots the misclassified screenshot, not a fresh capture
-        // (raw bitmap; the feedback service PNG-encodes lazily on report)
+        // (raw bitmap; the feedback service PNG-encodes lazily on report).
+        // The feedback service ignores targeted rescans — only full-board
+        // scans are worth reporting, and a row-restricted result set would
+        // clobber the snapshot the user actually saw fail.
         feedbackService.recordScanContext({
           screenshot,
           resolution,
           isInitialScan,
+          targetedRows: isInitialScan ? undefined : options?.heroOrders,
           results: result.results,
         })
 

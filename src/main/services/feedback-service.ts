@@ -9,9 +9,12 @@ import { generateHmacSignature, generateNonce } from './api-config'
 import type { DecodedScreenshot } from '@core/ml/preprocessing'
 
 // @DEV-GUIDE: Backs the "Report Failed Recognition" loop. The overlay button saves a
-// snapshot of the LAST SCAN (the exact screenshot the model classified, plus its raw
-// predictions) — not a fresh capture, so the reported image always matches the
-// misrecognition the user saw. The scan pipeline hands over the RAW bitmap (it never
+// snapshot of the LAST FULL-BOARD SCAN (the exact screenshot the model classified, plus
+// its raw predictions) — not a fresh capture, so the reported image always matches the
+// misrecognition the user saw. Targeted auto-rescans (restricted to a few player rows,
+// results often empty) are NOT recorded: they would replace the full-board snapshot
+// with a near-useless one. Full scans recur at least once per round in auto mode, so
+// the kept context stays fresh. The scan pipeline hands over the RAW bitmap (it never
 // PNG-encodes); the PNG is produced HERE, lazily, only when the user actually files a
 // report. Samples live under userData/feedback-samples/, one folder per snapshot
 // (screenshot.png + metadata.json), pruned to MAX_STORED_SAMPLES.
@@ -31,6 +34,11 @@ export interface ScanContext {
   screenshot: DecodedScreenshot
   resolution: string
   isInitialScan: boolean
+  /**
+   * Rescan only: player rows the scan was restricted to (targeted
+   * auto-rescan). Undefined = full-board scan.
+   */
+  targetedRows?: number[]
   results: unknown
 }
 
@@ -83,6 +91,10 @@ export function createFeedbackService(apiConfig: ApiConfig | null): FeedbackServ
 
   return {
     recordScanContext(ctx) {
+      // Targeted auto-rescans cover only a few rows (their results are often
+      // empty) — recording one would clobber the full-board snapshot the user
+      // is actually reporting. Keep the last full scan instead.
+      if (ctx.targetedRows) return
       lastScan = { ...ctx, capturedAt: new Date().toISOString() }
     },
 
