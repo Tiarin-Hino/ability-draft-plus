@@ -7,6 +7,7 @@ import { PoolBoard } from './components/PoolBoard'
 import { PlayerColumn } from './components/PlayerRows'
 import { StatPanels } from './components/StatPanels'
 import { PickTicker } from './components/PickTicker'
+import { EditMode, applyLayout, loadStoredLayout } from './components/EditMode'
 import i18n from './i18n'
 
 // @DEV-GUIDE: Root of the stream SPA (OBS browser source) — a tournament-style
@@ -21,6 +22,8 @@ import i18n from './i18n'
 //   ?demo=1                  fake full draft for OBS scene setup; outlines the
 //                            reserved zones productions can cover with their own
 //                            sources (sponsors, caster cam)
+//   ?edit=1                  layout tuning mode: drag/scale the major sections,
+//                            copy the resulting JSON (see EditMode.tsx)
 //   ?api=<origin>            dev-mode only: origin of the stream server
 // Language follows StreamBoardState.meta.language (the app's language setting).
 
@@ -62,6 +65,7 @@ function App(): React.ReactElement {
   const { t } = useTranslation()
   const { board, connection } = useStreamState()
   const demo = isDemoMode()
+  const edit = param('edit') === '1'
 
   const language = board?.meta.language
   useEffect(() => {
@@ -69,6 +73,13 @@ function App(): React.ReactElement {
       void i18n.changeLanguage(language)
     }
   }, [language])
+
+  // Outside edit mode, still honor a previously tuned layout after every
+  // render (EditMode owns application while it is mounted)
+  const updatedAt = board?.meta.updatedAt
+  useEffect(() => {
+    if (!edit) applyLayout(loadStoredLayout())
+  }, [edit, updatedAt])
 
   if (!board || board.phase === 'waiting') {
     return (
@@ -94,7 +105,6 @@ function App(): React.ReactElement {
         gsi={board.gsi}
         connection={connection}
         demo={demo}
-        players={board.players}
       />
 
       <main className="board-main">
@@ -117,6 +127,8 @@ function App(): React.ReactElement {
           {demo && <span>{t('reservedZone')}</span>}
         </div>
       </footer>
+
+      {edit && <EditMode boardRev={board.meta.updatedAt} />}
     </div>
   )
 }

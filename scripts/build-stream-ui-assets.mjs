@@ -133,12 +133,13 @@ async function extractCell(src, raw, [x0, x1], threshold, out, { alphaFromBlack 
   console.log('colored crests: 2 sprites')
 }
 
-// ── Medallion + gems from the top bar sheet ────────────────────────────────
+// ── Clock medallion from the top bar sheet ─────────────────────────────────
 // The bar connects everything horizontally, so column bands see one blob.
 // The medallion is the only structure whose vertical extent far exceeds the
-// bar's; find its column span via per-column extent, then crop a square.
-// Gems are the saturated green/red diamonds: pick the widest cluster of
-// green-dominant / red-dominant columns and cut one sprite of each.
+// bar's — but the ring's outermost side arcs sit INSIDE the bar's y-band, so
+// the extent test alone clips the circle. Expand the detected span by 20% per
+// side to recover the full ring (the sliver of bar hairline that rides along
+// is invisible at display size).
 {
   const src = join(ROOT, 'design/ui/topbar-medallion.png')
   const raw = await loadRaw(src)
@@ -161,96 +162,14 @@ async function extractCell(src, raw, [x0, x1], threshold, out, { alphaFromBlack 
   const medCols = extents
     .map((e, x) => (e > barHeight * 1.35 ? x : -1))
     .filter((x) => x >= 0)
-  const mx0 = Math.min(...medCols)
-  const mx1 = Math.max(...medCols)
+  const pad = Math.round((Math.max(...medCols) - Math.min(...medCols)) * 0.2)
+  const mx0 = Math.max(0, Math.min(...medCols) - pad)
+  const mx1 = Math.min(width - 1, Math.max(...medCols) + pad)
   const [my0, my1] = rowBounds(raw, mx0, mx1, 18)
   await extractCell(src, raw, [mx0, mx1], 18, join(OUT, 'clock-medallion.png'), {
     alphaFromBlack: true,
   })
   console.log(`medallion: ${mx1 - mx0}x${my1 - my0}`)
-
-  // Gem sprites sit ON the bar's midline: find the bar's y-band (rows with
-  // content across most of the width), scan for saturated green/red only in a
-  // thin stripe around its center, and take the clusters ADJACENT to the
-  // medallion (innermost gem on each side) — edge decorations can't intrude.
-  const rowsWide = []
-  for (let y = 0; y < height; y++) {
-    let hits = 0
-    for (let x = 0; x < width; x += 4) {
-      if (lum(data, (y * width + x) * 4) > 18) hits++
-    }
-    if (hits > (width / 4) * 0.5) rowsWide.push(y)
-  }
-  const barMid = Math.round((rowsWide[0] + rowsWide[rowsWide.length - 1]) / 2)
-  const stripe = Math.max(6, Math.round((rowsWide.length || 20) * 0.25))
-
-  const colorCols = (test) => {
-    const cols = []
-    for (let x = 0; x < width; x++) {
-      let hits = 0
-      for (let y = barMid - stripe; y <= barMid + stripe; y++) {
-        const i = (y * width + x) * 4
-        if (test(data[i], data[i + 1], data[i + 2])) hits++
-      }
-      if (hits > 2) cols.push(x)
-    }
-    return cols
-  }
-  const clusters = (cols) => {
-    const groups = []
-    let g = []
-    for (const x of cols) {
-      if (g.length === 0 || x - g[g.length - 1] <= 6) g.push(x)
-      else {
-        groups.push(g)
-        g = [x]
-      }
-    }
-    if (g.length) groups.push(g)
-    return groups.filter((grp) => grp.length > 12 && grp.length < width * 0.08)
-  }
-  const green = clusters(
-    colorCols((r, gr, b) => gr > 100 && gr - r > 40 && gr - b > 30),
-  ).filter((g) => g[g.length - 1] < mx0)
-  if (green.length === 0) throw new Error('gems: no green clusters found')
-  // Red gems: same size class as the green ones and clear of the medallion's
-  // laurel (its orange highlights also pass a red-dominance test)
-  const gemWidth = green[green.length - 1].length
-  const medClearance = Math.round((mx1 - mx0) * 0.2)
-  const red = clusters(
-    colorCols((r, gr, b) => r > 120 && r - gr > 50 && r - b > 50),
-  ).filter(
-    (g) =>
-      g[0] > mx1 + medClearance &&
-      g.length > gemWidth * 0.55 &&
-      g.length < gemWidth * 1.8,
-  )
-  if (red.length === 0) throw new Error('gems: no red clusters found')
-  // Innermost gem on each side (closest to the medallion). The colored area
-  // misses the gem's own gold frame, so crop a centered square a bit larger
-  // than the colored cluster instead of tight content bounds.
-  const cutGem = async (grp, out) => {
-    const cx = Math.round((grp[0] + grp[grp.length - 1]) / 2)
-    const half = Math.round((grp[grp.length - 1] - grp[0]) / 2 + (grp[grp.length - 1] - grp[0]) * 0.35)
-    const region = {
-      left: Math.max(0, cx - half),
-      top: Math.max(0, barMid - half),
-      width: Math.min(width, cx + half) - Math.max(0, cx - half),
-      height: Math.min(height, barMid + half) - Math.max(0, barMid - half),
-    }
-    const { data: d, info } = await sharp(src)
-      .extract(region)
-      .ensureAlpha()
-      .raw()
-      .toBuffer({ resolveWithObject: true })
-    for (let i = 0; i < d.length; i += 4) d[i + 3] = Math.max(d[i], d[i + 1], d[i + 2])
-    await sharp(d, { raw: { width: info.width, height: info.height, channels: 4 } })
-      .png()
-      .toFile(out)
-  }
-  await cutGem(green[green.length - 1], join(OUT, 'gem-radiant.png'))
-  await cutGem(red[0], join(OUT, 'gem-dire.png'))
-  console.log(`gems: ${green.length} green / ${red.length} red clusters (innermost taken)`)
 }
 
 console.log('done ->', OUT)

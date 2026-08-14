@@ -91,7 +91,7 @@ export function PoolBoard({ heroes }: { heroes: StreamHeroRow[] }) {
   const byOrder = new Map(heroes.map((h) => [h.heroOrder, h]))
 
   return (
-    <section className="pool-board" aria-label="Ability pool">
+    <section className="pool-board" aria-label="Ability pool" data-edit-key="ability-pool">
       <PoolSlab />
       <div className="pool-section-title">
         <span>{t('pool.ultimates')}</span>

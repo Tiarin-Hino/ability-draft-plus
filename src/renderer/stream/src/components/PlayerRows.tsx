@@ -89,7 +89,11 @@ export function PlayerColumn({
     scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : null
 
   return (
-    <section className={`team-column team-${team}`} aria-label={t(`team.${team}`)}>
+    <section
+      className={`team-column team-${team}`}
+      aria-label={t(`team.${team}`)}
+      data-edit-key={`${team}-cards`}
+    >
       <header className={`team-header${capOk ? ' has-cap' : ''}`}>
         {capOk && (
           <img

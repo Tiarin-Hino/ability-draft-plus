@@ -267,14 +267,14 @@ body:has(.bg-dark) {
 }
 
 /* Gold laurel medallion (design/ui/clock-medallion.png) hanging through the
-   bar's bottom edge; the ring occupies the top ~33% of the (tall) art, so the
-   time sits at the ring's center, not the box's. The bar needs z-index so the
-   hanging part paints over the board below. */
+   bar's bottom edge; the sprite is ~359x384 with the ring's center around 43%
+   of its height, so the time is anchored there, not at the box center. The
+   bar needs z-index so the hanging part paints over the board below. */
 .clock-medallion {
-  width: 3.4rem;
-  height: 5.1rem;
-  margin-bottom: -2.6rem;
-  transform: translateY(-0.45rem);
+  width: 3.7rem;
+  height: 3.96rem;
+  margin-bottom: -1.6rem;
+  transform: translateY(-0.25rem);
   background-size: contain;
   background-repeat: no-repeat;
   background-position: top center;
@@ -283,46 +283,17 @@ body:has(.bg-dark) {
 }
 .clock-time {
   position: absolute;
-  top: 33%;
+  top: 43%;
   left: 50%;
   transform: translate(-50%, -50%);
   font-family: var(--font-score);
-  font-size: 0.95rem;
+  font-size: 0.98rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   color: var(--gold);
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
 
-/* Per-player gem sockets flanking the medallion (lit = has drafted) */
-.turn-gems {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-.turn-gem {
-  width: 0.95rem;
-  height: 0.95rem;
-  background: center / contain no-repeat;
-  filter: grayscale(0.9) brightness(0.45);
-  opacity: 0.55;
-}
-.turn-gems-radiant .turn-gem {
-  background-image: url('./assets/ui/gem-radiant.png');
-}
-.turn-gems-dire .turn-gem {
-  background-image: url('./assets/ui/gem-dire.png');
-}
-.turn-gem-lit {
-  filter: none;
-  opacity: 1;
-}
-.turn-gems-radiant .turn-gem-lit {
-  filter: drop-shadow(0 0 4px rgba(111, 191, 74, 0.6));
-}
-.turn-gems-dire .turn-gem-lit {
-  filter: drop-shadow(0 0 4px rgba(211, 75, 58, 0.6));
-}
 
 .demo-badge {
   align-self: center;
@@ -934,6 +905,119 @@ body:has(.bg-dark) {
 .pick-ticker-ability {
   font-size: 0.88rem;
   font-weight: 600;
+}
+
+/* ── ?edit=1 layout tuning mode (see EditMode.tsx) ────────────────────── */
+.edit-target {
+  position: relative;
+  outline: 1px dashed rgba(201, 163, 76, 0.5);
+  outline-offset: 2px;
+  cursor: move;
+  user-select: none;
+}
+.edit-target:hover {
+  outline: 2px solid var(--gold);
+}
+/* Section labels live in their own fixed layer — a ::before chip would merge
+   with sections that already use ::before (the pool board's pedestal glass) */
+.edit-chips {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  pointer-events: none;
+}
+.edit-chip {
+  position: absolute;
+  padding: 0 0.3rem;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #0b0d11;
+  background: var(--gold);
+  border-radius: 0.2rem;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+
+.edit-panel {
+  position: fixed;
+  left: 0.8rem;
+  bottom: 0.8rem;
+  z-index: 60;
+  width: 17rem;
+  padding: 0.6rem 0.75rem;
+  background: rgba(10, 12, 16, 0.95);
+  border: 1px solid var(--gold-soft);
+  border-radius: 0.45rem;
+  font-size: 0.72rem;
+  color: var(--text);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+}
+.edit-panel-title {
+  font-family: var(--font-display);
+  color: var(--gold);
+  font-size: 0.8rem;
+  letter-spacing: 0.2em;
+  margin-bottom: 0.35rem;
+  cursor: grab;
+  user-select: none;
+}
+.edit-panel-hint {
+  color: var(--text-dim);
+  font-size: 0.66rem;
+  line-height: 1.4;
+}
+.edit-panel-empty {
+  margin-top: 0.3rem;
+}
+.edit-panel-list {
+  margin: 0.4rem 0 0.3rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 0.3rem;
+}
+.edit-panel-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.08rem 0;
+}
+.edit-panel-key {
+  color: var(--gold);
+}
+.edit-panel-values {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+}
+.edit-panel-json {
+  width: 100%;
+  resize: none;
+  background: rgba(0, 0, 0, 0.5);
+  color: var(--text-dim);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.25rem;
+  font-size: 0.6rem;
+  font-family: monospace;
+  padding: 0.25rem;
+  margin-bottom: 0.35rem;
+}
+.edit-panel-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+.edit-panel-actions button {
+  flex: 1;
+  padding: 0.25rem 0;
+  background: rgba(201, 163, 76, 0.15);
+  color: var(--gold);
+  border: 1px solid var(--gold-soft);
+  border-radius: 0.3rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+.edit-panel-actions button:hover {
+  background: rgba(201, 163, 76, 0.3);
 }
 
 /* ── Bottom stat strip ────────────────────────────────────────────────── */
