@@ -29,6 +29,8 @@ import { loadApiConfig } from '../services/api-config'
 import type { FeedbackService } from '../services/feedback-service'
 import type { ScanTriggerService } from '../services/scan-trigger-service'
 import type { SlotMappingService } from '../services/slot-mapping-service'
+import { startDevControlServer } from '../services/dev-control-service'
+import type { LayoutSource } from '@shared/types'
 
 // @DEV-GUIDE: Central IPC handler registration. All renderer↔main communication goes through
 // typed IPC channels following the domain:action naming convention (e.g. 'ml:scan', 'hero:getAll').
@@ -121,7 +123,14 @@ export function registerIpcHandlers(
   //
   // The pendingOverlayData pattern avoids a race: overlay renderer mounts asynchronously,
   // so overlay:getInitialData lets it pull data when ready instead of relying on did-finish-load.
-  ipcMain.handle('overlay:activate', () => {
+  // Exposed as a plain function too (activateOverlay) so the dev-only control server can
+  // re-activate the overlay between automated game restarts (diagnostic harness).
+  function activateOverlay(): {
+    success: boolean
+    resolution?: string
+    source?: LayoutSource
+    error?: string
+  } {
     // Auto-detect resolution from game window or primary display
     const primaryDisplay = screen.getPrimaryDisplay()
     const gameBounds = windowTracker.getGameWindowPhysicalBounds()
@@ -214,6 +223,21 @@ export function registerIpcHandlers(
 
     logger.info('Overlay activated with auto-detected resolution', { resolution, source })
     return { success: true, resolution, source }
+  }
+
+  ipcMain.handle('overlay:activate', () => activateOverlay())
+
+  // Dev-only loopback control for the diagnostic harness (no-op in packaged builds)
+  let scanCount = 0
+  startDevControlServer(appStore, {
+    activateOverlay,
+    performInitialScan: async () => {
+      scanCount++
+      await scanTrigger.performScan(true)
+    },
+    getScanCount: () => scanCount,
+    isAutoDraftTrackingEnabled: () =>
+      dbService.metadata.getSettings().experimentalAutoDraftTracking === true,
   })
 
   ipcMain.on('overlay:close', () => {

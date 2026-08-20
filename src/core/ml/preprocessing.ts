@@ -63,6 +63,49 @@ export async function cropTile(
 }
 
 /**
+ * Crops a region and encodes it as a grayscale PNG upscaled to a fixed width —
+ * OCR input for the hero-name strips. The fixed width normalizes letter height
+ * across game resolutions (small text upscaled is markedly better for
+ * tesseract than native-size text).
+ */
+export async function cropRegionPng(
+  screenshot: DecodedScreenshot,
+  region: { x: number; y: number; width: number; height: number },
+  targetWidth: number,
+): Promise<Buffer> {
+  return sharp(screenshot.data, {
+    raw: { width: screenshot.width, height: screenshot.height, channels: 3 },
+  })
+    .extract({
+      left: region.x,
+      top: region.y,
+      width: region.width,
+      height: region.height,
+    })
+    .resize(targetWidth, null, { kernel: 'lanczos3' })
+    .grayscale()
+    .normalise()
+    .png()
+    .toBuffer()
+}
+
+/**
+ * Writes a raw RGB square vector to disk as a PNG — diagnostic sink for
+ * rejected pick-slot crops (exactly what the template matcher saw).
+ */
+export async function saveRawVectorPng(
+  vec: Uint8Array,
+  size: number,
+  filePath: string,
+): Promise<void> {
+  await sharp(Buffer.from(vec.buffer, vec.byteOffset, vec.byteLength), {
+    raw: { width: size, height: size, channels: 3 },
+  })
+    .png()
+    .toFile(filePath)
+}
+
+/**
  * Decodes an icon image FILE (PNG) and resizes to a square raw RGB vector —
  * used to build pick-slot template-matching candidates from the cached
  * official CDN icons. Alpha is stripped so vectors align with screenshot crops.

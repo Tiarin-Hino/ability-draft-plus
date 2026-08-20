@@ -8,8 +8,9 @@ import type {
   MlWorkerReadyResponse,
   MlWorkerSuccessResponse,
   MlWorkerErrorResponse,
+  PickCandidates,
 } from '@shared/types/ml'
-import type { ResolutionLayout } from '@shared/types'
+import type { ResolutionLayout, SlotCoordinate } from '@shared/types'
 import type { DecodedScreenshot } from '@core/ml/preprocessing'
 import {
   ML_WORKER_MAX_RESTART_ATTEMPTS,
@@ -45,9 +46,11 @@ export interface MlService {
    * never be predicted. Omitted/empty → no masking.
    * @param heroOrders Rescan only: restrict the selected-abilities scan to
    * these player rows (targeted auto-rescan). Omitted → all rows.
-   * @param pickCandidateNames Rescan only: names the draft can actually
-   * contain (pool + picked), scoping pick-slot template matching. Omitted →
-   * match against every cached icon.
+   * @param retryPoolSlots Rescan only: pool slots that read Unknown earlier,
+   * re-classified alongside the pick scan (see core/domain/pool-retry.ts).
+   * @param pickCandidates Rescan only: names the draft can actually contain,
+   * split standard/ultimate by pick-box type, scoping pick-slot template
+   * matching. Omitted → match against every cached icon.
    */
   scan(
     screenshot: DecodedScreenshot,
@@ -55,7 +58,8 @@ export interface MlService {
     isInitialScan: boolean,
     activeClassNames?: string[],
     heroOrders?: number[],
-    pickCandidateNames?: string[],
+    pickCandidates?: PickCandidates,
+    retryPoolSlots?: SlotCoordinate[],
   ): Promise<MlWorkerSuccessResponse>
   terminate(): Promise<void>
   isReady(): boolean
@@ -175,6 +179,19 @@ export function createMlService(): MlService {
           classNamesPath: getClassNamesPath(),
           useDirectML: false,
           pickIconsDir: getPickIconsDir(),
+          // Dev-only diagnostic: rejected pick-slot crops get dumped here so
+          // recognition misses are debuggable from what the matcher saw
+          rejectedCropsDir: app.isPackaged
+            ? undefined
+            : join(app.getPath('userData'), 'debug', 'rejected-picks'),
+          // Pool crops the classifier rejected — the pool is read once per
+          // draft, so an Unknown there is only diagnosable from the crop
+          lowConfCropsDir: app.isPackaged
+            ? undefined
+            : join(app.getPath('userData'), 'debug', 'low-confidence-pool'),
+          // Reference tiles from the gather script's models mode (empty until
+          // populated — the worker then skips model-tile matching)
+          modelTilesDir: join(app.getPath('userData'), 'model-tiles'),
         },
       }
       worker.postMessage(initMessage)
@@ -196,13 +213,15 @@ export function createMlService(): MlService {
     isInitialScan: boolean,
     activeClassNames?: string[],
     heroOrders?: number[],
-    pickCandidateNames?: string[],
+    pickCandidates?: PickCandidates,
+    retryPoolSlots?: SlotCoordinate[],
   ): Promise<MlWorkerSuccessResponse> {
     if (!worker || !ready) {
       throw new Error('ML Worker not ready')
     }
 
     return new Promise<MlWorkerSuccessResponse>((resolve, reject) => {
+      const startedAt = Date.now()
       // Scan timeout watchdog
       const timer = setTimeout(() => {
         if (scanReject) {
@@ -216,6 +235,14 @@ export function createMlService(): MlService {
 
       scanResolve = (result) => {
         clearTimeout(timer)
+        // Worker round-trip time — a regression here (e.g. template library
+        // growth) shows up long before it reaches the watchdog
+        const workerMs = Date.now() - startedAt
+        if (workerMs > ML_PREDICTION_TIMEOUT / 2) {
+          logger.warn('ML scan slow', { workerMs, isInitialScan })
+        } else {
+          logger.debug('ML scan complete', { workerMs, isInitialScan })
+        }
         resolve(result)
       }
       scanReject = (err) => {
@@ -240,7 +267,8 @@ export function createMlService(): MlService {
           isInitialScan,
           activeClassNames,
           heroOrders,
-          pickCandidateNames,
+          pickCandidates,
+          retryPoolSlots,
         },
       }
 

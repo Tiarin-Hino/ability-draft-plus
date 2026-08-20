@@ -177,6 +177,13 @@ export function createScanProcessingService(
         const overlay = windowManager.getOverlayWindow()
         if (overlay && !overlay.isDestroyed()) {
           overlay.webContents.send('overlay:data', output.overlayPayload)
+          // A scan repaints the whole hotspot layer, and those hotspots are
+          // hover-ONLY (they never toggle click-through themselves), so they
+          // depend entirely on mouse-move forwarding still being armed. Window
+          // operations around a scan can drop it silently — re-apply the
+          // current state so tooltips work without the user first clicking
+          // something. Idempotent and preserves an in-progress hover.
+          windowManager.refreshOverlayMouseEvents()
         }
 
         const cp = windowManager.getControlPanelWindow()

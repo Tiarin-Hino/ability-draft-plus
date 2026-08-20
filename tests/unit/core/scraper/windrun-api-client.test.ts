@@ -33,6 +33,48 @@ describe('WindrunApiClient', () => {
     })
   }
 
+  describe('client tag', () => {
+    // Dummy value — the real one lives only in .env / app-config.json
+    const TOKEN = 'test-token-123'
+
+    it('appends the tag param to every request when provided', async () => {
+      mockFetchJson({ data: [] })
+      const client = createWindrunApiClient('https://api.windrun.io/api/v2', TOKEN)
+      await client.fetchStaticAbilities()
+
+      const url = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string
+      expect(url).toContain('idf=test-token-123')
+    })
+
+    it('keeps the patch param alongside the tag', async () => {
+      mockFetchJson({ data: [] })
+      const client = createWindrunApiClient('https://api.windrun.io/api/v2', TOKEN)
+      await client.fetchAbilities('7.39')
+
+      const url = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string
+      expect(url).toContain('patch=7.39')
+      expect(url).toContain('idf=test-token-123')
+    })
+
+    it('omits the param entirely when none is configured', async () => {
+      mockFetchJson({ data: [] })
+      const client = createWindrunApiClient('https://api.windrun.io/api/v2')
+      await client.fetchStaticAbilities()
+
+      const url = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string
+      expect(url).not.toContain('idf=')
+    })
+
+    it('never leaks the tag into error messages', async () => {
+      mockFetchError(429, 'Too Many Requests')
+      const client = createWindrunApiClient('https://api.windrun.io/api/v2', TOKEN)
+
+      const err = await client.fetchStaticAbilities().catch((e: unknown) => e as Error)
+      expect(err.message).toContain('429')
+      expect(err.message).not.toContain(TOKEN)
+    })
+  })
+
   it('fetchStaticAbilities calls correct URL', async () => {
     const response: WindrunStaticAbilitiesResponse = {
       data: [

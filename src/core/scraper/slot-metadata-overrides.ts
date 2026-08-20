@@ -28,4 +28,27 @@ export const SLOT_METADATA_OVERRIDES: Readonly<Record<string, SlotMetadataOverri
   dragon_knight_wyrms_wrath: { abilityOrder: 3, isUltimate: false },
   venomancer_snakebite: { abilityOrder: 2, isUltimate: false },
   tinker_deploy_turrets: { abilityOrder: 3, isUltimate: false },
+  // Luna: scraped data has Lunar Orbit at W and Moon Glaive at E — the game
+  // renders them the other way round. Verified 2026-08-19 against a real draft
+  // board: the W-column pool slot's art NCC-matches the official Moon Glaive
+  // icon at 0.847 (Lunar Orbit: 0.040). The classifier was right and the
+  // METADATA was wrong, which silently mislabels crops the gather script takes
+  // for these two classes.
+  luna_moon_glaive: { abilityOrder: 2, isUltimate: false },
+  luna_lunar_orbit: { abilityOrder: 3, isUltimate: false },
+  // Troll Warlord (confirmed in-game 2026-08-19): BOTH Whirling Axes variants
+  // share the W slot (the one random slot in his kit — melee/ranged form), Q is
+  // Fervor and E is Berserker's Rage. Scraped data had Berserker's Rage with no
+  // slot at all and pushed whirling_axes_melee down to E, which made every E-slot
+  // scan of his row read as a "misread".
+  troll_warlord_whirling_axes_melee: { abilityOrder: 2, isUltimate: false },
+  troll_warlord_whirling_axes_ranged: { abilityOrder: 2, isUltimate: false },
+  troll_warlord_berserkers_rage: { abilityOrder: 3, isUltimate: false },
+  // Scraped with NO slot at all (passives/innates Liquipedia exposes no hotkey
+  // for), which left these heroes with a hole in their kit and the ability
+  // unpredictable. All three confirmed in-game 2026-08-19 as stable pool
+  // abilities filling the hero's missing slot.
+  night_stalker_midnight_feast: { abilityOrder: 3, isUltimate: false },
+  obsidian_destroyer_objurgation: { abilityOrder: 3, isUltimate: false },
+  skeleton_king_bone_guard: { abilityOrder: 2, isUltimate: false },
 }

@@ -60,6 +60,34 @@ export function loadApiConfig(): ApiConfig | null {
 }
 
 /**
+ * Load the optional stats-API client tag.
+ *
+ * Deliberately NOT part of loadApiConfig(): a missing tag must not disable
+ * screenshot submission, and a missing screenshot config must not disable
+ * scraping. Absent => requests go out without it.
+ * - Dev: CLIENT_TAG in `.env` (gitignored — never committed)
+ * - Packaged: CLIENT_TAG in resources/app-config.json (generated at build
+ *   time from the CI secret of the same name)
+ */
+export function loadClientTag(): string | undefined {
+  if (app.isPackaged) {
+    const configPath = join(process.resourcesPath, 'app-config.json')
+    try {
+      const data = JSON.parse(readFileSync(configPath, 'utf-8'))
+      return data.CLIENT_TAG || undefined
+    } catch {
+      return undefined
+    }
+  }
+  const envPath = resolve(app.getAppPath(), '.env')
+  if (existsSync(envPath)) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    require('dotenv').config({ path: envPath })
+  }
+  return process.env.CLIENT_TAG || undefined
+}
+
+/**
  * Load Sentry DSN for crash reporting.
  * Returns undefined if not configured (crash reporting will be disabled).
  */

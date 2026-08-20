@@ -1,5 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { mkdtempSync, rmSync, existsSync, mkdirSync, writeFileSync } from 'fs'
+import {
+  mkdtempSync,
+  rmSync,
+  existsSync,
+  mkdirSync,
+  writeFileSync,
+  utimesSync,
+  readFileSync,
+  statSync,
+} from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
 
@@ -151,8 +160,86 @@ describe('icon-cache-service', () => {
         total: 3,
         fetched: 1,
         alreadyCached: 1,
+        refreshed: 0,
         failed: 1,
       })
+    })
+
+    it('refreshes a stale cached icon whose upstream art changed', async () => {
+      const NEW_BYTES = Buffer.from('reworked-art')
+      const fetchImpl = vi.fn().mockResolvedValue(new Response(NEW_BYTES, { status: 200 }))
+      const service = createIconCacheService({ cacheRoot, placeholderRoot, fetchImpl })
+
+      const cachedPath = join(cacheRoot, 'abilities', 'pugna_nether_blast.png')
+      mkdirSync(join(cacheRoot, 'abilities'), { recursive: true })
+      writeFileSync(cachedPath, PNG_BYTES)
+      const staleDate = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000)
+      utimesSync(cachedPath, staleDate, staleDate)
+
+      const summary = await service.prefetchAbilities(['pugna_nether_blast'])
+
+      expect(summary).toEqual({
+        total: 1,
+        fetched: 0,
+        alreadyCached: 0,
+        refreshed: 1,
+        failed: 0,
+      })
+      // Refresh must bypass the (stale) CDN edge cache via an uncacheable URL
+      expect(fetchImpl.mock.calls[0][0]).toMatch(/pugna_nether_blast\.png\?_=\d+/)
+      expect(readFileSync(cachedPath).equals(NEW_BYTES)).toBe(true)
+    })
+
+    it('bumps mtime without rewriting when stale icon art is unchanged', async () => {
+      const fetchImpl = vi.fn().mockResolvedValue(okResponse())
+      const service = createIconCacheService({ cacheRoot, placeholderRoot, fetchImpl })
+
+      const cachedPath = join(cacheRoot, 'abilities', 'unchanged.png')
+      mkdirSync(join(cacheRoot, 'abilities'), { recursive: true })
+      writeFileSync(cachedPath, PNG_BYTES)
+      const staleDate = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000)
+      utimesSync(cachedPath, staleDate, staleDate)
+
+      const summary = await service.prefetchAbilities(['unchanged'])
+
+      expect(summary).toEqual({
+        total: 1,
+        fetched: 0,
+        alreadyCached: 1,
+        refreshed: 0,
+        failed: 0,
+      })
+      expect(statSync(cachedPath).mtimeMs).toBeGreaterThan(staleDate.getTime() + 1000)
+    })
+
+    it('keeps the cached copy when a stale-icon refresh fetch fails', async () => {
+      const fetchImpl = vi.fn().mockRejectedValue(new Error('offline'))
+      const service = createIconCacheService({ cacheRoot, placeholderRoot, fetchImpl })
+
+      const cachedPath = join(cacheRoot, 'abilities', 'offline_icon.png')
+      mkdirSync(join(cacheRoot, 'abilities'), { recursive: true })
+      writeFileSync(cachedPath, PNG_BYTES)
+      const staleDate = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000)
+      utimesSync(cachedPath, staleDate, staleDate)
+
+      const summary = await service.prefetchAbilities(['offline_icon'])
+
+      expect(summary.alreadyCached).toBe(1)
+      expect(summary.failed).toBe(0)
+      expect(readFileSync(cachedPath).equals(PNG_BYTES)).toBe(true)
+    })
+
+    it('does not revalidate a fresh cached icon', async () => {
+      const fetchImpl = vi.fn().mockResolvedValue(okResponse())
+      const service = createIconCacheService({ cacheRoot, placeholderRoot, fetchImpl })
+
+      await service.getIcon('abilities', 'fresh_icon')
+      fetchImpl.mockClear()
+
+      const summary = await service.prefetchAbilities(['fresh_icon'])
+
+      expect(fetchImpl).not.toHaveBeenCalled()
+      expect(summary.alreadyCached).toBe(1)
     })
   })
 })

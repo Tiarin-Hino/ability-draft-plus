@@ -58,6 +58,11 @@ export interface DraftSessionSlice {
   gsiHeroEvents: GsiHeroEvent[]
   /** Committed GSI slot <-> scan row mappings (sticky for the draft). */
   slotRowMappings: SlotRowMapping[]
+  /** OCR'd hero names per player row (ocr-service; names are always English). */
+  ocrHeroNamesByRow: Record<
+    number,
+    { name: string; displayName: string; similarity: number }
+  >
 }
 
 /** A picked hero model attributed to the player who drafted it. */
@@ -101,6 +106,7 @@ export function createDraftStore() {
     playerCardRows: [],
     gsiHeroEvents: [],
     slotRowMappings: [],
+    ocrHeroNamesByRow: {},
 
     // Actions
     resetSession: () =>
@@ -124,6 +130,7 @@ export function createDraftStore() {
         playerCardRows: [],
         gsiHeroEvents: [],
         slotRowMappings: [],
+        ocrHeroNamesByRow: {},
       }),
 
     selectMySpot: (dbHeroId, heroOrder) =>

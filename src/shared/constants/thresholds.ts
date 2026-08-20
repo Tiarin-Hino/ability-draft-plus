@@ -12,6 +12,13 @@ export const ML_CLASS_THRESHOLD_OVERRIDES: Readonly<Record<string, number>> = {
   crystal_maiden_crystal_nova: 0.5,
   medusa_gorgon_grasp: 0.5,
   nevermore_shadowraze2: 0.5,
+  // Enrage: live pool crop dumped 2026-08-20 scored 0.806 with the CORRECT
+  // argmax and the runner-up far behind at 0.158 — the model is sure, it just
+  // sits under the global gate. (Do NOT add spirit_breaker_bulldoze here: the
+  // same dump showed its slot argmaxing alchemist_unstable_concoction at 0.825
+  // with bulldoze at 0.101, so an override would turn a safe Unknown into a
+  // confident MISREAD. That pair needs training data, not a threshold.)
+  ursa_enrage: 0.5,
 }
 // Picked-slot recognition via template matching against official CDN icons
 // (core/ml/template-matcher.ts). Pick boxes render the icon FLAT (unlike the
@@ -21,19 +28,46 @@ export const ML_CLASS_THRESHOLD_OVERRIDES: Readonly<Record<string, number>> = {
 // went 40/40 (2026-08-14, sample-2026-08-13T23-08-21-287Z).
 export const PICK_TEMPLATE_COMPARE_SIZE = 48
 // Pick boxes have a border ring + rounded corners the model/icons never saw;
-// insetting the crop by ~8% of the slot width (6px at 1440p's 73px) removes
+// insetting the crop by ~8% of the slot width (7px at 1440p's 87px) removes
 // them. Measured: shadowraze2 NCC 0.773 inset vs argmax LOST without inset.
 export const PICK_TEMPLATE_CROP_INSET_RATIO = 0.08
 // Acceptance: best NCC at or above MIN_NCC and ahead of the runner-up by
-// MIN_MARGIN, else the slot renders Unknown. Correct matches measured
-// 0.518-0.924 NCC with a +0.026 worst-case margin against all 539 icons;
-// margins widen when candidates are scoped to the scanned pool.
+// MIN_MARGIN, else the slot renders Unknown. With CORRECT box geometry
+// (87px at 1440p — see the 2026-08-14 layout fix; the original 73px
+// under-crop degraded every match to 0.42-0.87 and caused chronic rejects),
+// correct matches measure 0.90-0.996 NCC with 0.19+ margins against all 539
+// icons, so these gates carry comfortable headroom. If scores regress into
+// the gates again, suspect crop geometry FIRST (debug/rejected-picks dumps),
+// not the thresholds.
 export const PICK_TEMPLATE_MIN_NCC = 0.45
 export const PICK_TEMPLATE_MIN_MARGIN = 0.02
+// Scoping a pick box to the pool's candidates is what keeps margins wide, but it
+// turns a POOL miss into a permanent pick miss: an ability the initial scan failed
+// to read never enters the candidate set, so its pick box can never match and the
+// matcher just returns the least-bad pool candidate forever. Measured 2026-08-19:
+// 3 of 528 pool slots read Unknown (classifier below its 0.9 gate) and each one
+// that got drafted produced an unresolvable pick box scoring ~0.32 — while an
+// UNRESTRICTED match against the full icon library scored the true ability at
+// 0.974 and 0.994. So a rejected scoped match retries unrestricted and is accepted
+// only above this much stricter floor, which sits far above any wrong match
+// observed in the runs (max 0.782) and below every correct one.
+export const PICK_TEMPLATE_FALLBACK_MIN_NCC = 0.85
 // An empty pick box is near-uniform dark pixels: measured std 0.8 vs 54+ for
 // any real icon. Detected before matching — empties never reach the matcher
 // (the classifier used to argmax tusk_snowball 0.33-0.52 on them).
 export const PICK_TEMPLATE_EMPTY_STD = 5
+// Cached CDN icons go stale when Valve reworks art in place (2026-08: all four
+// Pugna icons — old art broke pick-slot template matching AND the streamer
+// view). During prefetch, a cached icon older than this TTL is refetched with a
+// cache-busting query — required because Valve's Cloudflare edge itself served
+// the pre-rework bytes under the bare URL while origin had the new art.
+export const ICON_CACHE_REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000
+
+// Pool slots that read Unknown are re-classified on later scans (pool art is
+// static until drafted). Bounded so a genuinely unreadable slot cannot re-crop
+// forever; ~10 rescans covers several draft rounds, far more than a transient
+// artifact (hover tooltip, animation frame) survives.
+export const POOL_RETRY_MAX_ATTEMPTS = 10
 
 export const ML_MODEL_INIT_TIMEOUT = 30_000
 export const ML_PREDICTION_TIMEOUT = 10_000
@@ -65,6 +99,34 @@ export const DEFAULT_STREAM_PORT = 58873
 export const STREAM_TOP_WINRATE_COUNT = 8
 export const STREAM_MAX_COMBO_PANEL_ENTRIES = 8
 export const STREAM_PICK_FEED_LENGTH = 20
+
+// Model-tile IDENTIFICATION via NCC against the gathered reference-tile library
+// (core/ml/model-tile-matcher.ts; references from ad_data_gather_script's
+// models mode land in userData/model-tiles/<hero>/*.png).
+// CALIBRATED on the 2026-08-19 diagnostic run (11 bot drafts, 5737 accepted
+// tile matches vs known lineups): correct matches score 0.995+ (p05, median
+// 0.998) because a reference exists for that hero AT THAT BOARD POSITION,
+// while every WRONG match topped out at 0.782 (median 0.564 — mostly picked/
+// dimmed tiles latching onto dark templates: tiny/pangolier/tusk). The
+// distribution is bimodal with a wide empty gap, so a 0.85 floor drops 100%
+// of the wrong matches and keeps 99.1% of the correct ones. At the old 0.5
+// floor those 36 wrong IDs made model recognition 72.7% accurate; a tile that
+// scores below the floor now reads Unknown, which beats a confident misread.
+export const MODEL_TILE_MATCH_MIN_NCC = 0.85
+export const MODEL_TILE_MATCH_MIN_MARGIN = 0.03
+
+// OCR of hero names on the 10 player cards (main/services/ocr-service.ts).
+// Names are always English spaced capitals; the strip is the card's UPPER HALF
+// (the highlighted/active card expands, shifting the name down). A strip is
+// re-OCR'd only when its downscaled pixels change (cheap diff), and a match
+// below this similarity (1 - levenshtein/len) is discarded as a misread.
+export const OCR_NAME_STRIP_HEIGHT_RATIO = 0.5
+export const OCR_MIN_SIMILARITY = 0.6
+export const OCR_STRIP_DIFF_SIZE = 32
+export const OCR_STRIP_DIFF_THRESHOLD = 4
+// Strips are upscaled to this width before OCR so letter height is consistent
+// across game resolutions (tesseract reads upscaled small text far better).
+export const OCR_STRIP_TARGET_WIDTH = 600
 
 // Picked-model detection via model-tile diffing. The 12 model portrait tiles on
 // the draft stage are pixel-STATIC while unpicked (measured mean abs diff 0.0

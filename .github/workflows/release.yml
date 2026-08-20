@@ -25,6 +25,7 @@ jobs:
           CLIENT_API_KEY: ${{ secrets.CLIENT_API_KEY }}
           CLIENT_SHARED_SECRET: ${{ secrets.CLIENT_SHARED_SECRET }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          CLIENT_TAG: ${{ secrets.CLIENT_TAG }}
       - run: npm run build
       - name: Convert pre-existing release to draft
         # electron-builder requires the release to be a draft (or non-existent) before it can

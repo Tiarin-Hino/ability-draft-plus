@@ -81,6 +81,9 @@ describe('MlService', () => {
           classNamesPath: expect.stringContaining('class_names.json'),
           useDirectML: false,
           pickIconsDir: expect.stringContaining('stream-icons'),
+          rejectedCropsDir: expect.stringContaining('rejected-picks'),
+          lowConfCropsDir: expect.stringContaining('low-confidence-pool'),
+          modelTilesDir: expect.stringContaining('model-tiles'),
         },
       })
 
