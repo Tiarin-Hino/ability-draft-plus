@@ -30,14 +30,18 @@ jobs:
           node-version: '22'
           cache: 'npm'
       - run: npm ci
-      - run: npm run prebuild
+      # NOTE: no separate `npm run prebuild` step. `prebuild` is an npm lifecycle
+      # script, so `npm run build` runs it automatically — and a prebuild step
+      # without this env block used to regenerate app-config.json with EMPTY
+      # values right after the configured one wrote it, silently shipping a
+      # build with no credentials. Keep the env on the step that builds.
+      - run: npm run build
         env:
           API_ENDPOINT_URL: ${{ secrets.API_ENDPOINT_URL }}
           CLIENT_API_KEY: ${{ secrets.CLIENT_API_KEY }}
           CLIENT_SHARED_SECRET: ${{ secrets.CLIENT_SHARED_SECRET }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           CLIENT_TAG: ${{ secrets.CLIENT_TAG }}
-      - run: npm run build
       # E2E smoke test runs against the built output (out/main/index.js)
       - run: npm run test:e2e
       - run: npx electron-builder --win --publish=never
