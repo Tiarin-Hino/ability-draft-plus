@@ -12,13 +12,6 @@ export const ML_CLASS_THRESHOLD_OVERRIDES: Readonly<Record<string, number>> = {
   crystal_maiden_crystal_nova: 0.5,
   medusa_gorgon_grasp: 0.5,
   nevermore_shadowraze2: 0.5,
-  // Enrage: live pool crop dumped 2026-08-20 scored 0.806 with the CORRECT
-  // argmax and the runner-up far behind at 0.158 — the model is sure, it just
-  // sits under the global gate. (Do NOT add spirit_breaker_bulldoze here: the
-  // same dump showed its slot argmaxing alchemist_unstable_concoction at 0.825
-  // with bulldoze at 0.101, so an override would turn a safe Unknown into a
-  // confident MISREAD. That pair needs training data, not a threshold.)
-  ursa_enrage: 0.5,
 }
 // Picked-slot recognition via template matching against official CDN icons
 // (core/ml/template-matcher.ts). Pick boxes render the icon FLAT (unlike the
