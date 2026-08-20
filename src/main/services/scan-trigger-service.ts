@@ -1,4 +1,6 @@
-import { screen } from 'electron'
+import { screen, app } from 'electron'
+import { promises as fs } from 'fs'
+import { join } from 'path'
 import sharp from 'sharp'
 import log from 'electron-log/main'
 import { GAME_WINDOW_TITLE } from './window-tracker-service'
@@ -13,11 +15,17 @@ import type { ScanProcessingService } from './scan-processing-service'
 import type { WindowTrackerService } from './window-tracker-service'
 import type { FeedbackService } from './feedback-service'
 import type { IconCacheService } from './icon-cache-service'
+import type { OcrService } from './ocr-service'
 import type { AppStore } from '../store/app-store'
 import type { StoreApi } from 'zustand/vanilla'
 import type { DraftStore } from '../store/draft-store'
-import type { ScanResult } from '@shared/types'
-import type { InitialScanResults } from '@shared/types/ml'
+import type { ScanResult, SlotCoordinate } from '@shared/types'
+import {
+  mergeRetriedPoolSlots,
+  unresolvedPoolSlots,
+} from '@core/domain/pool-retry'
+import { POOL_RETRY_MAX_ATTEMPTS } from '@shared/constants/thresholds'
+import type { InitialScanResults, PickCandidates } from '@shared/types/ml'
 
 // @DEV-GUIDE: The single scan pipeline, factored out of the ml:scan IPC handler so the
 // experimental auto-rescan service can trigger scans WITHOUT round-tripping through the
@@ -33,6 +41,10 @@ import type { InitialScanResults } from '@shared/types/ml'
 // (pool + picked, from DraftStore) to scope icon matching, and each initial scan
 // prefetches the pool's official icons so the worker's template set is warm
 // before the first pick — independent of the streamer view.
+// Pool retry: the pool is scanned ONCE, so a slot the classifier could not read
+// stays Unknown all draft AND its pick box becomes unmatchable (scoping). Every
+// rescan therefore re-reads the still-Unknown pool slots (bounded by
+// POOL_RETRY_MAX_ATTEMPTS) and merges whatever resolves — see core/domain/pool-retry.ts.
 
 const logger = log.scope('scan-trigger')
 
@@ -60,29 +72,115 @@ export function createScanTriggerService(
   dbService: DatabaseService,
   draftStore: StoreApi<DraftStore>,
   iconCache: IconCacheService,
+  ocrService: OcrService,
 ): ScanTriggerService {
-  // Pick-slot template-matching candidates: the draft can only contain the
-  // initial pool plus names already picked (the pool cache removes picked
-  // names, so the union reconstructs the original 48). Empty before the first
-  // initial scan → the worker matches against every cached icon instead.
-  function getPickCandidateNames(): string[] {
+  // Pick-slot template-matching candidates, split by pick-box type: a standard
+  // box can only contain one of the pool's 36 standard abilities, the ultimate
+  // box one of its 12 ultimates.
+  //
+  // These sets only ever GROW within a draft (cleared on each initial scan).
+  // Deriving them fresh from the caches each time was a real bug: the pool
+  // cache DROPS a name once it is picked, so the name survives only in
+  // selectedAbilitiesCache — and a single transient bad read of that box (the
+  // game briefly redraws it, the slot reads EMPTY) evicted it from there too.
+  // The name was then in NEITHER set, so the matcher could never propose it
+  // again and the slot stayed Unknown for the rest of the draft, scoring an
+  // identical wrong-best every scan. Observed 2026-08-19: bristleback_warpath
+  // matched at 0.460, blinked empty, then sat at 0.429/centaur_stampede for 5
+  // straight scans while an unrestricted match scored warpath at 0.979.
+  const candidateStandard = new Set<string>()
+  const candidateUltimates = new Set<string>()
+
+  // Pool slots that read Unknown are re-classified on later scans (pool art is
+  // static until drafted). Attempts are counted per slot so an unreadable slot
+  // cannot re-crop for the whole draft.
+  const poolRetryAttempts = new Map<string, number>()
+
+  function getRetryPoolSlots(): SlotCoordinate[] {
+    const unresolved = unresolvedPoolSlots(
+      draftStore.getState().initialPoolAbilitiesCache,
+    )
+    const slots: SlotCoordinate[] = []
+    for (const slot of unresolved) {
+      const key = `${slot.coord.x},${slot.coord.y}`
+      const tries = poolRetryAttempts.get(key) ?? 0
+      if (tries >= POOL_RETRY_MAX_ATTEMPTS) continue
+      poolRetryAttempts.set(key, tries + 1)
+      slots.push({ ...slot.coord, ability_order: slot.ability_order, is_ultimate: slot.is_ultimate })
+    }
+    return slots
+  }
+
+  function mergePoolRetry(results: ScanResult[] | undefined): void {
+    if (!results || results.length === 0) return
     const state = draftStore.getState()
-    const names = new Set<string>()
+    const { cache, resolved } = mergeRetriedPoolSlots(
+      state.initialPoolAbilitiesCache,
+      results,
+    )
+    if (resolved.length === 0) return
+    draftStore.setState({ initialPoolAbilitiesCache: cache })
+    // Newly known pool names are immediately valid pick candidates
+    for (const slot of cache.ultimates) if (slot.name) candidateUltimates.add(slot.name)
+    for (const slot of cache.standard) if (slot.name) candidateStandard.add(slot.name)
+    logger.info('Recovered pool slots on retry', { resolved })
+    void iconCache.prefetchAbilities(resolved).catch(() => undefined)
+  }
+
+  function getPickCandidates(): PickCandidates {
+    const state = draftStore.getState()
     for (const slot of state.initialPoolAbilitiesCache.ultimates) {
-      if (slot.name) names.add(slot.name)
+      if (slot.name) candidateUltimates.add(slot.name)
     }
     for (const slot of state.initialPoolAbilitiesCache.standard) {
-      if (slot.name) names.add(slot.name)
+      if (slot.name) candidateStandard.add(slot.name)
     }
     for (const slot of state.selectedAbilitiesCache) {
-      if (slot.name) names.add(slot.name)
+      if (slot.name) {
+        ;(slot.is_ultimate ? candidateUltimates : candidateStandard).add(slot.name)
+      }
     }
-    return [...names]
+    return { standard: [...candidateStandard], ultimates: [...candidateUltimates] }
+  }
+
+  // Dev-only per-scan diagnostic recorder: one JSONL line per scan with the
+  // full recognition picture (slot results incl. rejections, model-tile
+  // matches, OCR reads). The diagnostic harness's analyzer joins these with
+  // the lobby's known ground truth. Fire-and-forget; never fails a scan.
+  const diagnosticsPath = app.isPackaged
+    ? null
+    : join(
+        app.getPath('userData'),
+        'debug',
+        'scan-diagnostics',
+        `session-${new Date().toISOString().replace(/[:.]/g, '-')}.jsonl`,
+      )
+  let diagnosticsDirReady = false
+  function recordScanDiagnostics(entry: Record<string, unknown>): void {
+    if (diagnosticsPath === null) return
+    void (async () => {
+      try {
+        if (!diagnosticsDirReady) {
+          await fs.mkdir(join(diagnosticsPath, '..'), { recursive: true })
+          diagnosticsDirReady = true
+        }
+        await fs.appendFile(diagnosticsPath, JSON.stringify(entry) + '\n')
+      } catch {
+        // Diagnostics must never break scanning
+      }
+    })()
   }
 
   return {
     async performScan(isInitialScan, options): Promise<void> {
       try {
+        // A new draft starts at the initial scan — drop the previous draft's
+        // pick candidates before they leak into this one
+        if (isInitialScan) {
+          candidateStandard.clear()
+          candidateUltimates.clear()
+          poolRetryAttempts.clear()
+        }
         // Read resolution from app store (set at overlay activation)
         const resolution = appStore.getState().activeResolution
         if (!resolution) {
@@ -189,10 +287,64 @@ export function createScanTriggerService(
           isInitialScan,
           dbService.abilities.getAllNames(),
           isInitialScan ? undefined : options?.heroOrders,
-          isInitialScan ? undefined : getPickCandidateNames(),
+          isInitialScan ? undefined : getPickCandidates(),
+          isInitialScan ? undefined : getRetryPoolSlots(),
         )
 
         appStore.setState({ mlStatus: 'ready' })
+
+        // A rejected pick-slot template match renders as Unknown with no trace
+        // of what nearly matched — log the score/margin so a live miss (e.g. a
+        // stale cached icon after a Valve art rework) is diagnosable afterwards.
+        if (!isInitialScan && Array.isArray(result.results)) {
+          for (const slot of result.results as ScanResult[]) {
+            if (slot.rejectedMatch) {
+              logger.warn('Pick slot template match rejected', {
+                heroOrder: slot.hero_order,
+                slot: `x${slot.coord.x}y${slot.coord.y}${slot.is_ultimate ? ' ult' : ''}`,
+                bestName: slot.rejectedMatch.bestName,
+                secondName: slot.rejectedMatch.secondName,
+                score: Number(slot.confidence.toFixed(4)),
+                margin:
+                  slot.rejectedMatch.margin === null
+                    ? null
+                    : Number(slot.rejectedMatch.margin.toFixed(4)),
+              })
+            }
+          }
+        }
+
+        // Pool slots recovered by the retry pass feed straight back into the
+        // pool cache (and therefore into the pick candidates)
+        mergePoolRetry(result.poolRetryResults)
+
+        // Hero-name OCR: a new draft resets per-row state; every scan's name
+        // strips queue for recognition (per-row gating keeps this cheap)
+        if (isInitialScan) ocrService.reset()
+        if (result.nameStrips) ocrService.processStrips(result.nameStrips)
+
+        // Model-tile identification (reference library) — log resolved tiles;
+        // consumed by diagnostics and compared against W-slot identification
+        if (result.modelTileMatches) {
+          const resolved = result.modelTileMatches.filter((m) => m.name !== null)
+          if (resolved.length > 0) {
+            logger.info('Model tiles identified (reference match)', {
+              tiles: resolved.map(
+                (m) => `${m.heroOrder}:${m.name} (${m.score.toFixed(3)})`,
+              ),
+            })
+          }
+        }
+
+        recordScanDiagnostics({
+          ts: new Date().toISOString(),
+          isInitialScan,
+          heroOrders: options?.heroOrders ?? null,
+          results: result.results,
+          poolRetryResults: result.poolRetryResults ?? null,
+          modelTileMatches: result.modelTileMatches ?? null,
+          ocrHeroNamesByRow: draftStore.getState().ocrHeroNamesByRow,
+        })
 
         // Remember exactly what the model saw so "Report Failed Recognition"
         // snapshots the misclassified screenshot, not a fresh capture
@@ -236,7 +388,8 @@ export function createScanTriggerService(
         // the streamer view (the cache's other consumer) turned off.
         // Fire-and-forget: rescans fall back to the classifier until icons land.
         if (isInitialScan) {
-          const poolNames = getPickCandidateNames()
+          const candidates = getPickCandidates()
+          const poolNames = [...candidates.standard, ...candidates.ultimates]
           if (poolNames.length > 0) {
             void iconCache.prefetchAbilities(poolNames).catch((error) => {
               logger.warn('Pool icon prefetch failed', {

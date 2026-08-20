@@ -98,7 +98,38 @@ export interface IpcInvokeMap {
   'overlay:getInitialData': { request: void; response: OverlayDataPayload | null }
   // Dev-only ML pipeline cockpit (handlers exist only in unpackaged builds)
   'dev:runGatherScript': {
-    request: { dryRun: boolean }
+    request: {
+      dryRun: boolean
+      /** Engine hero names for a targeted gather (icon reworks: --heroes mode).
+       *  When set, the model-gaps export is skipped entirely. */
+      heroes?: string[]
+      /** With heroes: archive the heroes' existing dataset images to _purged/
+       *  before gathering (--purge-existing). */
+      purgeExisting?: boolean
+    }
+    response: { success: boolean; output?: string; error?: string }
+  }
+  'dev:runModelsGather': {
+    request: {
+      dryRun: boolean
+      /** Target model-tile images per hero (default 24). */
+      sets?: number
+    }
+    response: { success: boolean; output?: string; error?: string }
+  }
+  'dev:runDiagnosticCycle': {
+    request: {
+      dryRun: boolean
+      /** Bot drafts to run; 0 = one full roster pass (default 3). */
+      iterations?: number
+      /** AD per-turn pick timer in seconds; 0 (default) = no timer commands,
+       *  the game's own defaults (60s prep / 7s pick / 5s round break). */
+      pickTimeS?: number
+    }
+    response: { success: boolean; output?: string; error?: string }
+  }
+  'dev:analyzeDiagnostics': {
+    request: void
     response: { success: boolean; output?: string; error?: string }
   }
   'dev:uploadDataset': {

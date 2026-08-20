@@ -95,6 +95,17 @@ export interface ScanResult {
   ability_order: number
   is_ultimate: boolean
   coord: SlotCoordinate
+  /**
+   * Present only when pick-slot template matching REJECTED its best candidate
+   * (name === null on a non-empty pick box) — carries what would have matched
+   * (and who ran it closest, for margin failures) so the miss is diagnosable
+   * from main-process logs.
+   */
+  rejectedMatch?: {
+    bestName: string | null
+    secondName: string | null
+    margin: number | null
+  }
 }
 
 export interface EnrichedScanSlot extends ScanResult {

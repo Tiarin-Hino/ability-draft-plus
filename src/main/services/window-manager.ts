@@ -14,6 +14,14 @@ import log from 'electron-log/main'
 //   (fullscreen transparent windows break mouse event forwarding after toggle)
 // - showInactive() to avoid stealing focus from the game
 //
+// Mouse-move FORWARDING is the fragile part: hover-only elements (ability
+// tooltips) never toggle click-through themselves, so they work only while
+// forwarding is armed — and Windows drops it whenever the window's layered
+// state is rebuilt, notably on setBounds. repositionOverlay therefore skips
+// no-op moves and re-applies the flag after real ones, and callers can
+// re-arm explicitly via refreshOverlayMouseEvents(). Always re-apply the
+// CURRENT state; forcing ignore=true would break an in-progress hover.
+//
 // When overlay closes, the 'closed' event fires and main process resets overlay state
 // in AppStore. The control panel auto-restores and refocuses.
 
@@ -27,6 +35,8 @@ export interface WindowManager {
   getOverlayWindow(): BrowserWindow | null
   closeOverlay(): void
   setOverlayMouseEvents(ignore: boolean, forward?: boolean): void
+  /** Re-applies the current click-through state (see refreshOverlayMouseEvents). */
+  refreshOverlayMouseEvents(): void
 }
 
 // @DEV-GUIDE: In dev mode, electron-vite serves renderers at ELECTRON_RENDERER_URL.
@@ -45,6 +55,10 @@ function loadWindowContent(
 export function createWindowManager(): WindowManager {
   let controlPanelWindow: BrowserWindow | null = null
   let overlayWindow: BrowserWindow | null = null
+  // Current click-through state, mirrored so it can be re-applied after window
+  // operations that silently drop it (see refreshOverlayMouseEvents).
+  let mouseIgnore = true
+  let mouseForward = true
 
   function createControlPanelWindow(): BrowserWindow {
     controlPanelWindow = new BrowserWindow({
@@ -126,7 +140,7 @@ export function createWindowManager(): WindowManager {
 
     overlayWindow.setAlwaysOnTop(true, 'screen-saver')
     overlayWindow.setVisibleOnAllWorkspaces(true)
-    overlayWindow.setIgnoreMouseEvents(true, { forward: true })
+    applyOverlayMouseEvents(true, true)
     overlayWindow.showInactive()
 
     loadWindowContent(overlayWindow, 'overlay/index.html')
@@ -182,15 +196,56 @@ export function createWindowManager(): WindowManager {
         ? { ...bounds, width: bounds.width - 1 }
         : bounds
 
+      // Skip no-op moves. The tracker reports raw game-window bounds, and
+      // several distinct game bounds collapse onto the SAME adjusted overlay
+      // bounds (anything covering the display maps to display-minus-1px), so
+      // this fired repeatedly with identical values. That churn is not free:
+      // every setBounds re-creates the window's layered/transparent state on
+      // Windows and drops the mouse-move FORWARDING that setIgnoreMouseEvents
+      // installed — after which hover-only elements (ability tooltips) stop
+      // receiving events until something toggles the flag again. Users saw
+      // exactly that: tooltips dead after a scan until they clicked a button
+      // (whose hover enter/leave re-applied the flag).
+      const current = overlayWindow.getBounds()
+      if (
+        current.x === adjusted.x &&
+        current.y === adjusted.y &&
+        current.width === adjusted.width &&
+        current.height === adjusted.height
+      ) {
+        return
+      }
+
       overlayWindow.setBounds(adjusted)
+      // setBounds dropped the forwarding state — put it back exactly as it was
+      // (NOT unconditionally click-through: the user may be hovering a button
+      // right now, which means ignore is legitimately false).
+      applyOverlayMouseEvents(mouseIgnore, mouseForward)
       logger.info('Overlay repositioned', adjusted)
     }
   }
 
-  function setOverlayMouseEvents(ignore: boolean, forward = true): void {
+  function applyOverlayMouseEvents(ignore: boolean, forward: boolean): void {
+    mouseIgnore = ignore
+    mouseForward = forward
     if (overlayWindow && !overlayWindow.isDestroyed()) {
       overlayWindow.setIgnoreMouseEvents(ignore, { forward })
     }
+  }
+
+  function setOverlayMouseEvents(ignore: boolean, forward = true): void {
+    applyOverlayMouseEvents(ignore, forward)
+  }
+
+  /**
+   * Re-applies the CURRENT click-through state. Mouse-move forwarding is
+   * fragile on Windows — window operations can silently drop it, leaving
+   * hover-only overlay elements dead. Cheap and idempotent, so callers re-arm
+   * it after anything that disturbs the window (notably a completed scan,
+   * which repaints the whole hotspot layer).
+   */
+  function refreshOverlayMouseEvents(): void {
+    applyOverlayMouseEvents(mouseIgnore, mouseForward)
   }
 
   return {
@@ -201,5 +256,6 @@ export function createWindowManager(): WindowManager {
     getOverlayWindow,
     closeOverlay,
     setOverlayMouseEvents,
+    refreshOverlayMouseEvents,
   }
 }

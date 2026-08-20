@@ -12,6 +12,7 @@ const config = {
   CLIENT_API_KEY: process.env.CLIENT_API_KEY || '',
   CLIENT_SHARED_SECRET: process.env.CLIENT_SHARED_SECRET || '',
   SENTRY_DSN: process.env.SENTRY_DSN || '',
+  CLIENT_TAG: process.env.CLIENT_TAG || '',
 }
 
 const missing = Object.entries(config)
@@ -20,7 +21,7 @@ const missing = Object.entries(config)
 
 if (missing.length > 0) {
   console.warn(`Warning: Missing API config keys: ${missing.join(', ')}`)
-  console.warn('Screenshot submission will be disabled in the built app.')
+  console.warn('The built app will run without the corresponding features.')
 }
 
 const outPath = resolve(__dirname, '../resources/app-config.json')

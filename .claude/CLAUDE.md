@@ -43,9 +43,12 @@ maintenance spec — the authoritative map of what IS, not a build plan.
 - The classifier handles POOL slots only. PICKED-ability slots are identified by template
   matching (`core/ml/template-matcher.ts`): NCC against the official CDN icons cached in
   `userData/stream-icons/abilities` (pick boxes render icons flat; crops are border-inset).
-  Candidates are scoped to pool + picked names; the classifier is the pick-slot fallback
-  only when no icons are cached. Went 40/40 on a board where the classifier missed 3 picks
-  and confidently misread a 4th
+  Candidates are scoped per box type — standard boxes match the pool's 36 standard
+  abilities, the ultimate box its 12 ultimates (pool + picked names); the classifier is
+  the pick-slot fallback only when no icons are cached. Went 40/40 on a board where the
+  classifier missed 3 picks and confidently misread a 4th. The cache is NOT immutable:
+  prefetch revalidates icons older than 7 days with a cache-busting query (Valve reworks
+  art in place and their CDN edge serves stale bytes under the bare URL — 2026-08 Pugna)
 - Retraining: `training/train.py` (+ isolated `training/gate.py`) via the "Retrain ML model"
   workflow → opens a model PR. FP16 only; INT8 collapsed accuracy twice (documented) — do not
   reintroduce quantization without beating the gate across multiple training runs
@@ -93,8 +96,11 @@ maintenance spec — the authoritative map of what IS, not a build plan.
 
 ## Security
 - API credentials via `.env` (dev) / `resources/app-config.json` (packaged, generated at build).
-  Never commit them. Note: the client "shared secret" is distributed with the installer —
-  treat the API as public + rate-limited, not authenticated
+  Never commit them. `CLIENT_TAG` is an optional stats-API request parameter, kept
+  deliberately separate from `loadApiConfig()` so neither setting can disable the
+  other's feature (absent → requests still go out).
+  Note: the client "shared secret" is distributed with the installer — treat the API
+  as public + rate-limited, not authenticated
 - Validate URLs before `shell.openExternal` (http/https only)
 
 ## Known intentional decisions (don't "fix" without reading history)

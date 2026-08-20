@@ -7,6 +7,7 @@ import type { ScraperDeps, LiquipediaDeps } from '@core/scraper'
 import type { MlModelGaps } from '@core/ml/staleness-detector'
 import type { DatabaseService } from './database-service'
 import type { AppStore } from '../store/app-store'
+import { loadClientTag } from './api-config'
 
 // @DEV-GUIDE: Orchestrates data scraping from Windrun.io (ability/hero stats, synergy pairs,
 // triplets) and Liquipedia (ability_order, is_ultimate enrichment).
@@ -92,7 +93,7 @@ export function createScraperService(
         scraperMessage: 'Starting scrape...',
       })
 
-      const apiClient = createWindrunApiClient()
+      const apiClient = createWindrunApiClient(undefined, loadClientTag())
       const classNames = loadClassNames()
 
       const deps: ScraperDeps = {

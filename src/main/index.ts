@@ -22,6 +22,7 @@ import { createScraperService } from './services/scraper-service'
 import { createSentryService } from './services/sentry-service'
 import { loadSentryDsn, loadApiConfig } from './services/api-config'
 import { createFeedbackService } from './services/feedback-service'
+import { createOcrService } from './services/ocr-service'
 import { createDraftStore } from './store/draft-store'
 import { createAppStore, createAppStoreHandlers } from './store/app-store'
 import { registerIpcHandlers } from './ipc'
@@ -237,6 +238,9 @@ app.whenReady().then(async () => {
   // Feedback service is shared by the feedback IPC handlers and the scan trigger
   const feedbackService = createFeedbackService(loadApiConfig())
 
+  // Hero-name OCR over the per-scan name strips (results in DraftStore)
+  const ocrService = createOcrService(dbService, draftStore)
+
   // The single scan pipeline, shared by the ml:scan IPC handler and auto-rescan
   const scanTrigger = createScanTriggerService(
     mlService,
@@ -251,6 +255,7 @@ app.whenReady().then(async () => {
     dbService,
     draftStore,
     iconCache,
+    ocrService,
   )
 
   // EXPERIMENTAL: GSI-driven auto-rescan + pick attribution (setting-gated, default off)
@@ -299,6 +304,7 @@ app.whenReady().then(async () => {
     cachedWindowCapture.dispose()
     bridge.destroy()
     await streamService.stop()
+    await ocrService.dispose()
     await mlService.terminate()
     dbService.close()
   })

@@ -3,6 +3,7 @@ import {
   computePixelStats,
   makeIconTemplate,
   matchPickSlot,
+  matchPickSlotScoped,
 } from '@core/ml/template-matcher'
 import type { IconTemplate } from '@core/ml/template-matcher'
 import {
@@ -71,7 +72,14 @@ describe('matchPickSlot', () => {
   it('detects an empty (uniform dark) slot without matching', () => {
     const crop = new Uint8Array(VEC_LENGTH).fill(8)
     const result = matchPickSlot(crop, makeTemplates(5))
-    expect(result).toEqual({ name: null, score: 0, isEmpty: true })
+    expect(result).toEqual({
+      name: null,
+      score: 0,
+      isEmpty: true,
+      bestName: null,
+      secondName: null,
+      margin: null,
+    })
   })
 
   it('treats near-uniform noise below the empty threshold as empty', () => {
@@ -112,6 +120,26 @@ describe('matchPickSlot', () => {
     expect(result.name).toBeNull()
     expect(result.isEmpty).toBe(false)
     expect(result.score).toBeGreaterThan(PICK_TEMPLATE_MIN_NCC)
+    // Rejection diagnostics: what would have matched, and who ran it closest
+    expect(result.bestName).toBe('twin_a')
+    expect(result.secondName).toBe('twin_b')
+    expect(result.margin).not.toBeNull()
+    expect(result.margin!).toBeLessThan(0.02)
+  })
+
+  it('reports the winning margin on accepted matches', () => {
+    const templates = makeTemplates(20)
+    const result = matchPickSlot(gameRender(makePattern(7)), templates)
+    expect(result.name).toBe('ability_7')
+    expect(result.bestName).toBe('ability_7')
+    expect(result.margin).not.toBeNull()
+    expect(result.margin!).toBeGreaterThan(0)
+  })
+
+  it('reports a null margin for a single-template scope', () => {
+    const result = matchPickSlot(gameRender(makePattern(0)), makeTemplates(1))
+    expect(result.name).toBe('ability_0')
+    expect(result.margin).toBeNull()
   })
 
   it('rejects a crop that resembles no template', () => {
@@ -137,5 +165,53 @@ describe('matchPickSlot', () => {
     ]
     const result = matchPickSlot(gameRender(makePattern(3)), templates)
     expect(result.name).toBe('real')
+  })
+})
+
+describe('matchPickSlotScoped', () => {
+  const FALLBACK = 0.85
+
+  it('uses the scoped result when it is accepted', () => {
+    const templates = makeTemplates(20)
+    const crop = gameRender(makePattern(7))
+    const r = matchPickSlotScoped(crop, templates, new Set(['ability_7']), FALLBACK)
+    expect(r.name).toBe('ability_7')
+  })
+
+  it('recovers a pick whose ability is missing from the candidate set', () => {
+    // ability_7 was never added to the pool candidates (pool scan missed it):
+    // the scoped match must fail, and the unrestricted retry must find it.
+    const templates = makeTemplates(20)
+    const crop = gameRender(makePattern(7), 1, 0) // clean render -> high NCC
+    const scopedOnly = matchPickSlot(crop, templates, new Set(['ability_3', 'ability_4']))
+    expect(scopedOnly.name).toBeNull()
+
+    const r = matchPickSlotScoped(
+      crop,
+      templates,
+      new Set(['ability_3', 'ability_4']),
+      FALLBACK,
+    )
+    expect(r.name).toBe('ability_7')
+    expect(r.score).toBeGreaterThanOrEqual(FALLBACK)
+  })
+
+  it('does NOT fall back on a mediocre unrestricted match', () => {
+    // Heavily degraded crop: the true icon still wins unrestricted but well
+    // below the strict fallback bar, so the slot must stay Unknown.
+    const templates = makeTemplates(20)
+    const crop = gameRender(makePattern(7), 0.35, 90)
+    const wide = matchPickSlot(crop, templates)
+    expect(wide.score).toBeLessThan(FALLBACK)
+
+    const r = matchPickSlotScoped(crop, templates, new Set(['ability_3']), FALLBACK)
+    expect(r.name).toBeNull()
+  })
+
+  it('leaves empty slots alone', () => {
+    const crop = new Uint8Array(VEC_LENGTH).fill(8)
+    const r = matchPickSlotScoped(crop, makeTemplates(5), new Set(['ability_1']), FALLBACK)
+    expect(r.isEmpty).toBe(true)
+    expect(r.name).toBeNull()
   })
 })
