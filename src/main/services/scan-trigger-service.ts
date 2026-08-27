@@ -239,6 +239,9 @@ export function createScanTriggerService(
           )
         }
         screenshot ??= await screenshotService.capture()
+        // On-screen state (e.g. the draft countdown) reflects THIS moment, not
+        // when the ML worker finishes — stamp it for time-sensitive consumers
+        const capturedAtMs = Date.now()
 
         const layout = layoutService.getLayout(resolution)
         if (!layout) {
@@ -322,6 +325,11 @@ export function createScanTriggerService(
         // strips queue for recognition (per-row gating keeps this cheap)
         if (isInitialScan) ocrService.reset()
         if (result.nameStrips) ocrService.processStrips(result.nameStrips)
+        // Countdown digits for own-row detection, stamped with the moment the
+        // screenshot was actually taken (the ML pipeline adds seconds)
+        if (result.countdownStrip) {
+          ocrService.processCountdown(result.countdownStrip, capturedAtMs)
+        }
 
         // Model-tile identification (reference library) — log resolved tiles;
         // consumed by diagnostics and compared against W-slot identification

@@ -4,6 +4,7 @@ import {
   turnAt,
   turnsEndedBetween,
   isRoundBreak,
+  countdownTargetRow,
 } from '@core/gsi/draft-clock'
 
 // Small config for arithmetic-friendly tests: 4 players (2 per team), 5s turns,
@@ -108,5 +109,45 @@ describe('isRoundBreak', () => {
     expect(isRoundBreak(22.9, schedule)).toBe(true)
     expect(isRoundBreak(43, schedule)).toBe(true)
     expect(isRoundBreak(9999, schedule)).toBe(true)
+  })
+})
+
+describe('countdownTargetRow', () => {
+  // Default AD schedule: [0,5,1,6,2,7,3,8,4,9], 7s turns, first turn at 0s
+  it('resolves the TA game reading: N=86 at 51s before draft start -> row 7', () => {
+    const result = countdownTargetRow({ countdownS: 86, elapsedS: -51 })
+    expect(result?.row).toBe(7) // 86-51 = 35 = index 5 -> order[5] = 7
+  })
+
+  it('resolves the Venge game reading: N=33 at 9s after draft start -> row 3', () => {
+    const result = countdownTargetRow({ countdownS: 33, elapsedS: 9 })
+    expect(result?.row).toBe(3) // 33+9 = 42 = index 6 -> order[6] = 3
+  })
+
+  it('resolves row 0 (first pick) from a preview reading', () => {
+    const result = countdownTargetRow({ countdownS: 40, elapsedS: -40 })
+    expect(result?.row).toBe(0)
+  })
+
+  it('tolerates ~2s of combined OCR/anchor error', () => {
+    // Turn index 5 starts at 35s; row = order[5] = 7
+    expect(countdownTargetRow({ countdownS: 36, elapsedS: 0 })?.row).toBe(7)
+    expect(countdownTargetRow({ countdownS: 34, elapsedS: 0 })?.row).toBe(7)
+  })
+
+  it('refuses a reading that lands between turn starts', () => {
+    // 3.5s off every turn start (starts are multiples of 7 in round 1)
+    expect(countdownTargetRow({ countdownS: 24.5, elapsedS: 0 })).toBeNull()
+  })
+
+  it('resolves later-round targets across round breaks', () => {
+    // Round 2 starts at 75s (70 + 5s break), first turn is row 9
+    const result = countdownTargetRow({ countdownS: 55, elapsedS: 20 })
+    expect(result?.row).toBe(9)
+  })
+
+  it('returns the exact-match delta', () => {
+    const result = countdownTargetRow({ countdownS: 14, elapsedS: 0 })
+    expect(result).toEqual({ row: 1, deltaS: 0 })
   })
 })

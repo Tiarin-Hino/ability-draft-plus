@@ -84,6 +84,7 @@ export function createStreamServerService(
   getPickEvents?: () => PickEvent[],
   getModelAssignments?: () => Array<{ poolHeroOrder: number; playerIndex: number }>,
   getSlotRowMappings?: () => Array<{ gsiSlot: number; scanRow: number }>,
+  getLocalPlayerRow?: () => number | null,
 ): StreamServerService {
   let server: Server | null = null
   let activePort: number | null = null
@@ -150,18 +151,17 @@ export function createStreamServerService(
           }
         }
       }
-      // Playing: GSI only knows the LOCAL player (name via team_slot, model via
-      // the hero block) — merge them so the board isn't all placeholders
+      // Playing: GSI only knows the LOCAL player. Placement uses the OCR-derived
+      // My Spot row (own-row-detection.ts) — localPlayer.slotIndex is lobby-order
+      // and does NOT match the draft screen, so until the row is derived the
+      // local name shows nowhere rather than on a probably-wrong row (same
+      // principle as the spectate slot-row mappings).
       const local = gsiSnapshot.localPlayer
-      if (
-        local &&
-        local.slotIndex !== null &&
-        local.slotIndex >= 0 &&
-        local.slotIndex < 10
-      ) {
-        playerNames[local.slotIndex] ??= local.name
-        if (gsiSnapshot.localHeroNpcName && !playerModels[local.slotIndex]) {
-          playerModels[local.slotIndex] = {
+      const localRow = getLocalPlayerRow?.() ?? null
+      if (local && localRow !== null && localRow >= 0 && localRow < 10) {
+        playerNames[localRow] ??= local.name
+        if (gsiSnapshot.localHeroNpcName && !playerModels[localRow]) {
+          playerModels[localRow] = {
             npcName: gsiSnapshot.localHeroNpcName,
             displayName: heroDisplayName(gsiSnapshot.localHeroNpcName),
           }

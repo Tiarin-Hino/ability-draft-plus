@@ -3,21 +3,36 @@ import type { StoreApi } from 'zustand/vanilla'
 import type { DraftStore } from '../store/draft-store'
 import type { WindowManager } from './window-manager'
 import type { StreamServerService } from './stream-server-service'
+import {
+  resolveOwnRowFromOcr,
+  heroNameToken,
+} from '@core/domain/own-row-detection'
 
 // @DEV-GUIDE: Auto "My Spot" + "My Model" selection from GSI while PLAYING (not
 // spectating) — the automated replacement for the overlay's manual buttons (which
 // are hidden when automatic draft tracking is enabled).
-// - Spot: the GSI player block carries team_name + team_slot, which the parser maps
-//   to the scan's player index (0-4 radiant, 5-9 dire) as localPlayer.slotIndex.
+// - Spot: NO GSI field matches the draft screen's visual row order (team_slot and
+//   player_slot are both lobby-order — disproven on live games 2026-08-25; only
+//   the team half is trustworthy). Two screen-side signals derive it instead:
+//   1. Draft countdown (INSTANT — lands seconds into the preview): auto-rescan
+//      matches the OCR'd "YOU WILL DRAFT IN: N" against the turn schedule and
+//      publishes DraftStore.countdownSpotRow. Validated 4/4 across slots on
+//      live lobby games 2026-08-26 (deltas 1.5-2.1s; the 2.5s matcher tolerance
+//      can never straddle two 7s-spaced turns).
+//   2. GSI hero block x card-name OCR (lands after the user DRAFTS their model,
+//      near-certain): resolveOwnRowFromOcr over DraftStore.ocrHeroNamesByRow.
+//      It CONFIRMS the countdown pick (fills in the model's dbHeroId, no UI
+//      churn) or CORRECTS it (re-broadcast).
+//   Every GSI snapshot retries both while armed.
 // - Model: once the user picks their hero, GSI's hero block reports it as an npc
-//   short name (localHeroNpcName); matched against the identified pool heroes by
-//   DB name (npc name minus underscores — same convention as stream-server).
+//   short name (localHeroNpcName); matched against the identified pool heroes
+//   via heroNameToken (underscore-normalized + npc aliases, e.g. zuus->zeus).
 //
-// Each selection applies at most ONCE per initial scan (the scan-processor resets
+// Each signal applies at most ONCE per initial scan (the scan-processor resets
 // selections on every initial scan, and scan-processing-service calls
-// onInitialScanProcessed): immediately when GSI already knows the value, or on a
-// later GSI snapshot when it arrives (the model typically lands mid-draft). A
-// manual deselect after auto-selection is respected (the once-flags stay set).
+// onInitialScanProcessed). A manual selection disables both signals; a manual
+// deselect of an auto pick is respected by the signal that made it — but the
+// OCR signal, if still pending, will place its authoritative row once.
 //
 // Selection mirrors the draft:selectMySpot/selectMyModel IPC handlers exactly:
 // DraftStore update + broadcast to both windows.
@@ -34,11 +49,15 @@ export function createSpotDetectionService(
   windowManager: WindowManager,
   streamService: Pick<StreamServerService, 'getGsiState' | 'onGsiSnapshot'>,
 ): SpotDetectionService {
-  /** True once the respective auto-selection ran for this initial scan generation. */
-  let spotApplied = false
+  /** Once-flags per initial-scan generation (see DEV-GUIDE). */
+  let countdownApplied = false
+  let ocrApplied = false
   let modelApplied = false
   /** True between an initial scan and the auto-selection attempts succeeding. */
   let armed = false
+  /** Row this service last auto-applied — distinguishes our own selection from
+   * a manual one (only our own may be corrected by the OCR signal). */
+  let autoAppliedRow: number | null = null
 
   function broadcast(channel: string, payload: unknown): void {
     const cp = windowManager.getControlPanelWindow()
@@ -47,37 +66,91 @@ export function createSpotDetectionService(
     if (overlay && !overlay.isDestroyed()) overlay.webContents.send(channel, payload)
   }
 
-  function trySelectSpot(): void {
-    if (spotApplied) return
+  function applySpot(dbHeroId: number | null, row: number): void {
+    draftStore.getState().selectMySpot(dbHeroId, row)
+    autoAppliedRow = row
+    broadcast('draft:selectMySpot', { selectedHeroOrderForDrafting: row })
+  }
+
+  function trySelectSpotFromCountdown(): void {
+    if (countdownApplied || ocrApplied) return
 
     const state = draftStore.getState()
-    if (state.identifiedHeroModelsCache.length === 0) return
-    if (state.mySelectedSpotHeroOrder !== null) return
-
-    const { snapshot, connected } = streamService.getGsiState()
-    const slotIndex = snapshot?.localPlayer?.slotIndex ?? null
-    if (!connected || slotIndex === null) return
-
-    const hero = state.identifiedHeroModelsCache.find(
-      (m) => m.heroOrder === slotIndex,
-    )
-    if (!hero || hero.dbHeroId === null) {
-      // Row not identified — a corrected initial rescan re-arms via
-      // onInitialScanProcessed, so don't burn the once-flag on this
-      logger.warn('GSI knows the spot but its hero row is unidentified', {
-        slotIndex,
-      })
+    if (state.mySelectedSpotHeroOrder !== null) {
+      // Selected before we got a reading (manual, or OCR won the race) —
+      // this signal's work is done for the draft
+      countdownApplied = true
       return
     }
 
-    spotApplied = true
-    draftStore.getState().selectMySpot(hero.dbHeroId, slotIndex)
-    logger.info('My Spot auto-selected from GSI', {
-      slotIndex,
-      hero: hero.heroDisplayName,
-      player: snapshot?.localPlayer?.name,
+    const candidate = state.countdownSpotRow
+    if (candidate === null) return
+
+    countdownApplied = true
+    applySpot(null, candidate.row)
+    logger.info('My Spot auto-selected (draft countdown)', {
+      row: candidate.row,
+      deltaS: Number(candidate.deltaS.toFixed(1)),
     })
-    broadcast('draft:selectMySpot', { selectedHeroOrderForDrafting: slotIndex })
+  }
+
+  function trySelectSpotFromOcr(): void {
+    if (ocrApplied) return
+
+    const state = draftStore.getState()
+    const current = state.mySelectedSpotHeroOrder
+    if (current !== null && current !== autoAppliedRow) {
+      // Manually selected (fresh, or over our auto pick) — never fight the user
+      ocrApplied = true
+      return
+    }
+
+    const { snapshot, connected } = streamService.getGsiState()
+    const npcName = snapshot?.localHeroNpcName ?? null
+    if (!connected || !npcName) return
+
+    // slotIndex (team_name + team_slot) is lobby-order — only its team HALF is
+    // meaningful; the visual row comes from the OCR match below
+    const slotIndex = snapshot?.localPlayer?.slotIndex ?? null
+    const teamHalfStart = slotIndex === null ? null : slotIndex < 5 ? 0 : 5
+
+    const row = resolveOwnRowFromOcr({
+      ocrHeroNamesByRow: state.ocrHeroNamesByRow,
+      localHeroNpcName: npcName,
+      teamHalfStart,
+    })
+    // Model not on a card yet / not OCR'd yet — every snapshot retries
+    if (row === null) return
+
+    const token = heroNameToken(npcName)
+    const poolHero = state.identifiedHeroModelsCache.find(
+      (m) => heroNameToken(m.heroName) === token,
+    )
+    const dbHeroId = poolHero?.dbHeroId ?? null
+
+    ocrApplied = true
+    if (current === row) {
+      // Countdown pick confirmed — just fill in the hero id, no UI churn
+      draftStore.getState().selectMySpot(dbHeroId, row)
+      logger.info('My Spot confirmed (GSI model x card OCR)', {
+        row,
+        model: npcName,
+      })
+      return
+    }
+    applySpot(dbHeroId, row)
+    logger.info(
+      current === null
+        ? 'My Spot auto-selected (GSI model x card OCR)'
+        : 'My Spot corrected by OCR (countdown pick was wrong)',
+      {
+        row,
+        previousRow: current,
+        model: npcName,
+        teamHalfStart,
+        player: snapshot?.localPlayer?.name,
+      },
+    )
   }
 
   function trySelectModel(): void {
@@ -91,10 +164,9 @@ export function createSpotDetectionService(
     const npcName = snapshot?.localHeroNpcName ?? null
     if (!connected || !npcName) return
 
-    // npc short name -> DB hero name convention: underscores stripped
-    const dbName = npcName.replace(/_/g, '')
+    const token = heroNameToken(npcName)
     const model = state.identifiedHeroModelsCache.find(
-      (m) => m.heroName === dbName,
+      (m) => heroNameToken(m.heroName) === token,
     )
     if (!model || model.dbHeroId === null) {
       logger.warn('GSI reported a picked model outside the identified pool', {
@@ -114,19 +186,23 @@ export function createSpotDetectionService(
 
   function tryApply(): void {
     if (!armed) return
-    trySelectSpot()
+    trySelectSpotFromCountdown()
+    trySelectSpotFromOcr()
     trySelectModel()
-    if (spotApplied && modelApplied) armed = false
+    if (ocrApplied && modelApplied) armed = false
   }
 
-  // GSI learns things over time (the model pick lands mid-draft; the server may
-  // start late) — every snapshot is a cheap retry while armed.
+  // GSI learns things over time (the countdown lands during the preview, the
+  // model pick mid-draft; the server may start late) — every snapshot is a
+  // cheap retry while armed.
   streamService.onGsiSnapshot(() => tryApply())
 
   return {
     onInitialScanProcessed(): void {
-      spotApplied = false
+      countdownApplied = false
+      ocrApplied = false
       modelApplied = false
+      autoAppliedRow = null
       armed = true
       tryApply()
     },

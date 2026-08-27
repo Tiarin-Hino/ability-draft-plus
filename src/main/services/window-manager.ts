@@ -238,13 +238,23 @@ export function createWindowManager(): WindowManager {
   }
 
   /**
-   * Re-applies the CURRENT click-through state. Mouse-move forwarding is
-   * fragile on Windows — window operations can silently drop it, leaving
-   * hover-only overlay elements dead. Cheap and idempotent, so callers re-arm
-   * it after anything that disturbs the window (notably a completed scan,
-   * which repaints the whole hotspot layer).
+   * Re-arms mouse-move forwarding. Fragile on Windows — window operations can
+   * silently drop it, leaving hover-only overlay elements dead. A same-state
+   * re-apply demonstrably does NOT restore it (observed 2026-08-26: tooltips
+   * stayed dead after the auto initial scan despite the post-scan refresh,
+   * until a button hover toggled click-through off and back on) — so when the
+   * overlay is in click-through mode this performs that full toggle CYCLE:
+   * ignore off, then back on with forwarding. The off state lasts only between
+   * the two synchronous calls. While the user is interacting (ignore already
+   * false) the current state is simply re-applied — never yank click-through
+   * off under the cursor.
    */
   function refreshOverlayMouseEvents(): void {
+    if (mouseIgnore) {
+      applyOverlayMouseEvents(false, mouseForward)
+      applyOverlayMouseEvents(true, mouseForward)
+      return
+    }
     applyOverlayMouseEvents(mouseIgnore, mouseForward)
   }
 

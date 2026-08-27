@@ -155,7 +155,9 @@ function buildPlayerRows(
 
   // Spectate: GSI arrays are slot-indexed and the within-team slot order does
   // NOT match the board's row order — only a correlated mapping may place a
-  // name/model on a row. Playing: the index IS the row (validated team_slot).
+  // name/model on a row. Playing: gsiInfo() already placed the local player at
+  // their OCR-derived row (own-row-detection.ts), so the arrays are row-indexed
+  // and the identity read below is correct.
   const slotByRow = new Map(slotRowMappings.map((m) => [m.scanRow, m.gsiSlot]))
   const gsiSlotForRow = (row: number): number | null =>
     gsi.spectating ? (slotByRow.get(row) ?? null) : row

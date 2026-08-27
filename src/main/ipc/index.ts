@@ -181,6 +181,7 @@ export function registerIpcHandlers(
       heroModels: [],
       heroesForMySpotUI: [],
       selectedHeroForDraftingDbId: null,
+      selectedSpotHeroOrder: null,
       selectedModelHeroOrder: null,
       heroesCoords: coords.heroes_coords ?? [],
       heroesParams: coords.heroes_params ?? { width: 0, height: 0 },

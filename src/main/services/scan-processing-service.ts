@@ -194,8 +194,8 @@ export function createScanProcessingService(
         // Third consumer: the streamer-view server (caches its own last payload)
         streamService?.onScanProcessed(output.overlayPayload, isInitialScan)
 
-        // Initial scans reset the spot selection — give GSI auto spot detection
-        // a chance to re-apply it from the local player's team slot
+        // Initial scans reset the spot selection — re-arm auto spot/model
+        // detection (row derived from GSI hero x card OCR; see spot-detection)
         if (isInitialScan) spotDetection?.onInitialScanProcessed()
 
         const durationMs = Math.round(performance.now() - start)

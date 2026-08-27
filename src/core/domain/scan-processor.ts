@@ -511,6 +511,7 @@ export function processScanResults(
     heroModels: enrichedHeroModels,
     heroesForMySpotUI,
     selectedHeroForDraftingDbId: state.mySelectedSpotDbId,
+    selectedSpotHeroOrder: state.mySelectedSpotHeroOrder,
     selectedModelHeroOrder: state.mySelectedModelHeroOrder,
     heroesCoords,
     heroesParams,

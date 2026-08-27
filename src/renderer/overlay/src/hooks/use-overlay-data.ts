@@ -63,17 +63,12 @@ export function useOverlayData(): OverlayState & {
         setScanState('scanned')
         setScanError(null)
       }
-      // Sync selections from payload
-      if (data.selectedHeroForDraftingDbId !== undefined) {
-        // Resolve hero order from heroesForMySpotUI
-        if (data.selectedHeroForDraftingDbId === null) {
-          setSelectedSpotHeroOrder(null)
-        } else {
-          const hero = data.heroesForMySpotUI.find(
-            (h) => h.dbHeroId === data.selectedHeroForDraftingDbId,
-          )
-          if (hero) setSelectedSpotHeroOrder(hero.heroOrder)
-        }
+      // Sync selections from payload. The PLAYER row comes through directly —
+      // never resolve the dbId against heroesForMySpotUI (pool rows): the dbId
+      // is the MODEL hero, and pool row != player row (that lookup put the
+      // My Spot highlight on the wrong player's boxes — 2026-08-26).
+      if (data.selectedSpotHeroOrder !== undefined) {
+        setSelectedSpotHeroOrder(data.selectedSpotHeroOrder)
       }
       if (data.selectedModelHeroOrder !== undefined) {
         setSelectedModelHeroOrder(data.selectedModelHeroOrder)

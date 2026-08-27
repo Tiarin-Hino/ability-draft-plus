@@ -123,6 +123,14 @@ export interface MlWorkerSuccessResponse {
    * layout has no heroes_coords.
    */
   nameStrips?: { row: number; png: ArrayBuffer }[]
+  /**
+   * The "YOU WILL DRAFT IN: N" digits region (playing mode) as an upscaled
+   * grayscale PNG for OCR in the main process — feeds countdown-based own-row
+   * detection (core/gsi/draft-clock.ts countdownTargetRow). Region is computed
+   * from the screenshot dimensions (HUD is center-anchored and scales with
+   * height), not from the layout preset. Buffer is transferred.
+   */
+  countdownStrip?: ArrayBuffer
   /** Results for payload.retryPoolSlots (only slots that were re-read). */
   poolRetryResults?: ScanResult[]
   /**
