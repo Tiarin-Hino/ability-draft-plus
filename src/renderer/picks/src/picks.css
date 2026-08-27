@@ -62,6 +62,40 @@ body {
   flex-direction: column;
   gap: var(--row-gap, 14px);
   width: fit-content;
+  /* In a flex parent (setup preview halves) the default stretch would pull the
+     frame past the last row — keep the strip shrink-wrapped on both axes */
+  align-self: flex-start;
+}
+
+/* Optional team-colored frame (?frame=0 disables): thin low-opacity border in
+   the team color over a faint dark backing, with a stronger accent along the
+   anchored edge — reads as a deliberate panel without stealing attention.
+   NO padding/radius on purpose: the border hugs the content bounding box, so
+   its corners coincide with the outer tile corners and it tracks every
+   spacing/alignment configuration. */
+.strip-frame {
+  border: 2px solid rgba(120, 220, 124, 0.9);
+  border-left: 3px solid rgb(120, 220, 124);
+  background: rgba(8, 10, 13, 0.42);
+  box-shadow:
+    0 2px 10px rgba(0, 0, 0, 0.45),
+    inset 0 0 22px rgba(95, 191, 99, 0.05);
+}
+.strip-dire.strip-frame {
+  border-color: rgba(235, 92, 84, 0.9);
+  border-left: 3px solid rgb(235, 92, 84);
+  box-shadow:
+    0 2px 10px rgba(0, 0, 0, 0.45),
+    inset 0 0 22px rgba(210, 74, 67, 0.05);
+}
+.strip-align-right.strip-frame {
+  border-left-width: 2px;
+  border-left-color: rgba(120, 220, 124, 0.9);
+  border-right: 3px solid rgb(120, 220, 124);
+}
+.strip-align-right.strip-dire.strip-frame {
+  border-left-color: rgba(235, 92, 84, 0.9);
+  border-right: 3px solid rgb(235, 92, 84);
 }
 
 .player {

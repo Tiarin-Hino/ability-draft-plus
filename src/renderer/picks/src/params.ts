@@ -16,6 +16,8 @@ export interface StripOptions {
   /** Which page edge the rows anchor to; 'right' also mirrors the row order
    * (portrait outermost). */
   align: StripAlign
+  /** Team-colored frame around the whole strip. */
+  frame: boolean
   rowGap: number
   slotGap: number
   heroGap: number
@@ -63,6 +65,7 @@ export function parseStripOptions(
     bg: bg === 'transparent' || bg === 'chroma' || bg === 'dark' ? bg : null,
     names: params.get('names') !== '0',
     align: align === 'left' || align === 'right' ? align : defaultAlign(team),
+    frame: params.get('frame') !== '0',
     rowGap: intParam(params, 'rowgap', SPACING_DEFAULTS.rowGap, SPACING_LIMITS.rowGap),
     slotGap: intParam(params, 'slotgap', SPACING_DEFAULTS.slotGap, SPACING_LIMITS.slotGap),
     heroGap: intParam(params, 'herogap', SPACING_DEFAULTS.heroGap, SPACING_LIMITS.heroGap),
@@ -80,6 +83,7 @@ export function buildStripUrl(
   if (options.bg) params.set('bg', options.bg)
   if (!options.names) params.set('names', '0')
   if (options.align !== defaultAlign(team)) params.set('align', options.align)
+  if (!options.frame) params.set('frame', '0')
   if (options.rowGap !== SPACING_DEFAULTS.rowGap) params.set('rowgap', String(options.rowGap))
   if (options.slotGap !== SPACING_DEFAULTS.slotGap) params.set('slotgap', String(options.slotGap))
   if (options.heroGap !== SPACING_DEFAULTS.heroGap) params.set('herogap', String(options.heroGap))

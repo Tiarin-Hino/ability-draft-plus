@@ -85,7 +85,7 @@ export function TeamStrip({
 }) {
   return (
     <div
-      className={`strip strip-${team} strip-align-${options.align}`}
+      className={`strip strip-${team} strip-align-${options.align}${options.frame ? ' strip-frame' : ''}`}
       style={
         {
           '--row-gap': `${options.rowGap}px`,

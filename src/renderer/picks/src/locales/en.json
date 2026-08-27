@@ -17,6 +17,7 @@
       "dark": "Dark"
     },
     "names": "Player names",
+    "frame": "Team frame",
     "on": "On",
     "off": "Off",
     "alignRadiant": "Radiant strip",

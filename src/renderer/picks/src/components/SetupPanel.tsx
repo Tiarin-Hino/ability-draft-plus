@@ -23,6 +23,7 @@ import { TeamStrip } from './TeamStrip'
 interface SetupState {
   bg: PicksBg | null
   names: boolean
+  frame: boolean
   alignRadiant: StripAlign
   alignDire: StripAlign
   rowGap: number
@@ -34,6 +35,7 @@ interface SetupState {
 const SETUP_DEFAULTS: SetupState = {
   bg: null,
   names: true,
+  frame: true,
   alignRadiant: 'left',
   alignDire: 'right',
   ...SPACING_DEFAULTS,
@@ -55,6 +57,7 @@ function stripOptions(setup: SetupState, team: StreamTeam): StripOptions {
   return {
     bg: setup.bg,
     names: setup.names,
+    frame: setup.frame,
     align: team === 'radiant' ? setup.alignRadiant : setup.alignDire,
     rowGap: setup.rowGap,
     slotGap: setup.slotGap,
@@ -187,6 +190,17 @@ export function SetupPanel() {
                   { value: false, label: t('setup.off') },
                 ]}
                 onChange={(names) => setSetup((s) => ({ ...s, names }))}
+              />
+            </div>
+            <div className="control-row">
+              <span>{t('setup.frame')}</span>
+              <Seg<boolean>
+                value={setup.frame}
+                options={[
+                  { value: true, label: t('setup.on') },
+                  { value: false, label: t('setup.off') },
+                ]}
+                onChange={(frame) => setSetup((s) => ({ ...s, frame }))}
               />
             </div>
             <div className="control-row">
