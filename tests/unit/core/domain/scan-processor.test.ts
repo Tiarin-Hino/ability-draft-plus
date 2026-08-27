@@ -312,6 +312,35 @@ describe('processScanResults', () => {
       expect(updatedState.identifiedHeroModelsCache[0].heroDisplayName).toBe('Lina')
     })
 
+    it('excludes hero models already picked by any player from top-tier suggestions', () => {
+      const initialResult = processScanResults(makeInitialScanInput())
+      // Baseline: with this tiny pool every scored entity is top-tier,
+      // including both hero models
+      expect(
+        initialResult.overlayPayload.heroModels.map((m) => m.isGeneralTopTier),
+      ).toEqual([true, true])
+
+      const rescan = processScanResults({
+        rawResults: [makeScanResult('fireball', 0, 1, false)],
+        isInitialScan: false,
+        state: { ...initialResult.updatedState, pickedModelHeroOrders: [0] },
+        deps: mockDeps,
+        modelCoords: [makeCoord(0), makeCoord(1)],
+        heroesCoords: [makeCoord(0), makeCoord(1)],
+        heroesParams: { width: 358, height: 170 },
+        targetResolution: '1920x1080',
+        scaleFactor: 1.0,
+      })
+
+      const picked = rescan.overlayPayload.heroModels.find((m) => m.heroOrder === 0)
+      const available = rescan.overlayPayload.heroModels.find((m) => m.heroOrder === 1)
+      expect(picked?.isPicked).toBe(true)
+      expect(picked?.isGeneralTopTier).toBe(false)
+      // Score display survives the exclusion (enrichment falls back to computing it)
+      expect(picked?.consolidatedScore).toBeGreaterThan(0)
+      expect(available?.isGeneralTopTier).toBe(true)
+    })
+
     it('caches accepted picks and reports rescanRejected=false', () => {
       const initialResult = processScanResults(makeInitialScanInput())
       const rescan = processScanResults({

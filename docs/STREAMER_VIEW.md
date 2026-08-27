@@ -60,6 +60,29 @@ The layout mirrors the in-game AD draft screen so viewers orient instantly:
   (OP) and worst (trap) combinations available, from the app's Windrun dataset.
 - Player names and hero models appear when GSI is connected (see below).
 
+## Picks View — the in-game team strips
+
+A second, minimal view for the *game* scene: two independent strips (5 Radiant rows,
+5 Dire rows), each row a hero portrait plus the player's three standard picks and
+gold-framed ultimate. It answers "what did everyone draft?" for viewers who joined
+after the draft, without covering gameplay.
+
+- **Setup**: open `http://localhost:58873/picks` in a normal browser. It shows both
+  strips against a demo draft with controls for background, player names, per-team
+  alignment (mirror a strip to put both on the same screen side), and spacing
+  (row/ability/hero/ultimate gaps). Every setting is baked into the two generated
+  `?team=radiant` / `?team=dire` URLs — copy each into OBS as its **own browser
+  source** and position them freely.
+- **Live behavior**: rows fill in during the draft as scans land. The finished draft
+  then **stays on screen for the whole game** — resetting or closing the overlay does
+  not clear it (the snapshot even survives an app restart); it is replaced only when
+  the next draft's initial scan is recorded.
+- Player names and hero portraits come from GSI: complete while spectating; when
+  playing, only your own row until hero recognition improves (rows without a known
+  hero show a neutral socket, picks still render).
+- The strips are separate from `/stream`, so a two-scene OBS setup — draft scene with
+  the board, game scene with the strips — works with no switching inside the app.
+
 ## Game State Integration (GSI)
 
 GSI lets Dota itself send player names, game phase, and clock to the board. It does
@@ -102,10 +125,16 @@ Things to know before enabling:
 ## Architecture notes (maintainers)
 
 - Server: `src/main/services/stream-server-service.ts` — plain Node `http`, bound to
-  `127.0.0.1` only. Routes: static SPA (from `out/renderer`, asar-aware `readFile`),
-  `GET /events` (SSE, versioned full-state envelopes), `GET /icons/*`
+  `127.0.0.1` only. Routes: static SPAs (from `out/renderer`, asar-aware `readFile`),
+  `GET /events` (SSE, versioned full-state envelopes), `GET /picks` +
+  `GET /picks/events` (Picks View SPA and its slimmer SSE feed), `GET /icons/*`
   (`icon-cache-service`, Valve CDN download-through cache in `userData/stream-icons`),
   `POST /gsi` (parser in `src/core/gsi/`).
+- Picks View assembly is pure too: `src/core/domain/picks-view.ts` projects each
+  'drafting' board build down to a `PicksViewState`; the server caches the latest
+  projection and persists it to `userData/picks-view.json` so the strips outlive
+  overlay resets and app restarts. It is only ever replaced by a newer drafting
+  build, never cleared.
 - Board assembly is pure: `src/core/domain/stream-board.ts` builds the grid from the
   draft's *initial* scan payload (rescans subtract picked abilities from pool arrays)
   and the latest payload for picks/panels.

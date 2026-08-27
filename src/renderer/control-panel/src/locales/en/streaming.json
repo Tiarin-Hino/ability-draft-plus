@@ -13,6 +13,8 @@
     "port": "Port",
     "portHint": "1024–65535. Changing the port requires restarting the server and updating your OBS scene.",
     "url": "Board URL",
+    "picksUrl": "Picks View URL",
+    "picksHint": "The Picks View shows each player's hero and drafted abilities as two compact team strips for your in-game scene. Open the URL in a browser to tune them and generate the per-team OBS source links. It keeps showing the finished draft for the whole game, even after the overlay is closed.",
     "copy": "Copy",
     "copied": "Copied!",
     "clients": "Connected clients: {{count}}",

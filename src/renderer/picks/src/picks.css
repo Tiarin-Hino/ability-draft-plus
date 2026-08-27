@@ -1,0 +1,428 @@
+/* @DEV-GUIDE: Picks View (Streamer View № 2) styles. Two surfaces share this file:
+   the per-team strip pages (OBS browser sources — background transparent by default,
+   strip anchored to a page edge, NO chrome whatsoever) and the /picks setup page (a
+   normal browser page with controls). Strip spacing is driven by CSS custom
+   properties set inline by TeamStrip from the URL-tuned StripOptions. Overlay CSS
+   rules apply here too: no backdrop-filter, rgba() backgrounds. */
+
+:root {
+  --ground: #0b0e12;
+  --panel: #131920;
+  --panel-2: #182028;
+  --line: #26303c;
+  --ink: #e9e2d0;
+  --muted: #939dab;
+  --gold: #c9a355;
+  --radiant: #5fbf63;
+  --dire: #d24a43;
+  --amber: #e0a63f;
+  --plate: rgba(8, 10, 13, 0.82);
+  --tile: 34px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', 'Noto Sans', sans-serif;
+  color: var(--ink);
+  background: transparent;
+}
+
+/* ---------- strip pages ---------- */
+
+.strip-page {
+  min-height: 100vh;
+  padding: 4px; /* room for tile shadows at the page edge */
+}
+.strip-page.bg-dark {
+  background: var(--ground);
+}
+.strip-page.bg-chroma {
+  background: #00ff00;
+}
+
+.strip-page .strip-align-right {
+  margin-left: auto;
+}
+
+.waiting {
+  padding: 12px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+/* ---------- the strip itself ---------- */
+
+.strip {
+  display: flex;
+  flex-direction: column;
+  gap: var(--row-gap, 14px);
+  width: fit-content;
+  /* In a flex parent (setup preview halves) the default stretch would pull the
+     frame past the last row — keep the strip shrink-wrapped on both axes */
+  align-self: flex-start;
+}
+
+/* Optional team-colored frame (?frame=0 disables): thin low-opacity border in
+   the team color over a faint dark backing, with a stronger accent along the
+   anchored edge — reads as a deliberate panel without stealing attention.
+   NO padding/radius on purpose: the border hugs the content bounding box, so
+   its corners coincide with the outer tile corners and it tracks every
+   spacing/alignment configuration. */
+.strip-frame {
+  border: 2px solid rgba(120, 220, 124, 0.9);
+  border-left: 3px solid rgb(120, 220, 124);
+  background: rgba(8, 10, 13, 0.42);
+  box-shadow:
+    0 2px 10px rgba(0, 0, 0, 0.45),
+    inset 0 0 22px rgba(95, 191, 99, 0.05);
+}
+.strip-dire.strip-frame {
+  border-color: rgba(235, 92, 84, 0.9);
+  border-left: 3px solid rgb(235, 92, 84);
+  box-shadow:
+    0 2px 10px rgba(0, 0, 0, 0.45),
+    inset 0 0 22px rgba(210, 74, 67, 0.05);
+}
+.strip-align-right.strip-frame {
+  border-left-width: 2px;
+  border-left-color: rgba(120, 220, 124, 0.9);
+  border-right: 3px solid rgb(120, 220, 124);
+}
+.strip-align-right.strip-dire.strip-frame {
+  border-left-color: rgba(235, 92, 84, 0.9);
+  border-right: 3px solid rgb(235, 92, 84);
+}
+
+.player {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.nameplate {
+  align-self: flex-start;
+  max-width: 220px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: var(--plate);
+  border-left: 2px solid var(--radiant);
+  padding: 1px 7px 2px;
+  border-radius: 2px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+.strip-dire .nameplate {
+  border-left-color: var(--dire);
+}
+.strip-align-right .player {
+  align-items: flex-end;
+}
+.strip-align-right .nameplate {
+  align-self: flex-end;
+  border-left: none;
+  border-right: 2px solid var(--radiant);
+}
+.strip-align-right.strip-dire .nameplate {
+  border-right-color: var(--dire);
+}
+
+.row {
+  display: flex;
+  align-items: stretch;
+  gap: var(--slot-gap, 4px);
+}
+.strip-align-right .row {
+  flex-direction: row-reverse;
+}
+
+.portrait,
+.tile {
+  border-radius: 2px;
+  border: 1px solid rgba(0, 0, 0, 0.85);
+  outline: 1px solid rgba(255, 255, 255, 0.14);
+  outline-offset: -2px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+  background: #10151b;
+  object-fit: cover;
+}
+
+.portrait {
+  /* Official portraits are 16:9; a near-square box + cover crop keeps the face
+     (horizontally centered in Valve's art) while trimming strip width */
+  width: calc(var(--tile) * 1.2);
+  height: var(--tile);
+  object-position: center;
+  /* hero <-> abilities gap rides on the portrait so row-reverse mirrors it */
+  margin-right: var(--hero-gap, 4px);
+}
+.strip-align-right .portrait {
+  margin-right: 0;
+  margin-left: var(--hero-gap, 4px);
+}
+.strip-radiant .portrait {
+  box-shadow:
+    inset 0 -2px 0 var(--radiant),
+    0 2px 6px rgba(0, 0, 0, 0.6);
+}
+.strip-dire .portrait {
+  box-shadow:
+    inset 0 -2px 0 var(--dire),
+    0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
+.tile {
+  width: var(--tile);
+  height: var(--tile);
+}
+.tile-ult {
+  margin-left: var(--ult-gap, 10px);
+  outline-color: rgba(201, 163, 85, 0.75);
+}
+.strip-align-right .tile-ult {
+  margin-left: 0;
+  margin-right: var(--ult-gap, 10px);
+}
+
+.tile-empty,
+.tile-unknown,
+.portrait-unknown {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tile-empty {
+  background: rgba(10, 13, 16, 0.55);
+  outline: 1px dashed rgba(147, 157, 171, 0.4);
+}
+.tile-unknown {
+  background: rgba(38, 30, 12, 0.7);
+  outline: 1px dashed var(--amber);
+  color: var(--amber);
+  font-size: 16px;
+  font-weight: 600;
+}
+.portrait-unknown {
+  background: rgba(16, 21, 27, 0.75);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* ---------- setup page ---------- */
+
+.setup-page {
+  min-height: 100vh;
+  background: var(--ground);
+  padding: 28px 24px 60px;
+}
+
+.setup {
+  max-width: 980px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.setup h1 {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  color: var(--gold);
+}
+
+.setup-intro {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--muted);
+  max-width: 70ch;
+}
+
+.setup-preview {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 22px;
+  min-height: 300px;
+  overflow-x: auto;
+}
+.setup-preview.bg-transparent {
+  background: repeating-conic-gradient(#161b22 0% 25%, #0d1117 0% 50%) 0 0 / 24px 24px;
+}
+.setup-preview.bg-chroma {
+  background: #00ff00;
+}
+.setup-preview.bg-dark {
+  background: #070a0d;
+}
+.setup-preview-half {
+  display: flex;
+  flex: 1;
+}
+.setup-preview-half.align-right {
+  justify-content: flex-end;
+}
+
+.setup-preview-label {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(147, 157, 171, 0.7);
+  background: var(--plate);
+  padding: 2px 8px;
+  border-radius: 3px;
+}
+
+.setup-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.setup-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.setup-card h2 {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.control-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.seg {
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  overflow: hidden;
+}
+.seg button {
+  font: inherit;
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--panel-2);
+  border: none;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+.seg button + button {
+  border-left: 1px solid var(--line);
+}
+.seg button.active {
+  color: var(--ink);
+  box-shadow: inset 0 -2px 0 var(--gold);
+}
+.seg button:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: -2px;
+}
+
+.slider-row {
+  display: grid;
+  grid-template-columns: 1fr 130px 34px;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+.slider-row input[type='range'] {
+  accent-color: var(--gold);
+}
+.slider-value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.setup-reset {
+  align-self: flex-start;
+  font: inherit;
+  font-size: 12px;
+  color: var(--muted);
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+.setup-reset:hover {
+  color: var(--ink);
+}
+
+.url-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.url-team {
+  width: 70px;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.url-team.radiant {
+  color: var(--radiant);
+}
+.url-team.dire {
+  color: var(--dire);
+}
+.url-row code {
+  flex: 1;
+  overflow-x: auto;
+  white-space: nowrap;
+  font-family: Consolas, 'Cascadia Mono', monospace;
+  font-size: 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 5px 8px;
+}
+.url-row button {
+  font: inherit;
+  font-size: 12px;
+  color: var(--ink);
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 5px 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.url-hint {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}

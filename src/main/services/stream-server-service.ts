@@ -4,9 +4,15 @@ import { promises as fs } from 'fs'
 import { app } from 'electron'
 import log from 'electron-log/main'
 import type { OverlayDataPayload } from '@shared/types'
-import type { StreamServerStatusInfo, StreamStateMessage } from '@shared/types/stream'
+import type {
+  PicksStateMessage,
+  PicksViewState,
+  StreamServerStatusInfo,
+  StreamStateMessage,
+} from '@shared/types/stream'
 import { STREAM_PROTOCOL_VERSION } from '@shared/constants/thresholds'
 import { buildStreamBoardState } from '@core/domain/stream-board'
+import { buildPicksViewState } from '@core/domain/picks-view'
 import { parseGsiPayload, gsiSnapshotMode } from '@core/gsi/parser'
 import type { GsiSnapshot } from '@core/gsi/types'
 import type { PickEvent, StreamGsiInfo } from '@shared/types/stream'
@@ -24,11 +30,21 @@ import type { IconCacheService, IconKind } from './icon-cache-service'
 //                       Electron patches fs so readFile reads archive contents)
 // - GET /events      -> SSE: full StreamBoardState envelope on connect + on every
 //                       scan/reset/language change; comment heartbeat every 15s
+// - GET /picks       -> Picks View SPA (per-team drafted-picks strips; /picks?team=…
+//                       are the OBS sources, bare /picks is the setup page)
+// - GET /picks/events-> SSE: PicksStateMessage envelopes (payload null until a draft
+//                       has been recorded)
 // - GET /icons/*     -> icon-cache-service (official art, locally cached)
 // - POST /gsi        -> Dota 2 Game State Integration ingest (cfg written by
 //                       gsi-cfg-service). Always answers 200 fast; parsed snapshots
 //                       merge player names/phase/clock into the board state with a
 //                       500ms debounced push. 30s of silence = disconnected.
+//
+// Picks snapshot lifecycle: every 'drafting' board build is projected down to a
+// PicksViewState which is cached here AND persisted to userData/picks-view.json.
+// onSessionReset does NOT touch it — the strips keep showing the finished draft
+// through the game (overlay reset/closed, even across an app restart); the next
+// draft's initial scan naturally replaces it.
 //
 // Dev quirk: with `npm run dev` the renderer bundle only exists on the electron-vite
 // dev server (ELECTRON_RENDERER_URL), so /stream redirects there with ?api=<our origin>
@@ -67,7 +83,8 @@ export interface StreamServerService {
   getStatus(): StreamServerStatusInfo
   /** Fed by scan-processing-service after every successful scan. */
   onScanProcessed(payload: OverlayDataPayload, isInitialScan: boolean): void
-  /** Clears the cached draft (overlay reset / overlay closed). */
+  /** Clears the cached draft (overlay reset / overlay closed). The picks
+   * snapshot deliberately survives — see the dev-guide above. */
   onSessionReset(): void
   /** Re-push current state to clients (e.g. after a language change). */
   refresh(): void
@@ -90,10 +107,19 @@ export function createStreamServerService(
   let activePort: number | null = null
   let errorKey: string | null = null
   const sseClients = new Set<ServerResponse>()
+  const picksSseClients = new Set<ServerResponse>()
   let heartbeatTimer: NodeJS.Timeout | null = null
 
   let initialPayload: OverlayDataPayload | null = null
   let latestPayload: OverlayDataPayload | null = null
+
+  // Last recorded draft's picks — survives session resets; see dev-guide above.
+  let picksSnapshot: PicksViewState | null = null
+  // Change key (players + language, NOT updatedAt) so 2/s GSI-driven builds
+  // don't spam picks clients and the disk with identical snapshots.
+  let picksSnapshotKey = ''
+  let picksSaveTimer: NodeJS.Timeout | null = null
+  const picksFilePath = join(app.getPath('userData'), 'picks-view.json')
 
   let gsiSnapshot: GsiSnapshot | null = null
   let gsiLastAt: number | null = null
@@ -185,9 +211,77 @@ export function createStreamServerService(
       streamServerStatus: errorKey ? 'error' : server ? 'running' : 'stopped',
       streamServerPort: activePort,
       streamServerError: errorKey,
-      streamClientCount: sseClients.size,
+      streamClientCount: sseClients.size + picksSseClients.size,
     })
   }
+
+  function picksMessage(): PicksStateMessage {
+    return {
+      v: STREAM_PROTOCOL_VERSION,
+      type: 'picks',
+      ts: Date.now(),
+      payload: picksSnapshot,
+    }
+  }
+
+  function schedulePicksSave(): void {
+    if (picksSaveTimer) return
+    picksSaveTimer = setTimeout(() => {
+      picksSaveTimer = null
+      const body = JSON.stringify({ v: STREAM_PROTOCOL_VERSION, snapshot: picksSnapshot })
+      void fs.writeFile(picksFilePath, body).catch((error: unknown) => {
+        logger.warn('Picks snapshot write failed', {
+          error: error instanceof Error ? error.message : String(error),
+        })
+      })
+    }, 1_000)
+  }
+
+  function broadcastPicks(): void {
+    if (picksSseClients.size === 0) return
+    const message = picksMessage()
+    for (const client of picksSseClients) {
+      try {
+        sseWrite(client, message)
+      } catch (error) {
+        logger.warn('Picks SSE write failed, dropping client', {
+          error: error instanceof Error ? error.message : String(error),
+        })
+        picksSseClients.delete(client)
+      }
+    }
+    syncStoreStatus()
+  }
+
+  /** Cache + persist the picks projection of a drafting board build. */
+  function updatePicksSnapshot(state: StreamStateMessage): void {
+    const derived = buildPicksViewState(state.payload)
+    if (!derived) return
+    const key = `${derived.meta.language}|${JSON.stringify(derived.players)}`
+    if (key === picksSnapshotKey) return
+    picksSnapshot = derived
+    picksSnapshotKey = key
+    schedulePicksSave()
+    broadcastPicks()
+  }
+
+  // Restore the last draft's picks from disk (app restarted mid-game). A live
+  // snapshot derived before this resolves wins — it is strictly newer.
+  void fs
+    .readFile(picksFilePath, 'utf-8')
+    .then((raw) => {
+      const parsed = JSON.parse(raw) as { v?: number; snapshot?: PicksViewState | null }
+      if (parsed.v !== STREAM_PROTOCOL_VERSION) return
+      if (!parsed.snapshot || !Array.isArray(parsed.snapshot.players)) return
+      if (picksSnapshot) return
+      picksSnapshot = parsed.snapshot
+      picksSnapshotKey = `${parsed.snapshot.meta.language}|${JSON.stringify(parsed.snapshot.players)}`
+      broadcastPicks()
+      logger.info('Picks snapshot restored from disk')
+    })
+    .catch(() => {
+      // No file yet (or unreadable) — nothing to restore.
+    })
 
   function buildState(): StreamStateMessage {
     const state = buildStreamBoardState({
@@ -212,13 +306,22 @@ export function createStreamServerService(
     }
   }
 
-  function sseWrite(res: ServerResponse, message: StreamStateMessage): void {
+  function sseWrite(
+    res: ServerResponse,
+    message: StreamStateMessage | PicksStateMessage,
+  ): void {
     res.write(`data: ${JSON.stringify(message)}\n\n`)
   }
 
-  function broadcast(): void {
-    if (sseClients.size === 0) return
+  /**
+   * forceBuild makes the state build (and thus the picks snapshot update +
+   * persistence) happen even with zero clients connected — scans must land in
+   * the snapshot regardless of whether OBS currently has a source open.
+   */
+  function broadcast(forceBuild = false): void {
+    if (sseClients.size === 0 && picksSseClients.size === 0 && !forceBuild) return
     const message = buildState()
+    updatePicksSnapshot(message)
     for (const client of sseClients) {
       try {
         sseWrite(client, message)
@@ -252,12 +355,35 @@ export function createStreamServerService(
     })
   }
 
+  function handlePicksSse(res: ServerResponse): void {
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+      // Dev only in practice: lets the SPA served from the vite dev server connect.
+      'Access-Control-Allow-Origin': '*',
+    })
+    sseWrite(res, picksMessage())
+    picksSseClients.add(res)
+    syncStoreStatus()
+    logger.info('Picks SSE client connected', { clients: picksSseClients.size })
+
+    res.on('close', () => {
+      picksSseClients.delete(res)
+      syncStoreStatus()
+      logger.info('Picks SSE client disconnected', { clients: picksSseClients.size })
+    })
+  }
+
   async function handleStatic(urlPath: string, res: ServerResponse): Promise<void> {
-    // '/' and '/stream' load the SPA; anything else is an asset relative to out/renderer.
+    // '/', '/stream' and '/picks' load their SPAs; anything else is an asset
+    // relative to out/renderer.
     const relative =
       urlPath === '/' || urlPath === '/stream' || urlPath === '/stream/'
         ? 'stream/index.html'
-        : urlPath.replace(/^\//, '')
+        : urlPath === '/picks' || urlPath === '/picks/'
+          ? 'picks/index.html'
+          : urlPath.replace(/^\//, '')
 
     const filePath = normalize(join(staticRoot, relative))
     if (!filePath.startsWith(staticRoot)) {
@@ -483,6 +609,11 @@ export function createStreamServerService(
       return
     }
 
+    if (urlPath === '/picks/events') {
+      handlePicksSse(res)
+      return
+    }
+
     if (urlPath.startsWith('/icons/')) {
       void handleIcon(urlPath, res)
       return
@@ -497,11 +628,17 @@ export function createStreamServerService(
     // Preserve the caller's query params (?demo=1&bg=...&title=...) — only the
     // api origin is appended for the split-origin SSE connection.
     const devRendererUrl = !app.isPackaged && process.env['ELECTRON_RENDERER_URL']
-    if (devRendererUrl && (urlPath === '/' || urlPath === '/stream' || urlPath === '/stream/')) {
+    const devSpa =
+      urlPath === '/' || urlPath === '/stream' || urlPath === '/stream/'
+        ? 'stream'
+        : urlPath === '/picks' || urlPath === '/picks/'
+          ? 'picks'
+          : null
+    if (devRendererUrl && devSpa) {
       const query = new URLSearchParams((req.url ?? '').split('?')[1] ?? '')
       query.set('api', `http://127.0.0.1:${activePort}`)
       res.writeHead(302, {
-        Location: `${devRendererUrl}/stream/index.html?${query.toString()}`,
+        Location: `${devRendererUrl}/${devSpa}/index.html?${query.toString()}`,
       })
       res.end()
       return
@@ -535,11 +672,13 @@ export function createStreamServerService(
           activePort = port
           errorKey = null
           heartbeatTimer = setInterval(() => {
-            for (const client of sseClients) {
-              try {
-                client.write(': heartbeat\n\n')
-              } catch {
-                sseClients.delete(client)
+            for (const clients of [sseClients, picksSseClients]) {
+              for (const client of clients) {
+                try {
+                  client.write(': heartbeat\n\n')
+                } catch {
+                  clients.delete(client)
+                }
               }
             }
           }, SSE_HEARTBEAT_MS)
@@ -581,7 +720,7 @@ export function createStreamServerService(
       if (appStore.getState().gsiConnected) {
         appStore.setState({ gsiConnected: false })
       }
-      for (const client of sseClients) {
+      for (const client of [...sseClients, ...picksSseClients]) {
         try {
           client.end()
         } catch {
@@ -589,6 +728,7 @@ export function createStreamServerService(
         }
       }
       sseClients.clear()
+      picksSseClients.clear()
 
       return new Promise((resolve) => {
         srv.close(() => {
@@ -609,7 +749,7 @@ export function createStreamServerService(
       return {
         status: errorKey ? 'error' : server ? 'running' : 'stopped',
         port: activePort,
-        clientCount: sseClients.size,
+        clientCount: sseClients.size + picksSseClients.size,
         errorKey,
       }
     },
@@ -619,7 +759,9 @@ export function createStreamServerService(
         initialPayload = payload
       }
       latestPayload = payload
-      broadcast()
+      // forceBuild: the picks snapshot must record the scan even with no
+      // clients connected (an OBS source may connect later, or after restart)
+      broadcast(true)
     },
 
     onSessionReset(): void {
