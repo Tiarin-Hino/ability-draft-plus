@@ -1,0 +1,39 @@
+{
+  "waiting": "No draft recorded yet — scan a draft in Ability Draft Plus",
+  "unknownAbility": "Unknown ability",
+  "team": {
+    "radiant": "Radiant",
+    "dire": "Dire"
+  },
+  "player": "Player {{num}}",
+  "setup": {
+    "title": "PICKS VIEW SETUP",
+    "intro": "Tune the two team strips before the game, then add the generated URLs to OBS as two browser sources. Every setting is baked into the URLs — nothing needs to be saved in OBS.",
+    "preview": "Preview (demo draft)",
+    "background": "Background",
+    "bg": {
+      "transparent": "Transparent",
+      "chroma": "Chroma",
+      "dark": "Dark"
+    },
+    "names": "Player names",
+    "on": "On",
+    "off": "Off",
+    "alignRadiant": "Radiant strip",
+    "alignDire": "Dire strip",
+    "align": {
+      "left": "Left-aligned",
+      "right": "Right-aligned"
+    },
+    "spacing": "Spacing (px)",
+    "rowGap": "Between rows",
+    "slotGap": "Between abilities",
+    "heroGap": "Hero to abilities",
+    "ultGap": "Ultimate to abilities",
+    "reset": "Reset to defaults",
+    "urls": "OBS browser source URLs",
+    "urlHint": "Add each strip as its own browser source so you can position them independently. The strips stay live during the draft and keep the finished draft on screen for the whole game.",
+    "copy": "Copy",
+    "copied": "Copied!"
+  }
+}

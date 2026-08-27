@@ -175,3 +175,51 @@ export interface PickEvent {
   kind: 'ability' | 'modelSelectionMarker'
   clockTime: number | null
 }
+
+// ---------------------------------------------------------------------------
+// Picks View (Streamer View № 2) — the minimal per-team drafted-picks strips
+// served at /picks and pushed over /picks/events. Deliberately a SEPARATE,
+// slimmer state than StreamBoardState: the strips outlive the draft session
+// (they keep showing the last completed draft during the game, after the
+// overlay is reset or closed), so their snapshot is cached and persisted
+// independently in stream-server-service.
+// ---------------------------------------------------------------------------
+
+/** One drafted ability on a picks strip. */
+export interface PicksAbility {
+  /** Valve internal name; null when the slot could not be identified. */
+  name: string | null
+  displayName: string
+  /** Server-relative icon path; null when name is unknown. */
+  iconPath: string | null
+  isUnknown: boolean
+}
+
+/** One player row on a picks strip: hero portrait + the 4 pick boxes. */
+export interface PicksPlayer {
+  /** Player index 0–9 (0–4 radiant, 5–9 dire). */
+  playerIndex: number
+  team: StreamTeam
+  /** From GSI when available; null until known. */
+  playerName: string | null
+  /** Localized hero display name; null while the hero model is unknown. */
+  heroDisplayName: string | null
+  /** Server-relative hero portrait path; null while the hero model is unknown. */
+  portraitPath: string | null
+  /** Fixed length 4: indexes 0–2 standard picks in pick order, 3 the ultimate;
+   * null = still empty. */
+  picks: (PicksAbility | null)[]
+}
+
+/** Snapshot of the last recorded draft's picks. */
+export interface PicksViewState {
+  players: PicksPlayer[]
+  meta: {
+    language: string
+    appVersion: string
+    updatedAt: number
+  }
+}
+
+/** Pushed over /picks/events; payload null until a draft has been recorded. */
+export type PicksStateMessage = StreamEnvelope<'picks', PicksViewState | null>

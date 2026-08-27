@@ -78,6 +78,39 @@ function IconPrefetchCard() {
   )
 }
 
+function UrlRow({ label, url }: { label: string; url: string }) {
+  const { t } = useTranslation('streaming')
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(url)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+
+  return (
+    <div className="space-y-1">
+      <Label>{label}</Label>
+      <div className="flex items-center gap-2">
+        <code className="rounded bg-muted px-2 py-1 text-sm">{url}</code>
+        <Button variant="outline" size="sm" onClick={handleCopy} className="gap-1">
+          {copied ? (
+            <>
+              <Check className="h-3.5 w-3.5" aria-hidden="true" />
+              {t('server.copied')}
+            </>
+          ) : (
+            <>
+              <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+              {t('server.copy')}
+            </>
+          )}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 export function StreamingPage() {
   const { t } = useTranslation('streaming')
   const status = useAppStore((s) => s.streamServerStatus)
@@ -87,12 +120,13 @@ export function StreamingPage() {
 
   const [portInput, setPortInput] = useState(String(DEFAULT_STREAM_PORT))
   const [autostart, setAutostart] = useState(false)
-  const [copied, setCopied] = useState(false)
   const [busy, setBusy] = useState(false)
 
   const running = status === 'running'
   const effectivePort = running && storePort !== null ? storePort : parseInt(portInput, 10)
-  const boardUrl = `http://localhost:${Number.isFinite(effectivePort) ? effectivePort : DEFAULT_STREAM_PORT}/stream`
+  const serverOrigin = `http://localhost:${Number.isFinite(effectivePort) ? effectivePort : DEFAULT_STREAM_PORT}`
+  const boardUrl = `${serverOrigin}/stream`
+  const picksUrl = `${serverOrigin}/picks`
 
   useEffect(() => {
     window.electronApi.invoke('settings:get').then((settings) => {
@@ -119,12 +153,6 @@ export function StreamingPage() {
   const handleAutostart = (checked: boolean) => {
     setAutostart(checked)
     window.electronApi.invoke('settings:set', { streamAutostart: checked })
-  }
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(boardUrl)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1500)
   }
 
   const statusVariant =
@@ -182,24 +210,10 @@ export function StreamingPage() {
           <p className="text-xs text-muted-foreground">{t('server.portHint')}</p>
 
           {running && (
-            <div className="space-y-1">
-              <Label>{t('server.url')}</Label>
-              <div className="flex items-center gap-2">
-                <code className="rounded bg-muted px-2 py-1 text-sm">{boardUrl}</code>
-                <Button variant="outline" size="sm" onClick={handleCopy} className="gap-1">
-                  {copied ? (
-                    <>
-                      <Check className="h-3.5 w-3.5" aria-hidden="true" />
-                      {t('server.copied')}
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="h-3.5 w-3.5" aria-hidden="true" />
-                      {t('server.copy')}
-                    </>
-                  )}
-                </Button>
-              </div>
+            <div className="space-y-3">
+              <UrlRow label={t('server.url')} url={boardUrl} />
+              <UrlRow label={t('server.picksUrl')} url={picksUrl} />
+              <p className="text-xs text-muted-foreground">{t('server.picksHint')}</p>
               <p className="text-xs text-muted-foreground">
                 {t('server.clients', { count: clientCount })}
               </p>
