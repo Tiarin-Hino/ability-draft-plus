@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { PicksAbility, PicksPlayer, StreamTeam } from '@shared/types/stream'
 import { apiBase } from '../hooks/use-picks-state'
 import type { StripOptions } from '../params'
+import { portraitObjectPosition } from '../portrait-focus'
 
 // @DEV-GUIDE: One team's five picks rows. Row layout copies the in-game pick boxes:
 // portrait, 3 standard picks in pick order, then the gold-framed ultimate — and the
@@ -57,6 +58,7 @@ function PlayerRow({
           <img
             className="portrait"
             src={`${apiBase()}${player.portraitPath}`}
+            style={{ objectPosition: portraitObjectPosition(player.portraitPath) }}
             alt={player.heroDisplayName ?? ''}
             title={player.heroDisplayName ?? undefined}
             onError={() => setPortraitFailed(true)}
