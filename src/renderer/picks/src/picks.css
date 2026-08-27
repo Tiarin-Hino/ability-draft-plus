@@ -123,8 +123,11 @@ body {
 }
 
 .portrait {
-  width: calc(var(--tile) * 16 / 9);
+  /* Official portraits are 16:9; a near-square box + cover crop keeps the face
+     (horizontally centered in Valve's art) while trimming strip width */
+  width: calc(var(--tile) * 1.2);
   height: var(--tile);
+  object-position: center;
   /* hero <-> abilities gap rides on the portrait so row-reverse mirrors it */
   margin-right: var(--hero-gap, 4px);
 }
