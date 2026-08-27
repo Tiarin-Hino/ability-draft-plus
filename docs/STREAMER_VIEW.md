@@ -148,5 +148,19 @@ Things to know before enabling:
 ## Planned (not yet built)
 
 - Hero-model pick recognition (the `modelSelectionMarker` events mark the hook).
-- Twitch extension letting viewers browse pool abilities themselves.
 - Caster-triggered short clips explaining broken/bugged abilities during the draft.
+- **Twitch extension** letting viewers browse pool abilities themselves (PGL-style video
+  overlay). Deliberately deferred until Streamer View is finalized and cleaned up: the
+  board state assembled here is already the complete data set an overlay needs, so the
+  extension is primarily a *transport swap* — instead of SSE to localhost, the same
+  versioned `StreamEnvelope` goes to a hosted EBS that relays it to viewers via Twitch
+  PubSub. Do not design a second data path for it.
+  Extension-specific work that does NOT exist yet:
+  - EBS (small Node service): Twitch JWT verification, `send-extension-message` relay.
+    Envelope must fit the 5KB / 1-msg-per-sec-per-channel PubSub limits.
+  - Streamer-side opt-in: Twitch OAuth pairing + a "broadcast" toggle that pushes
+    envelopes to the EBS alongside (not instead of) the local SSE feed.
+  - Stream-delay sync: timestamp each envelope; the frontend buffers against
+    `hlsLatencyBroadcaster` so viewers see the board matching their delayed video.
+  - Overlay alignment assumes a fullscreen 16:9 game scene; cropped/custom OBS scenes
+    need a calibration offset on the extension config page.
