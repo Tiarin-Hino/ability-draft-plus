@@ -121,6 +121,18 @@ export const OCR_STRIP_DIFF_THRESHOLD = 4
 // across game resolutions (tesseract reads upscaled small text far better).
 export const OCR_STRIP_TARGET_WIDTH = 600
 
+// "YOU WILL DRAFT IN: N" countdown digits (playing mode; countdown-based
+// own-row detection — countdownTargetRow in core/gsi/draft-clock.ts). The HUD
+// line is center-anchored and scales with screen HEIGHT; the label text ends at
+// a fixed offset right of center and the digits render left-anchored after it.
+// Ratios are of screen HEIGHT, measured on 2560x1440 screenshots (2026-08-26);
+// the x offset is added to width/2.
+export const COUNTDOWN_REGION_X_OFFSET_RATIO = 0.07
+export const COUNTDOWN_REGION_WIDTH_RATIO = 0.12
+export const COUNTDOWN_REGION_Y_RATIO = 0.088
+export const COUNTDOWN_REGION_HEIGHT_RATIO = 0.05
+export const COUNTDOWN_STRIP_TARGET_WIDTH = 300
+
 // Picked-model detection via model-tile diffing. The 12 model portrait tiles on
 // the draft stage are pixel-STATIC while unpicked (measured mean abs diff 0.0
 // across scans) and change drastically when picked (measured 35-120). Tiles are
@@ -157,8 +169,11 @@ export const AUTO_INITIAL_SCAN_DELAY_S = 15
 // so a 1s tick costs nothing between turns but keeps boundary latency low.
 export const AUTO_RESCAN_TICK_MS = 1_000
 // Wait after a turn ends before scanning — the game UI needs a moment to render
-// the picked ability icon into the player's row.
-export const AUTO_RESCAN_PICK_VISIBLE_DELAY_S = 1
+// the picked ability icon into the player's row. Measured 2026-08-26: at 1s the
+// reveal races the capture (misses under CPU load); 2s clears it with 5s of the
+// next turn to spare. A row whose targeted scan still comes up empty gets one
+// retry a tick later (see runRescan).
+export const AUTO_RESCAN_PICK_VISIBLE_DELAY_S = 2
 // A targeted rescan blocked by the contamination guard (hover tooltip over the
 // rows) retries every tick; after this many attempts the pending rows are
 // dropped — the next round-break full reconciliation scan will catch the pick.

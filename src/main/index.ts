@@ -147,6 +147,7 @@ app.whenReady().then(async () => {
     () => draftStore.getState().draftTimeline,
     () => draftStore.getState().modelAssignments,
     () => draftStore.getState().slotRowMappings,
+    () => draftStore.getState().mySelectedSpotHeroOrder,
   )
   // Auto "My Spot" from GSI (playing mode) — re-applied after each initial scan
   const spotDetectionService = createSpotDetectionService(

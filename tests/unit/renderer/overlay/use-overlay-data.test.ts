@@ -55,6 +55,7 @@ function makeOverlayPayload(overrides: Partial<OverlayDataPayload> = {}): Overla
     heroModels: [],
     heroesForMySpotUI: [],
     selectedHeroForDraftingDbId: null,
+    selectedSpotHeroOrder: null,
     selectedModelHeroOrder: null,
     heroesCoords: [],
     heroesParams: { width: 358, height: 170 },
@@ -165,46 +166,38 @@ describe('useOverlayData', () => {
       expect(result.current.scanState).toBe('idle')
     })
 
-    it('syncs selectedSpotHeroOrder from payload hero match', () => {
+    it('syncs selectedSpotHeroOrder from the payload row directly', () => {
       const { result } = renderHook(() => useOverlayData())
+      // The dbId is the MODEL hero and must NOT be resolved against the pool
+      // list (pool row != player row); the payload row wins
       const payload = makeOverlayPayload({
         selectedHeroForDraftingDbId: 42,
+        selectedSpotHeroOrder: 7,
         heroesForMySpotUI: [
           { heroOrder: 3, heroName: 'npc_dota_hero_axe', dbHeroId: 42 },
-          { heroOrder: 7, heroName: 'npc_dota_hero_lina', dbHeroId: 55 },
         ],
       })
 
       act(() => emit('overlay:data', payload))
 
-      expect(result.current.selectedSpotHeroOrder).toBe(3)
+      expect(result.current.selectedSpotHeroOrder).toBe(7)
     })
 
-    it('clears selectedSpotHeroOrder when selectedHeroForDraftingDbId is null', () => {
+    it('clears selectedSpotHeroOrder when the payload row is null', () => {
       const { result } = renderHook(() => useOverlayData())
 
-      // First select a hero
       act(() =>
         emit(
           'overlay:data',
-          makeOverlayPayload({
-            selectedHeroForDraftingDbId: 42,
-            heroesForMySpotUI: [
-              { heroOrder: 3, heroName: 'npc_dota_hero_axe', dbHeroId: 42 },
-            ],
-          }),
+          makeOverlayPayload({ selectedSpotHeroOrder: 3 }),
         ),
       )
       expect(result.current.selectedSpotHeroOrder).toBe(3)
 
-      // Then clear it
       act(() =>
         emit(
           'overlay:data',
-          makeOverlayPayload({
-            selectedHeroForDraftingDbId: null,
-            heroesForMySpotUI: [],
-          }),
+          makeOverlayPayload({ selectedSpotHeroOrder: null }),
         ),
       )
       expect(result.current.selectedSpotHeroOrder).toBeNull()

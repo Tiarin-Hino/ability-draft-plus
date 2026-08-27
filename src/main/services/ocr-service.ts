@@ -17,9 +17,14 @@ import type { DatabaseService } from './database-service'
 // - One tesseract.js worker, lazily spawned on the first strip batch; strip
 //   recognition is serialized through a queue (tesseract is not reentrant).
 // - Per-row gating keeps the steady-state cost near zero: a row whose strip
-//   bytes are unchanged since the last attempt is skipped, and a row that
-//   already resolved to a confident hero is never OCR'd again this session
-//   (names never change once a model is picked; reset() clears on new drafts).
+//   bytes are unchanged since the last attempt is skipped. A row IS re-OCR'd
+//   when its pixels change — even after resolving — because a resolution can
+//   be a MISREAD (observed 2026-08-26: an empty card read as the wrong hero at
+//   0.933 and, under the old never-re-OCR rule, poisoned attribution for the
+//   whole draft). A changed card re-reads and REPLACES the entry only when the
+//   new read clears the similarity floor; failed reads never wipe a good value.
+//   A card's name area changes pixels only a handful of times per draft, so
+//   the cost stays negligible (reset() clears state on new drafts).
 // - CANDIDATE SCOPING (same trick as pick-slot template matching): a drafted
 //   model can only be one of the draft's 12 pool heroes, so once the initial
 //   scan has identified the pool the roster is narrowed to it. The full roster
@@ -40,6 +45,9 @@ const logger = log.scope('ocr')
 export interface OcrService {
   /** Fire-and-forget: queue name strips from a scan for recognition. */
   processStrips(strips: { row: number; png: ArrayBuffer }[]): void
+  /** Fire-and-forget: OCR a "YOU WILL DRAFT IN: N" digits strip; the parsed
+   * seconds land in DraftStore.draftCountdown stamped with capturedAtMs. */
+  processCountdown(png: ArrayBuffer, capturedAtMs: number): void
   /** Clears per-row state (new draft session). */
   reset(): void
   /** Terminates the tesseract worker (app shutdown). */
@@ -56,7 +64,8 @@ export function createOcrService(
 
   // Per-row gates
   const lastStripHash = new Map<number, string>()
-  const resolvedRows = new Set<number>()
+  /** Countdown strip pixels unchanged -> skip (it changes every second). */
+  let lastCountdownHash: string | null = null
 
   let rosterCache: HeroNameCandidate[] | null = null
   function fullRoster(): HeroNameCandidate[] {
@@ -101,7 +110,7 @@ export function createOcrService(
   }
 
   async function recognizeStrip(row: number, png: Buffer): Promise<void> {
-    if (disposed || resolvedRows.has(row)) return
+    if (disposed) return
     const hash = createHash('md5').update(png).digest('hex')
     if (lastStripHash.get(row) === hash) return
     lastStripHash.set(row, hash)
@@ -125,7 +134,7 @@ export function createOcrService(
     }
     const match = best
 
-    resolvedRows.add(row)
+    const previous = draftStore.getState().ocrHeroNamesByRow[row]
     draftStore.setState((state) => ({
       ocrHeroNamesByRow: {
         ...state.ocrHeroNamesByRow,
@@ -136,11 +145,57 @@ export function createOcrService(
         },
       },
     }))
-    logger.info('OCR hero name resolved', {
-      row,
-      hero: match.name,
-      similarity: Number(match.similarity.toFixed(3)),
-    })
+    if (previous && previous.name !== match.name) {
+      // A changed card overruled an earlier read — usually a misread healing
+      logger.info('OCR hero name revised', {
+        row,
+        from: previous.name,
+        to: match.name,
+        similarity: Number(match.similarity.toFixed(3)),
+      })
+    } else {
+      logger.info('OCR hero name resolved', {
+        row,
+        hero: match.name,
+        similarity: Number(match.similarity.toFixed(3)),
+      })
+    }
+  }
+
+  /**
+   * Digits-only recognition of the countdown strip. Runs inside the same
+   * serialized queue as the name strips; the whitelist is switched to digits
+   * for this recognize and restored after (tesseract is not reentrant, so the
+   * queue guarantees no interleaving).
+   */
+  async function recognizeCountdown(
+    png: Buffer,
+    capturedAtMs: number,
+  ): Promise<void> {
+    if (disposed) return
+    const hash = createHash('md5').update(png).digest('hex')
+    if (lastCountdownHash === hash) return // countdown unchanged since last read
+    lastCountdownHash = hash
+
+    const worker = await getWorker()
+    await worker.setParameters({ tessedit_char_whitelist: '0123456789' })
+    try {
+      const { data } = await worker.recognize(png)
+      const runs = data.text.match(/\d+/g)
+      const seconds = runs ? parseInt(runs[runs.length - 1], 10) : NaN
+      // Max legal countdown: 59s preview + full serpentine schedule (~370s)
+      if (!Number.isFinite(seconds) || seconds < 0 || seconds > 400) {
+        logger.debug('Countdown strip unresolved', {
+          text: data.text.replace(/\n/g, ' | ').slice(0, 40),
+        })
+        return
+      }
+      draftStore.setState({ draftCountdown: { seconds, atMs: capturedAtMs } })
+    } finally {
+      await worker.setParameters({
+        tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ ',
+      })
+    }
   }
 
   return {
@@ -159,10 +214,22 @@ export function createOcrService(
       }
     },
 
+    processCountdown(png, capturedAtMs): void {
+      if (disposed) return
+      const buffer = Buffer.from(png)
+      queue = queue
+        .then(() => recognizeCountdown(buffer, capturedAtMs))
+        .catch((error) => {
+          logger.warn('Countdown OCR failed', {
+            error: error instanceof Error ? error.message : String(error),
+          })
+        })
+    },
+
     reset(): void {
       lastStripHash.clear()
-      resolvedRows.clear()
-      draftStore.setState({ ocrHeroNamesByRow: {} })
+      lastCountdownHash = null
+      draftStore.setState({ ocrHeroNamesByRow: {}, draftCountdown: null })
     },
 
     async dispose(): Promise<void> {

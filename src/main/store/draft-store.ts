@@ -63,6 +63,13 @@ export interface DraftSessionSlice {
     number,
     { name: string; displayName: string; similarity: number }
   >
+  /** Latest OCR'd "YOU WILL DRAFT IN" seconds + its capture time (playing
+   * mode; countdown-based own-row detection). */
+  draftCountdown: { seconds: number; atMs: number } | null
+  /** Own row derived from the countdown vs the turn schedule (auto-rescan
+   * computes it — it owns the pick-phase anchor; spot-detection consumes).
+   * Validated 4/4 on live lobby games 2026-08-26. */
+  countdownSpotRow: { row: number; deltaS: number; atMs: number } | null
 }
 
 /** A picked hero model attributed to the player who drafted it. */
@@ -107,6 +114,8 @@ export function createDraftStore() {
     gsiHeroEvents: [],
     slotRowMappings: [],
     ocrHeroNamesByRow: {},
+    draftCountdown: null,
+    countdownSpotRow: null,
 
     // Actions
     resetSession: () =>
@@ -131,6 +140,8 @@ export function createDraftStore() {
         gsiHeroEvents: [],
         slotRowMappings: [],
         ocrHeroNamesByRow: {},
+        draftCountdown: null,
+        countdownSpotRow: null,
       }),
 
     selectMySpot: (dbHeroId, heroOrder) =>

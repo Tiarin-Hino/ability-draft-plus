@@ -140,6 +140,9 @@ export interface OverlayDataPayload {
   heroModels: HeroModelDisplay[]
   heroesForMySpotUI: HeroSpotDisplay[]
   selectedHeroForDraftingDbId: number | null
+  /** My Spot PLAYER row 0-9 (authoritative — the dbId above is the MODEL hero
+   * and must not be resolved against pool rows; see spot-detection-service). */
+  selectedSpotHeroOrder: number | null
   selectedModelHeroOrder: number | null
   heroesCoords: SlotCoordinate[]
   heroesParams: { width: number; height: number }

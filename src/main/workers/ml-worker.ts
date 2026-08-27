@@ -30,6 +30,11 @@ import { matchModelTile } from '@core/ml/model-tile-matcher'
 import {
   MODEL_TILE_COMPARE_SIZE,
   PLAYER_CARD_COMPARE_SIZE,
+  COUNTDOWN_REGION_X_OFFSET_RATIO,
+  COUNTDOWN_REGION_WIDTH_RATIO,
+  COUNTDOWN_REGION_Y_RATIO,
+  COUNTDOWN_REGION_HEIGHT_RATIO,
+  COUNTDOWN_STRIP_TARGET_WIDTH,
   PICK_TEMPLATE_COMPARE_SIZE,
   PICK_TEMPLATE_CROP_INSET_RATIO,
   PICK_TEMPLATE_FALLBACK_MIN_NCC,
@@ -346,6 +351,8 @@ async function handleScan(payload: {
   const playerCardTiles = await capturePlayerCardTiles(screenshot, coords)
   // Hero-name strips for main-process OCR (upscaled grayscale PNGs)
   const nameStrips = await captureNameStrips(screenshot, coords)
+  // "YOU WILL DRAFT IN" digits for countdown-based own-row detection
+  const countdownStrip = await captureCountdownStrip(screenshot)
   // Model-tile identification against the reference library (no-op until the
   // gather script's models mode populates it) — MUST run before the tiles'
   // buffers are transferred away below
@@ -358,6 +365,7 @@ async function handleScan(payload: {
     modelTiles,
     playerCardTiles,
     nameStrips,
+    countdownStrip,
     poolRetryResults,
     modelTileMatches,
   }
@@ -365,6 +373,7 @@ async function handleScan(payload: {
     ...(modelTiles?.map((t) => t.tile) ?? []),
     ...(playerCardTiles?.map((t) => t.tile) ?? []),
     ...(nameStrips?.map((s) => s.png) ?? []),
+    ...(countdownStrip ? [countdownStrip] : []),
   ])
 }
 
@@ -463,6 +472,34 @@ async function captureNameStrips(
 }
 
 /**
+ * Crops the "YOU WILL DRAFT IN: N" digits region (playing mode) as an upscaled
+ * grayscale PNG. The region is computed from screenshot DIMENSIONS, not the
+ * layout preset: the HUD line is center-anchored and scales with height, and
+ * the digits render left-anchored right after the fixed-width label text.
+ * Spectate/replay screens have no countdown — OCR simply finds no digits.
+ */
+async function captureCountdownStrip(
+  screenshot: DecodedScreenshot,
+): Promise<ArrayBuffer | undefined> {
+  const { width, height } = screenshot
+  const region = {
+    x: Math.round(width / 2 + height * COUNTDOWN_REGION_X_OFFSET_RATIO),
+    y: Math.round(height * COUNTDOWN_REGION_Y_RATIO),
+    width: Math.round(height * COUNTDOWN_REGION_WIDTH_RATIO),
+    height: Math.round(height * COUNTDOWN_REGION_HEIGHT_RATIO),
+  }
+  if (region.x + region.width > width || region.y + region.height > height) {
+    return undefined
+  }
+  try {
+    const png = await cropRegionPng(screenshot, region, COUNTDOWN_STRIP_TARGET_WIDTH)
+    return png.buffer.slice(png.byteOffset, png.byteOffset + png.byteLength)
+  } catch {
+    return undefined
+  }
+}
+
+/**
  * Identifies the 12 model tiles against the reference-tile library. Reuses the
  * raw tiles already captured for diff detection — no extra cropping.
  */
@@ -510,7 +547,19 @@ async function performInitialScan(
   return {
     ultimates,
     standard,
-    selectedAbilities: [],
+    // Nothing is picked at draft start, so the boxes are not SCANNED — but
+    // their default (empty) slots must exist in the payload so the overlay
+    // renders their hotspots from the first scan: the My Spot border shows on
+    // the (empty) boxes as soon as the spot is known, not after the first pick.
+    // Coords carry x/y only — the shared box size lives in the params (same
+    // merge performSelectedAbilitiesScan does).
+    selectedAbilities: (coords.selected_abilities_coords ?? []).map((c) =>
+      makeDefaultResult({
+        ...c,
+        width: coords.selected_abilities_params?.width ?? c.width,
+        height: coords.selected_abilities_params?.height ?? c.height,
+      }),
+    ),
     heroDefiningAbilities,
   }
 }

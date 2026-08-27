@@ -54,9 +54,13 @@ function resolveSlotIndex(
 }
 
 /**
- * Playing-mode local player block -> scan slot index 0-9, from the authoritative
- * team_name ("radiant"/"dire") + team_slot (0-4 within the team). Null when either
- * is absent (menus, spectating) — callers treat that as "slot unknown".
+ * Playing-mode local player block -> slot index 0-9 from team_name
+ * ("radiant"/"dire") + team_slot (0-4 within the team). Null when either is
+ * absent (menus, spectating) — callers treat that as "slot unknown".
+ * WARNING: this is LOBBY order. Only the team half (<5 / >=5) matches the
+ * draft screen; the within-team order does NOT (disproven on live games
+ * 2026-08-25, and player_slot doesn't match either). Never use it to place
+ * anything on a visual row — see core/domain/own-row-detection.ts.
  */
 function localSlotIndex(player: Record<string, unknown>): number | null {
   const teamName = asString(player['team_name'])

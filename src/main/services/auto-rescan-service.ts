@@ -11,9 +11,11 @@ import { gsiSnapshotMode } from '@core/gsi/parser'
 import {
   buildTurnSchedule,
   turnsEndedBetween,
+  countdownTargetRow,
   type TurnWindow,
 } from '@core/gsi/draft-clock'
 import { attributePicksByRow } from '@core/domain/pick-attribution'
+import { heroNameToken } from '@core/domain/own-row-detection'
 import {
   AUTO_RESCAN_TICK_MS,
   AUTO_RESCAN_PICK_VISIBLE_DELAY_S,
@@ -105,9 +107,12 @@ export function createAutoRescanService(
    * exactly when the assigning player's turn ends (user-verified), so the turn
    * that triggered the first-seen scan identifies the picker. The mapping is
    * tentative until the two-scan persistence commit (commit time lags by one
-   * turn and must NOT be used for attribution).
+   * turn and must NOT be used for attribution). 'self' marks the user's own
+   * model (GSI hero block match): its row is resolved at COMMIT time from the
+   * OCR-derived My Spot (localPlayer.slotIndex is lobby-order, not the visual
+   * row — see own-row-detection.ts), which may still be resolving at first-seen.
    */
-  const tentativeModelPicker = new Map<number, number>()
+  const tentativeModelPicker = new Map<number, number | 'self'>()
   /** Accepted rescans this session — the 1st sweeps up all preview-time picks
    * at once, so its timing carries no per-turn information. */
   let acceptedRescans = 0
@@ -118,6 +123,14 @@ export function createAutoRescanService(
   let lastClockTime: number | null = null
   /** Sticky per draft session: a big clock rewind marked this as a replay. */
   let replayDetected = false
+  /** A clock <= -8 (the preview ramp) was seen — proves we witnessed the draft
+   * start, the precondition for a trustworthy pick-phase anchor. */
+  let sawPreviewClock = false
+  let scheduleUnknownLogged = false
+  /** Rows already given their one empty-targeted-scan retry this turn. */
+  const retriedEmptyRows = new Set<number>()
+  /** Capture stamp of the last countdown reading already logged. */
+  let lastCountdownAtMs = 0
 
   function resetDraftSession(): void {
     draftClockSeenAtMs = null
@@ -130,6 +143,10 @@ export function createAutoRescanService(
     lastReplayScanMs = 0
     lastClockTime = null
     replayDetected = false
+    sawPreviewClock = false
+    scheduleUnknownLogged = false
+    retriedEmptyRows.clear()
+    lastCountdownAtMs = 0
     tentativeModelPicker.clear()
     acceptedRescans = 0
     modelConfirmAtMs = null
@@ -187,6 +204,13 @@ export function createAutoRescanService(
       logger.info('Draft clock identified', { clockTime: snapshot.clockTime })
     }
 
+    // Per-turn countdowns only reach -7; anything deeper is the PREVIEW ramp.
+    // Seeing it proves we witnessed the draft from (near) the start — the only
+    // condition under which the anchor below is trustworthy. Joining mid-draft
+    // (app/GSI started late) must NOT anchor: clock-0 crossings happen at every
+    // turn boundary and would offset the whole schedule (observed 2026-08-26).
+    if (snapshot.clockTime <= -8) sawPreviewClock = true
+
     // Replay detector: a spectated draft whose clock jumps BACKWARD beyond the
     // per-turn countdown depth is being seeked — the turn schedule is void for
     // the rest of this session. (Playing-mode clocks legitimately rewind by
@@ -214,6 +238,7 @@ export function createAutoRescanService(
     // where the preview clock reads exactly 0. Once wall time passes the
     // anchor, negative clocks are turn timers and must never touch it.
     const now = Date.now()
+    if (!sawPreviewClock) return // mid-draft join: no trustworthy anchor exists
     if (snapshot.clockTime < 0) {
       if (pickAnchorMs === null || now < pickAnchorMs) {
         if (pickAnchorMs === null) {
@@ -253,6 +278,41 @@ export function createAutoRescanService(
       const { snapshot, connected } = streamService.getGsiState()
       if (!connected || snapshot?.gamePhase !== GSI_HERO_SELECTION_PHASE) return
 
+      // Countdown-derived own-row candidate: "YOU WILL DRAFT IN: N" at capture
+      // time t means the local player's next turn starts at t+N — matched
+      // against the schedule via the anchor. Published to DraftStore for
+      // spot-detection (validated 4/4 across slots on live lobby games,
+      // 2026-08-26, deltas 1.5-2.1s).
+      const countdown = draftStore.getState().draftCountdown
+      if (
+        countdown !== null &&
+        countdown.atMs !== lastCountdownAtMs &&
+        pickAnchorMs !== null &&
+        sawPreviewClock
+      ) {
+        lastCountdownAtMs = countdown.atMs
+        const elapsedAtCapture = (countdown.atMs - pickAnchorMs) / 1000
+        const candidate = countdownTargetRow({
+          countdownS: countdown.seconds,
+          elapsedS: elapsedAtCapture,
+        })
+        logger.info('Countdown spot candidate', {
+          n: countdown.seconds,
+          elapsedS: Math.round(elapsedAtCapture),
+          row: candidate?.row ?? null,
+          deltaS: candidate === null ? null : Number(candidate.deltaS.toFixed(1)),
+        })
+        if (candidate !== null) {
+          draftStore.setState({
+            countdownSpotRow: {
+              row: candidate.row,
+              deltaS: candidate.deltaS,
+              atMs: countdown.atMs,
+            },
+          })
+        }
+      }
+
       if (poolNames().length === 0) {
         // Fallback auto INITIAL scan: the user hasn't scanned the pool yet —
         // do it for them once, autoInitialScanDelayS (user setting; slower PCs
@@ -273,17 +333,22 @@ export function createAutoRescanService(
         return
       }
 
-      // REPLAY (auto-detected via clock rewind): the turn schedule is void —
-      // plain periodic FULL rescans; attribution stays row-diff-correct.
+      // REPLAY (auto-detected via clock rewind) or MID-DRAFT JOIN (preview ramp
+      // never seen, so no trustworthy anchor exists): the turn schedule is void
+      // — plain periodic FULL rescans; attribution stays row-diff/OCR-correct.
       // Live spectating (no rewind seen) runs the turn-driven path below.
-      if (replayDetected) {
+      if (replayDetected || !sawPreviewClock) {
+        if (!replayDetected && !scheduleUnknownLogged) {
+          scheduleUnknownLogged = true
+          logger.info('Joined draft mid-progress (no preview clock) — periodic full rescans')
+        }
         if (Date.now() - lastReplayScanMs < AUTO_RESCAN_REPLAY_INTERVAL_MS) {
           return
         }
         lastReplayScanMs = Date.now()
         pendingRows.clear()
         fullScanDue = false
-        await runRescan(undefined, undefined, snapshot.clockTime, null)
+        await runRescan(undefined, undefined, snapshot.clockTime, null, 'periodic')
         return
       }
 
@@ -292,7 +357,7 @@ export function createAutoRescanService(
       // commits in ~1.5s instead of one full turn later
       if (modelConfirmAtMs !== null && Date.now() >= modelConfirmAtMs) {
         modelConfirmAtMs = null
-        await runRescan([], undefined, snapshot.clockTime, null)
+        await runRescan([], undefined, snapshot.clockTime, null, 'model-confirm')
         return
       }
 
@@ -310,6 +375,8 @@ export function createAutoRescanService(
         const ended = turnsEndedBetween(schedule, queuedUpToS, visibleUpToS)
         for (const turn of ended) {
           pendingRows.add(turn.playerIndex)
+          // A NEW turn re-earns the row its one empty-scan retry
+          retriedEmptyRows.delete(turn.playerIndex)
           // Last turn of a round -> reconcile the whole board in the 5s break
           if (turn.seq % 10 === 9) fullScanDue = true
         }
@@ -332,12 +399,32 @@ export function createAutoRescanService(
   }
 
   /**
-   * Attribute model-tile changes to players. Newly PENDING tiles are mapped to
-   * the single turn that triggered this scan (ambiguous multi-turn scans and
-   * the first sweep-up rescan attribute nothing); newly COMMITTED tiles turn
-   * their tentative mapping into a stored assignment. The user's own model is
-   * attributed from GSI directly, which also overrides any tentative guess.
+   * Attribute model-tile changes to players. AUTHORITATIVE source: the card
+   * OCR (the drafter's card prints the hero's name — see ocrRowForPoolHero);
+   * turn timing is the fallback while OCR hasn't read the card. Newly PENDING
+   * tiles are tentatively mapped to the single turn that triggered this scan
+   * (ambiguous multi-turn scans and the first sweep-up rescan attribute
+   * nothing); newly COMMITTED tiles resolve OCR-first, then tentative. The
+   * user's own model resolves via the OCR-derived My Spot ('self').
    */
+  /**
+   * The unique player row whose card OCR'd as the given POOL hero, or null
+   * (not OCR'd yet / ambiguous). Direct evidence of who drafted the model —
+   * the draft screen prints the hero's name on the drafter's card.
+   */
+  function ocrRowForPoolHero(order: number): number | null {
+    const state = draftStore.getState()
+    const heroName = state.identifiedHeroModelsCache.find(
+      (m) => m.heroOrder === order,
+    )?.heroName
+    if (!heroName) return null
+    const token = heroNameToken(heroName)
+    const rows = Object.entries(state.ocrHeroNamesByRow)
+      .filter(([, ocr]) => heroNameToken(ocr.name) === token)
+      .map(([row]) => Number(row))
+    return rows.length === 1 ? rows[0] : null
+  }
+
   function attributeModelPicks(
     prevPending: readonly number[],
     prevPicked: readonly number[],
@@ -347,8 +434,7 @@ export function createAutoRescanService(
     const { snapshot } = streamService.getGsiState()
 
     const localNpc = snapshot?.localHeroNpcName ?? null
-    const localSlot = snapshot?.localPlayer?.slotIndex ?? null
-    const localDbName = localNpc ? localNpc.replace(/_/g, '') : null
+    const localToken = localNpc ? heroNameToken(localNpc) : null
 
     // Tentative mapping at FIRST-SEEN time
     const prevPendingSet = new Set(prevPending)
@@ -359,8 +445,12 @@ export function createAutoRescanService(
       const heroName = state.identifiedHeroModelsCache.find(
         (m) => m.heroOrder === order,
       )?.heroName
-      if (localDbName !== null && localSlot !== null && heroName === localDbName) {
-        tentativeModelPicker.set(order, localSlot)
+      if (
+        localToken !== null &&
+        heroName !== undefined &&
+        heroNameToken(heroName) === localToken
+      ) {
+        tentativeModelPicker.set(order, 'self')
       } else if (acceptedRescans > 1 && scannedRows?.length === 1) {
         tentativeModelPicker.set(order, scannedRows[0])
       }
@@ -374,15 +464,30 @@ export function createAutoRescanService(
       if (!stillRelevant.has(order)) tentativeModelPicker.delete(order)
     }
 
-    // Commit: persist the tentative mapping as an assignment
+    // Commit priority: the LOCAL player's model goes to the known My Spot row
+    // (countdown/OCR-validated — a single card misread must never move it,
+    // observed 2026-08-26); other models take the card-OCR row (direct
+    // evidence), with the turn-timing tentative mapping as the fallback while
+    // OCR hasn't read the card (reconcileModelAssignmentsWithOcr fixes later)
     const prevPickedSet = new Set(prevPicked)
     const assignments: import('../store/draft-store').ModelAssignment[] = []
     for (const order of state.pickedModelHeroOrders) {
       if (prevPickedSet.has(order)) continue
-      const playerIndex = tentativeModelPicker.get(order)
+      const tentative = tentativeModelPicker.get(order)
       tentativeModelPicker.delete(order)
+      const ocrRow = ocrRowForPoolHero(order)
+      const spotRow =
+        tentative === 'self' ? state.mySelectedSpotHeroOrder : null
+      if (spotRow !== null && ocrRow !== null && ocrRow !== spotRow) {
+        logger.warn(
+          'Card OCR disagrees with My Spot for the local model — trusting the spot',
+          { order, ocrRow, spotRow },
+        )
+      }
+      const playerIndex =
+        spotRow ?? ocrRow ?? (tentative === 'self' ? undefined : tentative)
       if (playerIndex === undefined) {
-        logger.info('Model pick left unattributed (ambiguous timing)', { order })
+        logger.info('Model pick left unattributed (awaiting card OCR)', { order })
         continue
       }
       assignments.push({ poolHeroOrder: order, playerIndex })
@@ -391,6 +496,61 @@ export function createAutoRescanService(
       draftStore.getState().appendModelAssignments(assignments)
       logger.info('Model picks attributed', { assignments })
     }
+  }
+
+  /**
+   * Card OCR lands on its own schedule (often a scan after the model commit)
+   * and outranks turn-timing guesses: append assignments timing couldn't make
+   * and CORRECT ones it got wrong (observed: adjacent-turn misattribution put
+   * Night Stalker on the wrong team's row, 2026-08-26).
+   */
+  function reconcileModelAssignmentsWithOcr(): boolean {
+    const state = draftStore.getState()
+    if (state.pickedModelHeroOrders.length === 0) return false
+
+    // The LOCAL player's model is anchored to the known My Spot row — card
+    // OCR must never "correct" it onto another player (misread protection)
+    const { snapshot } = streamService.getGsiState()
+    const localToken = snapshot?.localHeroNpcName
+      ? heroNameToken(snapshot.localHeroNpcName)
+      : null
+    const spotRow = state.mySelectedSpotHeroOrder
+
+    let changed = false
+    let assignments = [...state.modelAssignments]
+    for (const order of state.pickedModelHeroOrders) {
+      const heroName = state.identifiedHeroModelsCache.find(
+        (m) => m.heroOrder === order,
+      )?.heroName
+      const isLocalModel =
+        localToken !== null &&
+        heroName !== undefined &&
+        heroNameToken(heroName) === localToken
+      const ocrRow =
+        isLocalModel && spotRow !== null ? spotRow : ocrRowForPoolHero(order)
+      if (ocrRow === null) continue
+      const existing = assignments.find((a) => a.poolHeroOrder === order)
+      if (!existing) {
+        assignments.push({ poolHeroOrder: order, playerIndex: ocrRow })
+        changed = true
+        logger.info('Model assignment added from card OCR', {
+          order,
+          row: ocrRow,
+        })
+      } else if (existing.playerIndex !== ocrRow) {
+        assignments = assignments.map((a) =>
+          a.poolHeroOrder === order ? { ...a, playerIndex: ocrRow } : a,
+        )
+        changed = true
+        logger.info('Model assignment corrected by card OCR', {
+          order,
+          from: existing.playerIndex,
+          to: ocrRow,
+        })
+      }
+    }
+    if (changed) draftStore.setState({ modelAssignments: assignments })
+    return changed
   }
 
   /**
@@ -403,6 +563,7 @@ export function createAutoRescanService(
     attributionRows: number[] | undefined,
     clockTime: number | null,
     elapsedS: number | null,
+    untimedKind?: 'periodic' | 'model-confirm',
   ): Promise<void> {
     const before = draftStore.getState()
     const prevSelected = before.selectedAbilitiesCache
@@ -429,6 +590,7 @@ export function createAutoRescanService(
 
     acceptedRescans += 1
     attributeModelPicks(prevPendingModels, prevPickedModels, attributionRows)
+    reconcileModelAssignmentsWithOcr()
 
     // Pending tile changes await their persistence confirmation — schedule the
     // fast model-only capture (chains naturally if new changes keep appearing)
@@ -448,12 +610,28 @@ export function createAutoRescanService(
       targeted: heroOrders ?? 'full',
       newPicks: events.length,
       clockTime,
-      ...(elapsedS !== null ? { elapsedS: Math.round(elapsedS) } : { replay: true }),
+      ...(elapsedS !== null
+        ? { elapsedS: Math.round(elapsedS) }
+        : { kind: untimedKind ?? 'untimed' }),
     })
 
     pendingRows.clear()
     fullScanDue = false
     targetRetries = 0
+
+    // One bounded retry for a targeted row whose pick did not show up: the
+    // icon reveal races the capture right after a turn (measured marginal at
+    // +1-2s, loses under CPU load). A model-draft turn also lands here — it
+    // never yields an ability pick, costing at most one extra capture per turn.
+    if (heroOrders && heroOrders.length > 0) {
+      const rowsWithEvents = new Set(events.map((e) => e.playerIndex))
+      for (const row of heroOrders) {
+        if (!rowsWithEvents.has(row) && !retriedEmptyRows.has(row)) {
+          retriedEmptyRows.add(row)
+          pendingRows.add(row)
+        }
+      }
+    }
 
     if (events.length > 0) {
       draftStore.getState().appendPickEvents(events)

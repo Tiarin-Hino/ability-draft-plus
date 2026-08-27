@@ -102,6 +102,40 @@ export function turnsEndedBetween(
 }
 
 /**
+ * Resolve the LOCAL player's row from the on-screen "YOU WILL DRAFT IN: N"
+ * countdown (playing mode only — spectators never see it). N seconds after the
+ * capture moment, the local player's next turn STARTS; matching that instant
+ * against the schedule's turn starts identifies the turn — and its playerIndex
+ * IS the visual row (user-validated timing model: radiant 1 picks at clock 0,
+ * dire 1 at +7s, radiant 2 at +14s, ...). Works from the preview onward
+ * (elapsedS is negative before clock zero) and across round breaks. Returns
+ * null when no turn start falls within the tolerance (OCR misread, or the
+ * anchor drifted) — turn starts are >= 7s apart, so the default 2.5s tolerance
+ * can never match two windows.
+ */
+export function countdownTargetRow(input: {
+  /** OCR'd countdown value in seconds. */
+  countdownS: number
+  /** Seconds since the pick-phase anchor at the CAPTURE moment (negative during preview). */
+  elapsedS: number
+  toleranceS?: number
+  schedule?: TurnWindow[]
+}): { row: number; deltaS: number } | null {
+  const tolerance = input.toleranceS ?? 2.5
+  const schedule = input.schedule ?? buildTurnSchedule()
+  const turnStartS = input.elapsedS + input.countdownS
+
+  let best: { row: number; deltaS: number } | null = null
+  for (const window of schedule) {
+    const deltaS = Math.abs(window.startS - turnStartS)
+    if (deltaS <= tolerance && (best === null || deltaS < best.deltaS)) {
+      best = { row: window.playerIndex, deltaS }
+    }
+  }
+  return best
+}
+
+/**
  * True when `elapsedS` falls in a between-rounds break (or past the final turn) —
  * the moments a full-pool reconciliation rescan is safe and cheap to run.
  */
