@@ -432,6 +432,7 @@ export function processScanResults(
     standard,
     abilityDetailsMap,
     state.identifiedHeroModelsCache,
+    new Set(state.pickedModelHeroOrders),
   )
 
   // --- Phase 11: Check if My Spot has picked an ultimate ---
@@ -557,11 +558,15 @@ function cloneState(state: DraftSessionState): DraftSessionState {
 // @DEV-GUIDE: Converts all pool abilities + hero models into ScoredEntity objects.
 // Each entity gets a consolidatedScore (0.4 * winrate + 0.6 * pickOrder) for ranking.
 // Deduplicates by name (an ability can appear in both ultimates and standard arrays).
+// Picked ABILITIES are naturally absent (rescans subtract them from the pool arrays),
+// but the models cache keeps every identified model, so models already drafted by ANY
+// player must be skipped here or they keep surfacing as top-tier suggestions.
 function buildScoredEntities(
   ultimates: ScanResult[],
   standard: ScanResult[],
   abilityDetailsMap: Map<string, import('@shared/types').AbilityDetail>,
   heroModels: IdentifiedHeroModel[],
+  pickedModelHeroOrders: ReadonlySet<number>,
 ): ScoredEntity[] {
   const entities: ScoredEntity[] = []
   const seen = new Set<string>()
@@ -589,6 +594,7 @@ function buildScoredEntities(
 
   for (const model of heroModels) {
     if (model.dbHeroId === null) continue
+    if (pickedModelHeroOrders.has(model.heroOrder)) continue
     entities.push({
       entityType: 'hero',
       internalName: model.heroName,
