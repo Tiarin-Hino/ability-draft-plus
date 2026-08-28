@@ -159,11 +159,17 @@ function AbilityTooltipContent({
           &#x2726; {t('tooltip.synergyPick')}
         </div>
       )}
-      {slot.isGeneralTopTier && !slot.isSynergySuggestionForMySpot && (
-        <div className="tooltip-badge tooltip-badge-top">
-          &#x2605; {t('tooltip.topPick')}
-        </div>
-      )}
+      {slot.isGeneralTopTier &&
+        !slot.isSynergySuggestionForMySpot &&
+        (slot.isPersonallyDriven ? (
+          <div className="tooltip-badge tooltip-badge-personal">
+            &#x2605; {t('tooltip.personalPick')}
+          </div>
+        ) : (
+          <div className="tooltip-badge tooltip-badge-top">
+            &#x2605; {t('tooltip.topPick')}
+          </div>
+        ))}
 
       <div className="tooltip-title">{slot.displayName}</div>
       <div className="tooltip-stat">
@@ -213,11 +219,16 @@ function HeroTooltipContent({
 }): React.ReactElement {
   return (
     <>
-      {model.isGeneralTopTier && (
-        <div className="tooltip-badge tooltip-badge-model">
-          &#x2605; {t('tooltip.topModel')}
-        </div>
-      )}
+      {model.isGeneralTopTier &&
+        (model.isPersonallyDriven ? (
+          <div className="tooltip-badge tooltip-badge-personal">
+            &#x2605; {t('tooltip.personalPick')}
+          </div>
+        ) : (
+          <div className="tooltip-badge tooltip-badge-model">
+            &#x2605; {t('tooltip.topModel')}
+          </div>
+        ))}
 
       <div className="tooltip-title">{model.heroDisplayName}</div>
       <div className="tooltip-stat">

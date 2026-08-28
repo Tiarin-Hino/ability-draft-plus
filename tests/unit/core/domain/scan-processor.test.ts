@@ -776,6 +776,127 @@ describe('processScanResults', () => {
       expect(iceBlast.personalScoreDelta).toBeUndefined()
     })
 
+    // 12-ability pool for top-tier cut tests: winrates 0.60 down to 0.49,
+    // identical pick rates, so the global ranking is a01 > a02 > ... > a12 and
+    // only a01..a10 make the 10-slot general top tier.
+    function makeBigPoolInput(
+      personalAbilityStats: Map<string, import('@shared/types').PersonalAbilityStats>,
+    ): ScanProcessorInput {
+      const names = Array.from({ length: 12 }, (_, i) =>
+        `a${String(i + 1).padStart(2, '0')}`,
+      )
+      const details = new Map<string, AbilityDetail>(
+        names.map((name, i) => [
+          name,
+          {
+            abilityId: i + 1,
+            name,
+            displayName: name,
+            heroId: i + 1,
+            winrate: 0.6 - i * 0.01,
+            highSkillWinrate: null,
+            pickRate: 25,
+            hsPickRate: null,
+            isUltimate: false,
+            abilityOrder: 1,
+          },
+        ]),
+      )
+
+      const deps: ScanProcessorDeps = {
+        heroes: {
+          getByAbilityName: () => null,
+          getById: () => null,
+        },
+        abilities: {
+          getDetails(requested: string[]) {
+            const map = new Map<string, AbilityDetail>()
+            for (const name of requested) {
+              const d = details.get(name)
+              if (d) map.set(name, d)
+            }
+            return map
+          },
+        },
+        synergies: {
+          getHighWinrateCombinations: () => [],
+          getAllOPCombinations: () => [],
+          getAllTrapCombinations: () => [],
+          getAllHeroSynergies: () => [],
+          getAllHeroTrapSynergies: () => [],
+          getAllHeroAbilitySynergiesUnfiltered: () => [],
+        },
+        settings: mockDeps.settings,
+        playerStats: {
+          getAbilityStatsByName: () => personalAbilityStats,
+          getHeroStatsByName: () => new Map(),
+        },
+      }
+
+      const rawResults: InitialScanResults = {
+        ultimates: [],
+        standard: names.map((name, i) => makeScanResult(name, i, 1, false)),
+        selectedAbilities: [],
+        heroDefiningAbilities: [],
+      }
+
+      return {
+        rawResults,
+        isInitialScan: true,
+        state: makeInitialState(),
+        deps,
+        modelCoords: [],
+        heroesCoords: [],
+        heroesParams: { width: 358, height: 170 },
+        targetResolution: '1920x1080',
+        scaleFactor: 1.0,
+      }
+    }
+
+    it('flags a pick that enters the top tier only because of personal stats', () => {
+      // a12 is globally worst (0.49) but has a dominant personal record
+      const { overlayPayload } = processScanResults(
+        makeBigPoolInput(
+          new Map([
+            ['a12', { games: 50, wins: 45, winrate: 0.9, avgPickPosition: 25 }],
+          ]),
+        ),
+      )
+      const standard = overlayPayload.scanData!.standard
+      const a12 = standard.find((s) => s.name === 'a12')!
+      const a01 = standard.find((s) => s.name === 'a01')!
+      const a10 = standard.find((s) => s.name === 'a10')!
+
+      expect(a12.isGeneralTopTier).toBe(true)
+      expect(a12.isPersonallyDriven).toBe(true)
+      // a01 is top tier on global merit — not personally driven
+      expect(a01.isGeneralTopTier).toBe(true)
+      expect(a01.isPersonallyDriven).toBe(false)
+      // a12's entry pushed the globally-weakest former member out
+      expect(a10.isGeneralTopTier).toBe(false)
+    })
+
+    it('flags nothing when no personal stats exist', () => {
+      const { overlayPayload } = processScanResults(makeBigPoolInput(new Map()))
+      for (const slot of overlayPayload.scanData!.standard) {
+        expect(slot.isPersonallyDriven).toBe(false)
+      }
+    })
+
+    it('does not flag a top-tier pick whose personal boost was not needed', () => {
+      // a01 is already #1 globally; a strong personal record must not flag it
+      const { overlayPayload } = processScanResults(
+        makeBigPoolInput(
+          new Map([
+            ['a01', { games: 50, wins: 45, winrate: 0.9, avgPickPosition: 25 }],
+          ]),
+        ),
+      )
+      const a01 = overlayPayload.scanData!.standard.find((s) => s.name === 'a01')!
+      expect(a01.isGeneralTopTier).toBe(true)
+      expect(a01.isPersonallyDriven).toBe(false)
+    })
+
     it('personalizes hero model scores from personal hero stats', () => {
       const base = processScanResults(makeInitialScanInput())
       const baseLina = base.overlayPayload.heroModels.find(

@@ -54,6 +54,10 @@ export function AbilityHotspot({
       onMouseLeave={onLeave}
       data-ability-name={slot.displayName}
       aria-label={slot.displayName}
-    />
+    >
+      {/* Corner marker: this slot is recommended because of the linked
+          profile's personal stats (composes with any shimmer border) */}
+      {slot.isPersonallyDriven && <span className="personal-marker" />}
+    </div>
   )
 }

@@ -49,6 +49,9 @@ export function HeroModelHotspot({
       data-hero-name={model.heroDisplayName}
       aria-label={model.heroDisplayName}
       id={`hero-model-hotspot-${model.heroOrder}`}
-    />
+    >
+      {/* Corner marker: recommended because of the linked profile's stats */}
+      {model.isPersonallyDriven && <span className="personal-marker" />}
+    </div>
   )
 }

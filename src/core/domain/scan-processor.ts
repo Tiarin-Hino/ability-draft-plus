@@ -29,7 +29,10 @@ import {
 import { determineTopTierEntities } from './top-tier'
 import { detectModelPicks } from './model-pick-detection'
 import type { ModelTileCapture } from './model-pick-detection'
-import { RESCAN_GUARD_MAX_CONSECUTIVE_REJECTIONS } from '@shared/constants/thresholds'
+import {
+  RESCAN_GUARD_MAX_CONSECUTIVE_REJECTIONS,
+  PERSONAL_SCORE_DELTA_EPSILON,
+} from '@shared/constants/thresholds'
 
 // @DEV-GUIDE: Central business logic — transforms raw ML scan results into a fully-enriched
 // OverlayDataPayload for the overlay UI. This is pure TypeScript with ZERO Electron imports.
@@ -462,6 +465,39 @@ export function processScanResults(
     synergisticPartnersInPool,
   )
 
+  // --- Phase 12.5: Personally-driven picks (linked Windrun profile) ---
+  // Flag entities that made the GENERAL top-tier cut only because personal
+  // blending raised their score: re-rank with the personal contribution
+  // stripped and mark entities present now but absent from that baseline (a
+  // positive delta is also required, so an entity that merely inherited a slot
+  // from a personally-DEMOTED competitor is not claimed as "because of you").
+  // Synergy suggestions are exempt — their inclusion is membership-driven.
+  if (allScoredEntities.some((e) => e.personalScoreDelta !== undefined)) {
+    const baselineEntities = allScoredEntities.map((e) => ({
+      ...e,
+      consolidatedScore: e.consolidatedScore - (e.personalScoreDelta ?? 0),
+    }))
+    const baselineGeneralNames = new Set(
+      determineTopTierEntities(
+        baselineEntities,
+        state.mySelectedModelDbHeroId,
+        mySpotHasUlt,
+        synergisticPartnersInPool,
+      )
+        .filter((e) => e.isGeneralTopTier)
+        .map((e) => e.internalName),
+    )
+    for (const entity of topTierEntities) {
+      if (
+        entity.isGeneralTopTier &&
+        (entity.personalScoreDelta ?? 0) > PERSONAL_SCORE_DELTA_EPSILON &&
+        !baselineGeneralNames.has(entity.internalName)
+      ) {
+        entity.isPersonallyDriven = true
+      }
+    }
+  }
+
   // Build top-tier lookup for fast enrichment
   const topTierLookup = new Map(
     topTierEntities.map((e) => [e.internalName, e]),
@@ -721,6 +757,7 @@ function enrichSlots(
       isGeneralTopTier: topTier?.isGeneralTopTier ?? false,
       isSynergySuggestionForMySpot:
         topTier?.isSynergySuggestionForMySpot ?? false,
+      isPersonallyDriven: topTier?.isPersonallyDriven ?? false,
       isUltimateFromDb: details.isUltimate,
       highWinrateCombinations: synergies?.high ?? [],
       lowWinrateCombinations: synergies?.low ?? [],
@@ -741,6 +778,7 @@ function makeUnknownSlot(slot: ScanResult): EnrichedScanSlot {
     consolidatedScore: 0,
     isGeneralTopTier: false,
     isSynergySuggestionForMySpot: false,
+    isPersonallyDriven: false,
     isUltimateFromDb: false,
     highWinrateCombinations: [],
     lowWinrateCombinations: [],
@@ -784,6 +822,7 @@ function enrichHeroModels(
       personalWinrate: scored?.personalWinrate,
       personalScoreDelta: scored?.personalScoreDelta,
       isGeneralTopTier: topTier?.isGeneralTopTier ?? false,
+      isPersonallyDriven: topTier?.isPersonallyDriven ?? false,
       identificationConfidence: model.identificationConfidence,
       strongAbilitySynergies: synergies?.strong ?? [],
       weakAbilitySynergies: synergies?.weak ?? [],

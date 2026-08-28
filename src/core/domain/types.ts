@@ -52,6 +52,9 @@ export interface ScoredEntity {
 export interface TopTierEntity extends ScoredEntity {
   isSynergySuggestionForMySpot: boolean
   isGeneralTopTier: boolean
+  /** True when this entity made the general top-tier cut ONLY because personal
+   * blending raised its score (a global-only ranking would exclude it). */
+  isPersonallyDriven?: boolean
 }
 
 // ---------------------------------------------------------------------------

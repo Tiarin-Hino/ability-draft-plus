@@ -148,6 +148,9 @@ export interface EnrichedScanSlot extends ScanResult {
   personalWinrate?: number
   /** consolidatedScore minus the global-only score — how far personalization moved it. */
   personalScoreDelta?: number
+  /** True when this slot is top-tier ONLY because of the linked profile's stats
+   * (a global-only ranking would not recommend it). Drives the corner marker. */
+  isPersonallyDriven?: boolean
   highWinrateCombinations: SynergyPairDisplay[]
   lowWinrateCombinations: SynergyPairDisplay[]
   strongHeroSynergies: HeroSynergyDisplay[]
@@ -223,6 +226,8 @@ export interface HeroModelDisplay {
   personalWinrate?: number
   /** consolidatedScore minus the global-only score — how far personalization moved it. */
   personalScoreDelta?: number
+  /** True when this model is top-tier ONLY because of the linked profile's stats. */
+  isPersonallyDriven?: boolean
   identificationConfidence: number
   strongAbilitySynergies: HeroSynergyDisplay[]
   weakAbilitySynergies: HeroSynergyDisplay[]
