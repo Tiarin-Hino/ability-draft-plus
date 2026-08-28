@@ -46,6 +46,10 @@ export interface ScoredEntity {
   personalWinrate?: number
   /** consolidatedScore minus the global-only score. */
   personalScoreDelta?: number
+  /** Role-layer adjustment included in consolidatedScore (role mode active only). */
+  roleScoreDelta?: number
+  /** Effective position (1-5) that produced the best role fit. */
+  roleBestPosition?: number
 }
 
 /** Entity with top-tier selection flags applied. */
@@ -121,6 +125,11 @@ export interface AbilityLookup {
   getDetails(names: string[]): Map<string, AbilityDetail>
 }
 
+/** Raw /ability-shifts columns for the whole pool (role-axes derivation). */
+export interface AbilityShiftsLookup {
+  getAllShifts(): import('@core/database/repositories/ability-repository').AbilityShiftRow[]
+}
+
 export interface SynergyLookup {
   getHighWinrateCombinations(
     baseAbilityName: string,
@@ -157,7 +166,7 @@ export interface PersonalStatsLookup {
 
 export interface ScanProcessorDeps {
   heroes: HeroLookup
-  abilities: AbilityLookup & AbilityIdLookup
+  abilities: AbilityLookup & AbilityIdLookup & AbilityShiftsLookup
   synergies: SynergyLookup
   triplets?: TripletLookup
   settings: SettingsLookup

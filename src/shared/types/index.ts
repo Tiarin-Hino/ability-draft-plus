@@ -86,6 +86,12 @@ export interface AppSettings {
   /** Seconds to wait after the draft clock is identified before the automatic
    * initial scan (slower PCs need the draft screen fully rendered). */
   autoInitialScanDelayS: number
+  /** Role-aware suggestions mode. 'off' (default) keeps scoring bit-identical
+   * to the role-less path; 'fixed' scores against roleFixedPositions; 'dynamic'
+   * infers the vacant position(s) from teammates' build trajectories. */
+  roleMode: 'off' | 'fixed' | 'dynamic'
+  /** Fixed-mode position multi-select (values 1-5). Ignored unless roleMode==='fixed'. */
+  roleFixedPositions: number[]
 }
 
 export interface SlotCoordinate {
@@ -151,6 +157,11 @@ export interface EnrichedScanSlot extends ScanResult {
   /** True when this slot is top-tier ONLY because of the linked profile's stats
    * (a global-only ranking would not recommend it). Drives the corner marker. */
   isPersonallyDriven?: boolean
+  /** consolidatedScore minus the role-less score — how far the role layer moved
+   * it (present only when a role mode is active and the layer contributed). */
+  roleScoreDelta?: number
+  /** The effective position that produced roleScoreDelta's best fit (1-5). */
+  roleBestPosition?: number
   highWinrateCombinations: SynergyPairDisplay[]
   lowWinrateCombinations: SynergyPairDisplay[]
   strongHeroSynergies: HeroSynergyDisplay[]
@@ -183,6 +194,28 @@ export interface OverlayDataPayload {
   /** When automatic draft tracking is on, the overlay hides the manual
    * My Spot / My Model buttons (both are selected automatically via GSI). */
   autoDraftTrackingEnabled: boolean
+  /** Role-aware suggestions context (absent when roleMode==='off' or My Spot is
+   * unknown — the payload is then bit-identical to the role-less path). */
+  roleContext?: RoleContextDisplay
+}
+
+/** What the role layer decided this scan — drives the overlay's role UI. */
+export interface RoleContextDisplay {
+  mode: 'fixed' | 'dynamic'
+  /** Positions suggestions were scored against. Empty in dynamic mode while the
+   * evidence gate is closed (scoring is then neutral). */
+  effectivePositions: number[]
+  /** Mean build greed of teammates with picks, [-1, +1]; null before any picks. */
+  teamGreed: number | null
+  /** Per-teammate estimated positions (hero_order keyed; null until confident). */
+  teammates: {
+    heroOrder: number
+    estimatedPosition: number | null
+    /** picks/4, a display hint — estimates are approximations, never facts. */
+    confidence: number
+  }[]
+  /** Dynamic mode only: false while waiting for enough teammate picks. */
+  dynamicGateOpen?: boolean
 }
 
 export interface ThirdAbilitySuggestion {

@@ -98,6 +98,27 @@ export const PERSONAL_SCORE_DELTA_EPSILON = 0.005
 // undocumented), so weights here only trade off the two orderings.
 export const SHIFT_GREED_XPM_WEIGHT = 0.5
 
+// Role scoring (core/domain/role-scoring.ts — see the Position Templates spec).
+// Starting values, eyeball-calibrated: the pos-5 spread between a low-greed stun
+// and a high-greed farming tool lands around 0.10 of score — enough to reorder
+// within a tier without burying a globally OP pick. The summed role adjustment
+// is hard-capped so role influence can never exceed roughly one score tier.
+export const ROLE_GREED_WEIGHT = 0.08
+export const ROLE_SHIFT_ACCENT_WEIGHT = 0.02
+export const ROLE_TEAM_BALANCE_WEIGHT = 0.03
+export const ROLE_ADJUSTMENT_CAP = 0.15
+// Below this |delta| the overlay renders no role badge (anti-noise, mirrors
+// PERSONAL_SCORE_DELTA_EPSILON).
+export const ROLE_SCORE_DELTA_EPSILON = 0.005
+// Dynamic mode evidence gate: no vacancy inference until this many teammates
+// have this many named picks each — below that, trajectories are noise and
+// scoring stays neutral (off-equivalent).
+export const DYNAMIC_ROLE_MIN_TEAMMATES = 2
+export const DYNAMIC_ROLE_MIN_PICKS = 2
+// The pos-5 "enabling" accent only counts in the top band of the healing axis —
+// the raw healing shift is zero-inflated, so mid-axis values carry no signal.
+export const ROLE_ENABLING_ACCENT_FLOOR = 0.7
+
 // Model
 // The class count is NOT a constant — it is defined by resources/model/class_names.json
 // and validated against the model's output width at classifier init.

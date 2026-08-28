@@ -79,6 +79,37 @@ describe('MetadataRepository', () => {
     })
   })
 
+  describe('role settings', () => {
+    it('defaults to mode off with no fixed positions', async () => {
+      const freshDb = await createTestDb()
+      const freshRepo = createMetadataRepository(freshDb.db)
+      const settings = freshRepo.getSettings()
+      expect(settings.roleMode).toBe('off')
+      expect(settings.roleFixedPositions).toEqual([])
+      freshDb.close()
+    })
+
+    it('round-trips mode and fixed positions', () => {
+      repo.setSettings({ roleMode: 'fixed', roleFixedPositions: [4, 5] })
+      const settings = repo.getSettings()
+      expect(settings.roleMode).toBe('fixed')
+      expect(settings.roleFixedPositions).toEqual([4, 5])
+    })
+
+    it('round-trips an empty position selection', () => {
+      repo.setSettings({ roleFixedPositions: [] })
+      expect(repo.getSettings().roleFixedPositions).toEqual([])
+    })
+
+    it('drops junk stored values instead of crashing', () => {
+      repo.set('role_mode', 'nonsense')
+      repo.set('role_fixed_positions', '0,3,7,x')
+      const settings = repo.getSettings()
+      expect(settings.roleMode).toBe('off')
+      expect(settings.roleFixedPositions).toEqual([3])
+    })
+  })
+
   describe('getLastScrapeDate / setLastScrapeDate', () => {
     it('returns seeded scrape date', () => {
       expect(repo.getLastScrapeDate()).toBe('2024-11-15')

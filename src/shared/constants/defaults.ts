@@ -17,6 +17,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   streamAutostart: false,
   experimentalAutoDraftTracking: false,
   autoInitialScanDelayS: AUTO_INITIAL_SCAN_DELAY_S,
+  roleMode: 'off',
+  roleFixedPositions: [],
 }
 
 export const SUPPORTED_LANGUAGES = ['en', 'ru'] as const

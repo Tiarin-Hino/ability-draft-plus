@@ -47,6 +47,8 @@ export function createMetadataRepository(db: SQLJsDatabase): MetadataRepository 
       const streamAutostart = get('stream_autostart')
       const autoDraftTracking = get('experimental_auto_draft_tracking')
       const autoInitialScanDelayS = get('auto_initial_scan_delay_s')
+      const roleMode = get('role_mode')
+      const roleFixedPositions = get('role_fixed_positions')
 
       return {
         opThreshold:
@@ -86,6 +88,18 @@ export function createMetadataRepository(db: SQLJsDatabase): MetadataRepository 
           autoInitialScanDelayS !== null
             ? parseInt(autoInitialScanDelayS, 10)
             : DEFAULT_SETTINGS.autoInitialScanDelayS,
+        roleMode:
+          roleMode === 'off' || roleMode === 'fixed' || roleMode === 'dynamic'
+            ? roleMode
+            : DEFAULT_SETTINGS.roleMode,
+        // Stored as CSV ("4,5"); junk entries are dropped, not defaulted
+        roleFixedPositions:
+          roleFixedPositions !== null
+            ? roleFixedPositions
+                .split(',')
+                .map((v) => parseInt(v, 10))
+                .filter((v) => Number.isInteger(v) && v >= 1 && v <= 5)
+            : DEFAULT_SETTINGS.roleFixedPositions,
       }
     },
 
@@ -122,6 +136,12 @@ export function createMetadataRepository(db: SQLJsDatabase): MetadataRepository 
       }
       if (settings.autoInitialScanDelayS !== undefined) {
         set('auto_initial_scan_delay_s', String(settings.autoInitialScanDelayS))
+      }
+      if (settings.roleMode !== undefined) {
+        set('role_mode', settings.roleMode)
+      }
+      if (settings.roleFixedPositions !== undefined) {
+        set('role_fixed_positions', settings.roleFixedPositions.join(','))
       }
     },
 

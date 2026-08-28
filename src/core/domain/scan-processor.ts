@@ -14,6 +14,13 @@ import type {
   IdentifiedHeroModel,
 } from './types'
 import { calculateConsolidatedScore, calculatePersonalizedScore } from './scoring'
+import { computeShiftAxes, type ShiftAxes } from './shift-axes'
+import {
+  resolveRoleContext,
+  computeRoleScore,
+  toRoleContextDisplay,
+  type RoleContext,
+} from './role-scoring'
 import { identifyHeroModels } from './hero-identification'
 import {
   getAbilitySynergySplit,
@@ -41,6 +48,8 @@ import {
 // 1. Branch initial scan vs rescan (rescan diffs against cached pool)
 // 2. Collect unique ability names from pool and picked abilities
 // 3. Batch DB lookup for ability details (winrate, pick rate, display name)
+// 3.5. Role context (role-aware suggestions): shift axes + effective positions +
+//      teammate estimates — null with roleMode 'off' (bit-identical path)
 // 4. Build heroes-in-pool set (from identified hero models)
 // 5. Per-ability synergy enrichment (high/low winrate partner pairs)
 // 6. Per-ability hero synergies (which heroes synergize with each ability)
@@ -49,7 +58,8 @@ import {
 // 8.5. Enrich pairs with triplet context (suggested third ability badge)
 // 9. My Spot synergistic partners (abilities synergizing with user's picked abilities)
 // 10. Score all entities (consolidated score = 0.4 * winrate + 0.6 * pickOrder;
-//     with a linked Windrun profile the inputs are personal-blended — scoring.ts)
+//     with a linked Windrun profile the inputs are personal-blended — scoring.ts;
+//     with a role mode active, abilities get the capped role delta on top — role-scoring.ts)
 // 11. Check if My Spot already picked an ultimate
 // 12. Determine top-tier entities (max 10, synergy suggestions prioritized)
 // 13. Enrich scan slots with all computed data for overlay display
@@ -304,6 +314,24 @@ export function processScanResults(
     deps.playerStats?.getHeroStatsByName() ??
     new Map<string, import('@shared/types').PersonalHeroStats>()
 
+  // --- Phase 3.5: Role context (role-aware suggestions) ---
+  // Only computed with a role mode EXPLICITLY active AND My Spot known —
+  // otherwise null, and every downstream score is bit-identical to the
+  // role-less path (anything but 'fixed'/'dynamic' counts as off).
+  const roleModeActive =
+    settings.roleMode === 'fixed' || settings.roleMode === 'dynamic'
+  const shiftAxesByName: Map<string, ShiftAxes> = roleModeActive
+    ? computeShiftAxes(deps.abilities.getAllShifts())
+    : new Map()
+  const roleContext: RoleContext | null = roleModeActive
+    ? resolveRoleContext(
+        settings,
+        selectedAbilities,
+        state.mySelectedSpotHeroOrder,
+        shiftAxesByName,
+      )
+    : null
+
   // --- Phase 4: Build heroes-in-pool set ---
   const heroesInPool = new Set<string>()
   for (const model of state.identifiedHeroModelsCache) {
@@ -448,6 +476,8 @@ export function processScanResults(
     new Set(state.pickedModelHeroOrders),
     personalAbilityStats,
     personalHeroStats,
+    roleContext,
+    shiftAxesByName,
   )
 
   // --- Phase 11: Check if My Spot has picked an ultimate ---
@@ -566,6 +596,7 @@ export function processScanResults(
     heroesParams,
     modelsCoords: modelCoords,
     autoDraftTrackingEnabled: settings.experimentalAutoDraftTracking === true,
+    roleContext: roleContext !== null ? toRoleContextDisplay(roleContext) : undefined,
   }
 
   return {
@@ -620,6 +651,8 @@ function buildScoredEntities(
   pickedModelHeroOrders: ReadonlySet<number>,
   personalAbilityStats: Map<string, import('@shared/types').PersonalAbilityStats>,
   personalHeroStats: Map<string, import('@shared/types').PersonalHeroStats>,
+  roleContext: RoleContext | null,
+  shiftAxesByName: ReadonlyMap<string, ShiftAxes>,
 ): ScoredEntity[] {
   const entities: ScoredEntity[] = []
   const seen = new Set<string>()
@@ -634,16 +667,26 @@ function buildScoredEntities(
       details?.pickRate ?? null,
       personalAbilityStats.get(slot.name),
     )
+    // Role layer applies AFTER the personal blend (fixed layer order), so
+    // "you win with it" and "it fits your role" stack rather than fight.
+    // Heroes are exempt — hero models have no shift data.
+    const role = computeRoleScore(shiftAxesByName.get(slot.name), roleContext)
+    const consolidatedScore =
+      role !== null
+        ? Math.min(1, Math.max(0, scored.consolidatedScore + role.delta))
+        : scored.consolidatedScore
     entities.push({
       entityType: 'ability',
       internalName: slot.name,
       displayName: details?.displayName ?? slot.name,
       winrate: details?.winrate ?? null,
       pickRate: details?.pickRate ?? null,
-      consolidatedScore: scored.consolidatedScore,
+      consolidatedScore,
       personalGames: scored.personalGames,
       personalWinrate: scored.personalWinrate,
       personalScoreDelta: scored.personalScoreDelta,
+      roleScoreDelta: role?.delta,
+      roleBestPosition: role?.bestPosition,
       isUltimateFromCoordSource: slot.is_ultimate,
       isUltimateFromDb: details?.isUltimate,
       heroOrder: slot.hero_order,
@@ -754,6 +797,8 @@ function enrichSlots(
       personalGames: scored?.personalGames,
       personalWinrate: scored?.personalWinrate,
       personalScoreDelta: scored?.personalScoreDelta,
+      roleScoreDelta: scored?.roleScoreDelta,
+      roleBestPosition: scored?.roleBestPosition,
       isGeneralTopTier: topTier?.isGeneralTopTier ?? false,
       isSynergySuggestionForMySpot:
         topTier?.isSynergySuggestionForMySpot ?? false,
