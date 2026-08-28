@@ -99,6 +99,7 @@
     "teamNeeds": "Team needs pos {{positions}}",
     "needSpot": "Select My Spot to enable",
     "appliesNextScan": "Applies on the next scan",
-    "needData": "Run a data update to enable"
+    "needData": "Run a data update to enable",
+    "waitingSpot": "Waiting for automatic spot detection…"
   }
 }

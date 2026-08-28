@@ -202,6 +202,8 @@ function App(): React.ReactElement {
         <RolePanel
           roleContext={overlayData?.roleContext}
           hasScanData={overlayData?.scanData != null}
+          mySpotSelected={selectedSpotHeroOrder !== null}
+          autoTracking={overlayData?.autoDraftTrackingEnabled ?? false}
         />
 
         {/* OP Combinations Panel - z-index 9999 */}

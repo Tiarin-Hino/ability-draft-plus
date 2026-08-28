@@ -19,11 +19,19 @@ const POSITIONS = [1, 2, 3, 4, 5] as const
 interface RolePanelProps {
   roleContext: RoleContextDisplay | undefined
   hasScanData: boolean
+  /** LIVE spot selection (broadcast immediately on manual click or GSI
+   * auto-detection) — used to override a stale per-scan 'noSpot' status. */
+  mySpotSelected: boolean
+  /** Auto draft tracking hides the manual My Spot buttons, so a 'noSpot'
+   * status must say "waiting for detection", not "select your spot". */
+  autoTracking: boolean
 }
 
 export function RolePanel({
   roleContext,
   hasScanData,
+  mySpotSelected,
+  autoTracking,
 }: RolePanelProps): React.ReactElement {
   const { t } = useTranslation()
   const { onMouseEnter, onMouseLeave } = useMousePassthrough()
@@ -64,7 +72,12 @@ export function RolePanel({
     // Context absent on a processed scan = that scan predates the mode toggle
     if (roleContext === undefined) return t('role.appliesNextScan')
     if (roleContext.status === 'noData') return t('role.needData')
-    if (roleContext.status === 'noSpot') return t('role.needSpot')
+    if (roleContext.status === 'noSpot') {
+      // Spot arrived after the last scan (GSI detection lands ~20s in) —
+      // the layer activates on the next rescan
+      if (mySpotSelected) return t('role.appliesNextScan')
+      return autoTracking ? t('role.waitingSpot') : t('role.needSpot')
+    }
     if (roleContext.mode === 'dynamic') {
       return roleContext.dynamicGateOpen && roleContext.effectivePositions.length > 0
         ? t('role.teamNeeds', {
