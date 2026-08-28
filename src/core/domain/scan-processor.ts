@@ -320,17 +320,22 @@ export function processScanResults(
   // role-less path (anything but 'fixed'/'dynamic' counts as off).
   const roleModeActive =
     settings.roleMode === 'fixed' || settings.roleMode === 'dynamic'
-  const shiftAxesByName: Map<string, ShiftAxes> = roleModeActive
-    ? computeShiftAxes(deps.abilities.getAllShifts())
-    : new Map()
-  const roleContext: RoleContext | null = roleModeActive
-    ? resolveRoleContext(
-        settings,
-        selectedAbilities,
-        state.mySelectedSpotHeroOrder,
-        shiftAxesByName,
-      )
-    : null
+  const allShifts = roleModeActive ? deps.abilities.getAllShifts() : []
+  // A database that predates the shifts scrape has NULL in every shift column;
+  // role scoring would then hand every ability the same meaningless delta.
+  // Treat "no shift data at all" as role-off until the next data update.
+  const hasShiftData = allShifts.some((row) => row.gpmShift !== null)
+  const shiftAxesByName: Map<string, ShiftAxes> =
+    roleModeActive && hasShiftData ? computeShiftAxes(allShifts) : new Map()
+  const roleContext: RoleContext | null =
+    roleModeActive && hasShiftData
+      ? resolveRoleContext(
+          settings,
+          selectedAbilities,
+          state.mySelectedSpotHeroOrder,
+          shiftAxesByName,
+        )
+      : null
 
   // --- Phase 4: Build heroes-in-pool set ---
   const heroesInPool = new Set<string>()

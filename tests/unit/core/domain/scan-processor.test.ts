@@ -1032,6 +1032,41 @@ describe('role-aware suggestions', () => {
     expect(iceBlast.roleScoreDelta!).toBeGreaterThan(0)
   })
 
+  it('a database with no shift data suppresses role scoring entirely', () => {
+    const initial = processScanResults(makeInitialScanInput())
+    const state = initial.updatedState
+    state.mySelectedSpotDbId = 1
+    state.mySelectedSpotHeroOrder = 0
+    const noShiftDeps = depsWithRole('fixed', [5])
+    noShiftDeps.abilities = {
+      ...mockDeps.abilities,
+      getAllShifts: () =>
+        mockDeps.abilities.getAllShifts().map((row) => ({
+          ...row,
+          gpmShift: null,
+          xpmShift: null,
+          healingShift: null,
+        })),
+    }
+    const input: ScanProcessorInput = {
+      rawResults: [] as ScanResult[],
+      isInitialScan: false,
+      state,
+      deps: noShiftDeps,
+      modelCoords: [makeCoord(0), makeCoord(1)],
+      heroesCoords: [makeCoord(0), makeCoord(1)],
+      heroesParams: { width: 358, height: 170 },
+      targetResolution: '1920x1080',
+      scaleFactor: 1.0,
+    }
+    const { overlayPayload } = processScanResults(input)
+
+    expect(overlayPayload.roleContext).toBeUndefined()
+    for (const slot of overlayPayload.scanData!.standard) {
+      expect(slot.roleScoreDelta).toBeUndefined()
+    }
+  })
+
   it('dynamic mode with no teammate picks keeps the gate closed and scoring neutral', () => {
     const { overlayPayload } = runRescanWithRole('dynamic')
 

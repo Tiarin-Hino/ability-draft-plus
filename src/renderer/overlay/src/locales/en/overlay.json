@@ -81,6 +81,7 @@
     "watching": "Watching team trend…",
     "teamNeeds": "Team needs pos {{positions}}",
     "needSpot": "Select My Spot to enable",
-    "appliesNextScan": "Applies on the next scan"
+    "appliesNextScan": "Applies on the next scan",
+    "needData": "Run a data update to enable"
   }
 }
