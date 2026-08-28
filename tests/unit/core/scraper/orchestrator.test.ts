@@ -74,6 +74,10 @@ function createMockApiClient(): WindrunApiClient {
             abilityId: 5359, killsShift: 0.1, deathsShift: -0.05, killAssistShift: 0.2,
             gpmShift: 0.45, xpmShift: 0.31, dmgShift: 0.43, healingShift: -0.02,
           },
+          {
+            abilityId: -70, killsShift: 0.01, deathsShift: 0, killAssistShift: 0.01,
+            gpmShift: 0.02, xpmShift: 0.01, dmgShift: 0.03, healingShift: 0.05,
+          },
         ],
       },
     }),
@@ -85,6 +89,7 @@ function createMockDeps(apiClient?: WindrunApiClient): ScraperDeps {
     apiClient: apiClient ?? createMockApiClient(),
     heroes: {
       upsertHeroes: vi.fn().mockReturnValue(new Map([['ursa', 1]])),
+      applyHeroShifts: vi.fn().mockReturnValue(1),
       getAll: vi.fn().mockReturnValue([]),
       getById: vi.fn(),
       getByName: vi.fn(),

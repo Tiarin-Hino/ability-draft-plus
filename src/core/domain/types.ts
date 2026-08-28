@@ -111,6 +111,8 @@ export interface DraftSessionState {
 // ---------------------------------------------------------------------------
 
 export interface HeroLookup {
+  /** Hero-MODEL shift rows (name = hero internal name) for role-axes derivation. */
+  getAllShifts(): import('@core/database/repositories/ability-repository').AbilityShiftRow[]
   getByAbilityName(
     abilityName: string,
   ): { heroId: number; heroName: string; heroDisplayName: string | null } | null

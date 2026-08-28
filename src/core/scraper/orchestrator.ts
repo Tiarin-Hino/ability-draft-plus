@@ -138,22 +138,32 @@ export async function performFullScrape(
 
     // Ability shifts (role fingerprint) — non-fatal enrichment: the endpoint is
     // undocumented, so its failure must never fail the scrape; existing shift
-    // values are kept (applyAbilityShifts never wipes).
+    // values are kept (apply*Shifts never wipes). Negative ids are hero MODELS
+    // (keyed by the positive hero windrun_id, like /abilities).
     try {
       const shiftsRes = await deps.apiClient.fetchAbilityShifts(options.patch)
+      const entries = (shiftsRes.data.abilityShifts ?? []).map((s) => ({
+        windrunId: s.abilityId,
+        killsShift: s.killsShift,
+        deathsShift: s.deathsShift,
+        kaShift: s.killAssistShift,
+        gpmShift: s.gpmShift,
+        xpmShift: s.xpmShift,
+        dmgShift: s.dmgShift,
+        healingShift: s.healingShift,
+      }))
       const applied = deps.abilities.applyAbilityShifts(
-        (shiftsRes.data.abilityShifts ?? []).map((s) => ({
-          windrunId: s.abilityId,
-          killsShift: s.killsShift,
-          deathsShift: s.deathsShift,
-          kaShift: s.killAssistShift,
-          gpmShift: s.gpmShift,
-          xpmShift: s.xpmShift,
-          dmgShift: s.dmgShift,
-          healingShift: s.healingShift,
-        })),
+        entries.filter((e) => e.windrunId > 0),
       )
-      onProgress({ phase: 'phase1', message: `Applied ability shifts to ${applied} abilities` })
+      const heroApplied = deps.heroes.applyHeroShifts(
+        entries
+          .filter((e) => e.windrunId < 0)
+          .map((e) => ({ ...e, windrunId: -e.windrunId })),
+      )
+      onProgress({
+        phase: 'phase1',
+        message: `Applied ability shifts to ${applied} abilities and ${heroApplied} hero models`,
+      })
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       onProgress({ phase: 'phase1', message: `Ability shifts unavailable (kept previous values): ${message}` })

@@ -103,10 +103,14 @@ export const SHIFT_GREED_XPM_WEIGHT = 0.5
 // and a high-greed farming tool lands around 0.10 of score — enough to reorder
 // within a tier without burying a globally OP pick. The summed role adjustment
 // is hard-capped so role influence can never exceed roughly one score tier.
-export const ROLE_GREED_WEIGHT = 0.08
+export const ROLE_GREED_WEIGHT = 0.1
 export const ROLE_SHIFT_ACCENT_WEIGHT = 0.02
 export const ROLE_TEAM_BALANCE_WEIGHT = 0.03
 export const ROLE_ADJUSTMENT_CAP = 0.15
+// Hero MODELS get role-scored from their own shift entries, scaled down: model
+// shifts are ~20-50x weaker than ability shifts (the build determines farm
+// priority, not the model), so within-hero percentiles overstate their weight.
+export const ROLE_MODEL_WEIGHT_SCALE = 0.5
 // Below this |delta| the overlay renders no role badge (anti-noise, mirrors
 // PERSONAL_SCORE_DELTA_EPSILON).
 export const ROLE_SCORE_DELTA_EPSILON = 0.005
@@ -123,10 +127,11 @@ export const ROLE_ENABLING_ACCENT_FLOOR = 0.7
 // twice-covered capability (the third single-target stun) drops several ranks.
 export const ROLE_NEED_WEIGHT = 0.05
 export const ROLE_DUPLICATE_WEIGHT = 0.04
-// Static per-position tag accents (Position Templates matrix) — deliberately
-// tiny: greed already encodes most role fit empirically; tags mainly drive the
-// DYNAMIC needs engine and the explanation chips.
-export const ROLE_TAG_ACCENT_WEIGHT = 0.02
+// Static per-position tag accents (Position Templates matrix). Raised from the
+// initial 0.02 after live feedback: for MID greed targets (pos 3/4) the greed
+// penalty on a core-shifted ability is inherently small, so the accents are
+// the main lever separating e.g. a pure steroid from a playmaker for pos 4.
+export const ROLE_TAG_ACCENT_WEIGHT = 0.04
 
 // Model
 // The class count is NOT a constant — it is defined by resources/model/class_names.json

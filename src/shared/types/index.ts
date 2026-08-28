@@ -271,6 +271,11 @@ export interface HeroModelDisplay {
   personalScoreDelta?: number
   /** True when this model is top-tier ONLY because of the linked profile's stats. */
   isPersonallyDriven?: boolean
+  /** Role-layer adjustment included in the score (scaled — models carry a far
+   * weaker role signal than abilities). */
+  roleScoreDelta?: number
+  /** Effective position (1-5) that produced the best role fit. */
+  roleBestPosition?: number
   identificationConfidence: number
   strongAbilitySynergies: HeroSynergyDisplay[]
   weakAbilitySynergies: HeroSynergyDisplay[]

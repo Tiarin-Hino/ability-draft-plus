@@ -111,17 +111,19 @@ describe('runColumnMigrations', () => {
 
     runColumnMigrations(db)
 
-    const cols = getColumns(db, 'Abilities')
-    for (const col of [
-      'kills_shift',
-      'deaths_shift',
-      'ka_shift',
-      'gpm_shift',
-      'xpm_shift',
-      'dmg_shift',
-      'healing_shift',
-    ]) {
-      expect(cols).toContain(col)
+    for (const table of ['Abilities', 'Heroes']) {
+      const cols = getColumns(db, table)
+      for (const col of [
+        'kills_shift',
+        'deaths_shift',
+        'ka_shift',
+        'gpm_shift',
+        'xpm_shift',
+        'dmg_shift',
+        'healing_shift',
+      ]) {
+        expect(cols).toContain(col)
+      }
     }
     db.close()
   })

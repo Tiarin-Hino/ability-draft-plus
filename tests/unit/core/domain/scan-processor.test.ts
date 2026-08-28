@@ -75,6 +75,15 @@ const abilityDb: Record<string, AbilityDetail> = {
 
 const mockDeps: ScanProcessorDeps = {
   heroes: {
+    // Hero-model role fingerprints: lina reads (slightly) support-shifted,
+    // antimage (slightly) greedy — magnitudes far below ability shifts, as live
+    getAllShifts() {
+      const base = { killsShift: 0, deathsShift: 0, kaShift: 0, dmgShift: 0 }
+      return [
+        { name: 'lina', ...base, gpmShift: -0.02, xpmShift: -0.01, healingShift: 0.1 },
+        { name: 'antimage', ...base, gpmShift: 0.03, xpmShift: 0.02, healingShift: -0.01 },
+      ]
+    },
     getByAbilityName(abilityName: string) {
       const map: Record<string, { heroId: number; heroName: string; heroDisplayName: string | null }> = {
         firestorm: { heroId: 1, heroName: 'lina', heroDisplayName: 'Lina' },
@@ -999,6 +1008,19 @@ describe('role-aware suggestions', () => {
       expect(slot.roleScoreDelta).toBeDefined()
       expect(slot.roleBestPosition).toBe(5)
     }
+  })
+
+  it('hero models get a scaled role delta (support-shifted model beats greedy for pos 5)', () => {
+    const input = makeInitialScanInput()
+    input.deps = depsWithRole('fixed', [5])
+    const { overlayPayload } = processScanResults(input)
+
+    const lina = overlayPayload.heroModels.find((m) => m.heroName === 'lina')!
+    const antimage = overlayPayload.heroModels.find((m) => m.heroName === 'antimage')!
+    expect(lina.roleScoreDelta).toBeDefined()
+    expect(antimage.roleScoreDelta).toBeDefined()
+    expect(lina.roleScoreDelta!).toBeGreaterThan(antimage.roleScoreDelta!)
+    expect(lina.roleBestPosition).toBe(5)
   })
 
   it('dynamic mode with My Spot unknown reports noSpot and stays inert', () => {

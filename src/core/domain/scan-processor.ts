@@ -41,6 +41,7 @@ import type { ModelTileCapture } from './model-pick-detection'
 import {
   RESCAN_GUARD_MAX_CONSECUTIVE_REJECTIONS,
   PERSONAL_SCORE_DELTA_EPSILON,
+  ROLE_MODEL_WEIGHT_SCALE,
 } from '@shared/constants/thresholds'
 
 // @DEV-GUIDE: Central business logic — transforms raw ML scan results into a fully-enriched
@@ -329,6 +330,13 @@ export function processScanResults(
   const hasShiftData = allShifts.some((row) => row.gpmShift !== null)
   const shiftAxesByName: Map<string, ShiftAxes> =
     roleModeActive && hasShiftData ? computeShiftAxes(allShifts) : new Map()
+  // Hero MODELS have their own shift entries — percentiled among heroes only
+  // (their raw magnitudes are far below ability shifts) and weight-scaled at
+  // scoring time (ROLE_MODEL_WEIGHT_SCALE).
+  const heroAxesByName: Map<string, ShiftAxes> =
+    roleModeActive && hasShiftData
+      ? computeShiftAxes(deps.heroes.getAllShifts())
+      : new Map()
   const roleContext: RoleContext | null =
     roleModeActive && hasShiftData
       ? resolveRoleContext(
@@ -503,6 +511,7 @@ export function processScanResults(
     personalHeroStats,
     roleContext,
     shiftAxesByName,
+    heroAxesByName,
     deps.tags,
     myPickTags,
     myModelAttackType,
@@ -709,6 +718,7 @@ function buildScoredEntities(
   personalHeroStats: Map<string, import('@shared/types').PersonalHeroStats>,
   roleContext: RoleContext | null,
   shiftAxesByName: ReadonlyMap<string, ShiftAxes>,
+  heroAxesByName: ReadonlyMap<string, ShiftAxes>,
   tags: import('./ability-tags').AbilityTagsLookup | undefined,
   myPickTags: ReadonlySet<AbilityTag>[],
   myModelAttackType: import('./ability-tags').HeroAttackType | undefined,
@@ -769,16 +779,27 @@ function buildScoredEntities(
       model.pickRate,
       personalHeroStats.get(model.heroName),
     )
+    // Models get greed-fit only (no tags/needs), from hero-model shift entries
+    // percentiled among heroes, scaled down — the model barely determines farm
+    // priority compared to the build.
+    const role = computeRoleScore(heroAxesByName.get(model.heroName), roleContext)
+    const roleDelta = role !== null ? role.delta * ROLE_MODEL_WEIGHT_SCALE : undefined
+    const consolidatedScore =
+      roleDelta !== undefined
+        ? Math.min(1, Math.max(0, scored.consolidatedScore + roleDelta))
+        : scored.consolidatedScore
     entities.push({
       entityType: 'hero',
       internalName: model.heroName,
       displayName: model.heroDisplayName,
       winrate: model.winrate,
       pickRate: model.pickRate,
-      consolidatedScore: scored.consolidatedScore,
+      consolidatedScore,
       personalGames: scored.personalGames,
       personalWinrate: scored.personalWinrate,
       personalScoreDelta: scored.personalScoreDelta,
+      roleScoreDelta: roleDelta,
+      roleBestPosition: role?.bestPosition,
       dbHeroId: model.dbHeroId,
       heroOrder: model.heroOrder,
     })
@@ -936,6 +957,8 @@ function enrichHeroModels(
       personalGames: scored?.personalGames,
       personalWinrate: scored?.personalWinrate,
       personalScoreDelta: scored?.personalScoreDelta,
+      roleScoreDelta: scored?.roleScoreDelta,
+      roleBestPosition: scored?.roleBestPosition,
       isGeneralTopTier: topTier?.isGeneralTopTier ?? false,
       isPersonallyDriven: topTier?.isPersonallyDriven ?? false,
       identificationConfidence: model.identificationConfidence,

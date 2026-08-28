@@ -312,6 +312,11 @@ function HeroTooltipContent({
         scoreDelta={model.personalScoreDelta}
         t={t}
       />
+      <RoleStatLine
+        scoreDelta={model.roleScoreDelta}
+        position={model.roleBestPosition}
+        t={t}
+      />
 
       <HeroSynergySection
         title={t('tooltip.strongAbilities')}
