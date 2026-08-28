@@ -1,7 +1,10 @@
 import { useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { EnrichedScanSlot, HeroModelDisplay, SynergyPairDisplay, HeroSynergyDisplay } from '@shared/types'
-import { PERSONAL_SCORE_DELTA_EPSILON } from '@shared/constants/thresholds'
+import {
+  PERSONAL_SCORE_DELTA_EPSILON,
+  ROLE_SCORE_DELTA_EPSILON,
+} from '@shared/constants/thresholds'
 
 export type TooltipData =
   | { type: 'ability'; slot: EnrichedScanSlot }
@@ -69,6 +72,33 @@ function PersonalStatLine({
         games: String(games),
       })}
       {arrow && <span className={arrowClass}> {arrow}</span>}
+    </div>
+  )
+}
+
+// Role-fit line (role-aware suggestions): which effective position this ability
+// fits best and whether the role layer moved its score up or down. Negligible
+// shifts render nothing — same anti-noise rule as the personal line.
+function RoleStatLine({
+  scoreDelta,
+  position,
+  t,
+}: {
+  scoreDelta?: number
+  position?: number
+  t: (key: string, opts?: Record<string, string>) => string
+}): React.ReactElement | null {
+  if (scoreDelta == null || position == null) return null
+  if (Math.abs(scoreDelta) <= ROLE_SCORE_DELTA_EPSILON) return null
+
+  const up = scoreDelta > 0
+  return (
+    <div className="tooltip-stat tooltip-role">
+      {t('tooltip.roleFit', { position: String(position) })}
+      <span className={up ? 'tooltip-role-up' : 'tooltip-role-down'}>
+        {' '}
+        {up ? '▲' : '▼'}
+      </span>
     </div>
   )
 }
@@ -182,6 +212,11 @@ function AbilityTooltipContent({
         games={slot.personalGames}
         winrate={slot.personalWinrate}
         scoreDelta={slot.personalScoreDelta}
+        t={t}
+      />
+      <RoleStatLine
+        scoreDelta={slot.roleScoreDelta}
+        position={slot.roleBestPosition}
         t={t}
       />
 

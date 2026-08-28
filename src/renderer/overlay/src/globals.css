@@ -431,6 +431,20 @@ body {
   color: #d97b6a;
 }
 
+/* Role-fit line (role-aware suggestions) — blue, distinct from the amber
+   personal line and the teal synergy accents. */
+.tooltip-role {
+  color: #7fb3e3;
+}
+
+.tooltip-role-up {
+  color: #6fce7e;
+}
+
+.tooltip-role-down {
+  color: #d97b6a;
+}
+
 .tooltip-section-title {
   font-weight: 600;
   margin-top: 10px;
@@ -657,6 +671,70 @@ body {
 .scan-summary-warn {
   border-color: rgba(230, 170, 40, 0.8);
   color: #e6c063;
+}
+
+/* ============================================================
+   Role Panel (role-aware suggestions quick control)
+   ============================================================ */
+.role-panel {
+  z-index: 10000;
+  background-color: rgba(32, 18, 34, 0.85);
+  border: 1px solid rgba(93, 53, 102, 0.6);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: 4px;
+  padding: 6px 10px;
+}
+
+.role-panel:hover {
+  background-color: rgba(48, 28, 51, 0.92);
+}
+
+.role-button-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.role-label {
+  color: #a8b2bc;
+  font-size: 11px;
+  margin-right: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.role-btn {
+  background-color: rgba(56, 32, 57, 0.85);
+  border: 1px solid rgba(93, 53, 102, 0.5);
+  border-radius: 5px;
+  color: #c8c8c8;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  min-width: 26px;
+  padding: 5px 6px;
+  text-align: center;
+  transition: all 0.15s ease-out;
+}
+
+.role-btn:hover {
+  background-color: rgba(93, 53, 102, 0.9);
+  color: #e8e8e8;
+}
+
+.role-btn-active {
+  background-color: rgba(64, 105, 150, 0.9);
+  border-color: rgba(127, 179, 227, 0.9);
+  color: #eef4fa;
+}
+
+.role-status {
+  color: #a8b2bc;
+  font-size: 11px;
+  line-height: 1.2;
 }
 
 /* ============================================================

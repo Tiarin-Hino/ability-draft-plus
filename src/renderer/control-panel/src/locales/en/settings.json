@@ -86,5 +86,21 @@
     "buttonsNote": "While enabled, the manual My Spot and My Model overlay buttons are hidden — both selections happen automatically from game data.",
     "setupTitle": "GSI setup",
     "setupHint": "One-time: install the config file below into your Dota folder, then restart Dota 2."
+  },
+  "roleSuggestions": {
+    "title": "Role-Aware Suggestions",
+    "description": "Adjust suggestions for the position you intend to play, based on how each ability shifts its drafters toward farming or supporting (windrun.io stat shifts).",
+    "mode": {
+      "off": "Off",
+      "fixed": "My positions",
+      "dynamic": "Fill for team"
+    },
+    "hint": {
+      "off": "Suggestions stay exactly as they are today.",
+      "fixed": "Score suggestions for the position(s) you pick below — for role loyalists and party stacks that agree lanes up front. Teammates still get approximate role estimates for display only.",
+      "dynamic": "The app watches what your teammates draft and suggests picks for the position nobody is building toward (for example: three greedy builds on your team → support picks). It stays neutral until enough teammate picks are on the board."
+    },
+    "noPositionsWarning": "Select at least one position — with none selected, suggestions stay unadjusted.",
+    "positionsHint": "Suggestions are boosted when they fit any selected position."
   }
 }
