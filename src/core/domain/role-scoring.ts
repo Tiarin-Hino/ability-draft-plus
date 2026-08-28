@@ -333,8 +333,13 @@ function reservedPosition(
 
 /**
  * Resolve the role context for one scan. Returns null when the role layer must
- * be a complete no-op: mode off, My Spot unknown, or fixed mode with nothing
- * selected. Callers treat null as "score exactly as before".
+ * be a complete no-op: mode off, fixed mode with nothing selected, or dynamic
+ * mode with My Spot unknown. FIXED mode works WITHOUT a spot — the selected
+ * positions are the essentials and tailor suggestions from the initial scan
+ * on; the spot only unlocks the auxiliary parts (teammate estimates, the
+ * team-balance term, and pick-aware needs). Dynamic inherently needs the spot:
+ * its whole job is reading MY team's builds. Callers treat null as "score
+ * exactly as before".
  */
 export function resolveRoleContext(
   settings: Pick<AppSettings, 'roleMode' | 'roleFixedPositions'>,
@@ -343,18 +348,24 @@ export function resolveRoleContext(
   axesByName: ReadonlyMap<string, ShiftAxes>,
 ): RoleContext | null {
   if (settings.roleMode !== 'fixed' && settings.roleMode !== 'dynamic') return null
-  if (myHeroOrder === null) return null
 
   const fixedPositions = (settings.roleFixedPositions ?? []).filter(
     (p): p is DraftPosition => Number.isInteger(p) && p >= 1 && p <= 5,
   )
   if (settings.roleMode === 'fixed' && fixedPositions.length === 0) return null
+  if (settings.roleMode === 'dynamic' && myHeroOrder === null) return null
 
-  const teammates = summarizeTeammateBuilds(selectedAbilities, myHeroOrder, axesByName)
+  const teammates =
+    myHeroOrder !== null
+      ? summarizeTeammateBuilds(selectedAbilities, myHeroOrder, axesByName)
+      : []
   const teamGreed = meanTeamGreed(teammates)
 
   if (settings.roleMode === 'fixed') {
-    const myPicks = selectedAbilities.filter((s) => s.hero_order === myHeroOrder)
+    const myPicks =
+      myHeroOrder !== null
+        ? selectedAbilities.filter((s) => s.hero_order === myHeroOrder)
+        : []
     const reserved = reservedPosition(fixedPositions, buildGreedOf(myPicks, axesByName))
     const candidates = ALL_POSITIONS.filter((p) => p !== reserved)
     return {

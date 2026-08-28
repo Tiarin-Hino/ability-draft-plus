@@ -69,7 +69,18 @@ describe('resolveRoleContext', () => {
     expect(
       resolveRoleContext({ roleMode: 'fixed', roleFixedPositions: [] }, [], 0, empty),
     ).toBeNull()
-    expect(resolveRoleContext(FIXED_5, [], null, empty)).toBeNull()
+    // Dynamic needs the spot (its job is reading MY team); fixed does not
+    expect(resolveRoleContext(DYNAMIC, [], null, empty)).toBeNull()
+  })
+
+  it('fixed mode works without a spot: positions active, auxiliaries empty', () => {
+    const ctx = resolveRoleContext(FIXED_5, [], null, new Map())!
+
+    expect(ctx.mode).toBe('fixed')
+    expect(ctx.effectivePositions).toEqual([5])
+    expect(ctx.teammates).toEqual([])
+    expect(ctx.teamGreed).toBeNull()
+    expect(ctx.estimatedPositions.size).toBe(0)
   })
 
   it('teammates are the same screen half, excluding me', () => {

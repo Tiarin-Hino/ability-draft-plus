@@ -986,18 +986,28 @@ describe('role-aware suggestions', () => {
     for (const slot of slots) expect(slot.roleScoreDelta).toBeUndefined()
   })
 
-  it('fixed mode with My Spot unknown stays inert but reports noSpot status', () => {
+  it('fixed mode tailors suggestions from the INITIAL scan, before any spot is known', () => {
     const input = makeInitialScanInput()
     input.deps = depsWithRole('fixed', [5])
     const { overlayPayload } = processScanResults(input)
 
-    expect(overlayPayload.roleContext).toEqual({
-      mode: 'fixed',
-      status: 'noSpot',
-      effectivePositions: [],
-      teamGreed: null,
-      teammates: [],
-    })
+    expect(overlayPayload.roleContext).toBeDefined()
+    expect(overlayPayload.roleContext!.status).toBe('active')
+    expect(overlayPayload.roleContext!.effectivePositions).toEqual([5])
+    expect(overlayPayload.roleContext!.teammates).toEqual([])
+    for (const slot of overlayPayload.scanData!.standard) {
+      expect(slot.roleScoreDelta).toBeDefined()
+      expect(slot.roleBestPosition).toBe(5)
+    }
+  })
+
+  it('dynamic mode with My Spot unknown reports noSpot and stays inert', () => {
+    const input = makeInitialScanInput()
+    input.deps = depsWithRole('dynamic')
+    const { overlayPayload } = processScanResults(input)
+
+    expect(overlayPayload.roleContext).toBeDefined()
+    expect(overlayPayload.roleContext!.status).toBe('noSpot')
     for (const slot of overlayPayload.scanData!.standard) {
       expect(slot.roleScoreDelta).toBeUndefined()
     }
