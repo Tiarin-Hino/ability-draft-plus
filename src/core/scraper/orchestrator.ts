@@ -21,6 +21,8 @@ import type { MetadataRepository } from '@core/database/repositories/metadata-re
 // then prune ability rows absent from the fresh scrape (removed/renamed in a patch),
 // then apply hand-curated slot metadata overrides (slot-metadata-overrides.ts) — those
 // win over both Windrun and Liquipedia, and are re-applied after Liquipedia enrichment.
+// Phase 1 also applies /ability-shifts (role fingerprint columns) — NON-FATAL: the
+// endpoint is undocumented, so on failure the scrape continues with previous values.
 // Without the prune, stale rows accumulate forever and produce false "missingFromModel"
 // warnings once a retrained model drops the legacy class names. The prune also keeps
 // "DB ability names" === "abilities in the pool", which the scan pipeline relies on to
@@ -133,6 +135,29 @@ export async function performFullScrape(
     // Hand-curated slot corrections for abilities the scrapers can't get right
     // (passives, non-QWER hotkeys, stale pre-rework rows) — authoritative.
     applySlotOverrides(deps.abilities, onProgress, 'phase1')
+
+    // Ability shifts (role fingerprint) — non-fatal enrichment: the endpoint is
+    // undocumented, so its failure must never fail the scrape; existing shift
+    // values are kept (applyAbilityShifts never wipes).
+    try {
+      const shiftsRes = await deps.apiClient.fetchAbilityShifts(options.patch)
+      const applied = deps.abilities.applyAbilityShifts(
+        (shiftsRes.data.abilityShifts ?? []).map((s) => ({
+          windrunId: s.abilityId,
+          killsShift: s.killsShift,
+          deathsShift: s.deathsShift,
+          kaShift: s.killAssistShift,
+          gpmShift: s.gpmShift,
+          xpmShift: s.xpmShift,
+          dmgShift: s.dmgShift,
+          healingShift: s.healingShift,
+        })),
+      )
+      onProgress({ phase: 'phase1', message: `Applied ability shifts to ${applied} abilities` })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      onProgress({ phase: 'phase1', message: `Ability shifts unavailable (kept previous values): ${message}` })
+    }
 
     deps.persist()
 

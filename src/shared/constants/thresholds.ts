@@ -92,6 +92,12 @@ export const PERSONAL_PRIOR_STRENGTH = 20
 // up/down marker in the overlay (avoids arrow noise on negligible shifts).
 export const PERSONAL_SCORE_DELTA_EPSILON = 0.005
 
+// Role-aware suggestions: shift-derived axes (core/domain/shift-axes.ts).
+// The greed axis combines gpm_shift + SHIFT_GREED_XPM_WEIGHT * xpm_shift before
+// percentile-ranking across the pool; shifts are ordering-only (units are
+// undocumented), so weights here only trade off the two orderings.
+export const SHIFT_GREED_XPM_WEIGHT = 0.5
+
 // Model
 // The class count is NOT a constant — it is defined by resources/model/class_names.json
 // and validated against the model's output width at classifier init.

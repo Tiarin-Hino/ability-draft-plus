@@ -167,6 +167,27 @@ describe('WindrunApiClient', () => {
     expect(result.data.abilityTriplets[0].abilityIdOne).toBe(-70)
   })
 
+  it('fetchAbilityShifts calls ability-shifts with the patch param', async () => {
+    mockFetchJson({
+      data: {
+        patches: { overall: ['7.41d'] },
+        abilityShifts: [
+          {
+            abilityId: 5606, killsShift: 0.05, deathsShift: -0.1, killAssistShift: 0.02,
+            gpmShift: 0.56, xpmShift: 0.4, dmgShift: 0.08, healingShift: -0.05,
+          },
+        ],
+      },
+    })
+
+    const client = createWindrunApiClient('https://api.windrun.io/api/v2')
+    const result = await client.fetchAbilityShifts('7.41d')
+
+    const url = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string
+    expect(url).toBe('https://api.windrun.io/api/v2/ability-shifts?patch=7.41d')
+    expect(result.data.abilityShifts[0].gpmShift).toBe(0.56)
+  })
+
   it('throws on HTTP error response', async () => {
     mockFetchError(500, 'Internal Server Error')
 

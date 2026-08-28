@@ -293,3 +293,68 @@ describe('AbilityRepository.deleteAbilitiesNotIn', () => {
     expect(orphans[0].values[0][0]).toBe(0)
   })
 })
+
+// Separate DB instance: these tests mutate shift columns on shared fixture rows
+describe('AbilityRepository.applyAbilityShifts', () => {
+  let testDb: TestDb
+  let repo: AbilityRepository
+
+  const shiftsFor = (windrunId: number, gpmShift: number) => ({
+    windrunId,
+    killsShift: 0.1,
+    deathsShift: -0.2,
+    kaShift: 0.3,
+    gpmShift,
+    xpmShift: 0.25,
+    dmgShift: 0.15,
+    healingShift: -0.05,
+  })
+
+  beforeEach(async () => {
+    testDb = await createTestDb()
+    seedTestData(testDb.db)
+    repo = createAbilityRepository(testDb.db)
+    testDb.sqlite.exec("UPDATE Abilities SET windrun_id = 101 WHERE name = 'antimage_mana_break'")
+    testDb.sqlite.exec("UPDATE Abilities SET windrun_id = 102 WHERE name = 'antimage_blink'")
+  })
+
+  afterEach(() => {
+    testDb.close()
+  })
+
+  it('applies shifts by windrun_id and returns the matched count', () => {
+    const applied = repo.applyAbilityShifts([shiftsFor(101, 0.56), shiftsFor(102, -0.4)])
+
+    expect(applied).toBe(2)
+    const rows = new Map(repo.getAllShifts().map((r) => [r.name, r]))
+    expect(rows.get('antimage_mana_break')!.gpmShift).toBe(0.56)
+    expect(rows.get('antimage_mana_break')!.kaShift).toBe(0.3)
+    expect(rows.get('antimage_blink')!.gpmShift).toBe(-0.4)
+  })
+
+  it('ignores windrun ids with no matching ability row', () => {
+    const applied = repo.applyAbilityShifts([shiftsFor(101, 0.5), shiftsFor(999, 0.9)])
+
+    expect(applied).toBe(1)
+  })
+
+  it('returns 0 for an empty batch', () => {
+    expect(repo.applyAbilityShifts([])).toBe(0)
+  })
+
+  it('keeps previous values for abilities absent from a later batch (never wipes)', () => {
+    repo.applyAbilityShifts([shiftsFor(101, 0.5), shiftsFor(102, -0.3)])
+
+    repo.applyAbilityShifts([shiftsFor(102, -0.35)])
+
+    const rows = new Map(repo.getAllShifts().map((r) => [r.name, r]))
+    expect(rows.get('antimage_mana_break')!.gpmShift).toBe(0.5)
+    expect(rows.get('antimage_blink')!.gpmShift).toBe(-0.35)
+  })
+
+  it('rows never touched by shifts read as nulls', () => {
+    const rows = new Map(repo.getAllShifts().map((r) => [r.name, r]))
+    expect(rows.get('pudge_rot')!.gpmShift).toBeNull()
+    expect(rows.get('pudge_rot')!.healingShift).toBeNull()
+  })
+})
