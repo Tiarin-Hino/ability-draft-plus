@@ -4,9 +4,12 @@ import { sqliteTable, text, integer, real, index, unique } from 'drizzle-orm/sql
 // Defines both Drizzle table objects (for type-safe queries) and raw SCHEMA_SQL string
 // (for sql.js CREATE TABLE IF NOT EXISTS on startup).
 //
-// 7 tables: Heroes, Abilities, AbilitySynergies, HeroAbilitySynergies,
-// AbilityTriplets, HeroAbilityTriplets, Metadata.
+// 9 tables: Heroes, Abilities, AbilitySynergies, HeroAbilitySynergies,
+// AbilityTriplets, HeroAbilityTriplets, PlayerAbilityStats, PlayerHeroStats, Metadata.
 // All foreign keys cascade on delete. Strategic indices on lookup columns.
+// PlayerAbilityStats/PlayerHeroStats hold the linked Windrun profile's personal
+// stats, keyed by WINDRUN ids (deliberately no FK to Abilities/Heroes — the
+// profile can have history on abilities not currently in the AD pool).
 //
 // The SCHEMA_SQL string at the bottom is the raw SQL equivalent used by the sql.js
 // initialization path (see database/index.ts). Both representations must be kept in sync.
@@ -39,6 +42,10 @@ export const abilities = sqliteTable(
     hsPickRate: real('hs_pick_rate'),
     isUltimate: integer('is_ultimate', { mode: 'boolean' }),
     abilityOrder: integer('ability_order'),
+    // Windrun/Valve ability id (WindrunAbilityStat.abilityId) — join key for
+    // PlayerAbilityStats. Nullable: rows from pre-2.6 databases lack it until
+    // the next scrape.
+    windrunId: integer('windrun_id'),
   },
   (table) => [index('idx_abilities_hero_id').on(table.heroId)],
 )
@@ -141,6 +148,28 @@ export const heroAbilityTriplets = sqliteTable(
   ],
 )
 
+// ── PlayerAbilityStats ──────────────────────────────────────────────────────────
+// Personal per-ability stats of the linked Windrun profile. Fully replaced on each
+// refresh (the source endpoint returns a complete snapshot). avgPickPosition is the
+// player's own average pick order — same metric as Abilities.pick_rate.
+export const playerAbilityStats = sqliteTable('PlayerAbilityStats', {
+  windrunAbilityId: integer('windrun_ability_id').primaryKey(),
+  wins: integer('wins').notNull(),
+  losses: integer('losses').notNull(),
+  winrate: real('winrate').notNull(),
+  avgPickPosition: real('avg_pick_position'),
+})
+
+// ── PlayerHeroStats ─────────────────────────────────────────────────────────────
+// Personal per-hero stats of the linked Windrun profile (no pick position — the
+// source endpoint doesn't provide one for heroes).
+export const playerHeroStats = sqliteTable('PlayerHeroStats', {
+  windrunHeroId: integer('windrun_hero_id').primaryKey(),
+  wins: integer('wins').notNull(),
+  losses: integer('losses').notNull(),
+  winrate: real('winrate').notNull(),
+})
+
 // ── Metadata ────────────────────────────────────────────────────────────────────
 export const metadata = sqliteTable('Metadata', {
   key: text('key').primaryKey(),
@@ -170,7 +199,8 @@ export const SCHEMA_SQL = `
     pick_rate REAL,
     hs_pick_rate REAL,
     is_ultimate INTEGER,
-    ability_order INTEGER
+    ability_order INTEGER,
+    windrun_id INTEGER
   );
   CREATE INDEX IF NOT EXISTS idx_abilities_hero_id ON Abilities (hero_id);
 
@@ -227,6 +257,21 @@ export const SCHEMA_SQL = `
   CREATE INDEX IF NOT EXISTS idx_hero_triplet_hero ON HeroAbilityTriplets (hero_id);
   CREATE INDEX IF NOT EXISTS idx_hero_triplet_a1 ON HeroAbilityTriplets (ability_id_one);
   CREATE INDEX IF NOT EXISTS idx_hero_triplet_a2 ON HeroAbilityTriplets (ability_id_two);
+
+  CREATE TABLE IF NOT EXISTS PlayerAbilityStats (
+    windrun_ability_id INTEGER PRIMARY KEY,
+    wins INTEGER NOT NULL,
+    losses INTEGER NOT NULL,
+    winrate REAL NOT NULL,
+    avg_pick_position REAL
+  );
+
+  CREATE TABLE IF NOT EXISTS PlayerHeroStats (
+    windrun_hero_id INTEGER PRIMARY KEY,
+    wins INTEGER NOT NULL,
+    losses INTEGER NOT NULL,
+    winrate REAL NOT NULL
+  );
 
   CREATE TABLE IF NOT EXISTS Metadata (
     key TEXT PRIMARY KEY,

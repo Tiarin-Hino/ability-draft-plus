@@ -387,6 +387,19 @@ body {
   font-size: 12px;
 }
 
+/* Personal (linked Windrun profile) stat line + score-shift markers */
+.tooltip-personal {
+  color: #d9c26a;
+}
+
+.tooltip-personal-up {
+  color: #6fce7e;
+}
+
+.tooltip-personal-down {
+  color: #d97b6a;
+}
+
 .tooltip-section-title {
   font-weight: 600;
   margin-top: 10px;

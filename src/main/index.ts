@@ -19,6 +19,7 @@ import { createAutoRescanService } from './services/auto-rescan-service'
 import { createUpdateService } from './services/update-service'
 import { createWindowTrackerService } from './services/window-tracker-service'
 import { createScraperService } from './services/scraper-service'
+import { createPlayerStatsService } from './services/player-stats-service'
 import { createSentryService } from './services/sentry-service'
 import { loadSentryDsn, loadApiConfig } from './services/api-config'
 import { createFeedbackService } from './services/feedback-service'
@@ -259,6 +260,9 @@ app.whenReady().then(async () => {
     ocrService,
   )
 
+  // Linked Windrun profile stats (personalized suggestions)
+  const playerStatsService = createPlayerStatsService(dbService)
+
   // EXPERIMENTAL: GSI-driven auto-rescan + pick attribution (setting-gated, default off)
   const autoRescanService = createAutoRescanService(
     appStore,
@@ -289,6 +293,7 @@ app.whenReady().then(async () => {
     feedbackService,
     scanTrigger,
     slotMappingService,
+    playerStatsService,
   )
 
   // Streamer view autostart (opt-in setting)

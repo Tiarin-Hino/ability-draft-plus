@@ -55,6 +55,7 @@
   "tooltip": {
     "winrate": "Winrate: {{value}}",
     "pickRate": "Pick Rate: {{value}}",
+    "personalStats": "You: {{value}} WR in {{games}} games",
     "strongSynergies": "Strong Synergies",
     "heroSynergies": "Hero Synergies",
     "weakSynergies": "Weak Synergies",

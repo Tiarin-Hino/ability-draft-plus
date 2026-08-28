@@ -55,6 +55,7 @@
   "tooltip": {
     "winrate": "Винрейт: {{value}}",
     "pickRate": "Пикрейт: {{value}}",
+    "personalStats": "Вы: {{value}} WR за {{games}} игр",
     "strongSynergies": "Сильные синергии",
     "heroSynergies": "Синергии героев",
     "weakSynergies": "Слабые синергии",

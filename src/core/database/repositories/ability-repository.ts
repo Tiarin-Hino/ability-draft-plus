@@ -25,6 +25,8 @@ export interface AbilityUpsertData {
   pickRate: number
   hsPickRate: number | null
   isUltimate?: boolean
+  /** Windrun/Valve ability id — join key for PlayerAbilityStats. */
+  windrunId?: number
 }
 
 export interface LiquipediaMetaUpdate {
@@ -131,6 +133,7 @@ export function createAbilityRepository(db: SQLJsDatabase): AbilityRepository {
             pickRate: ability.pickRate,
             hsPickRate: ability.hsPickRate,
             isUltimate: ability.isUltimate ?? false,
+            windrunId: ability.windrunId ?? null,
           })
           .onConflictDoUpdate({
             target: abilities.name,
@@ -142,6 +145,7 @@ export function createAbilityRepository(db: SQLJsDatabase): AbilityRepository {
               pickRate: sql`excluded.pick_rate`,
               hsPickRate: sql`excluded.hs_pick_rate`,
               isUltimate: sql`excluded.is_ultimate`,
+              windrunId: sql`excluded.windrun_id`,
             },
           })
           .run()

@@ -3,7 +3,11 @@ import {
   normalizeWinrate,
   normalizePickOrder,
   calculateConsolidatedScore,
+  blendPersonal,
+  calculatePersonalizedScore,
+  NEUTRAL_PICK_POSITION,
 } from '@core/domain/scoring'
+import { PERSONAL_PRIOR_STRENGTH } from '@shared/constants/thresholds'
 
 describe('normalizeWinrate', () => {
   it('returns winrate as-is when present', () => {
@@ -99,5 +103,89 @@ describe('calculateConsolidatedScore', () => {
     // wNorm = 0.6, pNorm = 0.5
     const expected = 0.4 * 0.6 + 0.6 * 0.5
     expect(calculateConsolidatedScore(0.6, null)).toBeCloseTo(expected)
+  })
+})
+
+describe('blendPersonal', () => {
+  it('computes the shrinkage formula', () => {
+    // (15 * 0.9 + 20 * 0.5) / 35
+    const expected = (15 * 0.9 + PERSONAL_PRIOR_STRENGTH * 0.5) / (15 + PERSONAL_PRIOR_STRENGTH)
+    expect(blendPersonal(0.5, 0.9, 15, 0.5)).toBeCloseTo(expected)
+  })
+
+  it('returns the global value unchanged at 0 games', () => {
+    expect(blendPersonal(0.55, 0.9, 0, 0.5)).toBe(0.55)
+  })
+
+  it('approaches the personal value as games grow', () => {
+    expect(blendPersonal(0.5, 0.9, 100_000, 0.5)).toBeCloseTo(0.9, 3)
+  })
+
+  it('falls back to the neutral prior when the global value is null', () => {
+    const expected = (10 * 0.8 + PERSONAL_PRIOR_STRENGTH * 0.5) / (10 + PERSONAL_PRIOR_STRENGTH)
+    expect(blendPersonal(null, 0.8, 10, 0.5)).toBeCloseTo(expected)
+  })
+})
+
+describe('calculatePersonalizedScore', () => {
+  it('matches the global score exactly without personal data', () => {
+    const result = calculatePersonalizedScore(0.55, 10)
+    expect(result.consolidatedScore).toBe(calculateConsolidatedScore(0.55, 10))
+    expect(result.personalGames).toBeUndefined()
+    expect(result.personalWinrate).toBeUndefined()
+    expect(result.personalScoreDelta).toBeUndefined()
+  })
+
+  it('matches the global score exactly with a 0-game sample', () => {
+    const result = calculatePersonalizedScore(0.55, 10, {
+      games: 0,
+      winrate: 1,
+      avgPickPosition: 1,
+    })
+    expect(result.consolidatedScore).toBe(calculateConsolidatedScore(0.55, 10))
+    expect(result.personalGames).toBeUndefined()
+  })
+
+  it('blends winrate and pick position and reports the delta', () => {
+    const personal = { games: 15, winrate: 0.9, avgPickPosition: 5 }
+    const result = calculatePersonalizedScore(0.5, 20, personal)
+
+    const blendedWr = blendPersonal(0.5, 0.9, 15, 0.5)
+    const blendedPick = blendPersonal(20, 5, 15, NEUTRAL_PICK_POSITION)
+    const expected = calculateConsolidatedScore(blendedWr, blendedPick)
+
+    expect(result.consolidatedScore).toBeCloseTo(expected)
+    expect(result.personalGames).toBe(15)
+    expect(result.personalWinrate).toBe(0.9)
+    expect(result.personalScoreDelta).toBeCloseTo(
+      expected - calculateConsolidatedScore(0.5, 20),
+    )
+  })
+
+  it('a strong personal record raises the score; a weak one lowers it', () => {
+    const base = calculateConsolidatedScore(0.5, 20)
+    const up = calculatePersonalizedScore(0.5, 20, {
+      games: 30,
+      winrate: 0.8,
+      avgPickPosition: 8,
+    })
+    const down = calculatePersonalizedScore(0.5, 20, {
+      games: 30,
+      winrate: 0.2,
+      avgPickPosition: 40,
+    })
+    expect(up.consolidatedScore).toBeGreaterThan(base)
+    expect(down.consolidatedScore).toBeLessThan(base)
+  })
+
+  it('blends winrate only when the sample has no pick position (heroes)', () => {
+    const result = calculatePersonalizedScore(0.5, 20, {
+      games: 25,
+      winrate: 0.7,
+    })
+    const blendedWr = blendPersonal(0.5, 0.7, 25, 0.5)
+    expect(result.consolidatedScore).toBeCloseTo(
+      calculateConsolidatedScore(blendedWr, 20),
+    )
   })
 })

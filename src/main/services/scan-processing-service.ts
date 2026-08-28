@@ -118,6 +118,7 @@ export function createScanProcessingService(
             synergies: dbService.synergies,
             triplets: dbService.triplets,
             settings: dbService.metadata,
+            playerStats: dbService.playerStats,
           },
           modelCoords: coords.models_coords ?? [],
           heroesCoords: coords.heroes_coords ?? [],

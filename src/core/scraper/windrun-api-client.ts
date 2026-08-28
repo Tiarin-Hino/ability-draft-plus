@@ -7,12 +7,15 @@ import type {
   WindrunStaticAbilitiesResponse,
   WindrunStaticHeroesResponse,
   WindrunPatchesResponse,
+  WindrunPlayerProfileResponse,
+  WindrunPlayerStatsResponse,
 } from './types'
 
 // @DEV-GUIDE: REST API client for Windrun.io (api.windrun.io/api/v2/).
 // Endpoints: /static/abilities (array, NOT record -- build Map via valveId),
 // /static/heroes (Record keyed by numeric string), /abilities, /ability-high-skill,
-// /heroes, /ability-pairs, /ability-triplets, /static/patches.
+// /heroes, /ability-pairs, /ability-triplets, /static/patches,
+// /players/{id32} + /players/{id32}/stats (personalization; id is steamID32).
 // Negative abilityId in API responses = hero (e.g., -35 = hero 35).
 // Response fields: valveId (not id), englishName (not name).
 // abilityPairs/abilityTriplets fields may be omitted -- always use ?? [] fallbacks.
@@ -36,6 +39,8 @@ export interface WindrunApiClient {
   fetchHeroes(patch?: string): Promise<WindrunHeroesResponse>
   fetchAbilityPairs(patch?: string): Promise<WindrunPairsResponse>
   fetchAbilityTriplets(patch?: string): Promise<WindrunTripletsResponse>
+  fetchPlayerProfile(playerId: number): Promise<WindrunPlayerProfileResponse>
+  fetchPlayerStats(playerId: number): Promise<WindrunPlayerStatsResponse>
 }
 
 export function createWindrunApiClient(
@@ -66,5 +71,9 @@ export function createWindrunApiClient(
     fetchHeroes: (patch?) => fetchJson<WindrunHeroesResponse>('heroes', patch),
     fetchAbilityPairs: (patch?) => fetchJson<WindrunPairsResponse>('ability-pairs', patch),
     fetchAbilityTriplets: (patch?) => fetchJson<WindrunTripletsResponse>('ability-triplets', patch),
+    fetchPlayerProfile: (playerId) =>
+      fetchJson<WindrunPlayerProfileResponse>(`players/${playerId}`),
+    fetchPlayerStats: (playerId) =>
+      fetchJson<WindrunPlayerStatsResponse>(`players/${playerId}/stats`),
   }
 }

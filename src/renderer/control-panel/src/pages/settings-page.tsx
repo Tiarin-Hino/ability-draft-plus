@@ -2,6 +2,7 @@ import { useSettings } from '@/hooks/use-settings'
 import { ThresholdCard } from '@/components/settings/threshold-card'
 import { AppearanceCard } from '@/components/settings/appearance-card'
 import { AutoTrackingCard } from '@/components/settings/auto-tracking-card'
+import { PlayerProfileCard } from '@/components/settings/player-profile-card'
 import { BackupCard } from '@/components/settings/backup-card'
 import { FeedbackCard } from '@/components/settings/feedback-card'
 import { DEFAULT_OP_THRESHOLD, DEFAULT_TRAP_THRESHOLD } from '@shared/constants/thresholds'
@@ -26,6 +27,7 @@ export function SettingsPage() {
         />
       </div>
 
+      <PlayerProfileCard />
       <AutoTrackingCard />
       <AppearanceCard />
       <BackupCard />

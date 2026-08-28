@@ -79,6 +79,19 @@ export const NUM_TOP_TIER_SUGGESTIONS = 10
 export const DEFAULT_OP_THRESHOLD = 0.13
 export const DEFAULT_TRAP_THRESHOLD = 0.05
 
+// Personalization (Windrun player stats). Personal per-ability samples are small
+// (Windrun's /players/{id}/stats caps spellStats at the top 200 abilities by games;
+// entries can carry 1-40+ games), so raw personal winrates are far too noisy to rank
+// with. Blended value = (n * personal + K * global) / (n + K): at 15 games personal
+// data shifts the input ~43%, at 100+ games it dominates, at 0 games it's a no-op.
+// The blend runs in INPUT space (winrate, avg pick position) — the 0.4/0.6
+// consolidated-score formula itself is untouched, and with no linked profile the
+// scores are bit-identical to the global-only path.
+export const PERSONAL_PRIOR_STRENGTH = 20
+// A personalized score that moved less than this from the global score renders no
+// up/down marker in the overlay (avoids arrow noise on negligible shifts).
+export const PERSONAL_SCORE_DELTA_EPSILON = 0.005
+
 // Model
 // The class count is NOT a constant — it is defined by resources/model/class_names.json
 // and validated against the model's output width at classifier init.

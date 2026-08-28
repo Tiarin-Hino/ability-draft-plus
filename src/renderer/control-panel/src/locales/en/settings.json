@@ -58,6 +58,24 @@
     "uploadError": "Upload failed: {{error}}",
     "apiNotConfigured": "The upload service is not configured in this build — use Export and attach the file to a GitHub issue."
   },
+  "personalStats": {
+    "title": "Personalized suggestions",
+    "description": "Link your Windrun.io profile to blend your personal ability and hero winrates into the overlay's suggestions. Abilities you historically win with rank higher; your stats also show in ability tooltips.",
+    "inputPlaceholder": "Windrun profile URL or Steam ID",
+    "inputHint": "Paste your Windrun profile link (windrun.io/players/…), your Steam ID64, or your Friend ID.",
+    "linkButton": "Link profile",
+    "linking": "Linking…",
+    "refreshButton": "Refresh stats",
+    "unlinkButton": "Unlink",
+    "lastUpdated": "updated {{date}}",
+    "refreshSuccess": "Refreshed: {{abilities}} abilities, {{heroes}} heroes with personal stats.",
+    "blendNote": "Personal winrates are blended with global stats in proportion to how many games you have on each ability — small samples only nudge the score. Stats refresh automatically when the overlay is activated (at most once per hour).",
+    "scrapeHint": "Your local Windrun data predates ability matching — run 'Update Windrun Data' on the Data page once to activate ability personalization.",
+    "errorInvalidInput": "Could not read a player ID from that input. Paste a windrun.io profile link or a Steam ID.",
+    "errorProfileNotFound": "Windrun.io returned no profile for that ID. Check the link and your connection.",
+    "errorNotLinked": "No profile is linked.",
+    "errorFetchFailed": "Fetching stats from Windrun.io failed. Your previous stats are kept — try again later."
+  },
   "autoTracking": {
     "title": "Automatic draft tracking",
     "description": "Automates the whole draft flow: the initial pool scan, your spot and hero model selection, and targeted rescans after every pick with per-player pick tracking.",

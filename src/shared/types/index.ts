@@ -40,6 +40,30 @@ export interface HeroAbilitySynergy {
   isOp: boolean
 }
 
+/** Personal (per linked Windrun profile) stats for one ability. */
+export interface PersonalAbilityStats {
+  games: number
+  wins: number
+  winrate: number
+  avgPickPosition: number | null
+}
+
+/** Personal (per linked Windrun profile) stats for one hero model. */
+export interface PersonalHeroStats {
+  games: number
+  wins: number
+  winrate: number
+}
+
+/** Linked Windrun player profile shown in settings (cached in Metadata). */
+export interface PlayerProfileInfo {
+  playerId: number
+  nickname: string | null
+  avatarUrl: string | null
+  /** ISO timestamp of the last successful stats fetch, null if never fetched. */
+  lastFetchedAt: string | null
+}
+
 export interface SystemDisplayInfo {
   width: number
   height: number
@@ -118,6 +142,12 @@ export interface EnrichedScanSlot extends ScanResult {
   isUltimateFromDb: boolean
   /** True when the ML model could not identify this slot (confidence below threshold). */
   isUnknown?: boolean
+  /** Linked-profile games on this ability (present only when personalization is active). */
+  personalGames?: number
+  /** Linked-profile winrate on this ability [0, 1]. */
+  personalWinrate?: number
+  /** consolidatedScore minus the global-only score — how far personalization moved it. */
+  personalScoreDelta?: number
   highWinrateCombinations: SynergyPairDisplay[]
   lowWinrateCombinations: SynergyPairDisplay[]
   strongHeroSynergies: HeroSynergyDisplay[]
@@ -187,6 +217,12 @@ export interface HeroModelDisplay {
   pickRate: number | null
   consolidatedScore: number
   isGeneralTopTier: boolean
+  /** Linked-profile games on this hero (present only when personalization is active). */
+  personalGames?: number
+  /** Linked-profile winrate on this hero [0, 1]. */
+  personalWinrate?: number
+  /** consolidatedScore minus the global-only score — how far personalization moved it. */
+  personalScoreDelta?: number
   identificationConfidence: number
   strongAbilitySynergies: HeroSynergyDisplay[]
   weakAbilitySynergies: HeroSynergyDisplay[]

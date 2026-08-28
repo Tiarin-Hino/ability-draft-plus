@@ -6,6 +6,7 @@ import type {
   AppSettings,
   OverlayDataPayload,
   ResolutionLayout,
+  PlayerProfileInfo,
 } from '../types'
 import type { InitialScanResults } from '../types/ml'
 import type { StreamServerStatusInfo } from '../types/stream'
@@ -178,6 +179,31 @@ export interface IpcInvokeMap {
   }
   // title is translated in the renderer (native dialogs can't use renderer i18n)
   'gsi:pickDotaFolder': { request: { title: string }; response: { dir: string | null } }
+  // Linked Windrun profile for personalized suggestions (player-stats-service).
+  // error keys are i18n keys in the settings namespace, translated in the renderer.
+  'player:getProfile': { request: void; response: PlayerProfileInfo | null }
+  'player:linkProfile': {
+    request: { input: string }
+    response: {
+      success: boolean
+      profile?: PlayerProfileInfo
+      stats?: PlayerStatsRefreshInfo
+      errorKey?: string
+    }
+  }
+  'player:unlinkProfile': { request: void; response: void }
+  'player:refreshStats': { request: void; response: PlayerStatsRefreshInfo }
+}
+
+/** Result of a personal-stats fetch (player:linkProfile / player:refreshStats).
+ * matchedAbilityCount of 0 with a non-zero abilityCount means the local DB
+ * predates windrun_id — a Windrun data update enables ability matching. */
+export interface PlayerStatsRefreshInfo {
+  success: boolean
+  abilityCount?: number
+  heroCount?: number
+  matchedAbilityCount?: number
+  errorKey?: string
 }
 
 // Send (fire-and-forget) channels from renderer to main

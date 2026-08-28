@@ -701,4 +701,101 @@ describe('processScanResults', () => {
       expect(overlayPayload.selectedModelHeroOrder).toBeNull()
     })
   })
+
+  describe('personalization (linked Windrun profile)', () => {
+    function withPersonalStats(
+      abilityStats: Map<string, import('@shared/types').PersonalAbilityStats>,
+      heroStats: Map<string, import('@shared/types').PersonalHeroStats>,
+    ): ScanProcessorDeps {
+      return {
+        ...mockDeps,
+        playerStats: {
+          getAbilityStatsByName: () => abilityStats,
+          getHeroStatsByName: () => heroStats,
+        },
+      }
+    }
+
+    it('produces identical output with empty personal maps (personalization off)', () => {
+      const base = processScanResults(makeInitialScanInput())
+      const input = makeInitialScanInput()
+      input.deps = withPersonalStats(new Map(), new Map())
+      const personalized = processScanResults(input)
+      expect(personalized.overlayPayload).toEqual(base.overlayPayload)
+    })
+
+    it('raises the score of an ability with a strong personal record', () => {
+      const base = processScanResults(makeInitialScanInput())
+      const baseFireball = base.overlayPayload.scanData!.standard.find(
+        (s) => s.name === 'fireball',
+      )!
+
+      const input = makeInitialScanInput()
+      input.deps = withPersonalStats(
+        new Map([
+          ['fireball', { games: 30, wins: 25, winrate: 25 / 30, avgPickPosition: 4 }],
+        ]),
+        new Map(),
+      )
+      const { overlayPayload } = processScanResults(input)
+      const fireball = overlayPayload.scanData!.standard.find(
+        (s) => s.name === 'fireball',
+      )!
+
+      expect(fireball.consolidatedScore).toBeGreaterThan(baseFireball.consolidatedScore)
+      expect(fireball.personalGames).toBe(30)
+      expect(fireball.personalWinrate).toBeCloseTo(25 / 30)
+      expect(fireball.personalScoreDelta).toBeCloseTo(
+        fireball.consolidatedScore - baseFireball.consolidatedScore,
+      )
+      // Global display values stay global
+      expect(fireball.winrate).toBe(0.55)
+      expect(fireball.pickRate).toBe(10)
+    })
+
+    it('leaves abilities without personal data untouched', () => {
+      const base = processScanResults(makeInitialScanInput())
+      const baseIceBlast = base.overlayPayload.scanData!.standard.find(
+        (s) => s.name === 'ice_blast',
+      )!
+
+      const input = makeInitialScanInput()
+      input.deps = withPersonalStats(
+        new Map([
+          ['fireball', { games: 30, wins: 25, winrate: 25 / 30, avgPickPosition: 4 }],
+        ]),
+        new Map(),
+      )
+      const { overlayPayload } = processScanResults(input)
+      const iceBlast = overlayPayload.scanData!.standard.find(
+        (s) => s.name === 'ice_blast',
+      )!
+
+      expect(iceBlast.consolidatedScore).toBe(baseIceBlast.consolidatedScore)
+      expect(iceBlast.personalGames).toBeUndefined()
+      expect(iceBlast.personalScoreDelta).toBeUndefined()
+    })
+
+    it('personalizes hero model scores from personal hero stats', () => {
+      const base = processScanResults(makeInitialScanInput())
+      const baseLina = base.overlayPayload.heroModels.find(
+        (m) => m.heroName === 'lina',
+      )!
+
+      const input = makeInitialScanInput()
+      input.deps = withPersonalStats(
+        new Map(),
+        new Map([['lina', { games: 20, wins: 4, winrate: 0.2 }]]),
+      )
+      const { overlayPayload } = processScanResults(input)
+      const lina = overlayPayload.heroModels.find((m) => m.heroName === 'lina')!
+
+      // Weak personal record lowers the model's score
+      expect(lina.consolidatedScore).toBeLessThan(baseLina.consolidatedScore)
+      expect(lina.personalGames).toBe(20)
+      expect(lina.personalWinrate).toBeCloseTo(0.2)
+      // Global display winrate stays global
+      expect(lina.winrate).toBe(baseLina.winrate)
+    })
+  })
 })
