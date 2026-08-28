@@ -50,6 +50,10 @@ export interface ScoredEntity {
   roleScoreDelta?: number
   /** Effective position (1-5) that produced the best role fit. */
   roleBestPosition?: number
+  /** Needs-engine reason chips ('covers:<need>' | 'duplicate:<need>'). */
+  roleReasons?: string[]
+  /** Mechanically inert on the selected model's attack type — excluded from top-tier. */
+  inertOnModel?: boolean
 }
 
 /** Entity with top-tier selection flags applied. */
@@ -171,4 +175,6 @@ export interface ScanProcessorDeps {
   triplets?: TripletLookup
   settings: SettingsLookup
   playerStats?: PersonalStatsLookup
+  /** Ability function tags + hero meta (resources/data). Absent = tags feature off. */
+  tags?: import('./ability-tags').AbilityTagsLookup
 }

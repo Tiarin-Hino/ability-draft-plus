@@ -445,6 +445,34 @@ body {
   color: #d97b6a;
 }
 
+.tooltip-role-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 3px 0;
+}
+
+.tooltip-role-chip {
+  background-color: rgba(64, 105, 150, 0.35);
+  border: 1px solid rgba(127, 179, 227, 0.5);
+  border-radius: 4px;
+  color: #b8d4ee;
+  font-size: 11px;
+  line-height: 1;
+  padding: 3px 6px;
+}
+
+.tooltip-role-chip-dup {
+  background-color: rgba(120, 90, 40, 0.35);
+  border-color: rgba(217, 123, 106, 0.5);
+  color: #e0b8a8;
+}
+
+/* Ability mechanically dead on the selected model (cleave on ranged) */
+.tooltip-inert {
+  color: #e6c063;
+}
+
 .tooltip-section-title {
   font-weight: 600;
   margin-top: 10px;

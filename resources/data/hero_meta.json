@@ -1,0 +1,510 @@
+{
+ "abaddon": {
+  "attackType": "Melee",
+  "primaryAttr": "all"
+ },
+ "abyssalunderlord": {
+  "attackType": "Melee",
+  "primaryAttr": "str"
+ },
+ "alchemist": {
+  "attackType": "Melee",
+  "primaryAttr": "str"
+ },
+ "ancientapparition": {
+  "attackType": "Ranged",
+  "primaryAttr": "int"
+ },
+ "antimage": {
+  "attackType": "Melee",
+  "primaryAttr": "agi"
+ },
+ "arc_warden": {
+  "attackType": "Ranged",
+  "primaryAttr": "all"
+ },
+ "axe": {
+  "attackType": "Melee",
+  "primaryAttr": "str"
+ },
+ "bane": {
+  "attackType": "Ranged",
+  "primaryAttr": "all"
+ },
+ "batrider": {
+  "attackType": "Ranged",
+  "primaryAttr": "all"
+ },
+ "beastmaster": {
+  "attackType": "Melee",
+  "primaryAttr": "all"
+ },
+ "bloodseeker": {
+  "attackType": "Melee",
+  "primaryAttr": "agi"
+ },
+ "bountyhunter": {
+  "attackType": "Melee",
+  "primaryAttr": "agi"
+ },
+ "brewmaster": {
+  "attackType": "Melee",
+  "primaryAttr": "all"
+ },
+ "bristleback": {
+  "attackType": "Melee",
+  "primaryAttr": "str"
+ },
+ "broodmother": {
+  "attackType": "Melee",
+  "primaryAttr": "agi"
+ },
+ "centaur": {
+  "attackType": "Melee",
+  "primaryAttr": "str"
+ },
+ "chaosknight": {
+  "attackType": "Melee",
+  "primaryAttr": "str"
+ },
+ "chen": {
+  "attackType": "Ranged",
+  "primaryAttr": "int"
+ },
+ "clinkz": {
+  "attackType": "Ranged",
+  "primaryAttr": "agi"
+ },
+ "crystalmaiden": {
+  "attackType": "Ranged",
+  "primaryAttr": "int"
+ },
+ "darkseer": {
+  "attackType": "Melee",
+  "primaryAttr": "int"
+ },
+ "darkwillow": {
+  "attackType": "Ranged",
+  "primaryAttr": "int"
+ },
+ "dawnbreaker": {
+  "attackType": "Melee",
+  "primaryAttr": "str"
+ },
+ "dazzle": {
+  "attackType": "Ranged",
+  "primaryAttr": "all"
+ },
+ "deathprophet": {
+  "attackType": "Ranged",
+  "primaryAttr": "all"
+ },
+ "disruptor": {
+  "attackType": "Ranged",
+  "primaryAttr": "int"
+ },
+ "doombringer": {
+  "attackType": "Melee",
+  "primaryAttr": "str"
+ },
+ "dragonknight": {
+  "attackType": "Melee",
+  "primaryAttr": "str"
+ },
+ "drowranger": {
+  "attackType": "Ranged",
+  "primaryAttr": "agi"
+ },
+ "earthshaker": {
+  "attackType": "Melee",
+  "primaryAttr": "str"
+ },
+ "earthspirit": {
+  "attackType": "Melee",
+  "primaryAttr": "str"
+ },
+ "eldertitan": {
+  "attackType": "Melee",
+  "primaryAttr": "str"
+ },
+ "emberspirit": {
+  "attackType": "Melee",
+  "primaryAttr": "agi"
+ },
+ "enchantress": {
+  "attackType": "Ranged",
+  "primaryAttr": "int"
+ },
+ "enigma": {
+  "attackType": "Ranged",
+  "primaryAttr": "all"
+ },
+ "facelessvoid": {
+  "attackType": "Melee",
+  "primaryAttr": "agi"
+ },
+ "furion": {
+  "attackType": "Ranged",
+  "primaryAttr": "all"
+ },
+ "grimstroke": {
+  "attackType": "Ranged",
+  "primaryAttr": "int"
+ },
+ "gyrocopter": {
+  "attackType": "Ranged",
+  "primaryAttr": "agi"
+ },
+ "hoodwink": {
+  "attackType": "Ranged",
+  "primaryAttr": "agi"
+ },
+ "huskar": {
+  "attackType": "Ranged",
+  "primaryAttr": "str"
+ },
+ "invoker": {
+  "attackType": "Ranged",
+  "primaryAttr": "int"
+ },
+ "jakiro": {
+  "attackType": "Ranged",
+  "primaryAttr": "int"
+ },
+ "juggernaut": {
+  "attackType": "Melee",
+  "primaryAttr": "agi"
+ },
+ "keeperofthelight": {
+  "attackType": "Ranged",
+  "primaryAttr": "int"
+ },
+ "kez": {
+  "attackType": "Melee",
+  "primaryAttr": "agi"
+ },
+ "kunkka": {
+  "attackType": "Melee",
+  "primaryAttr": "str"
+ },
+ "largo": {
+  "attackType": "Melee",
+  "primaryAttr": "str"
+ },
+ "legioncommander": {
+  "attackType": "Melee",
+  "primaryAttr": "str"
+ },
+ "leshrac": {
+  "attackType": "Ranged",
+  "primaryAttr": "int"
+ },
+ "lich": {
+  "attackType": "Ranged",
+  "primaryAttr": "int"
+ },
+ "lifestealer": {
+  "attackType": "Melee",
+  "primaryAttr": "str"
+ },
+ "lina": {
+  "attackType": "Ranged",
+  "primaryAttr": "int"
+ },
+ "lion": {
+  "attackType": "Ranged",
+  "primaryAttr": "int"
+ },
+ "lonedruid": {
+  "attackType": "Ranged",
+  "primaryAttr": "agi"
+ },
+ "luna": {
+  "attackType": "Ranged",
+  "primaryAttr": "agi"
+ },
+ "lycan": {
+  "attackType": "Melee",
+  "primaryAttr": "str"
+ },
+ "magnataur": {
+  "attackType": "Melee",
+  "primaryAttr": "all"
+ },
+ "marci": {
+  "attackType": "Melee",
+  "primaryAttr": "all"
+ },
+ "mars": {
+  "attackType": "Melee",
+  "primaryAttr": "str"
+ },
+ "medusa": {
+  "attackType": "Ranged",
+  "primaryAttr": "agi"
+ },
+ "meepo": {
+  "attackType": "Melee",
+  "primaryAttr": "agi"
+ },
+ "mirana": {
+  "attackType": "Ranged",
+  "primaryAttr": "agi"
+ },
+ "monkey_king": {
+  "attackType": "Melee",
+  "primaryAttr": "agi"
+ },
+ "morphling": {
+  "attackType": "Ranged",
+  "primaryAttr": "agi"
+ },
+ "muerta": {
+  "attackType": "Ranged",
+  "primaryAttr": "int"
+ },
+ "nagasiren": {
+  "attackType": "Melee",
+  "primaryAttr": "agi"
+ },
+ "necrolyte": {
+  "attackType": "Ranged",
+  "primaryAttr": "int"
+ },
+ "nevermore": {
+  "attackType": "Ranged",
+  "primaryAttr": "agi"
+ },
+ "nightstalker": {
+  "attackType": "Melee",
+  "primaryAttr": "str"
+ },
+ "nyxassassin": {
+  "attackType": "Melee",
+  "primaryAttr": "all"
+ },
+ "obsidiandestroyer": {
+  "attackType": "Ranged",
+  "primaryAttr": "int"
+ },
+ "ogremagi": {
+  "attackType": "Melee",
+  "primaryAttr": "str"
+ },
+ "omniknight": {
+  "attackType": "Melee",
+  "primaryAttr": "str"
+ },
+ "oracle": {
+  "attackType": "Ranged",
+  "primaryAttr": "int"
+ },
+ "pangolier": {
+  "attackType": "Melee",
+  "primaryAttr": "all"
+ },
+ "phantomassassin": {
+  "attackType": "Melee",
+  "primaryAttr": "agi"
+ },
+ "phantomlancer": {
+  "attackType": "Melee",
+  "primaryAttr": "agi"
+ },
+ "phoenix": {
+  "attackType": "Ranged",
+  "primaryAttr": "str"
+ },
+ "primal_beast": {
+  "attackType": "Melee",
+  "primaryAttr": "str"
+ },
+ "puck": {
+  "attackType": "Ranged",
+  "primaryAttr": "int"
+ },
+ "pudge": {
+  "attackType": "Melee",
+  "primaryAttr": "str"
+ },
+ "pugna": {
+  "attackType": "Ranged",
+  "primaryAttr": "int"
+ },
+ "queenofpain": {
+  "attackType": "Ranged",
+  "primaryAttr": "int"
+ },
+ "rattletrap": {
+  "attackType": "Melee",
+  "primaryAttr": "str"
+ },
+ "razor": {
+  "attackType": "Ranged",
+  "primaryAttr": "agi"
+ },
+ "riki": {
+  "attackType": "Melee",
+  "primaryAttr": "agi"
+ },
+ "ringmaster": {
+  "attackType": "Ranged",
+  "primaryAttr": "int"
+ },
+ "rubick": {
+  "attackType": "Ranged",
+  "primaryAttr": "int"
+ },
+ "sandking": {
+  "attackType": "Melee",
+  "primaryAttr": "all"
+ },
+ "shadowdemon": {
+  "attackType": "Ranged",
+  "primaryAttr": "int"
+ },
+ "shadowshaman": {
+  "attackType": "Ranged",
+  "primaryAttr": "int"
+ },
+ "shredder": {
+  "attackType": "Melee",
+  "primaryAttr": "str"
+ },
+ "silencer": {
+  "attackType": "Ranged",
+  "primaryAttr": "int"
+ },
+ "skeletonking": {
+  "attackType": "Melee",
+  "primaryAttr": "str"
+ },
+ "skywrathmage": {
+  "attackType": "Ranged",
+  "primaryAttr": "int"
+ },
+ "slardar": {
+  "attackType": "Melee",
+  "primaryAttr": "str"
+ },
+ "slark": {
+  "attackType": "Melee",
+  "primaryAttr": "agi"
+ },
+ "snapfire": {
+  "attackType": "Ranged",
+  "primaryAttr": "all"
+ },
+ "sniper": {
+  "attackType": "Ranged",
+  "primaryAttr": "agi"
+ },
+ "spectre": {
+  "attackType": "Melee",
+  "primaryAttr": "agi"
+ },
+ "spiritbreaker": {
+  "attackType": "Melee",
+  "primaryAttr": "str"
+ },
+ "stormspirit": {
+  "attackType": "Ranged",
+  "primaryAttr": "int"
+ },
+ "sven": {
+  "attackType": "Melee",
+  "primaryAttr": "str"
+ },
+ "techies": {
+  "attackType": "Ranged",
+  "primaryAttr": "all"
+ },
+ "templarassassin": {
+  "attackType": "Ranged",
+  "primaryAttr": "agi"
+ },
+ "terrorblade": {
+  "attackType": "Melee",
+  "primaryAttr": "agi"
+ },
+ "tidehunter": {
+  "attackType": "Melee",
+  "primaryAttr": "str"
+ },
+ "tinker": {
+  "attackType": "Ranged",
+  "primaryAttr": "int"
+ },
+ "tiny": {
+  "attackType": "Melee",
+  "primaryAttr": "str"
+ },
+ "treant": {
+  "attackType": "Melee",
+  "primaryAttr": "str"
+ },
+ "trollwarlord": {
+  "attackType": "Ranged",
+  "primaryAttr": "agi"
+ },
+ "tusk": {
+  "attackType": "Melee",
+  "primaryAttr": "str"
+ },
+ "undying": {
+  "attackType": "Melee",
+  "primaryAttr": "str"
+ },
+ "ursa": {
+  "attackType": "Melee",
+  "primaryAttr": "agi"
+ },
+ "vengefulspirit": {
+  "attackType": "Ranged",
+  "primaryAttr": "agi"
+ },
+ "venomancer": {
+  "attackType": "Ranged",
+  "primaryAttr": "all"
+ },
+ "viper": {
+  "attackType": "Ranged",
+  "primaryAttr": "agi"
+ },
+ "visage": {
+  "attackType": "Ranged",
+  "primaryAttr": "all"
+ },
+ "voidspirit": {
+  "attackType": "Melee",
+  "primaryAttr": "all"
+ },
+ "warlock": {
+  "attackType": "Ranged",
+  "primaryAttr": "int"
+ },
+ "weaver": {
+  "attackType": "Ranged",
+  "primaryAttr": "agi"
+ },
+ "windrunner": {
+  "attackType": "Ranged",
+  "primaryAttr": "all"
+ },
+ "winterwyvern": {
+  "attackType": "Ranged",
+  "primaryAttr": "int"
+ },
+ "wisp": {
+  "attackType": "Ranged",
+  "primaryAttr": "all"
+ },
+ "witchdoctor": {
+  "attackType": "Ranged",
+  "primaryAttr": "int"
+ },
+ "zeus": {
+  "attackType": "Ranged",
+  "primaryAttr": "int"
+ }
+}

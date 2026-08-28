@@ -162,6 +162,10 @@ export interface EnrichedScanSlot extends ScanResult {
   roleScoreDelta?: number
   /** The effective position that produced roleScoreDelta's best fit (1-5). */
   roleBestPosition?: number
+  /** Needs-engine reason chips ('covers:<need>' | 'duplicate:<need>'). */
+  roleReasons?: string[]
+  /** Mechanically inert on the selected model (cleave on ranged) — never top-tier. */
+  inertOnModel?: boolean
   highWinrateCombinations: SynergyPairDisplay[]
   lowWinrateCombinations: SynergyPairDisplay[]
   strongHeroSynergies: HeroSynergyDisplay[]

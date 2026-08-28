@@ -118,6 +118,15 @@ export const DYNAMIC_ROLE_MIN_PICKS = 2
 // The pos-5 "enabling" accent only counts in the top band of the healing axis —
 // the raw healing shift is zero-inflated, so mid-axis values carry no signal.
 export const ROLE_ENABLING_ACCENT_FLOOR = 0.7
+// Build-needs engine (tags): an unmet role need the candidate covers is worth
+// more than a mild greed mismatch; a candidate that ONLY duplicates an already
+// twice-covered capability (the third single-target stun) drops several ranks.
+export const ROLE_NEED_WEIGHT = 0.05
+export const ROLE_DUPLICATE_WEIGHT = 0.04
+// Static per-position tag accents (Position Templates matrix) — deliberately
+// tiny: greed already encodes most role fit empirically; tags mainly drive the
+// DYNAMIC needs engine and the explanation chips.
+export const ROLE_TAG_ACCENT_WEIGHT = 0.02
 
 // Model
 // The class count is NOT a constant — it is defined by resources/model/class_names.json

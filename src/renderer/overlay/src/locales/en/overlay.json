@@ -69,7 +69,24 @@
     "weakAbilities": "Weak Abilities for This Hero",
     "unknownAbility": "Unknown Ability",
     "unknownHint": "The model could not identify this icon — consider using 'Report Failed Recognition'",
-    "roleFit": "Role fit: pos {{position}}"
+    "roleFit": "Role fit: pos {{position}}",
+    "roleNeeds": {
+      "steroid": "attack steroid",
+      "farm": "farming tool",
+      "survival": "survivability",
+      "nuke": "nuke",
+      "mobility": "mobility",
+      "kill_ult": "kill ultimate",
+      "initiation": "initiation",
+      "aoe_cc": "AoE control",
+      "durability": "durability",
+      "hard_cc": "hard disable",
+      "waveclear": "waveclear",
+      "save": "ally save"
+    },
+    "roleCovers": "Covers your missing {{need}}",
+    "roleDuplicate": "Already covered: {{need}}",
+    "inertOnModel": "Does not work on your model (melee/ranged mismatch)"
   },
   "role": {
     "aria": "Role suggestions",

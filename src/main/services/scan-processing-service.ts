@@ -49,6 +49,7 @@ export function createScanProcessingService(
     import('./slot-mapping-service').SlotMappingService,
     'onCardTiles'
   >,
+  abilityTags?: import('@core/domain/ability-tags').AbilityTagsLookup,
 ): ScanProcessingService {
   // Enrichment failures must reach the overlay: without this broadcast the renderer's
   // scanState stays pinned at 'scanning' with every button disabled.
@@ -119,6 +120,7 @@ export function createScanProcessingService(
             triplets: dbService.triplets,
             settings: dbService.metadata,
             playerStats: dbService.playerStats,
+            tags: abilityTags,
           },
           modelCoords: coords.models_coords ?? [],
           heroesCoords: coords.heroes_coords ?? [],

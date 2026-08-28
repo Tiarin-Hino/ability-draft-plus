@@ -103,6 +103,36 @@ function RoleStatLine({
   )
 }
 
+// Needs-engine reason chips ('covers:<need>' / 'duplicate:<need>') — the
+// explainability half of the tags feature: WHY the role layer moved this.
+function RoleReasonChips({
+  reasons,
+  t,
+}: {
+  reasons?: string[]
+  t: (key: string, opts?: Record<string, string>) => string
+}): React.ReactElement | null {
+  if (!reasons || reasons.length === 0) return null
+  return (
+    <div className="tooltip-role-chips">
+      {reasons.map((reason) => {
+        const [kind, key] = reason.split(':')
+        const need = t(`tooltip.roleNeeds.${key}`)
+        return (
+          <span
+            key={reason}
+            className={`tooltip-role-chip${kind === 'duplicate' ? ' tooltip-role-chip-dup' : ''}`}
+          >
+            {kind === 'duplicate'
+              ? t('tooltip.roleDuplicate', { need })
+              : t('tooltip.roleCovers', { need })}
+          </span>
+        )
+      })}
+    </div>
+  )
+}
+
 function positionTooltip(el: HTMLDivElement, anchorRect: DOMRect): void {
   const tooltipWidth = el.offsetWidth
   const tooltipHeight = el.offsetHeight
@@ -219,6 +249,10 @@ function AbilityTooltipContent({
         position={slot.roleBestPosition}
         t={t}
       />
+      <RoleReasonChips reasons={slot.roleReasons} t={t} />
+      {slot.inertOnModel && (
+        <div className="tooltip-stat tooltip-inert">{t('tooltip.inertOnModel')}</div>
+      )}
 
       <SynergySection
         title={t('tooltip.strongSynergies')}

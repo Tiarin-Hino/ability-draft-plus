@@ -1032,6 +1032,77 @@ describe('role-aware suggestions', () => {
     expect(iceBlast.roleScoreDelta!).toBeGreaterThan(0)
   })
 
+  const mockTags: NonNullable<ScanProcessorDeps['tags']> = {
+    getTags(name: string) {
+      const table: Record<string, string[]> = {
+        fireball: ['farm_tool', 'steroid', 'melee_only'],
+        ice_blast: ['hard_cc', 'aoe', 'nuke'],
+        firestorm: ['waveclear', 'aoe'],
+        blink: ['mobility'],
+        laguna_blade: ['nuke'],
+      }
+      const tags = table[name]
+      return tags ? (new Set(tags) as ReturnType<NonNullable<ScanProcessorDeps['tags']>['getTags']>) : undefined
+    },
+    getHeroAttackType(heroName: string) {
+      return heroName === 'lina' ? 'Ranged' : 'Melee'
+    },
+  }
+
+  it('excludes melee-only abilities from top-tier on a ranged model and marks the slot', () => {
+    const initial = processScanResults(makeInitialScanInput())
+    const state = initial.updatedState
+    state.mySelectedModelDbHeroId = 1 // Lina model -> Ranged
+    state.mySelectedModelHeroOrder = 0
+    const deps = { ...depsWithRole('off'), tags: mockTags }
+    const input: ScanProcessorInput = {
+      rawResults: [] as ScanResult[],
+      isInitialScan: false,
+      state,
+      deps,
+      modelCoords: [makeCoord(0), makeCoord(1)],
+      heroesCoords: [makeCoord(0), makeCoord(1)],
+      heroesParams: { width: 358, height: 170 },
+      targetResolution: '1920x1080',
+      scaleFactor: 1.0,
+    }
+    const { overlayPayload } = processScanResults(input)
+
+    const fireball = overlayPayload.scanData!.standard.find((s) => s.name === 'fireball')!
+    expect(fireball.inertOnModel).toBe(true)
+    expect(fireball.isGeneralTopTier).toBe(false)
+    expect(fireball.isSynergySuggestionForMySpot).toBe(false)
+    const iceBlast = overlayPayload.scanData!.standard.find((s) => s.name === 'ice_blast')!
+    expect(iceBlast.inertOnModel).toBeUndefined()
+  })
+
+  it('needs-engine chips reach the enriched slots in a role mode', () => {
+    const initial = processScanResults(makeInitialScanInput())
+    const state = initial.updatedState
+    state.mySelectedSpotDbId = 1
+    state.mySelectedSpotHeroOrder = 0
+    const deps = { ...depsWithRole('fixed', [5]), tags: mockTags }
+    const input: ScanProcessorInput = {
+      rawResults: [] as ScanResult[],
+      isInitialScan: false,
+      state,
+      deps,
+      modelCoords: [makeCoord(0), makeCoord(1)],
+      heroesCoords: [makeCoord(0), makeCoord(1)],
+      heroesParams: { width: 358, height: 170 },
+      targetResolution: '1920x1080',
+      scaleFactor: 1.0,
+    }
+    const { overlayPayload } = processScanResults(input)
+
+    // No picks yet: ice_blast (hard_cc) covers the unmet pos-5 disable need
+    const iceBlast = overlayPayload.scanData!.standard.find((s) => s.name === 'ice_blast')!
+    expect(iceBlast.roleReasons).toContain('covers:hard_cc')
+    // firestorm (waveclear) covers the unmet waveclear|nuke need
+    const firestorm = overlayPayload.scanData!.standard.find((s) => s.name === 'firestorm')!
+    expect(firestorm.roleReasons).toContain('covers:waveclear')
+  })
+
   it('a database with no shift data suppresses role scoring entirely', () => {
     const initial = processScanResults(makeInitialScanInput())
     const state = initial.updatedState

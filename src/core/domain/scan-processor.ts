@@ -20,7 +20,9 @@ import {
   computeRoleScore,
   toRoleContextDisplay,
   type RoleContext,
+  type RoleTagInput,
 } from './role-scoring'
+import { isInertOnModel, type AbilityTag } from './ability-tags'
 import { identifyHeroModels } from './hero-identification'
 import {
   getAbilitySynergySplit,
@@ -337,6 +339,24 @@ export function processScanResults(
         )
       : null
 
+  // Tags layer: my own picks' tag sets feed the needs engine; the selected
+  // model's attack type drives the inert-ability hard filter. Both are no-ops
+  // without the tags dep (dataset not shipped/loaded).
+  const myPickTags: ReadonlySet<AbilityTag>[] =
+    deps.tags !== undefined && state.mySelectedSpotHeroOrder !== null
+      ? selectedAbilities
+          .filter((s) => s.hero_order === state.mySelectedSpotHeroOrder && s.name)
+          .map((s) => deps.tags!.getTags(s.name!))
+          .filter((t): t is ReadonlySet<AbilityTag> => t !== undefined)
+      : []
+  const myModelAttackType = (() => {
+    if (deps.tags === undefined || state.mySelectedModelDbHeroId === null) return undefined
+    const model = state.identifiedHeroModelsCache.find(
+      (m) => m.dbHeroId === state.mySelectedModelDbHeroId,
+    )
+    return model !== undefined ? deps.tags.getHeroAttackType(model.heroName) : undefined
+  })()
+
   // --- Phase 4: Build heroes-in-pool set ---
   const heroesInPool = new Set<string>()
   for (const model of state.identifiedHeroModelsCache) {
@@ -483,6 +503,9 @@ export function processScanResults(
     personalHeroStats,
     roleContext,
     shiftAxesByName,
+    deps.tags,
+    myPickTags,
+    myModelAttackType,
   )
 
   // --- Phase 11: Check if My Spot has picked an ultimate ---
@@ -493,8 +516,11 @@ export function processScanResults(
   )
 
   // --- Phase 12: Determine top-tier entities ---
+  // Abilities mechanically inert on the selected model (cleave on a ranged
+  // model) are a HARD exclusion from suggestions, not a score tweak.
+  const topTierCandidates = allScoredEntities.filter((e) => !e.inertOnModel)
   const topTierEntities = determineTopTierEntities(
-    allScoredEntities,
+    topTierCandidates,
     state.mySelectedModelDbHeroId,
     mySpotHasUlt,
     synergisticPartnersInPool,
@@ -508,7 +534,7 @@ export function processScanResults(
   // from a personally-DEMOTED competitor is not claimed as "because of you").
   // Synergy suggestions are exempt — their inclusion is membership-driven.
   if (allScoredEntities.some((e) => e.personalScoreDelta !== undefined)) {
-    const baselineEntities = allScoredEntities.map((e) => ({
+    const baselineEntities = topTierCandidates.map((e) => ({
       ...e,
       consolidatedScore: e.consolidatedScore - (e.personalScoreDelta ?? 0),
     }))
@@ -658,6 +684,9 @@ function buildScoredEntities(
   personalHeroStats: Map<string, import('@shared/types').PersonalHeroStats>,
   roleContext: RoleContext | null,
   shiftAxesByName: ReadonlyMap<string, ShiftAxes>,
+  tags: import('./ability-tags').AbilityTagsLookup | undefined,
+  myPickTags: ReadonlySet<AbilityTag>[],
+  myModelAttackType: import('./ability-tags').HeroAttackType | undefined,
 ): ScoredEntity[] {
   const entities: ScoredEntity[] = []
   const seen = new Set<string>()
@@ -672,10 +701,17 @@ function buildScoredEntities(
       details?.pickRate ?? null,
       personalAbilityStats.get(slot.name),
     )
+    const candidateTags = tags?.getTags(slot.name)
     // Role layer applies AFTER the personal blend (fixed layer order), so
     // "you win with it" and "it fits your role" stack rather than fight.
     // Heroes are exempt — hero models have no shift data.
-    const role = computeRoleScore(shiftAxesByName.get(slot.name), roleContext)
+    const tagInput: RoleTagInput | undefined =
+      tags !== undefined ? { candidateTags, myPickTags } : undefined
+    const role = computeRoleScore(
+      shiftAxesByName.get(slot.name),
+      roleContext,
+      tagInput,
+    )
     const consolidatedScore =
       role !== null
         ? Math.min(1, Math.max(0, scored.consolidatedScore + role.delta))
@@ -692,6 +728,8 @@ function buildScoredEntities(
       personalScoreDelta: scored.personalScoreDelta,
       roleScoreDelta: role?.delta,
       roleBestPosition: role?.bestPosition,
+      roleReasons: role !== null && role.reasons.length > 0 ? role.reasons : undefined,
+      inertOnModel: isInertOnModel(candidateTags, myModelAttackType) || undefined,
       isUltimateFromCoordSource: slot.is_ultimate,
       isUltimateFromDb: details?.isUltimate,
       heroOrder: slot.hero_order,
@@ -804,6 +842,8 @@ function enrichSlots(
       personalScoreDelta: scored?.personalScoreDelta,
       roleScoreDelta: scored?.roleScoreDelta,
       roleBestPosition: scored?.roleBestPosition,
+      roleReasons: scored?.roleReasons,
+      inertOnModel: scored?.inertOnModel,
       isGeneralTopTier: topTier?.isGeneralTopTier ?? false,
       isSynergySuggestionForMySpot:
         topTier?.isSynergySuggestionForMySpot ?? false,

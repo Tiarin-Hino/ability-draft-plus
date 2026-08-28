@@ -4,11 +4,15 @@ import {
   ROLE_TEAM_BALANCE_WEIGHT,
   ROLE_ADJUSTMENT_CAP,
   ROLE_ENABLING_ACCENT_FLOOR,
+  ROLE_NEED_WEIGHT,
+  ROLE_DUPLICATE_WEIGHT,
+  ROLE_TAG_ACCENT_WEIGHT,
   DYNAMIC_ROLE_MIN_TEAMMATES,
   DYNAMIC_ROLE_MIN_PICKS,
 } from '@shared/constants/thresholds'
 import type { ScanResult, AppSettings, RoleContextDisplay } from '@shared/types'
 import type { ShiftAxes } from './shift-axes'
+import type { AbilityTag } from './ability-tags'
 
 // @DEV-GUIDE: Role-aware scoring layer (Position Templates spec). Two modes on
 // one engine: the scoring side only ever sees an EFFECTIVE POSITION SET.
@@ -22,6 +26,12 @@ import type { ShiftAxes } from './shift-axes'
 // Rank-matching = minimal-cost ORDER-PRESERVING assignment of builds (sorted by
 // greed desc) onto positions (targets are already greed-desc) — optimal for a
 // 1-D metric, no Hungarian machinery needed.
+// TAGS LAYER (ability-tags.ts dataset): the build-needs engine evaluates each
+// position's needs checklist against the USER'S OWN drafted abilities — a
+// candidate covering an unmet capability is boosted (reason chip 'covers:X'),
+// one that only duplicates a twice-covered capability is damped ('duplicate:X').
+// Small static per-position tag accents ride along. All of it is a no-op when
+// no tag input is supplied (dataset absent).
 // With roleMode 'off' (or My Spot unknown) resolveRoleContext returns null and
 // every scoring output is bit-identical to the role-less path.
 
@@ -48,6 +58,54 @@ const ALL_POSITIONS: readonly DraftPosition[] = [1, 2, 3, 4, 5]
 const PLAYER_COUNT = 10
 const TEAM_SIZE = PLAYER_COUNT / 2
 const PICKS_PER_PLAYER = 4
+
+/** A role need: satisfied by any requirement; a requirement is an AND of tags. */
+export interface RoleNeed {
+  /** i18n suffix for reason chips (overlay: tooltip.roleNeeds.<key>). */
+  key: string
+  anyOf: AbilityTag[][]
+}
+
+// Business constants (Position Templates matrix §03) — the needs checklists the
+// dynamic engine evaluates against the user's own drafted abilities.
+export const POSITION_NEEDS: Readonly<Record<DraftPosition, RoleNeed[]>> = {
+  1: [
+    { key: 'steroid', anyOf: [['steroid']] },
+    { key: 'farm', anyOf: [['farm_tool'], ['waveclear']] },
+    { key: 'survival', anyOf: [['mobility'], ['sustain_self']] },
+  ],
+  2: [
+    { key: 'nuke', anyOf: [['nuke']] },
+    { key: 'mobility', anyOf: [['mobility']] },
+    { key: 'kill_ult', anyOf: [['teamfight_ult'], ['hard_cc']] },
+  ],
+  3: [
+    { key: 'initiation', anyOf: [['initiation']] },
+    { key: 'aoe_cc', anyOf: [['hard_cc', 'aoe']] },
+    { key: 'durability', anyOf: [['sustain_self'], ['passive_value']] },
+  ],
+  4: [
+    { key: 'hard_cc', anyOf: [['hard_cc']] },
+    { key: 'mobility', anyOf: [['mobility']] },
+    { key: 'waveclear', anyOf: [['waveclear'], ['nuke']] },
+  ],
+  5: [
+    { key: 'save', anyOf: [['save_ally']] },
+    { key: 'hard_cc', anyOf: [['hard_cc']] },
+    { key: 'waveclear', anyOf: [['waveclear'], ['nuke']] },
+  ],
+}
+
+/** Static per-position tag accents (±ROLE_TAG_ACCENT_WEIGHT each). */
+const POSITION_TAG_ACCENTS: Readonly<
+  Record<DraftPosition, { plus: AbilityTag[]; minus: AbilityTag[] }>
+> = {
+  1: { plus: ['passive_value'], minus: ['save_ally'] },
+  2: { plus: ['waveclear'], minus: ['passive_value'] },
+  3: { plus: ['team_aura', 'teamfight_ult'], minus: [] },
+  4: { plus: ['setup_cc', 'initiation'], minus: ['steroid', 'farm_tool'] },
+  5: { plus: ['team_aura', 'passive_value'], minus: ['steroid', 'farm_tool'] },
+}
 
 export interface TeammateBuild {
   heroOrder: number
@@ -76,6 +134,65 @@ export interface RoleScore {
   delta: number
   /** The effective position that produced the best fit. */
   bestPosition: DraftPosition
+  /** Reason chips for the best position: 'covers:<needKey>' | 'duplicate:<needKey>'. */
+  reasons: string[]
+}
+
+/** Tag context for the needs engine (absent = tags feature off, no-op). */
+export interface RoleTagInput {
+  /** Tags of the candidate ability (undefined = untagged: needs/accents skip it). */
+  candidateTags: ReadonlySet<AbilityTag> | undefined
+  /** Tag sets of the user's own drafted abilities (picks without tags excluded). */
+  myPickTags: ReadonlyArray<ReadonlySet<AbilityTag>>
+}
+
+function satisfies(tags: ReadonlySet<AbilityTag>, need: RoleNeed): boolean {
+  return need.anyOf.some((req) => req.every((tag) => tags.has(tag)))
+}
+
+/**
+ * Needs engine for one (candidate, position) pair: boost for covering an unmet
+ * capability, one damp when the candidate ONLY duplicates a capability the user
+ * already covers twice (the third single-target stun). Returns the adjustment
+ * and its reason chips.
+ */
+function needsAdjustment(
+  position: DraftPosition,
+  tagInput: RoleTagInput,
+): { adj: number; reasons: string[] } {
+  const candidate = tagInput.candidateTags
+  if (candidate === undefined) return { adj: 0, reasons: [] }
+
+  let adj = 0
+  const reasons: string[] = []
+  let duplicateKey: string | null = null
+  for (const need of POSITION_NEEDS[position]) {
+    if (!satisfies(candidate, need)) continue
+    const covered = tagInput.myPickTags.filter((tags) => satisfies(tags, need)).length
+    if (covered === 0) {
+      adj += ROLE_NEED_WEIGHT
+      reasons.push(`covers:${need.key}`)
+    } else if (covered >= 2 && duplicateKey === null) {
+      duplicateKey = need.key
+    }
+  }
+  if (reasons.length === 0 && duplicateKey !== null) {
+    adj -= ROLE_DUPLICATE_WEIGHT
+    reasons.push(`duplicate:${duplicateKey}`)
+  }
+  return { adj, reasons }
+}
+
+function tagAccentAdjustment(
+  position: DraftPosition,
+  candidate: ReadonlySet<AbilityTag> | undefined,
+): number {
+  if (candidate === undefined) return 0
+  const accents = POSITION_TAG_ACCENTS[position]
+  let adj = 0
+  for (const tag of accents.plus) if (candidate.has(tag)) adj += ROLE_TAG_ACCENT_WEIGHT
+  for (const tag of accents.minus) if (candidate.has(tag)) adj -= ROLE_TAG_ACCENT_WEIGHT
+  return adj
 }
 
 /** Same-team hero orders: rows 0-4 are one team, 5-9 the other (stream-board). */
@@ -280,12 +397,14 @@ export function resolveRoleContext(
 export function computeRoleScore(
   axes: ShiftAxes | undefined,
   context: RoleContext | null,
+  tagInput?: RoleTagInput,
 ): RoleScore | null {
   if (context === null || context.effectivePositions.length === 0) return null
 
   const greed = axes?.greed ?? 0
   let best = Number.NEGATIVE_INFINITY
   let bestPosition: DraftPosition = context.effectivePositions[0]
+  let bestReasons: string[] = []
   for (const pos of context.effectivePositions) {
     const template = POSITION_TEMPLATES[pos]
     const fit = 1 - Math.abs(greed - template.greedTarget)
@@ -300,10 +419,22 @@ export function computeRoleScore(
             : 0
           : raw
     }
-    const score = ROLE_GREED_WEIGHT * fit + ROLE_SHIFT_ACCENT_WEIGHT * accentValue
+    // Tags layer (needs + static accents) — a no-op without a tag input
+    const needs = tagInput
+      ? needsAdjustment(pos, tagInput)
+      : { adj: 0, reasons: [] as string[] }
+    const accentAdj = tagInput
+      ? tagAccentAdjustment(pos, tagInput.candidateTags)
+      : 0
+    const score =
+      ROLE_GREED_WEIGHT * fit +
+      ROLE_SHIFT_ACCENT_WEIGHT * accentValue +
+      needs.adj +
+      accentAdj
     if (score > best) {
       best = score
       bestPosition = pos
+      bestReasons = needs.reasons
     }
   }
 
@@ -317,7 +448,7 @@ export function computeRoleScore(
     -ROLE_ADJUSTMENT_CAP,
     Math.min(ROLE_ADJUSTMENT_CAP, best + teamAdjustment),
   )
-  return { delta, bestPosition }
+  return { delta, bestPosition, reasons: bestReasons }
 }
 
 /** Shape the context for the overlay payload (Maps don't survive IPC). */
