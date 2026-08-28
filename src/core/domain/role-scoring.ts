@@ -455,6 +455,7 @@ export function computeRoleScore(
 export function toRoleContextDisplay(context: RoleContext): RoleContextDisplay {
   return {
     mode: context.mode,
+    status: 'active',
     effectivePositions: [...context.effectivePositions],
     teamGreed: context.teamGreed,
     teammates: context.teammates.map((b) => ({

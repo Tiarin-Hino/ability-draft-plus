@@ -627,7 +627,13 @@ export function processScanResults(
     heroesParams,
     modelsCoords: modelCoords,
     autoDraftTrackingEnabled: settings.experimentalAutoDraftTracking === true,
-    roleContext: roleContext !== null ? toRoleContextDisplay(roleContext) : undefined,
+    roleContext: buildRoleContextDisplay(
+      roleModeActive,
+      hasShiftData,
+      settings.roleMode as 'fixed' | 'dynamic',
+      state.mySelectedSpotHeroOrder,
+      roleContext,
+    ),
   }
 
   return {
@@ -643,6 +649,25 @@ export function processScanResults(
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+// A scan processed with a role mode ON always carries a roleContext with a
+// status, so the overlay can say WHY the layer is inactive ('noData'/'noSpot')
+// instead of guessing. An absent roleContext then only ever means the last
+// scan predates the mode toggle (or fixed mode with nothing selected).
+function buildRoleContextDisplay(
+  roleModeActive: boolean,
+  hasShiftData: boolean,
+  mode: 'fixed' | 'dynamic',
+  mySpotHeroOrder: number | null,
+  roleContext: RoleContext | null,
+): import('@shared/types').RoleContextDisplay | undefined {
+  if (roleContext !== null) return toRoleContextDisplay(roleContext)
+  if (!roleModeActive) return undefined
+  const inactive = { effectivePositions: [], teamGreed: null, teammates: [] }
+  if (!hasShiftData) return { mode, status: 'noData', ...inactive }
+  if (mySpotHeroOrder === null) return { mode, status: 'noSpot', ...inactive }
+  return undefined // fixed mode with an empty selection
+}
 
 // @DEV-GUIDE: Deep-clones the mutable DraftSessionState to avoid mutating the caller's copy.
 // Arrays are shallow-copied (ScanResult objects are treated as immutable).

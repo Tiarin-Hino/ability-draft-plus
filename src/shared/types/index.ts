@@ -206,6 +206,12 @@ export interface OverlayDataPayload {
 /** What the role layer decided this scan — drives the overlay's role UI. */
 export interface RoleContextDisplay {
   mode: 'fixed' | 'dynamic'
+  /** Why the layer is (in)active THIS scan: 'active' = scoring applied;
+   * 'noData' = DB has no shift columns yet (pre-2.6 scrape); 'noSpot' = My
+   * Spot unknown. Present on every scan processed with a role mode on, so the
+   * overlay never has to guess — an absent roleContext then only ever means
+   * "the last scan predates the mode toggle". */
+  status: 'active' | 'noData' | 'noSpot'
   /** Positions suggestions were scored against. Empty in dynamic mode while the
    * evidence gate is closed (scoring is then neutral). */
   effectivePositions: number[]

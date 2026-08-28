@@ -19,13 +19,11 @@ const POSITIONS = [1, 2, 3, 4, 5] as const
 interface RolePanelProps {
   roleContext: RoleContextDisplay | undefined
   hasScanData: boolean
-  mySpotSelected: boolean
 }
 
 export function RolePanel({
   roleContext,
   hasScanData,
-  mySpotSelected,
 }: RolePanelProps): React.ReactElement {
   const { t } = useTranslation()
   const { onMouseEnter, onMouseLeave } = useMousePassthrough()
@@ -63,11 +61,10 @@ export function RolePanel({
   const status = ((): string => {
     if (mode === 'off') return t('role.offStatus')
     if (!hasScanData) return t('role.appliesNextScan')
-    // Context absent on a processed scan: My Spot missing, or the DB predates
-    // the shifts scrape (scan-processor suppresses role scoring without data)
-    if (roleContext === undefined) {
-      return mySpotSelected ? t('role.needData') : t('role.needSpot')
-    }
+    // Context absent on a processed scan = that scan predates the mode toggle
+    if (roleContext === undefined) return t('role.appliesNextScan')
+    if (roleContext.status === 'noData') return t('role.needData')
+    if (roleContext.status === 'noSpot') return t('role.needSpot')
     if (roleContext.mode === 'dynamic') {
       return roleContext.dynamicGateOpen && roleContext.effectivePositions.length > 0
         ? t('role.teamNeeds', {
