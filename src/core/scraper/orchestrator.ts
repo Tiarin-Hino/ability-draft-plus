@@ -113,6 +113,7 @@ export async function performFullScrape(
         pickRate: a.pickRate,
         hsPickRate: a.hsPickRate,
         isUltimate: a.isUltimate,
+        windrunId: a.windrunId,
       })),
       heroNameToIdMap,
     )

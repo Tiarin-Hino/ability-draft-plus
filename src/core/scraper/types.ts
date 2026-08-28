@@ -111,6 +111,52 @@ export interface WindrunPatchesResponse {
   data: string[]
 }
 
+// ── Player (personalization) endpoints ───────────────────────────────────────
+
+/** GET /players/{id32} — profile summary (used to validate a linked profile). */
+export interface WindrunPlayerProfileResponse {
+  data: {
+    steamId: number
+    nickname: string
+    avatar: string | null
+    rating: number
+    region: string | null
+    overallRank: number | null
+    regionalRank: number | null
+    percentile: number | null
+    wins: number
+    losses: number
+    lastMatch: string | null
+  }
+}
+
+/** One spellStats entry. NOTE: no `total` field — games = wins + losses. */
+export interface WindrunPlayerSpellStat {
+  wins: number
+  losses: number
+  winrate: number
+  avgPickPosition: number
+}
+
+export interface WindrunPlayerHeroStat {
+  wins: number
+  losses: number
+  total: number
+  winrate: number
+}
+
+/**
+ * GET /players/{id32}/stats. spellStats is keyed by Valve ability id and CAPPED
+ * at the top 200 abilities by games played; heroStats is keyed by hero id and
+ * uncapped. Other sections (seatStats, allies, ...) exist but are unused here.
+ */
+export interface WindrunPlayerStatsResponse {
+  stats: {
+    spellStats: Record<string, WindrunPlayerSpellStat> | null
+    heroStats: Record<string, WindrunPlayerHeroStat> | null
+  }
+}
+
 // ── Transformer output types ─────────────────────────────────────────────────
 
 export interface TransformedHero {
@@ -133,6 +179,8 @@ export interface TransformedAbility {
   pickRate: number
   hsPickRate: number | null
   isUltimate: boolean
+  /** Windrun/Valve ability id (stat.abilityId) — stored for PlayerAbilityStats joins. */
+  windrunId: number
 }
 
 export interface TransformedAbilitySynergy {

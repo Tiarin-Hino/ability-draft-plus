@@ -1,4 +1,10 @@
-import type { AbilityDetail, ScanResult, AppSettings } from '@shared/types'
+import type {
+  AbilityDetail,
+  ScanResult,
+  AppSettings,
+  PersonalAbilityStats,
+  PersonalHeroStats,
+} from '@shared/types'
 import type {
   SynergyPartner,
   AbilitySynergyPair,
@@ -34,12 +40,21 @@ export interface ScoredEntity {
   heroOrder?: number
   /** DB hero ID — only present for hero entities. */
   dbHeroId?: number | null
+  /** Linked-profile games (present only when personalization contributed). */
+  personalGames?: number
+  /** Linked-profile winrate [0, 1]. */
+  personalWinrate?: number
+  /** consolidatedScore minus the global-only score. */
+  personalScoreDelta?: number
 }
 
 /** Entity with top-tier selection flags applied. */
 export interface TopTierEntity extends ScoredEntity {
   isSynergySuggestionForMySpot: boolean
   isGeneralTopTier: boolean
+  /** True when this entity made the general top-tier cut ONLY because personal
+   * blending raised its score (a global-only ranking would exclude it). */
+  isPersonallyDriven?: boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -132,10 +147,19 @@ export interface SettingsLookup {
   getSettings(): AppSettings
 }
 
+/** Personal stats of the linked Windrun profile, keyed by internal names.
+ * Empty maps (or an absent dep) mean personalization is off — scores then match
+ * the global-only path exactly. */
+export interface PersonalStatsLookup {
+  getAbilityStatsByName(): Map<string, PersonalAbilityStats>
+  getHeroStatsByName(): Map<string, PersonalHeroStats>
+}
+
 export interface ScanProcessorDeps {
   heroes: HeroLookup
   abilities: AbilityLookup & AbilityIdLookup
   synergies: SynergyLookup
   triplets?: TripletLookup
   settings: SettingsLookup
+  playerStats?: PersonalStatsLookup
 }

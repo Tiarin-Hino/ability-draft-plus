@@ -11,7 +11,7 @@ import log from 'electron-log/main'
 //
 // Lifecycle: initialize() loads the .db file from %APPDATA% into memory (or copies bundled seed
 // on first run), creates Drizzle instance, runs CREATE TABLE IF NOT EXISTS for all tables,
-// then creates five repositories (hero, ability, synergy, triplet, metadata).
+// then creates six repositories (hero, ability, synergy, triplet, metadata, playerStats).
 //
 // Key gotcha: sql.js's run() returns the Database instance, NOT { changes: N }.
 // Drizzle propagates this, so result.changes is always undefined. Use SELECT-before-UPDATE.
@@ -41,6 +41,10 @@ import {
   createTripletRepository,
   type TripletRepository,
 } from '@core/database/repositories/triplet-repository'
+import {
+  createPlayerStatsRepository,
+  type PlayerStatsRepository,
+} from '@core/database/repositories/player-stats-repository'
 import { DB_FILE_NAME } from '@shared/constants/database'
 
 const logger = log.scope('database')
@@ -53,6 +57,7 @@ export interface DatabaseService {
   synergies: SynergyRepository
   triplets: TripletRepository
   metadata: MetadataRepository
+  playerStats: PlayerStatsRepository
   persist(): void
   close(): void
   getDbPath(): string
@@ -73,6 +78,7 @@ export function createDatabaseService(): DatabaseService {
   let synergyRepo: SynergyRepository
   let tripletRepo: TripletRepository
   let metadataRepo: MetadataRepository
+  let playerStatsRepo: PlayerStatsRepository
 
   function initRepositories(): void {
     heroRepo = createHeroRepository(drizzleDb)
@@ -80,6 +86,7 @@ export function createDatabaseService(): DatabaseService {
     synergyRepo = createSynergyRepository(drizzleDb)
     tripletRepo = createTripletRepository(drizzleDb)
     metadataRepo = createMetadataRepository(drizzleDb)
+    playerStatsRepo = createPlayerStatsRepository(drizzleDb)
   }
 
   async function initialize(): Promise<void> {
@@ -194,6 +201,9 @@ export function createDatabaseService(): DatabaseService {
     },
     get metadata() {
       return metadataRepo
+    },
+    get playerStats() {
+      return playerStatsRepo
     },
     persist,
     close,

@@ -1,4 +1,10 @@
-export { normalizeWinrate, normalizePickOrder, calculateConsolidatedScore } from './scoring'
+export {
+  normalizeWinrate,
+  normalizePickOrder,
+  calculateConsolidatedScore,
+  blendPersonal,
+  calculatePersonalizedScore,
+} from './scoring'
 export { identifyHeroModels } from './hero-identification'
 export {
   getAbilitySynergySplit,
@@ -23,5 +29,6 @@ export type {
   AbilityLookup,
   SynergyLookup,
   SettingsLookup,
+  PersonalStatsLookup,
   ScanProcessorDeps,
 } from './types'

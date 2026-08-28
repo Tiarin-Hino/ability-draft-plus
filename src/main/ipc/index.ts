@@ -18,6 +18,8 @@ import type { StreamServerService } from '../services/stream-server-service'
 import type { IconCacheService } from '../services/icon-cache-service'
 import type { GsiCfgService } from '../services/gsi-cfg-service'
 import { registerDatabaseHandlers } from './database-handlers'
+import { registerPlayerHandlers } from './player-handlers'
+import type { PlayerStatsService } from '../services/player-stats-service'
 import { registerMlHandlers } from './ml-handlers'
 import { registerDraftHandlers } from './draft-handlers'
 import { registerScraperHandlers } from './scraper-handlers'
@@ -72,6 +74,7 @@ export function registerIpcHandlers(
   feedbackService: FeedbackService,
   scanTrigger: ScanTriggerService,
   slotMappingService: SlotMappingService,
+  playerStatsService: PlayerStatsService,
 ): void {
   logger.info('Registering IPC handlers...')
 
@@ -154,6 +157,10 @@ export function registerIpcHandlers(
     const overlayWin = windowManager.createOverlayWindow()
     bridge.subscribe([overlayWin])
     appStore.setState({ overlayActive: true, activeResolution: resolution, activeResolutionSource: source })
+
+    // Personalization: refresh the linked profile's stats snapshot if stale
+    // (fire-and-forget — a failed/slow fetch must never delay the overlay)
+    void playerStatsService.refreshIfStale()
 
     // Global scan hotkeys, active only while the overlay is open. The overlay never
     // holds keyboard focus (showInactive + click-through), so in-window key handlers
@@ -264,6 +271,9 @@ export function registerIpcHandlers(
 
   // Database domain (hero, ability, settings, backup)
   registerDatabaseHandlers(dbService, backupService)
+
+  // Linked Windrun profile (personalized suggestions)
+  registerPlayerHandlers(playerStatsService)
 
   // API config is shared by the resolution and feedback domains
   const apiConfig = loadApiConfig()

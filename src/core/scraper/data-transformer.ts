@@ -128,6 +128,7 @@ export function transformAbilitiesAndHeroes(
         pickRate: stat.avgPickPosition,
         hsPickRate: hs?.avgPickPosition ?? null,
         isUltimate: staticAbility.isUltimate ?? false,
+        windrunId: stat.abilityId,
       })
     }
   }

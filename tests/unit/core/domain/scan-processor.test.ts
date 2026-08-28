@@ -701,4 +701,222 @@ describe('processScanResults', () => {
       expect(overlayPayload.selectedModelHeroOrder).toBeNull()
     })
   })
+
+  describe('personalization (linked Windrun profile)', () => {
+    function withPersonalStats(
+      abilityStats: Map<string, import('@shared/types').PersonalAbilityStats>,
+      heroStats: Map<string, import('@shared/types').PersonalHeroStats>,
+    ): ScanProcessorDeps {
+      return {
+        ...mockDeps,
+        playerStats: {
+          getAbilityStatsByName: () => abilityStats,
+          getHeroStatsByName: () => heroStats,
+        },
+      }
+    }
+
+    it('produces identical output with empty personal maps (personalization off)', () => {
+      const base = processScanResults(makeInitialScanInput())
+      const input = makeInitialScanInput()
+      input.deps = withPersonalStats(new Map(), new Map())
+      const personalized = processScanResults(input)
+      expect(personalized.overlayPayload).toEqual(base.overlayPayload)
+    })
+
+    it('raises the score of an ability with a strong personal record', () => {
+      const base = processScanResults(makeInitialScanInput())
+      const baseFireball = base.overlayPayload.scanData!.standard.find(
+        (s) => s.name === 'fireball',
+      )!
+
+      const input = makeInitialScanInput()
+      input.deps = withPersonalStats(
+        new Map([
+          ['fireball', { games: 30, wins: 25, winrate: 25 / 30, avgPickPosition: 4 }],
+        ]),
+        new Map(),
+      )
+      const { overlayPayload } = processScanResults(input)
+      const fireball = overlayPayload.scanData!.standard.find(
+        (s) => s.name === 'fireball',
+      )!
+
+      expect(fireball.consolidatedScore).toBeGreaterThan(baseFireball.consolidatedScore)
+      expect(fireball.personalGames).toBe(30)
+      expect(fireball.personalWinrate).toBeCloseTo(25 / 30)
+      expect(fireball.personalScoreDelta).toBeCloseTo(
+        fireball.consolidatedScore - baseFireball.consolidatedScore,
+      )
+      // Global display values stay global
+      expect(fireball.winrate).toBe(0.55)
+      expect(fireball.pickRate).toBe(10)
+    })
+
+    it('leaves abilities without personal data untouched', () => {
+      const base = processScanResults(makeInitialScanInput())
+      const baseIceBlast = base.overlayPayload.scanData!.standard.find(
+        (s) => s.name === 'ice_blast',
+      )!
+
+      const input = makeInitialScanInput()
+      input.deps = withPersonalStats(
+        new Map([
+          ['fireball', { games: 30, wins: 25, winrate: 25 / 30, avgPickPosition: 4 }],
+        ]),
+        new Map(),
+      )
+      const { overlayPayload } = processScanResults(input)
+      const iceBlast = overlayPayload.scanData!.standard.find(
+        (s) => s.name === 'ice_blast',
+      )!
+
+      expect(iceBlast.consolidatedScore).toBe(baseIceBlast.consolidatedScore)
+      expect(iceBlast.personalGames).toBeUndefined()
+      expect(iceBlast.personalScoreDelta).toBeUndefined()
+    })
+
+    // 12-ability pool for top-tier cut tests: winrates 0.60 down to 0.49,
+    // identical pick rates, so the global ranking is a01 > a02 > ... > a12 and
+    // only a01..a10 make the 10-slot general top tier.
+    function makeBigPoolInput(
+      personalAbilityStats: Map<string, import('@shared/types').PersonalAbilityStats>,
+    ): ScanProcessorInput {
+      const names = Array.from({ length: 12 }, (_, i) =>
+        `a${String(i + 1).padStart(2, '0')}`,
+      )
+      const details = new Map<string, AbilityDetail>(
+        names.map((name, i) => [
+          name,
+          {
+            abilityId: i + 1,
+            name,
+            displayName: name,
+            heroId: i + 1,
+            winrate: 0.6 - i * 0.01,
+            highSkillWinrate: null,
+            pickRate: 25,
+            hsPickRate: null,
+            isUltimate: false,
+            abilityOrder: 1,
+          },
+        ]),
+      )
+
+      const deps: ScanProcessorDeps = {
+        heroes: {
+          getByAbilityName: () => null,
+          getById: () => null,
+        },
+        abilities: {
+          getDetails(requested: string[]) {
+            const map = new Map<string, AbilityDetail>()
+            for (const name of requested) {
+              const d = details.get(name)
+              if (d) map.set(name, d)
+            }
+            return map
+          },
+        },
+        synergies: {
+          getHighWinrateCombinations: () => [],
+          getAllOPCombinations: () => [],
+          getAllTrapCombinations: () => [],
+          getAllHeroSynergies: () => [],
+          getAllHeroTrapSynergies: () => [],
+          getAllHeroAbilitySynergiesUnfiltered: () => [],
+        },
+        settings: mockDeps.settings,
+        playerStats: {
+          getAbilityStatsByName: () => personalAbilityStats,
+          getHeroStatsByName: () => new Map(),
+        },
+      }
+
+      const rawResults: InitialScanResults = {
+        ultimates: [],
+        standard: names.map((name, i) => makeScanResult(name, i, 1, false)),
+        selectedAbilities: [],
+        heroDefiningAbilities: [],
+      }
+
+      return {
+        rawResults,
+        isInitialScan: true,
+        state: makeInitialState(),
+        deps,
+        modelCoords: [],
+        heroesCoords: [],
+        heroesParams: { width: 358, height: 170 },
+        targetResolution: '1920x1080',
+        scaleFactor: 1.0,
+      }
+    }
+
+    it('flags a pick that enters the top tier only because of personal stats', () => {
+      // a12 is globally worst (0.49) but has a dominant personal record
+      const { overlayPayload } = processScanResults(
+        makeBigPoolInput(
+          new Map([
+            ['a12', { games: 50, wins: 45, winrate: 0.9, avgPickPosition: 25 }],
+          ]),
+        ),
+      )
+      const standard = overlayPayload.scanData!.standard
+      const a12 = standard.find((s) => s.name === 'a12')!
+      const a01 = standard.find((s) => s.name === 'a01')!
+      const a10 = standard.find((s) => s.name === 'a10')!
+
+      expect(a12.isGeneralTopTier).toBe(true)
+      expect(a12.isPersonallyDriven).toBe(true)
+      // a01 is top tier on global merit — not personally driven
+      expect(a01.isGeneralTopTier).toBe(true)
+      expect(a01.isPersonallyDriven).toBe(false)
+      // a12's entry pushed the globally-weakest former member out
+      expect(a10.isGeneralTopTier).toBe(false)
+    })
+
+    it('flags nothing when no personal stats exist', () => {
+      const { overlayPayload } = processScanResults(makeBigPoolInput(new Map()))
+      for (const slot of overlayPayload.scanData!.standard) {
+        expect(slot.isPersonallyDriven).toBe(false)
+      }
+    })
+
+    it('does not flag a top-tier pick whose personal boost was not needed', () => {
+      // a01 is already #1 globally; a strong personal record must not flag it
+      const { overlayPayload } = processScanResults(
+        makeBigPoolInput(
+          new Map([
+            ['a01', { games: 50, wins: 45, winrate: 0.9, avgPickPosition: 25 }],
+          ]),
+        ),
+      )
+      const a01 = overlayPayload.scanData!.standard.find((s) => s.name === 'a01')!
+      expect(a01.isGeneralTopTier).toBe(true)
+      expect(a01.isPersonallyDriven).toBe(false)
+    })
+
+    it('personalizes hero model scores from personal hero stats', () => {
+      const base = processScanResults(makeInitialScanInput())
+      const baseLina = base.overlayPayload.heroModels.find(
+        (m) => m.heroName === 'lina',
+      )!
+
+      const input = makeInitialScanInput()
+      input.deps = withPersonalStats(
+        new Map(),
+        new Map([['lina', { games: 20, wins: 4, winrate: 0.2 }]]),
+      )
+      const { overlayPayload } = processScanResults(input)
+      const lina = overlayPayload.heroModels.find((m) => m.heroName === 'lina')!
+
+      // Weak personal record lowers the model's score
+      expect(lina.consolidatedScore).toBeLessThan(baseLina.consolidatedScore)
+      expect(lina.personalGames).toBe(20)
+      expect(lina.personalWinrate).toBeCloseTo(0.2)
+      // Global display winrate stays global
+      expect(lina.winrate).toBe(baseLina.winrate)
+    })
+  })
 })

@@ -1,6 +1,7 @@
 import { useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { EnrichedScanSlot, HeroModelDisplay, SynergyPairDisplay, HeroSynergyDisplay } from '@shared/types'
+import { PERSONAL_SCORE_DELTA_EPSILON } from '@shared/constants/thresholds'
 
 export type TooltipData =
   | { type: 'ability'; slot: EnrichedScanSlot }
@@ -31,6 +32,45 @@ function formatSynergyWr(wr: number): string {
   const n = typeof wr === 'number' ? wr : Number(wr)
   if (Number.isNaN(n)) return 'N/A'
   return `${(n * 100).toFixed(1)}%`
+}
+
+// Personal (linked Windrun profile) stat line, shared by ability and hero
+// tooltips. The arrow marks whether personalization moved the score up or down
+// vs the global-only ranking; negligible shifts render no arrow.
+function PersonalStatLine({
+  games,
+  winrate,
+  scoreDelta,
+  t,
+}: {
+  games?: number
+  winrate?: number
+  scoreDelta?: number
+  t: (key: string, opts?: Record<string, string>) => string
+}): React.ReactElement | null {
+  if (games == null || winrate == null) return null
+
+  const delta = scoreDelta ?? 0
+  const arrow =
+    delta > PERSONAL_SCORE_DELTA_EPSILON
+      ? '▲'
+      : delta < -PERSONAL_SCORE_DELTA_EPSILON
+        ? '▼'
+        : null
+  const arrowClass =
+    delta > PERSONAL_SCORE_DELTA_EPSILON
+      ? 'tooltip-personal-up'
+      : 'tooltip-personal-down'
+
+  return (
+    <div className="tooltip-stat tooltip-personal">
+      {t('tooltip.personalStats', {
+        value: formatWinrate(winrate),
+        games: String(games),
+      })}
+      {arrow && <span className={arrowClass}> {arrow}</span>}
+    </div>
+  )
 }
 
 function positionTooltip(el: HTMLDivElement, anchorRect: DOMRect): void {
@@ -119,11 +159,17 @@ function AbilityTooltipContent({
           &#x2726; {t('tooltip.synergyPick')}
         </div>
       )}
-      {slot.isGeneralTopTier && !slot.isSynergySuggestionForMySpot && (
-        <div className="tooltip-badge tooltip-badge-top">
-          &#x2605; {t('tooltip.topPick')}
-        </div>
-      )}
+      {slot.isGeneralTopTier &&
+        !slot.isSynergySuggestionForMySpot &&
+        (slot.isPersonallyDriven ? (
+          <div className="tooltip-badge tooltip-badge-personal">
+            &#x2605; {t('tooltip.personalPick')}
+          </div>
+        ) : (
+          <div className="tooltip-badge tooltip-badge-top">
+            &#x2605; {t('tooltip.topPick')}
+          </div>
+        ))}
 
       <div className="tooltip-title">{slot.displayName}</div>
       <div className="tooltip-stat">
@@ -132,6 +178,12 @@ function AbilityTooltipContent({
       <div className="tooltip-stat">
         {t('tooltip.pickRate', { value: formatPickRate(slot.pickRate) })}
       </div>
+      <PersonalStatLine
+        games={slot.personalGames}
+        winrate={slot.personalWinrate}
+        scoreDelta={slot.personalScoreDelta}
+        t={t}
+      />
 
       <SynergySection
         title={t('tooltip.strongSynergies')}
@@ -167,11 +219,16 @@ function HeroTooltipContent({
 }): React.ReactElement {
   return (
     <>
-      {model.isGeneralTopTier && (
-        <div className="tooltip-badge tooltip-badge-model">
-          &#x2605; {t('tooltip.topModel')}
-        </div>
-      )}
+      {model.isGeneralTopTier &&
+        (model.isPersonallyDriven ? (
+          <div className="tooltip-badge tooltip-badge-personal">
+            &#x2605; {t('tooltip.personalPick')}
+          </div>
+        ) : (
+          <div className="tooltip-badge tooltip-badge-model">
+            &#x2605; {t('tooltip.topModel')}
+          </div>
+        ))}
 
       <div className="tooltip-title">{model.heroDisplayName}</div>
       <div className="tooltip-stat">
@@ -180,6 +237,12 @@ function HeroTooltipContent({
       <div className="tooltip-stat">
         {t('tooltip.pickRate', { value: formatPickRate(model.pickRate) })}
       </div>
+      <PersonalStatLine
+        games={model.personalGames}
+        winrate={model.personalWinrate}
+        scoreDelta={model.personalScoreDelta}
+        t={t}
+      />
 
       <HeroSynergySection
         title={t('tooltip.strongAbilities')}

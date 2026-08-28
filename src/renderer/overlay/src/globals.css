@@ -293,6 +293,24 @@ body {
   animation: shimmerTeal 1.2s infinite ease-in-out;
 }
 
+/* Corner marker: slot is recommended because of the linked profile's personal
+   stats. Uses the "yours" amber (--color-my-spot) — same semantic family as
+   My Spot, and distinct in hue+luminance from top-pick teal-green, synergy
+   blue, and hero-tier gold. Composes on top of any shimmer border; never
+   intercepts the mouse (hover belongs to the hotspot). */
+.personal-marker {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: rgba(var(--color-my-spot), 0.95);
+  border: 1px solid rgba(0, 0, 0, 0.7);
+  box-shadow: 0 0 4px rgba(var(--color-my-spot), 0.9);
+  pointer-events: none;
+}
+
 /* User's selected ability - teal */
 .my-spot-selected {
   border: 3px solid rgba(var(--color-my-spot), 1) !important;
@@ -323,6 +341,13 @@ body {
   border: none !important;
   animation: none !important;
   box-shadow: none !important;
+}
+
+/* The personal marker is a filled child element — border/shadow resets alone
+   don't hide it, and a leftover dot inside an icon crop would contaminate the
+   scan exactly like a border would. */
+.capture-mode .personal-marker {
+  display: none !important;
 }
 
 .capture-mode .dynamic-btn,
@@ -374,6 +399,11 @@ body {
   color: rgb(var(--color-hero-tier));
 }
 
+/* Recommended because of the linked profile's stats (matches .personal-marker) */
+.tooltip-badge-personal {
+  color: rgb(var(--color-my-spot));
+}
+
 .tooltip-title {
   font-weight: 600;
   margin-bottom: 6px;
@@ -385,6 +415,20 @@ body {
   color: #a8b2bc;
   margin-bottom: 4px;
   font-size: 12px;
+}
+
+/* Personal (linked Windrun profile) stat line + score-shift markers.
+   Same "yours" amber as .personal-marker / .tooltip-badge-personal. */
+.tooltip-personal {
+  color: rgb(var(--color-my-spot));
+}
+
+.tooltip-personal-up {
+  color: #6fce7e;
+}
+
+.tooltip-personal-down {
+  color: #d97b6a;
 }
 
 .tooltip-section-title {

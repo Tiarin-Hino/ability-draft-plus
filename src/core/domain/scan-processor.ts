@@ -13,7 +13,7 @@ import type {
   ScanProcessorDeps,
   IdentifiedHeroModel,
 } from './types'
-import { calculateConsolidatedScore } from './scoring'
+import { calculateConsolidatedScore, calculatePersonalizedScore } from './scoring'
 import { identifyHeroModels } from './hero-identification'
 import {
   getAbilitySynergySplit,
@@ -29,7 +29,10 @@ import {
 import { determineTopTierEntities } from './top-tier'
 import { detectModelPicks } from './model-pick-detection'
 import type { ModelTileCapture } from './model-pick-detection'
-import { RESCAN_GUARD_MAX_CONSECUTIVE_REJECTIONS } from '@shared/constants/thresholds'
+import {
+  RESCAN_GUARD_MAX_CONSECUTIVE_REJECTIONS,
+  PERSONAL_SCORE_DELTA_EPSILON,
+} from '@shared/constants/thresholds'
 
 // @DEV-GUIDE: Central business logic — transforms raw ML scan results into a fully-enriched
 // OverlayDataPayload for the overlay UI. This is pure TypeScript with ZERO Electron imports.
@@ -45,7 +48,8 @@ import { RESCAN_GUARD_MAX_CONSECUTIVE_REJECTIONS } from '@shared/constants/thres
 // 8. Global OP/Trap combination filtering (above/below threshold)
 // 8.5. Enrich pairs with triplet context (suggested third ability badge)
 // 9. My Spot synergistic partners (abilities synergizing with user's picked abilities)
-// 10. Score all entities (consolidated score = 0.4 * winrate + 0.6 * pickOrder)
+// 10. Score all entities (consolidated score = 0.4 * winrate + 0.6 * pickOrder;
+//     with a linked Windrun profile the inputs are personal-blended — scoring.ts)
 // 11. Check if My Spot already picked an ultimate
 // 12. Determine top-tier entities (max 10, synergy suggestions prioritized)
 // 13. Enrich scan slots with all computed data for overlay display
@@ -291,6 +295,15 @@ export function processScanResults(
   const settings = deps.settings.getSettings()
   const { opThreshold, trapThreshold } = settings
 
+  // Personal stats of the linked Windrun profile (empty maps = personalization
+  // off; scores then match the global-only path exactly — see scoring.ts)
+  const personalAbilityStats =
+    deps.playerStats?.getAbilityStatsByName() ??
+    new Map<string, import('@shared/types').PersonalAbilityStats>()
+  const personalHeroStats =
+    deps.playerStats?.getHeroStatsByName() ??
+    new Map<string, import('@shared/types').PersonalHeroStats>()
+
   // --- Phase 4: Build heroes-in-pool set ---
   const heroesInPool = new Set<string>()
   for (const model of state.identifiedHeroModelsCache) {
@@ -433,6 +446,8 @@ export function processScanResults(
     abilityDetailsMap,
     state.identifiedHeroModelsCache,
     new Set(state.pickedModelHeroOrders),
+    personalAbilityStats,
+    personalHeroStats,
   )
 
   // --- Phase 11: Check if My Spot has picked an ultimate ---
@@ -449,6 +464,39 @@ export function processScanResults(
     mySpotHasUlt,
     synergisticPartnersInPool,
   )
+
+  // --- Phase 12.5: Personally-driven picks (linked Windrun profile) ---
+  // Flag entities that made the GENERAL top-tier cut only because personal
+  // blending raised their score: re-rank with the personal contribution
+  // stripped and mark entities present now but absent from that baseline (a
+  // positive delta is also required, so an entity that merely inherited a slot
+  // from a personally-DEMOTED competitor is not claimed as "because of you").
+  // Synergy suggestions are exempt — their inclusion is membership-driven.
+  if (allScoredEntities.some((e) => e.personalScoreDelta !== undefined)) {
+    const baselineEntities = allScoredEntities.map((e) => ({
+      ...e,
+      consolidatedScore: e.consolidatedScore - (e.personalScoreDelta ?? 0),
+    }))
+    const baselineGeneralNames = new Set(
+      determineTopTierEntities(
+        baselineEntities,
+        state.mySelectedModelDbHeroId,
+        mySpotHasUlt,
+        synergisticPartnersInPool,
+      )
+        .filter((e) => e.isGeneralTopTier)
+        .map((e) => e.internalName),
+    )
+    for (const entity of topTierEntities) {
+      if (
+        entity.isGeneralTopTier &&
+        (entity.personalScoreDelta ?? 0) > PERSONAL_SCORE_DELTA_EPSILON &&
+        !baselineGeneralNames.has(entity.internalName)
+      ) {
+        entity.isPersonallyDriven = true
+      }
+    }
+  }
 
   // Build top-tier lookup for fast enrichment
   const topTierLookup = new Map(
@@ -557,7 +605,10 @@ function cloneState(state: DraftSessionState): DraftSessionState {
 
 // @DEV-GUIDE: Converts all pool abilities + hero models into ScoredEntity objects.
 // Each entity gets a consolidatedScore (0.4 * winrate + 0.6 * pickOrder) for ranking.
-// Deduplicates by name (an ability can appear in both ultimates and standard arrays).
+// With a linked Windrun profile the score inputs are personal-blended (scoring.ts);
+// entity.winrate/pickRate stay GLOBAL for display — personal numbers surface via
+// the personal* fields. Deduplicates by name (an ability can appear in both
+// ultimates and standard arrays).
 // Picked ABILITIES are naturally absent (rescans subtract them from the pool arrays),
 // but the models cache keeps every identified model, so models already drafted by ANY
 // player must be skipped here or they keep surfacing as top-tier suggestions.
@@ -567,6 +618,8 @@ function buildScoredEntities(
   abilityDetailsMap: Map<string, import('@shared/types').AbilityDetail>,
   heroModels: IdentifiedHeroModel[],
   pickedModelHeroOrders: ReadonlySet<number>,
+  personalAbilityStats: Map<string, import('@shared/types').PersonalAbilityStats>,
+  personalHeroStats: Map<string, import('@shared/types').PersonalHeroStats>,
 ): ScoredEntity[] {
   const entities: ScoredEntity[] = []
   const seen = new Set<string>()
@@ -576,16 +629,21 @@ function buildScoredEntities(
     seen.add(slot.name)
 
     const details = abilityDetailsMap.get(slot.name)
+    const scored = calculatePersonalizedScore(
+      details?.winrate ?? null,
+      details?.pickRate ?? null,
+      personalAbilityStats.get(slot.name),
+    )
     entities.push({
       entityType: 'ability',
       internalName: slot.name,
       displayName: details?.displayName ?? slot.name,
       winrate: details?.winrate ?? null,
       pickRate: details?.pickRate ?? null,
-      consolidatedScore: calculateConsolidatedScore(
-        details?.winrate ?? null,
-        details?.pickRate ?? null,
-      ),
+      consolidatedScore: scored.consolidatedScore,
+      personalGames: scored.personalGames,
+      personalWinrate: scored.personalWinrate,
+      personalScoreDelta: scored.personalScoreDelta,
       isUltimateFromCoordSource: slot.is_ultimate,
       isUltimateFromDb: details?.isUltimate,
       heroOrder: slot.hero_order,
@@ -595,16 +653,21 @@ function buildScoredEntities(
   for (const model of heroModels) {
     if (model.dbHeroId === null) continue
     if (pickedModelHeroOrders.has(model.heroOrder)) continue
+    const scored = calculatePersonalizedScore(
+      model.winrate,
+      model.pickRate,
+      personalHeroStats.get(model.heroName),
+    )
     entities.push({
       entityType: 'hero',
       internalName: model.heroName,
       displayName: model.heroDisplayName,
       winrate: model.winrate,
       pickRate: model.pickRate,
-      consolidatedScore: calculateConsolidatedScore(
-        model.winrate,
-        model.pickRate,
-      ),
+      consolidatedScore: scored.consolidatedScore,
+      personalGames: scored.personalGames,
+      personalWinrate: scored.personalWinrate,
+      personalScoreDelta: scored.personalScoreDelta,
       dbHeroId: model.dbHeroId,
       heroOrder: model.heroOrder,
     })
@@ -688,9 +751,13 @@ function enrichSlots(
         details.winrate,
         details.pickRate,
       ),
+      personalGames: scored?.personalGames,
+      personalWinrate: scored?.personalWinrate,
+      personalScoreDelta: scored?.personalScoreDelta,
       isGeneralTopTier: topTier?.isGeneralTopTier ?? false,
       isSynergySuggestionForMySpot:
         topTier?.isSynergySuggestionForMySpot ?? false,
+      isPersonallyDriven: topTier?.isPersonallyDriven ?? false,
       isUltimateFromDb: details.isUltimate,
       highWinrateCombinations: synergies?.high ?? [],
       lowWinrateCombinations: synergies?.low ?? [],
@@ -711,6 +778,7 @@ function makeUnknownSlot(slot: ScanResult): EnrichedScanSlot {
     consolidatedScore: 0,
     isGeneralTopTier: false,
     isSynergySuggestionForMySpot: false,
+    isPersonallyDriven: false,
     isUltimateFromDb: false,
     highWinrateCombinations: [],
     lowWinrateCombinations: [],
@@ -750,7 +818,11 @@ function enrichHeroModels(
         model.winrate,
         model.pickRate,
       ),
+      personalGames: scored?.personalGames,
+      personalWinrate: scored?.personalWinrate,
+      personalScoreDelta: scored?.personalScoreDelta,
       isGeneralTopTier: topTier?.isGeneralTopTier ?? false,
+      isPersonallyDriven: topTier?.isPersonallyDriven ?? false,
       identificationConfidence: model.identificationConfidence,
       strongAbilitySynergies: synergies?.strong ?? [],
       weakAbilitySynergies: synergies?.weak ?? [],
