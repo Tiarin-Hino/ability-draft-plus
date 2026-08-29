@@ -1,5 +1,6 @@
 import {
   ROLE_GREED_WEIGHT,
+  ROLE_GREED_TAPER,
   ROLE_SHIFT_ACCENT_WEIGHT,
   ROLE_TEAM_BALANCE_WEIGHT,
   ROLE_ADJUSTMENT_CAP,
@@ -85,20 +86,25 @@ export const POSITION_NEEDS: Readonly<Record<DraftPosition, RoleNeed[]>> = {
     { key: 'kill_ult', anyOf: [['teamfight_ult'], ['hard_cc']], priority: 0.75 },
     { key: 'mobility', anyOf: [['mobility']], priority: 0.5 },
   ],
+  // Pos-3 priorities softened (corpus: ~half of real rank-3 players finish
+  // without AoE-CC or initiation — the checklist is aspirational, not law).
   3: [
-    { key: 'aoe_cc', anyOf: [['hard_cc', 'aoe']], priority: 1.0 },
-    { key: 'initiation', anyOf: [['initiation']], priority: 0.75 },
-    { key: 'durability', anyOf: [['sustain_self'], ['passive_value']], priority: 0.5 },
+    { key: 'aoe_cc', anyOf: [['hard_cc', 'aoe']], priority: 0.75 },
+    { key: 'initiation', anyOf: [['initiation']], priority: 0.6 },
+    { key: 'durability', anyOf: [['sustain_self'], ['passive_value']], priority: 0.4 },
   ],
   4: [
     { key: 'hard_cc', anyOf: [['hard_cc']], priority: 1.0 },
     { key: 'waveclear', anyOf: [['waveclear'], ['nuke']], priority: 0.75 },
     { key: 'mobility', anyOf: [['mobility']], priority: 0.5 },
   ],
+  // Pos-5 reordered per corpus: waveclear|nuke coverage is near-universal
+  // (~90%) among expert supports while a save appears in only ~36-40% of
+  // their builds — saves are a luxury, wave-pushing is close to mandatory.
   5: [
     { key: 'hard_cc', anyOf: [['hard_cc']], priority: 1.0 },
-    { key: 'save', anyOf: [['save_ally']], priority: 0.75 },
-    { key: 'waveclear', anyOf: [['waveclear'], ['nuke']], priority: 0.5 },
+    { key: 'waveclear', anyOf: [['waveclear'], ['nuke']], priority: 0.75 },
+    { key: 'save', anyOf: [['save_ally']], priority: 0.5 },
   ],
 }
 
@@ -141,6 +147,9 @@ export interface RoleContext {
   mode: 'fixed' | 'dynamic'
   /** Positions to score candidates against. Empty = neutral scoring (gate closed). */
   effectivePositions: DraftPosition[]
+  /** The user's named ability picks so far (spot unknown → board-round estimate).
+   * Drives the greed taper and the core model-urgency ramp. */
+  myPickCount: number
   /** Mean buildGreed across teammates with picks; null before any teammate picks. */
   teamGreed: number | null
   teammates: TeammateBuild[]
@@ -384,6 +393,11 @@ export function resolveRoleContext(
       ? summarizeTeammateBuilds(selectedAbilities, myHeroOrder, axesByName)
       : []
   const teamGreed = meanTeamGreed(teammates)
+  const namedPicks = selectedAbilities.filter((s) => s.name !== null)
+  const myPickCount =
+    myHeroOrder !== null
+      ? namedPicks.filter((s) => s.hero_order === myHeroOrder).length
+      : Math.floor(namedPicks.length / PLAYER_COUNT)
 
   if (settings.roleMode === 'fixed') {
     const myPicks =
@@ -395,6 +409,7 @@ export function resolveRoleContext(
     return {
       mode: 'fixed',
       effectivePositions: fixedPositions,
+      myPickCount,
       teamGreed,
       teammates,
       estimatedPositions: estimateTeammatePositions(teammates, candidates, 1),
@@ -415,6 +430,7 @@ export function resolveRoleContext(
   return {
     mode: 'dynamic',
     effectivePositions: gateOpen ? ALL_POSITIONS.filter((p) => !taken.has(p)) : [],
+    myPickCount,
     teamGreed,
     teammates,
     estimatedPositions: estimated,
@@ -437,6 +453,12 @@ export function computeRoleScore(
   if (context === null || context.effectivePositions.length === 0) return null
 
   const greed = axes?.greed ?? 0
+  // Greed taper: the pick the user is ABOUT to make is pick #(myPickCount+1) —
+  // full greed weight on the first picks, needs/coverage take over late.
+  const taper =
+    ROLE_GREED_TAPER[
+      Math.min(context.myPickCount, ROLE_GREED_TAPER.length - 1)
+    ]
   let best = Number.NEGATIVE_INFINITY
   let bestPosition: DraftPosition = context.effectivePositions[0]
   let bestReasons: string[] = []
@@ -462,7 +484,7 @@ export function computeRoleScore(
       ? tagAccentAdjustment(pos, tagInput.candidateTags)
       : 0
     const score =
-      ROLE_GREED_WEIGHT * fit +
+      ROLE_GREED_WEIGHT * taper * fit +
       ROLE_SHIFT_ACCENT_WEIGHT * accentValue +
       needs.adj +
       accentAdj

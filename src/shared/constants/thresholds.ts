@@ -110,8 +110,15 @@ export const SHIFT_GREED_XPM_WEIGHT = 0.5
 // pollution persists, the next lever is discounting pick order itself while
 // a role is active — not raising these further.
 export const ROLE_GREED_WEIGHT = 0.16
+// Corpus finding (2,981 expert drafts, 2026-08-29): greed is drafted FIRST —
+// cores' picks average +0.52 → −0.04 greed across their four slots, supports
+// descend too. The greed term tapers with the user's own pick index so late
+// picks are scored by needs/coverage instead; index past the table clamps.
+export const ROLE_GREED_TAPER: readonly number[] = [1.0, 0.85, 0.6, 0.4]
 export const ROLE_SHIFT_ACCENT_WEIGHT = 0.03
-export const ROLE_TEAM_BALANCE_WEIGHT = 0.03
+// Corpus finding: within-team greed SPREAD is the strongest win separator
+// measured (won-lost gap grows with skill: +0.044 league → +0.057 top slice).
+export const ROLE_TEAM_BALANCE_WEIGHT = 0.05
 export const ROLE_ADJUSTMENT_CAP = 0.25
 // Hero MODELS get role-scored from their own shift entries, scaled down: model
 // shifts are ~20-50x weaker than ability shifts (the build determines farm

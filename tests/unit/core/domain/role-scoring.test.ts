@@ -192,6 +192,7 @@ describe('computeRoleScore', () => {
   const ctxFixed5: RoleContext = {
     mode: 'fixed',
     effectivePositions: [5],
+    myPickCount: 0,
     teamGreed: null,
     teammates: [],
     estimatedPositions: new Map(),
@@ -273,6 +274,7 @@ describe('toRoleContextDisplay', () => {
     const ctx: RoleContext = {
       mode: 'dynamic',
       effectivePositions: [3],
+      myPickCount: 0,
       teamGreed: 0.1,
       teammates: [
         { heroOrder: 1, pickCount: 3, buildGreed: 0.5 },
@@ -298,6 +300,7 @@ describe('computeRoleScore with tags (needs engine)', () => {
   const ctxPos5: RoleContext = {
     mode: 'fixed',
     effectivePositions: [5],
+    myPickCount: 0,
     teamGreed: null,
     teammates: [],
     estimatedPositions: new Map(),
@@ -397,6 +400,7 @@ describe('need priorities and pool scarcity', () => {
   const ctxPos1: RoleContext = {
     mode: 'fixed',
     effectivePositions: [1],
+    myPickCount: 0,
     teamGreed: null,
     teammates: [],
     estimatedPositions: new Map(),
@@ -449,6 +453,7 @@ describe('computeModelRoleScore', () => {
   const ctx = (positions: DraftPosition[]): RoleContext => ({
     mode: 'fixed',
     effectivePositions: positions,
+    myPickCount: 0,
     teamGreed: null,
     teammates: [],
     estimatedPositions: new Map(),
@@ -497,5 +502,42 @@ describe('computeModelRoleScore', () => {
   it('missing stat data scores as neutral fit, not an error', () => {
     const score = computeModelRoleScore(ctx([1, 4]), undefined, undefined, undefined, 0)!
     expect(Number.isFinite(score.delta)).toBe(true)
+  })
+})
+
+describe('greed taper by pick index', () => {
+  const ctxPos1AtPick = (myPickCount: number): RoleContext => ({
+    mode: 'fixed',
+    effectivePositions: [1],
+    myPickCount,
+    teamGreed: null,
+    teammates: [],
+    estimatedPositions: new Map(),
+  })
+
+  it('a greedy pick earns less greed credit on later picks', () => {
+    const first = computeRoleScore(axes(0.7), ctxPos1AtPick(0))!
+    const fourth = computeRoleScore(axes(0.7), ctxPos1AtPick(3))!
+
+    expect(first.delta).toBeGreaterThan(fourth.delta)
+  })
+
+  it('resolveRoleContext counts my picks (and estimates the round without a spot)', () => {
+    const axesByName = new Map<string, ShiftAxes>()
+    const mine = twoPicks(0, 0.5, axesByName)
+    const ctx = resolveRoleContext(FIXED_5, mine, 0, axesByName)!
+    expect(ctx.myPickCount).toBe(2)
+
+    // Without a spot: board-round estimate = floor(named picks / 10)
+    const board = [
+      ...twoPicks(1, 0.1, axesByName),
+      ...twoPicks(2, 0.1, axesByName),
+      ...twoPicks(3, 0.1, axesByName),
+      ...twoPicks(4, 0.1, axesByName),
+      ...twoPicks(5, 0.1, axesByName),
+      pick('extra', 6, 0),
+    ]
+    const noSpot = resolveRoleContext(FIXED_5, board, null, axesByName)!
+    expect(noSpot.myPickCount).toBe(1)
   })
 })

@@ -396,16 +396,9 @@ export function processScanResults(
     }
   }
 
-  // Core model urgency: cores (positions 1-3) should lock a model by ~round 3 —
-  // ramp a flat model boost with MY pick count (fallback: board round), scaled
-  // by how scarce good core models are among the remaining pool.
-  const totalNamedPicks = selectedAbilities.filter((s) => s.name !== null).length
-  const myPickCount =
-    state.mySelectedSpotHeroOrder !== null
-      ? selectedAbilities.filter(
-          (s) => s.hero_order === state.mySelectedSpotHeroOrder && s.name !== null,
-        ).length
-      : Math.floor(totalNamedPicks / 10)
+  // Core model urgency + greed taper both key off the user's pick count,
+  // which resolveRoleContext computes (board-round estimate without a spot).
+  const myPickCount = roleContext?.myPickCount ?? 0
 
   // --- Phase 4: Build heroes-in-pool set ---
   const heroesInPool = new Set<string>()
