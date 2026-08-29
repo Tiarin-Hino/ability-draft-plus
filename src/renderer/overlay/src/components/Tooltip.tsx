@@ -253,6 +253,12 @@ function AbilityTooltipContent({
       {slot.inertOnModel && (
         <div className="tooltip-stat tooltip-inert">{t('tooltip.inertOnModel')}</div>
       )}
+      {slot.contestedSoon &&
+        (slot.isGeneralTopTier || slot.isSynergySuggestionForMySpot) && (
+          <div className="tooltip-stat tooltip-contested">
+            {t('tooltip.contestedSoon')}
+          </div>
+        )}
 
       <SynergySection
         title={t('tooltip.strongSynergies')}

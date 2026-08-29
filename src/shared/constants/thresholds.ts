@@ -158,6 +158,17 @@ export const MODEL_SCARCITY_REF = 4
 // among the REMAINING models. This is the primary model role signal; the
 // shift-based greed fit stays as the small secondary (ROLE_MODEL_WEIGHT_SCALE).
 export const MODEL_ATTR_FIT_WEIGHT = 0.08
+// Ult security (sim finding, 2,000 solo-queue expert picks): 67% of expert ult
+// picks happen BEFORE being forced. When the remaining ult supply gets tight
+// relative to drafters still without one, ult candidates get this mild boost
+// (role mode active + user ult-less only). Applied outside the role cap.
+export const ULT_SECURITY_WEIGHT = 0.04
+export const ULT_SUPPLY_SLACK = 2
+// "Now-or-never" marker: in the sim, our top suggestion was drafted by someone
+// before the user's next turn in 60% of disagreement cases. A pool ability
+// whose global avg pick position is due within this window of the current
+// board pick count gets flagged as unlikely to survive another round.
+export const CONTESTED_SOON_WINDOW = 10
 // Static per-position tag accents (Position Templates matrix). Raised from the
 // initial 0.02 after live feedback: for MID greed targets (pos 3/4) the greed
 // penalty on a core-shifted ability is inherently small, so the accents are

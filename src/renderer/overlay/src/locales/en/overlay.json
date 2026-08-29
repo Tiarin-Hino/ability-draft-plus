@@ -86,7 +86,8 @@
     },
     "roleCovers": "Covers your missing {{need}}",
     "roleDuplicate": "Already covered: {{need}}",
-    "inertOnModel": "Does not work on your model (melee/ranged mismatch)"
+    "inertOnModel": "Does not work on your model (melee/ranged mismatch)",
+    "contestedSoon": "Usually drafted by now — may not survive another round"
   },
   "role": {
     "aria": "Role suggestions",

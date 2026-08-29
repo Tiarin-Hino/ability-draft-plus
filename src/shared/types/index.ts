@@ -166,6 +166,8 @@ export interface EnrichedScanSlot extends ScanResult {
   roleReasons?: string[]
   /** Mechanically inert on the selected model (cleave on ranged) — never top-tier. */
   inertOnModel?: boolean
+  /** Now-or-never: usually drafted by this point — unlikely to survive another round. */
+  contestedSoon?: boolean
   highWinrateCombinations: SynergyPairDisplay[]
   lowWinrateCombinations: SynergyPairDisplay[]
   strongHeroSynergies: HeroSynergyDisplay[]

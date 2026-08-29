@@ -473,6 +473,11 @@ body {
   color: #e6c063;
 }
 
+/* Now-or-never: usually drafted by this point in the draft */
+.tooltip-contested {
+  color: #e0a05a;
+}
+
 .tooltip-section-title {
   font-weight: 600;
   margin-top: 10px;

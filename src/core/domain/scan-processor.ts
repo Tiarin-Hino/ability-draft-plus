@@ -52,6 +52,9 @@ import {
   MODEL_URGENCY_STEP,
   MODEL_URGENCY_MAX_STEPS,
   MODEL_SCARCITY_REF,
+  ULT_SECURITY_WEIGHT,
+  ULT_SUPPLY_SLACK,
+  CONTESTED_SOON_WINDOW,
 } from '@shared/constants/thresholds'
 
 // @DEV-GUIDE: Central business logic — transforms raw ML scan results into a fully-enriched
@@ -400,6 +403,33 @@ export function processScanResults(
   // which resolveRoleContext computes (board-round estimate without a spot).
   const myPickCount = roleContext?.myPickCount ?? 0
 
+  // Ult security (role mode only): when remaining pool ults get tight relative
+  // to drafters still without one, ult candidates deserve a mild boost — the
+  // sim showed experts secure ults proactively (67% taken before forced).
+  const namedPickCount = selectedAbilities.filter((s) => s.name !== null).length
+  const ultSecurityActive = (() => {
+    if (roleContext === null) return false
+    const isUltPick = (s: ScanResult): boolean => {
+      if (!s.name) return false
+      const d = abilityDetailsMap.get(s.name)
+      return d?.isUltimate === true || s.is_ultimate
+    }
+    if (
+      state.mySelectedSpotHeroOrder !== null &&
+      selectedAbilities.some(
+        (s) => s.hero_order === state.mySelectedSpotHeroOrder && isUltPick(s),
+      )
+    ) {
+      return false // I already have my ult
+    }
+    const playersWithUlt = new Set(
+      selectedAbilities.filter(isUltPick).map((s) => s.hero_order),
+    ).size
+    const ultlessDrafters = 10 - playersWithUlt
+    const remainingUlts = ultimates.filter((s) => s.name !== null).length
+    return remainingUlts <= ultlessDrafters + ULT_SUPPLY_SLACK
+  })()
+
   // --- Phase 4: Build heroes-in-pool set ---
   const heroesInPool = new Set<string>()
   for (const model of state.identifiedHeroModelsCache) {
@@ -554,6 +584,8 @@ export function processScanResults(
       needScarcity,
       myPickCount,
       myModelPicked: state.mySelectedModelDbHeroId !== null,
+      ultSecurityActive,
+      namedPickCount,
     },
   )
 
@@ -759,6 +791,10 @@ interface RoleScoringInputs {
   needScarcity: ReadonlyMap<string, number>
   myPickCount: number
   myModelPicked: boolean
+  /** Ult supply is tight and the user lacks one — boost ult candidates. */
+  ultSecurityActive: boolean
+  /** Named picks on the whole board (drives the contested-soon marker). */
+  namedPickCount: number
 }
 
 /** Percentile ranks [0,1] with average-rank ties; undefined values -> 0.5. */
@@ -799,6 +835,8 @@ function buildScoredEntities(
     needScarcity,
     myPickCount,
     myModelPicked,
+    ultSecurityActive,
+    namedPickCount,
   } = role
   const entities: ScoredEntity[] = []
   const seen = new Set<string>()
@@ -824,10 +862,19 @@ function buildScoredEntities(
       roleContext,
       tagInput,
     )
+    // Ult-security nudge rides outside the role cap (small, flat, ults only)
+    const isUlt = details?.isUltimate === true || slot.is_ultimate
+    const ultNudge = ultSecurityActive && isUlt && role !== null ? ULT_SECURITY_WEIGHT : 0
+    const roleDelta = role !== null ? role.delta + ultNudge : undefined
     const consolidatedScore =
-      role !== null
-        ? Math.min(1, Math.max(0, scored.consolidatedScore + role.delta))
+      roleDelta !== undefined
+        ? Math.min(1, Math.max(0, scored.consolidatedScore + roleDelta))
         : scored.consolidatedScore
+    // Now-or-never marker: this ability's global pick timing says it is due
+    // before the draft comes back around
+    const contestedSoon =
+      details?.pickRate != null &&
+      details.pickRate <= namedPickCount + CONTESTED_SOON_WINDOW
     entities.push({
       entityType: 'ability',
       internalName: slot.name,
@@ -835,10 +882,11 @@ function buildScoredEntities(
       winrate: details?.winrate ?? null,
       pickRate: details?.pickRate ?? null,
       consolidatedScore,
+      contestedSoon: contestedSoon || undefined,
       personalGames: scored.personalGames,
       personalWinrate: scored.personalWinrate,
       personalScoreDelta: scored.personalScoreDelta,
-      roleScoreDelta: role?.delta,
+      roleScoreDelta: roleDelta,
       roleBestPosition: role?.bestPosition,
       roleReasons: role !== null && role.reasons.length > 0 ? role.reasons : undefined,
       inertOnModel: isInertOnModel(candidateTags, myModelAttackType) || undefined,
@@ -1030,6 +1078,7 @@ function enrichSlots(
       roleBestPosition: scored?.roleBestPosition,
       roleReasons: scored?.roleReasons,
       inertOnModel: scored?.inertOnModel,
+      contestedSoon: scored?.contestedSoon,
       isGeneralTopTier: topTier?.isGeneralTopTier ?? false,
       isSynergySuggestionForMySpot:
         topTier?.isSynergySuggestionForMySpot ?? false,

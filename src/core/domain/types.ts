@@ -54,6 +54,8 @@ export interface ScoredEntity {
   roleReasons?: string[]
   /** Mechanically inert on the selected model's attack type — excluded from top-tier. */
   inertOnModel?: boolean
+  /** Global pick timing says this ability is due before the draft wraps around. */
+  contestedSoon?: boolean
 }
 
 /** Entity with top-tier selection flags applied. */

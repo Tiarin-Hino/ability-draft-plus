@@ -1156,6 +1156,39 @@ describe('role-aware suggestions', () => {
     expect(firestorm.roleReasons).toContain('covers:waveclear')
   })
 
+  it('flags contested-soon abilities on suggestions (global pick timing)', () => {
+    // fireball pickRate 10 <= 0 named picks + window(10) -> contested;
+    // firestorm pickRate 25 -> not
+    const { overlayPayload } = processScanResults(makeInitialScanInput())
+    const fireball = overlayPayload.scanData!.standard.find((s) => s.name === 'fireball')!
+    const firestorm = overlayPayload.scanData!.standard.find((s) => s.name === 'firestorm')!
+
+    expect(fireball.contestedSoon).toBe(true)
+    expect(firestorm.contestedSoon).toBeUndefined()
+  })
+
+  it('ult security boosts ultimates when supply is tight and I lack one', () => {
+    // Pool has 1 ult (laguna) and 10 ult-less drafters -> 1 <= 10 + slack: active
+    const withRole = runRescanWithRole('fixed', [2])
+    const laguna = withRole.overlayPayload.scanData!.ultimates.find(
+      (s) => s.name === 'laguna_blade',
+    )!
+    // Compare against a slot-identical run with role off (no role layer at all)
+    const withoutRole = runRescanWithRole('off')
+    const lagunaOff = withoutRole.overlayPayload.scanData!.ultimates.find(
+      (s) => s.name === 'laguna_blade',
+    )!
+
+    expect(laguna.roleScoreDelta).toBeDefined()
+    expect(lagunaOff.roleScoreDelta).toBeUndefined()
+    // The nudge is part of the role delta; a standard ability with similar greed
+    // does not receive it
+    const iceBlast = withRole.overlayPayload.scanData!.standard.find(
+      (s) => s.name === 'ice_blast',
+    )!
+    expect(laguna.roleScoreDelta! - iceBlast.roleScoreDelta!).toBeGreaterThan(0.03)
+  })
+
   it('a database with no shift data suppresses role scoring entirely', () => {
     const initial = processScanResults(makeInitialScanInput())
     const state = initial.updatedState

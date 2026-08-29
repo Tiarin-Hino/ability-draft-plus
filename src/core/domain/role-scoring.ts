@@ -76,10 +76,13 @@ export interface RoleNeed {
 // dynamic engine evaluates against the user's own drafted abilities, ordered by
 // hardness-to-itemize (user-tuned 2026-08-29).
 export const POSITION_NEEDS: Readonly<Record<DraftPosition, RoleNeed[]>> = {
+  // Survival raised from 0.5 (sim finding: experts pay real opportunity cost
+  // for durability — Kraken Shell-class picks deep-ranked by us 4x — so
+  // survivability is less itemizable-away than the original theory assumed).
   1: [
     { key: 'steroid', anyOf: [['steroid']], priority: 1.0 },
     { key: 'farm', anyOf: [['farm_tool'], ['waveclear']], priority: 0.75 },
-    { key: 'survival', anyOf: [['mobility'], ['sustain_self']], priority: 0.5 },
+    { key: 'survival', anyOf: [['mobility'], ['sustain_self']], priority: 0.7 },
   ],
   2: [
     { key: 'nuke', anyOf: [['nuke']], priority: 1.0 },
@@ -124,11 +127,12 @@ export function allRoleNeeds(): RoleNeed[] {
 }
 
 /** Static per-position tag accents (±ROLE_TAG_ACCENT_WEIGHT each). */
+// sustain_self added to the core rows per the sim's durable-passives finding
 const POSITION_TAG_ACCENTS: Readonly<
   Record<DraftPosition, { plus: AbilityTag[]; minus: AbilityTag[] }>
 > = {
-  1: { plus: ['passive_value'], minus: ['save_ally'] },
-  2: { plus: ['waveclear'], minus: ['passive_value'] },
+  1: { plus: ['passive_value', 'sustain_self'], minus: ['save_ally'] },
+  2: { plus: ['waveclear', 'sustain_self'], minus: ['passive_value'] },
   3: { plus: ['team_aura', 'teamfight_ult'], minus: [] },
   4: { plus: ['setup_cc', 'initiation'], minus: ['steroid', 'farm_tool'] },
   5: { plus: ['team_aura', 'passive_value'], minus: ['steroid', 'farm_tool'] },
