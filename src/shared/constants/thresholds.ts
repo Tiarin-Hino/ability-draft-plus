@@ -133,6 +133,24 @@ export const ROLE_ENABLING_ACCENT_FLOOR = 0.7
 // twice-covered capability (the third single-target stun) drops several ranks.
 export const ROLE_NEED_WEIGHT = 0.08
 export const ROLE_DUPLICATE_WEIGHT = 0.06
+// Pool scarcity: a need's boost scales with its supply among UNPICKED pool
+// abilities — multiplier = clamp(REF / supply, MIN, MAX). Two stuns left in
+// the pool nearly doubles the hard_cc boost; twelve steroids dilute it.
+export const NEED_SCARCITY_REF = 6
+export const NEED_SCARCITY_MIN = 0.6
+export const NEED_SCARCITY_MAX = 1.8
+// Model urgency (core roles 1-3): cores should have their model locked by
+// ~round 3 — a flat boost on ALL model suggestions ramps with the user's own
+// pick count (step per pick, capped at 3 steps), scaled by how scarce good
+// core models are among the remaining pool. Supports (4-5) stay neutral.
+export const MODEL_URGENCY_STEP = 0.03
+export const MODEL_URGENCY_MAX_STEPS = 3
+export const MODEL_SCARCITY_REF = 4
+// Attribute-based model fit weight: per-position stat profiles (agi gain for
+// pos 1 right-click scaling, STR for pos 3, INT/mana for pos 4-5) percentiled
+// among the REMAINING models. This is the primary model role signal; the
+// shift-based greed fit stays as the small secondary (ROLE_MODEL_WEIGHT_SCALE).
+export const MODEL_ATTR_FIT_WEIGHT = 0.08
 // Static per-position tag accents (Position Templates matrix). Raised from the
 // initial 0.02 after live feedback: for MID greed targets (pos 3/4) the greed
 // penalty on a core-shifted ability is inherently small, so the accents are

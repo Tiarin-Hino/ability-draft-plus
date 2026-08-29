@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   resolveRoleContext,
   computeRoleScore,
+  computeModelRoleScore,
   toRoleContextDisplay,
   POSITION_TEMPLATES,
   type RoleContext,
@@ -388,5 +389,113 @@ describe('computeRoleScore with tags (needs engine)', () => {
 
     expect(save.bestPosition).toBe(5)
     expect(save.reasons).toContain('covers:save')
+  })
+})
+
+describe('need priorities and pool scarcity', () => {
+  const tags = (...t: string[]) => new Set(t) as ReadonlySet<import('@core/domain/ability-tags').AbilityTag>
+  const ctxPos1: RoleContext = {
+    mode: 'fixed',
+    effectivePositions: [1],
+    teamGreed: null,
+    teammates: [],
+    estimatedPositions: new Map(),
+  }
+
+  it('covering a defining need beats covering an itemizable one (pos-1 steroid > survival)', () => {
+    const steroid = computeRoleScore(axes(0.5), ctxPos1, {
+      candidateTags: tags('steroid'),
+      myPickTags: [],
+    })!
+    const mobility = computeRoleScore(axes(0.5), ctxPos1, {
+      candidateTags: tags('mobility'),
+      myPickTags: [],
+    })!
+
+    expect(steroid.delta).toBeGreaterThan(mobility.delta)
+  })
+
+  it('pos-5 priorities are hard_cc > save > waveclear (user-tuned order)', () => {
+    const ctxPos5: RoleContext = { ...ctxPos1, effectivePositions: [5] }
+    const stun = computeRoleScore(axes(-0.6), ctxPos5, {
+      candidateTags: tags('hard_cc'),
+      myPickTags: [],
+    })!
+    const save = computeRoleScore(axes(-0.6), ctxPos5, {
+      candidateTags: tags('save_ally'),
+      myPickTags: [],
+    })!
+
+    expect(stun.delta).toBeGreaterThan(save.delta)
+  })
+
+  it('scarcity multiplies the need boost', () => {
+    const scarce = computeRoleScore(axes(0.5), ctxPos1, {
+      candidateTags: tags('farm_tool'),
+      myPickTags: [],
+      needScarcity: new Map([['farm', 1.8]]),
+    })!
+    const abundant = computeRoleScore(axes(0.5), ctxPos1, {
+      candidateTags: tags('farm_tool'),
+      myPickTags: [],
+      needScarcity: new Map([['farm', 0.6]]),
+    })!
+
+    expect(scarce.delta).toBeGreaterThan(abundant.delta)
+  })
+})
+
+describe('computeModelRoleScore', () => {
+  const ctx = (positions: DraftPosition[]): RoleContext => ({
+    mode: 'fixed',
+    effectivePositions: positions,
+    teamGreed: null,
+    teammates: [],
+    estimatedPositions: new Map(),
+  })
+  const pct = (partial: Partial<import('@core/domain/role-scoring').ModelStatPercentiles>) => ({
+    strGain: 0.5, agiGain: 0.5, intGain: 0.5, totalGain: 0.5, intPool: 0.5,
+    ...partial,
+  })
+
+  it('returns null when inactive', () => {
+    expect(computeModelRoleScore(null, undefined, undefined, undefined, 0)).toBeNull()
+    expect(
+      computeModelRoleScore(ctx([]), undefined, pct({}), 'str', 0),
+    ).toBeNull()
+  })
+
+  it('pos 1 prefers agi-gain scaling; pos 4 prefers int/mana models', () => {
+    const carryStats = pct({ agiGain: 0.9, totalGain: 0.8 })
+    const casterStats = pct({ intPool: 0.9, totalGain: 0.7 })
+
+    const carryFor1 = computeModelRoleScore(ctx([1]), undefined, carryStats, 'agi', 0)!
+    const casterFor1 = computeModelRoleScore(ctx([1]), undefined, casterStats, 'int', 0)!
+    expect(carryFor1.delta).toBeGreaterThan(casterFor1.delta)
+
+    const carryFor4 = computeModelRoleScore(ctx([4]), undefined, carryStats, 'agi', 0)!
+    const casterFor4 = computeModelRoleScore(ctx([4]), undefined, casterStats, 'int', 0)!
+    expect(casterFor4.delta).toBeGreaterThan(carryFor4.delta)
+  })
+
+  it('pos 3 credits STR primary attribute and str gain', () => {
+    const strTank = pct({ strGain: 0.9 })
+    const agiCarry = pct({ agiGain: 0.9 })
+    const tankFor3 = computeModelRoleScore(ctx([3]), undefined, strTank, 'str', 0)!
+    const carryFor3 = computeModelRoleScore(ctx([3]), undefined, agiCarry, 'agi', 0)!
+
+    expect(tankFor3.delta).toBeGreaterThan(carryFor3.delta)
+  })
+
+  it('urgency adds a flat boost within the cap', () => {
+    const base = computeModelRoleScore(ctx([1]), undefined, pct({}), 'agi', 0)!
+    const urgent = computeModelRoleScore(ctx([1]), undefined, pct({}), 'agi', 0.09)!
+
+    expect(urgent.delta).toBeCloseTo(base.delta + 0.09)
+  })
+
+  it('missing stat data scores as neutral fit, not an error', () => {
+    const score = computeModelRoleScore(ctx([1, 4]), undefined, undefined, undefined, 0)!
+    expect(Number.isFinite(score.delta)).toBe(true)
   })
 })

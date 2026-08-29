@@ -36,6 +36,19 @@ export type AbilityTag = (typeof TAG_VOCABULARY)[number]
 const VOCAB_SET: ReadonlySet<string> = new Set(TAG_VOCABULARY)
 
 export type HeroAttackType = 'Melee' | 'Ranged'
+export type HeroPrimaryAttr = 'str' | 'agi' | 'int' | 'all'
+
+/** Hero-model metadata (hero_meta.json): attributes for role-fit scoring. */
+export interface HeroMeta {
+  attackType?: HeroAttackType
+  primaryAttr?: HeroPrimaryAttr
+  baseStr?: number
+  baseAgi?: number
+  baseInt?: number
+  strGain?: number
+  agiGain?: number
+  intGain?: number
+}
 
 /** Injected into the scan processor; absent dep = tags feature off (no-op). */
 export interface AbilityTagsLookup {
@@ -43,6 +56,8 @@ export interface AbilityTagsLookup {
   getTags(abilityName: string): ReadonlySet<AbilityTag> | undefined
   /** Attack type of a hero internal name (hero_meta.json); undefined when unknown. */
   getHeroAttackType(heroName: string): HeroAttackType | undefined
+  /** Full hero metadata (attributes/gains) for model role-fit; undefined when unknown. */
+  getHeroMeta(heroName: string): HeroMeta | undefined
 }
 
 /**
@@ -76,15 +91,36 @@ export function parseAbilityTagsDataset(json: unknown): {
   return { tagsByAbility, droppedTags: [...dropped] }
 }
 
-/** Parse + validate hero_meta.json ({ heroName: { attackType } }). */
-export function parseHeroMeta(json: unknown): Map<string, HeroAttackType> | null {
+/** Parse + validate hero_meta.json. Missing/invalid stat fields become
+ * undefined (model fit then treats them as neutral) — never fatal. */
+export function parseHeroMeta(json: unknown): Map<string, HeroMeta> | null {
   if (typeof json !== 'object' || json === null) return null
-  const result = new Map<string, HeroAttackType>()
+  const num = (v: unknown): number | undefined =>
+    typeof v === 'number' && Number.isFinite(v) ? v : undefined
+  const result = new Map<string, HeroMeta>()
   for (const [name, entry] of Object.entries(json)) {
-    const attackType = (entry as { attackType?: unknown })?.attackType
-    if (attackType === 'Melee' || attackType === 'Ranged') {
-      result.set(name, attackType)
+    if (typeof entry !== 'object' || entry === null) continue
+    const e = entry as Record<string, unknown>
+    const meta: HeroMeta = {
+      attackType:
+        e.attackType === 'Melee' || e.attackType === 'Ranged'
+          ? e.attackType
+          : undefined,
+      primaryAttr:
+        e.primaryAttr === 'str' ||
+        e.primaryAttr === 'agi' ||
+        e.primaryAttr === 'int' ||
+        e.primaryAttr === 'all'
+          ? e.primaryAttr
+          : undefined,
+      baseStr: num(e.baseStr),
+      baseAgi: num(e.baseAgi),
+      baseInt: num(e.baseInt),
+      strGain: num(e.strGain),
+      agiGain: num(e.agiGain),
+      intGain: num(e.intGain),
     }
+    result.set(name, meta)
   }
   return result
 }

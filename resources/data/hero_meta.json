@@ -1,510 +1,1272 @@
 {
  "abaddon": {
   "attackType": "Melee",
-  "primaryAttr": "all"
+  "primaryAttr": "all",
+  "baseStr": 21,
+  "baseAgi": 22,
+  "baseInt": 18,
+  "strGain": 2.6,
+  "agiGain": 1.5,
+  "intGain": 2
  },
  "abyssalunderlord": {
   "attackType": "Melee",
-  "primaryAttr": "str"
+  "primaryAttr": "str",
+  "baseStr": 25,
+  "baseAgi": 12,
+  "baseInt": 18,
+  "strGain": 3.2,
+  "agiGain": 1.6,
+  "intGain": 2.3
  },
  "alchemist": {
   "attackType": "Melee",
-  "primaryAttr": "str"
+  "primaryAttr": "str",
+  "baseStr": 23,
+  "baseAgi": 22,
+  "baseInt": 25,
+  "strGain": 2.7,
+  "agiGain": 1.5,
+  "intGain": 1.8
  },
  "ancientapparition": {
   "attackType": "Ranged",
-  "primaryAttr": "int"
+  "primaryAttr": "int",
+  "baseStr": 20,
+  "baseAgi": 20,
+  "baseInt": 23,
+  "strGain": 1.9,
+  "agiGain": 2,
+  "intGain": 3.1
  },
  "antimage": {
   "attackType": "Melee",
-  "primaryAttr": "agi"
+  "primaryAttr": "agi",
+  "baseStr": 21,
+  "baseAgi": 24,
+  "baseInt": 12,
+  "strGain": 1.6,
+  "agiGain": 2.8,
+  "intGain": 1.8
  },
  "arc_warden": {
   "attackType": "Ranged",
-  "primaryAttr": "all"
+  "primaryAttr": "all",
+  "baseStr": 20,
+  "baseAgi": 20,
+  "baseInt": 24,
+  "strGain": 2.2,
+  "agiGain": 2.7,
+  "intGain": 2.6
  },
  "axe": {
   "attackType": "Melee",
-  "primaryAttr": "str"
+  "primaryAttr": "str",
+  "baseStr": 25,
+  "baseAgi": 20,
+  "baseInt": 18,
+  "strGain": 2.7,
+  "agiGain": 1.7,
+  "intGain": 1.6
  },
  "bane": {
   "attackType": "Ranged",
-  "primaryAttr": "all"
+  "primaryAttr": "all",
+  "baseStr": 23,
+  "baseAgi": 23,
+  "baseInt": 23,
+  "strGain": 2.5,
+  "agiGain": 2.5,
+  "intGain": 2.5
  },
  "batrider": {
   "attackType": "Ranged",
-  "primaryAttr": "all"
+  "primaryAttr": "all",
+  "baseStr": 23,
+  "baseAgi": 13,
+  "baseInt": 22,
+  "strGain": 2.9,
+  "agiGain": 2,
+  "intGain": 2.9
  },
  "beastmaster": {
   "attackType": "Melee",
-  "primaryAttr": "all"
+  "primaryAttr": "all",
+  "baseStr": 25,
+  "baseAgi": 19,
+  "baseInt": 16,
+  "strGain": 2.9,
+  "agiGain": 2,
+  "intGain": 1.9
  },
  "bloodseeker": {
   "attackType": "Melee",
-  "primaryAttr": "agi"
+  "primaryAttr": "agi",
+  "baseStr": 24,
+  "baseAgi": 24,
+  "baseInt": 17,
+  "strGain": 2.7,
+  "agiGain": 3.1,
+  "intGain": 2
  },
  "bountyhunter": {
   "attackType": "Melee",
-  "primaryAttr": "agi"
+  "primaryAttr": "agi",
+  "baseStr": 19,
+  "baseAgi": 21,
+  "baseInt": 20,
+  "strGain": 2.5,
+  "agiGain": 2.6,
+  "intGain": 1.9
  },
  "brewmaster": {
   "attackType": "Melee",
-  "primaryAttr": "all"
+  "primaryAttr": "all",
+  "baseStr": 24,
+  "baseAgi": 19,
+  "baseInt": 17,
+  "strGain": 3.2,
+  "agiGain": 2,
+  "intGain": 1.9
  },
  "bristleback": {
   "attackType": "Melee",
-  "primaryAttr": "str"
+  "primaryAttr": "str",
+  "baseStr": 22,
+  "baseAgi": 17,
+  "baseInt": 14,
+  "strGain": 2.8,
+  "agiGain": 1.8,
+  "intGain": 2.8
  },
  "broodmother": {
   "attackType": "Melee",
-  "primaryAttr": "agi"
+  "primaryAttr": "agi",
+  "baseStr": 18,
+  "baseAgi": 18,
+  "baseInt": 18,
+  "strGain": 2.9,
+  "agiGain": 3.4,
+  "intGain": 2
  },
  "centaur": {
   "attackType": "Melee",
-  "primaryAttr": "str"
+  "primaryAttr": "str",
+  "baseStr": 27,
+  "baseAgi": 15,
+  "baseInt": 15,
+  "strGain": 4.2,
+  "agiGain": 1,
+  "intGain": 1.6
  },
  "chaosknight": {
   "attackType": "Melee",
-  "primaryAttr": "str"
+  "primaryAttr": "str",
+  "baseStr": 24,
+  "baseAgi": 18,
+  "baseInt": 18,
+  "strGain": 3.1,
+  "agiGain": 1.8,
+  "intGain": 1.2
  },
  "chen": {
   "attackType": "Ranged",
-  "primaryAttr": "int"
+  "primaryAttr": "int",
+  "baseStr": 23,
+  "baseAgi": 15,
+  "baseInt": 19,
+  "strGain": 2,
+  "agiGain": 2.1,
+  "intGain": 3.2
  },
  "clinkz": {
   "attackType": "Ranged",
-  "primaryAttr": "agi"
+  "primaryAttr": "agi",
+  "baseStr": 18,
+  "baseAgi": 25,
+  "baseInt": 21,
+  "strGain": 2,
+  "agiGain": 2.7,
+  "intGain": 2.2
  },
  "crystalmaiden": {
   "attackType": "Ranged",
-  "primaryAttr": "int"
+  "primaryAttr": "int",
+  "baseStr": 17,
+  "baseAgi": 16,
+  "baseInt": 20,
+  "strGain": 2.2,
+  "agiGain": 1.8,
+  "intGain": 3.3
  },
  "darkseer": {
   "attackType": "Melee",
-  "primaryAttr": "int"
+  "primaryAttr": "int",
+  "baseStr": 20,
+  "baseAgi": 19,
+  "baseInt": 22,
+  "strGain": 2.6,
+  "agiGain": 1.5,
+  "intGain": 2.7
  },
  "darkwillow": {
   "attackType": "Ranged",
-  "primaryAttr": "int"
+  "primaryAttr": "int",
+  "baseStr": 20,
+  "baseAgi": 18,
+  "baseInt": 21,
+  "strGain": 2,
+  "agiGain": 1.6,
+  "intGain": 3.5
  },
  "dawnbreaker": {
   "attackType": "Melee",
-  "primaryAttr": "str"
+  "primaryAttr": "str",
+  "baseStr": 25,
+  "baseAgi": 14,
+  "baseInt": 20,
+  "strGain": 3.4,
+  "agiGain": 1.7,
+  "intGain": 2
  },
  "dazzle": {
   "attackType": "Ranged",
-  "primaryAttr": "all"
+  "primaryAttr": "all",
+  "baseStr": 19,
+  "baseAgi": 20,
+  "baseInt": 25,
+  "strGain": 2.3,
+  "agiGain": 1.7,
+  "intGain": 3.5
  },
  "deathprophet": {
   "attackType": "Ranged",
-  "primaryAttr": "all"
+  "primaryAttr": "all",
+  "baseStr": 21,
+  "baseAgi": 17,
+  "baseInt": 24,
+  "strGain": 2.9,
+  "agiGain": 2,
+  "intGain": 3
  },
  "disruptor": {
   "attackType": "Ranged",
-  "primaryAttr": "int"
+  "primaryAttr": "int",
+  "baseStr": 21,
+  "baseAgi": 15,
+  "baseInt": 20,
+  "strGain": 2.4,
+  "agiGain": 1.4,
+  "intGain": 2.9
  },
  "doombringer": {
   "attackType": "Melee",
-  "primaryAttr": "str"
+  "primaryAttr": "str",
+  "baseStr": 24,
+  "baseAgi": 15,
+  "baseInt": 15,
+  "strGain": 3.6,
+  "agiGain": 1.5,
+  "intGain": 1.9
  },
  "dragonknight": {
   "attackType": "Melee",
-  "primaryAttr": "str"
+  "primaryAttr": "str",
+  "baseStr": 21,
+  "baseAgi": 14,
+  "baseInt": 18,
+  "strGain": 3.2,
+  "agiGain": 2,
+  "intGain": 1.7
  },
  "drowranger": {
   "attackType": "Ranged",
-  "primaryAttr": "agi"
+  "primaryAttr": "agi",
+  "baseStr": 16,
+  "baseAgi": 22,
+  "baseInt": 15,
+  "strGain": 1.9,
+  "agiGain": 2.8,
+  "intGain": 1.4
  },
  "earthshaker": {
   "attackType": "Melee",
-  "primaryAttr": "str"
+  "primaryAttr": "str",
+  "baseStr": 22,
+  "baseAgi": 12,
+  "baseInt": 18,
+  "strGain": 3.7,
+  "agiGain": 1.4,
+  "intGain": 2.1
  },
  "earthspirit": {
   "attackType": "Melee",
-  "primaryAttr": "str"
+  "primaryAttr": "str",
+  "baseStr": 22,
+  "baseAgi": 17,
+  "baseInt": 18,
+  "strGain": 3.8,
+  "agiGain": 2.4,
+  "intGain": 2.1
  },
  "eldertitan": {
   "attackType": "Melee",
-  "primaryAttr": "str"
+  "primaryAttr": "str",
+  "baseStr": 26,
+  "baseAgi": 16,
+  "baseInt": 23,
+  "strGain": 3,
+  "agiGain": 1.8,
+  "intGain": 1.6
  },
  "emberspirit": {
   "attackType": "Melee",
-  "primaryAttr": "agi"
+  "primaryAttr": "agi",
+  "baseStr": 22,
+  "baseAgi": 22,
+  "baseInt": 20,
+  "strGain": 2.5,
+  "agiGain": 3.2,
+  "intGain": 2.2
  },
  "enchantress": {
   "attackType": "Ranged",
-  "primaryAttr": "int"
+  "primaryAttr": "int",
+  "baseStr": 17,
+  "baseAgi": 19,
+  "baseInt": 22,
+  "strGain": 2,
+  "agiGain": 2.1,
+  "intGain": 4
  },
  "enigma": {
   "attackType": "Ranged",
-  "primaryAttr": "all"
+  "primaryAttr": "all",
+  "baseStr": 21,
+  "baseAgi": 14,
+  "baseInt": 19,
+  "strGain": 2.5,
+  "agiGain": 1,
+  "intGain": 3.6
  },
  "facelessvoid": {
   "attackType": "Melee",
-  "primaryAttr": "agi"
+  "primaryAttr": "agi",
+  "baseStr": 20,
+  "baseAgi": 24,
+  "baseInt": 15,
+  "strGain": 2.6,
+  "agiGain": 3.3,
+  "intGain": 1.5
  },
  "furion": {
   "attackType": "Ranged",
-  "primaryAttr": "all"
+  "primaryAttr": "all",
+  "baseStr": 19,
+  "baseAgi": 14,
+  "baseInt": 22,
+  "strGain": 2.6,
+  "agiGain": 2.6,
+  "intGain": 3.5
  },
  "grimstroke": {
   "attackType": "Ranged",
-  "primaryAttr": "int"
+  "primaryAttr": "int",
+  "baseStr": 21,
+  "baseAgi": 18,
+  "baseInt": 25,
+  "strGain": 2.4,
+  "agiGain": 1.9,
+  "intGain": 3.8
  },
  "gyrocopter": {
   "attackType": "Ranged",
-  "primaryAttr": "agi"
+  "primaryAttr": "agi",
+  "baseStr": 22,
+  "baseAgi": 25,
+  "baseInt": 21,
+  "strGain": 2.5,
+  "agiGain": 3.4,
+  "intGain": 2.4
  },
  "hoodwink": {
   "attackType": "Ranged",
-  "primaryAttr": "agi"
+  "primaryAttr": "agi",
+  "baseStr": 17,
+  "baseAgi": 25,
+  "baseInt": 21,
+  "strGain": 2,
+  "agiGain": 3.6,
+  "intGain": 2.9
  },
  "huskar": {
   "attackType": "Ranged",
-  "primaryAttr": "str"
+  "primaryAttr": "str",
+  "baseStr": 23,
+  "baseAgi": 10,
+  "baseInt": 18,
+  "strGain": 3.3,
+  "agiGain": 1.5,
+  "intGain": 0
  },
  "invoker": {
   "attackType": "Ranged",
-  "primaryAttr": "int"
+  "primaryAttr": "int",
+  "baseStr": 19,
+  "baseAgi": 14,
+  "baseInt": 20,
+  "strGain": 2.5,
+  "agiGain": 2,
+  "intGain": 4
  },
  "jakiro": {
   "attackType": "Ranged",
-  "primaryAttr": "int"
+  "primaryAttr": "int",
+  "baseStr": 25,
+  "baseAgi": 15,
+  "baseInt": 25,
+  "strGain": 2.5,
+  "agiGain": 1.2,
+  "intGain": 3
  },
  "juggernaut": {
   "attackType": "Melee",
-  "primaryAttr": "agi"
+  "primaryAttr": "agi",
+  "baseStr": 20,
+  "baseAgi": 32,
+  "baseInt": 14,
+  "strGain": 2,
+  "agiGain": 2.8,
+  "intGain": 1.4
  },
  "keeperofthelight": {
   "attackType": "Ranged",
-  "primaryAttr": "int"
+  "primaryAttr": "int",
+  "baseStr": 18,
+  "baseAgi": 15,
+  "baseInt": 24,
+  "strGain": 2.3,
+  "agiGain": 1.6,
+  "intGain": 3.3
  },
  "kez": {
   "attackType": "Melee",
-  "primaryAttr": "agi"
+  "primaryAttr": "agi",
+  "baseStr": 20,
+  "baseAgi": 27,
+  "baseInt": 20,
+  "strGain": 2.8,
+  "agiGain": 3.5,
+  "intGain": 1.7
  },
  "kunkka": {
   "attackType": "Melee",
-  "primaryAttr": "str"
+  "primaryAttr": "str",
+  "baseStr": 24,
+  "baseAgi": 14,
+  "baseInt": 18,
+  "strGain": 3.6,
+  "agiGain": 1.6,
+  "intGain": 1.8
  },
  "largo": {
   "attackType": "Melee",
-  "primaryAttr": "str"
+  "primaryAttr": "str",
+  "baseStr": 24,
+  "baseAgi": 14,
+  "baseInt": 21,
+  "strGain": 3.6,
+  "agiGain": 1.3,
+  "intGain": 2.6
  },
  "legioncommander": {
   "attackType": "Melee",
-  "primaryAttr": "str"
+  "primaryAttr": "str",
+  "baseStr": 24,
+  "baseAgi": 18,
+  "baseInt": 20,
+  "strGain": 3.1,
+  "agiGain": 1.7,
+  "intGain": 2.2
  },
  "leshrac": {
   "attackType": "Ranged",
-  "primaryAttr": "int"
+  "primaryAttr": "int",
+  "baseStr": 20,
+  "baseAgi": 17,
+  "baseInt": 22,
+  "strGain": 2.8,
+  "agiGain": 2.5,
+  "intGain": 3.5
  },
  "lich": {
   "attackType": "Ranged",
-  "primaryAttr": "int"
+  "primaryAttr": "int",
+  "baseStr": 20,
+  "baseAgi": 17,
+  "baseInt": 28,
+  "strGain": 2.1,
+  "agiGain": 1.7,
+  "intGain": 3.4
  },
  "lifestealer": {
   "attackType": "Melee",
-  "primaryAttr": "str"
+  "primaryAttr": "str",
+  "baseStr": 23,
+  "baseAgi": 15,
+  "baseInt": 15,
+  "strGain": 2.4,
+  "agiGain": 1.9,
+  "intGain": 1.8
  },
  "lina": {
   "attackType": "Ranged",
-  "primaryAttr": "int"
+  "primaryAttr": "int",
+  "baseStr": 20,
+  "baseAgi": 23,
+  "baseInt": 30,
+  "strGain": 2.4,
+  "agiGain": 2.4,
+  "intGain": 4
  },
  "lion": {
   "attackType": "Ranged",
-  "primaryAttr": "int"
+  "primaryAttr": "int",
+  "baseStr": 18,
+  "baseAgi": 15,
+  "baseInt": 19,
+  "strGain": 2.4,
+  "agiGain": 1.7,
+  "intGain": 3.5
  },
  "lonedruid": {
   "attackType": "Ranged",
-  "primaryAttr": "agi"
+  "primaryAttr": "agi",
+  "baseStr": 20,
+  "baseAgi": 22,
+  "baseInt": 13,
+  "strGain": 2.5,
+  "agiGain": 2.8,
+  "intGain": 1.4
  },
  "luna": {
   "attackType": "Ranged",
-  "primaryAttr": "agi"
+  "primaryAttr": "agi",
+  "baseStr": 21,
+  "baseAgi": 24,
+  "baseInt": 23,
+  "strGain": 2.2,
+  "agiGain": 3.4,
+  "intGain": 1.9
  },
  "lycan": {
   "attackType": "Melee",
-  "primaryAttr": "str"
+  "primaryAttr": "str",
+  "baseStr": 28,
+  "baseAgi": 18,
+  "baseInt": 23,
+  "strGain": 3.4,
+  "agiGain": 1.7,
+  "intGain": 1.7
  },
  "magnataur": {
   "attackType": "Melee",
-  "primaryAttr": "all"
+  "primaryAttr": "all",
+  "baseStr": 23,
+  "baseAgi": 14,
+  "baseInt": 20,
+  "strGain": 3.1,
+  "agiGain": 2,
+  "intGain": 2.1
  },
  "marci": {
   "attackType": "Melee",
-  "primaryAttr": "all"
+  "primaryAttr": "all",
+  "baseStr": 23,
+  "baseAgi": 20,
+  "baseInt": 19,
+  "strGain": 3.2,
+  "agiGain": 2.2,
+  "intGain": 1.9
  },
  "mars": {
   "attackType": "Melee",
-  "primaryAttr": "str"
+  "primaryAttr": "str",
+  "baseStr": 23,
+  "baseAgi": 18,
+  "baseInt": 21,
+  "strGain": 3.7,
+  "agiGain": 1.7,
+  "intGain": 2.2
  },
  "medusa": {
   "attackType": "Ranged",
-  "primaryAttr": "agi"
+  "primaryAttr": "agi",
+  "baseStr": 0,
+  "baseAgi": 22,
+  "baseInt": 25,
+  "strGain": 0,
+  "agiGain": 3.6,
+  "intGain": 3.6
  },
  "meepo": {
   "attackType": "Melee",
-  "primaryAttr": "agi"
+  "primaryAttr": "agi",
+  "baseStr": 24,
+  "baseAgi": 17,
+  "baseInt": 18,
+  "strGain": 2.2,
+  "agiGain": 2.1,
+  "intGain": 1.9
  },
  "mirana": {
   "attackType": "Ranged",
-  "primaryAttr": "agi"
+  "primaryAttr": "agi",
+  "baseStr": 20,
+  "baseAgi": 26,
+  "baseInt": 22,
+  "strGain": 2.2,
+  "agiGain": 3.1,
+  "intGain": 1.9
  },
  "monkey_king": {
   "attackType": "Melee",
-  "primaryAttr": "agi"
+  "primaryAttr": "agi",
+  "baseStr": 19,
+  "baseAgi": 24,
+  "baseInt": 20,
+  "strGain": 2.8,
+  "agiGain": 3.7,
+  "intGain": 1.8
  },
  "morphling": {
   "attackType": "Ranged",
-  "primaryAttr": "agi"
+  "primaryAttr": "agi",
+  "baseStr": 23,
+  "baseAgi": 24,
+  "baseInt": 19,
+  "strGain": 2.6,
+  "agiGain": 3.9,
+  "intGain": 1.8
  },
  "muerta": {
   "attackType": "Ranged",
-  "primaryAttr": "int"
+  "primaryAttr": "int",
+  "baseStr": 19,
+  "baseAgi": 21,
+  "baseInt": 23,
+  "strGain": 2,
+  "agiGain": 2.7,
+  "intGain": 3.6
  },
  "nagasiren": {
   "attackType": "Melee",
-  "primaryAttr": "agi"
+  "primaryAttr": "agi",
+  "baseStr": 21,
+  "baseAgi": 22,
+  "baseInt": 19,
+  "strGain": 2.4,
+  "agiGain": 3.4,
+  "intGain": 2
  },
  "necrolyte": {
   "attackType": "Ranged",
-  "primaryAttr": "int"
+  "primaryAttr": "int",
+  "baseStr": 18,
+  "baseAgi": 12,
+  "baseInt": 23,
+  "strGain": 2.3,
+  "agiGain": 1.3,
+  "intGain": 2.7
  },
  "nevermore": {
   "attackType": "Ranged",
-  "primaryAttr": "agi"
+  "primaryAttr": "agi",
+  "baseStr": 19,
+  "baseAgi": 25,
+  "baseInt": 18,
+  "strGain": 2.7,
+  "agiGain": 3.6,
+  "intGain": 2.2
  },
  "nightstalker": {
   "attackType": "Melee",
-  "primaryAttr": "str"
+  "primaryAttr": "str",
+  "baseStr": 23,
+  "baseAgi": 18,
+  "baseInt": 15,
+  "strGain": 3,
+  "agiGain": 2.2,
+  "intGain": 1.6
  },
  "nyxassassin": {
   "attackType": "Melee",
-  "primaryAttr": "all"
+  "primaryAttr": "all",
+  "baseStr": 17,
+  "baseAgi": 18,
+  "baseInt": 21,
+  "strGain": 2.7,
+  "agiGain": 2.9,
+  "intGain": 2.6
  },
  "obsidiandestroyer": {
   "attackType": "Ranged",
-  "primaryAttr": "int"
+  "primaryAttr": "int",
+  "baseStr": 21,
+  "baseAgi": 17,
+  "baseInt": 30,
+  "strGain": 2.9,
+  "agiGain": 1.6,
+  "intGain": 4.2
  },
  "ogremagi": {
   "attackType": "Melee",
-  "primaryAttr": "str"
+  "primaryAttr": "str",
+  "baseStr": 25,
+  "baseAgi": 14,
+  "baseInt": 0,
+  "strGain": 4.2,
+  "agiGain": 1.5,
+  "intGain": 0
  },
  "omniknight": {
   "attackType": "Melee",
-  "primaryAttr": "str"
+  "primaryAttr": "str",
+  "baseStr": 22,
+  "baseAgi": 15,
+  "baseInt": 16,
+  "strGain": 3.1,
+  "agiGain": 1.7,
+  "intGain": 2.1
  },
  "oracle": {
   "attackType": "Ranged",
-  "primaryAttr": "int"
+  "primaryAttr": "int",
+  "baseStr": 20,
+  "baseAgi": 15,
+  "baseInt": 26,
+  "strGain": 2.2,
+  "agiGain": 1.7,
+  "intGain": 3.6
  },
  "pangolier": {
   "attackType": "Melee",
-  "primaryAttr": "all"
+  "primaryAttr": "all",
+  "baseStr": 20,
+  "baseAgi": 18,
+  "baseInt": 16,
+  "strGain": 2.7,
+  "agiGain": 3.2,
+  "intGain": 2.5
  },
  "phantomassassin": {
   "attackType": "Melee",
-  "primaryAttr": "agi"
+  "primaryAttr": "agi",
+  "baseStr": 19,
+  "baseAgi": 21,
+  "baseInt": 15,
+  "strGain": 2,
+  "agiGain": 3.4,
+  "intGain": 1.7
  },
  "phantomlancer": {
   "attackType": "Melee",
-  "primaryAttr": "agi"
+  "primaryAttr": "agi",
+  "baseStr": 21,
+  "baseAgi": 26,
+  "baseInt": 21,
+  "strGain": 2.2,
+  "agiGain": 3.4,
+  "intGain": 1.8
  },
  "phoenix": {
   "attackType": "Ranged",
-  "primaryAttr": "str"
+  "primaryAttr": "str",
+  "baseStr": 23,
+  "baseAgi": 12,
+  "baseInt": 16,
+  "strGain": 3.3,
+  "agiGain": 1.5,
+  "intGain": 1.8
  },
  "primal_beast": {
   "attackType": "Melee",
-  "primaryAttr": "str"
+  "primaryAttr": "str",
+  "baseStr": 26,
+  "baseAgi": 15,
+  "baseInt": 16,
+  "strGain": 4.3,
+  "agiGain": 1,
+  "intGain": 1.7
  },
  "puck": {
   "attackType": "Ranged",
-  "primaryAttr": "int"
+  "primaryAttr": "int",
+  "baseStr": 17,
+  "baseAgi": 14,
+  "baseInt": 23,
+  "strGain": 2.4,
+  "agiGain": 2.3,
+  "intGain": 3.8
  },
  "pudge": {
   "attackType": "Melee",
-  "primaryAttr": "str"
+  "primaryAttr": "str",
+  "baseStr": 25,
+  "baseAgi": 11,
+  "baseInt": 16,
+  "strGain": 3,
+  "agiGain": 1.4,
+  "intGain": 1.8
  },
  "pugna": {
   "attackType": "Ranged",
-  "primaryAttr": "int"
+  "primaryAttr": "int",
+  "baseStr": 19,
+  "baseAgi": 21,
+  "baseInt": 26,
+  "strGain": 2,
+  "agiGain": 1.3,
+  "intGain": 5.2
  },
  "queenofpain": {
   "attackType": "Ranged",
-  "primaryAttr": "int"
+  "primaryAttr": "int",
+  "baseStr": 20,
+  "baseAgi": 22,
+  "baseInt": 25,
+  "strGain": 2.4,
+  "agiGain": 2.5,
+  "intGain": 3.4
  },
  "rattletrap": {
   "attackType": "Melee",
-  "primaryAttr": "str"
+  "primaryAttr": "str",
+  "baseStr": 26,
+  "baseAgi": 13,
+  "baseInt": 18,
+  "strGain": 3.2,
+  "agiGain": 2.3,
+  "intGain": 1.7
  },
  "razor": {
   "attackType": "Ranged",
-  "primaryAttr": "agi"
+  "primaryAttr": "agi",
+  "baseStr": 22,
+  "baseAgi": 24,
+  "baseInt": 21,
+  "strGain": 2.8,
+  "agiGain": 2.8,
+  "intGain": 2.2
  },
  "riki": {
   "attackType": "Melee",
-  "primaryAttr": "agi"
+  "primaryAttr": "agi",
+  "baseStr": 18,
+  "baseAgi": 30,
+  "baseInt": 14,
+  "strGain": 2,
+  "agiGain": 2.4,
+  "intGain": 1.3
  },
  "ringmaster": {
   "attackType": "Ranged",
-  "primaryAttr": "int"
+  "primaryAttr": "int",
+  "baseStr": 21,
+  "baseAgi": 11,
+  "baseInt": 25,
+  "strGain": 2.1,
+  "agiGain": 1.6,
+  "intGain": 3
  },
  "rubick": {
   "attackType": "Ranged",
-  "primaryAttr": "int"
+  "primaryAttr": "int",
+  "baseStr": 21,
+  "baseAgi": 23,
+  "baseInt": 24,
+  "strGain": 2,
+  "agiGain": 2.5,
+  "intGain": 3.7
  },
  "sandking": {
   "attackType": "Melee",
-  "primaryAttr": "all"
+  "primaryAttr": "all",
+  "baseStr": 23,
+  "baseAgi": 19,
+  "baseInt": 17,
+  "strGain": 2.3,
+  "agiGain": 2,
+  "intGain": 2
  },
  "shadowdemon": {
   "attackType": "Ranged",
-  "primaryAttr": "int"
+  "primaryAttr": "int",
+  "baseStr": 23,
+  "baseAgi": 18,
+  "baseInt": 22,
+  "strGain": 2.6,
+  "agiGain": 2.2,
+  "intGain": 3.6
  },
  "shadowshaman": {
   "attackType": "Ranged",
-  "primaryAttr": "int"
+  "primaryAttr": "int",
+  "baseStr": 20,
+  "baseAgi": 16,
+  "baseInt": 23,
+  "strGain": 2.3,
+  "agiGain": 1.6,
+  "intGain": 3.5
  },
  "shredder": {
   "attackType": "Melee",
-  "primaryAttr": "str"
+  "primaryAttr": "str",
+  "baseStr": 23,
+  "baseAgi": 16,
+  "baseInt": 23,
+  "strGain": 3.6,
+  "agiGain": 1.6,
+  "intGain": 2.7
  },
  "silencer": {
   "attackType": "Ranged",
-  "primaryAttr": "int"
+  "primaryAttr": "int",
+  "baseStr": 18,
+  "baseAgi": 22,
+  "baseInt": 25,
+  "strGain": 2.2,
+  "agiGain": 2.2,
+  "intGain": 2.9
  },
  "skeletonking": {
   "attackType": "Melee",
-  "primaryAttr": "str"
+  "primaryAttr": "str",
+  "baseStr": 22,
+  "baseAgi": 16,
+  "baseInt": 16,
+  "strGain": 2.8,
+  "agiGain": 1.7,
+  "intGain": 1.6
  },
  "skywrathmage": {
   "attackType": "Ranged",
-  "primaryAttr": "int"
+  "primaryAttr": "int",
+  "baseStr": 21,
+  "baseAgi": 13,
+  "baseInt": 25,
+  "strGain": 2,
+  "agiGain": 0.8,
+  "intGain": 4.1
  },
  "slardar": {
   "attackType": "Melee",
-  "primaryAttr": "str"
+  "primaryAttr": "str",
+  "baseStr": 21,
+  "baseAgi": 17,
+  "baseInt": 15,
+  "strGain": 3.4,
+  "agiGain": 2.1,
+  "intGain": 1.5
  },
  "slark": {
   "attackType": "Melee",
-  "primaryAttr": "agi"
+  "primaryAttr": "agi",
+  "baseStr": 20,
+  "baseAgi": 21,
+  "baseInt": 16,
+  "strGain": 2.1,
+  "agiGain": 1.5,
+  "intGain": 1.9
  },
  "snapfire": {
   "attackType": "Ranged",
-  "primaryAttr": "all"
+  "primaryAttr": "all",
+  "baseStr": 21,
+  "baseAgi": 16,
+  "baseInt": 21,
+  "strGain": 3.5,
+  "agiGain": 1.9,
+  "intGain": 2.2
  },
  "sniper": {
   "attackType": "Ranged",
-  "primaryAttr": "agi"
+  "primaryAttr": "agi",
+  "baseStr": 19,
+  "baseAgi": 27,
+  "baseInt": 15,
+  "strGain": 2,
+  "agiGain": 3.2,
+  "intGain": 2.6
  },
  "spectre": {
   "attackType": "Melee",
-  "primaryAttr": "agi"
+  "primaryAttr": "agi",
+  "baseStr": 21,
+  "baseAgi": 26,
+  "baseInt": 16,
+  "strGain": 2.4,
+  "agiGain": 2.4,
+  "intGain": 1.7
  },
  "spiritbreaker": {
   "attackType": "Melee",
-  "primaryAttr": "str"
+  "primaryAttr": "str",
+  "baseStr": 28,
+  "baseAgi": 17,
+  "baseInt": 14,
+  "strGain": 3.3,
+  "agiGain": 1.7,
+  "intGain": 1.8
  },
  "stormspirit": {
   "attackType": "Ranged",
-  "primaryAttr": "int"
+  "primaryAttr": "int",
+  "baseStr": 21,
+  "baseAgi": 22,
+  "baseInt": 23,
+  "strGain": 2,
+  "agiGain": 2.6,
+  "intGain": 3.7
  },
  "sven": {
   "attackType": "Melee",
-  "primaryAttr": "str"
+  "primaryAttr": "str",
+  "baseStr": 24,
+  "baseAgi": 18,
+  "baseInt": 16,
+  "strGain": 3.5,
+  "agiGain": 2.2,
+  "intGain": 1.5
  },
  "techies": {
   "attackType": "Ranged",
-  "primaryAttr": "all"
+  "primaryAttr": "all",
+  "baseStr": 19,
+  "baseAgi": 16,
+  "baseInt": 25,
+  "strGain": 2.6,
+  "agiGain": 1.8,
+  "intGain": 3
  },
  "templarassassin": {
   "attackType": "Ranged",
-  "primaryAttr": "agi"
+  "primaryAttr": "agi",
+  "baseStr": 21,
+  "baseAgi": 23,
+  "baseInt": 20,
+  "strGain": 2.4,
+  "agiGain": 3.4,
+  "intGain": 2
  },
  "terrorblade": {
   "attackType": "Melee",
-  "primaryAttr": "agi"
+  "primaryAttr": "agi",
+  "baseStr": 18,
+  "baseAgi": 23,
+  "baseInt": 19,
+  "strGain": 2,
+  "agiGain": 4,
+  "intGain": 1.6
  },
  "tidehunter": {
   "attackType": "Melee",
-  "primaryAttr": "str"
+  "primaryAttr": "str",
+  "baseStr": 26,
+  "baseAgi": 15,
+  "baseInt": 20,
+  "strGain": 3.7,
+  "agiGain": 1.5,
+  "intGain": 1.7
  },
  "tinker": {
   "attackType": "Ranged",
-  "primaryAttr": "int"
+  "primaryAttr": "int",
+  "baseStr": 19,
+  "baseAgi": 17,
+  "baseInt": 30,
+  "strGain": 2.3,
+  "agiGain": 1.4,
+  "intGain": 3.3
  },
  "tiny": {
   "attackType": "Melee",
-  "primaryAttr": "str"
+  "primaryAttr": "str",
+  "baseStr": 30,
+  "baseAgi": 0,
+  "baseInt": 17,
+  "strGain": 4.2,
+  "agiGain": 0,
+  "intGain": 2.2
  },
  "treant": {
   "attackType": "Melee",
-  "primaryAttr": "str"
+  "primaryAttr": "str",
+  "baseStr": 25,
+  "baseAgi": 15,
+  "baseInt": 20,
+  "strGain": 3.4,
+  "agiGain": 1.8,
+  "intGain": 1.8
  },
  "trollwarlord": {
   "attackType": "Ranged",
-  "primaryAttr": "agi"
+  "primaryAttr": "agi",
+  "baseStr": 21,
+  "baseAgi": 23,
+  "baseInt": 13,
+  "strGain": 2.5,
+  "agiGain": 3.3,
+  "intGain": 1
  },
  "tusk": {
   "attackType": "Melee",
-  "primaryAttr": "str"
+  "primaryAttr": "str",
+  "baseStr": 23,
+  "baseAgi": 23,
+  "baseInt": 18,
+  "strGain": 3.9,
+  "agiGain": 1.9,
+  "intGain": 1.7
  },
  "undying": {
   "attackType": "Melee",
-  "primaryAttr": "str"
+  "primaryAttr": "str",
+  "baseStr": 22,
+  "baseAgi": 13,
+  "baseInt": 27,
+  "strGain": 2.4,
+  "agiGain": 1.2,
+  "intGain": 2.8
  },
  "ursa": {
   "attackType": "Melee",
-  "primaryAttr": "agi"
+  "primaryAttr": "agi",
+  "baseStr": 25,
+  "baseAgi": 18,
+  "baseInt": 16,
+  "strGain": 2.4,
+  "agiGain": 2.8,
+  "intGain": 1.5
  },
  "vengefulspirit": {
   "attackType": "Ranged",
-  "primaryAttr": "agi"
+  "primaryAttr": "agi",
+  "baseStr": 20,
+  "baseAgi": 23,
+  "baseInt": 19,
+  "strGain": 2.6,
+  "agiGain": 3,
+  "intGain": 1.5
  },
  "venomancer": {
   "attackType": "Ranged",
-  "primaryAttr": "all"
+  "primaryAttr": "all",
+  "baseStr": 19,
+  "baseAgi": 25,
+  "baseInt": 19,
+  "strGain": 2.1,
+  "agiGain": 2.8,
+  "intGain": 1.8
  },
  "viper": {
   "attackType": "Ranged",
-  "primaryAttr": "agi"
+  "primaryAttr": "agi",
+  "baseStr": 21,
+  "baseAgi": 21,
+  "baseInt": 17,
+  "strGain": 2.4,
+  "agiGain": 2.9,
+  "intGain": 2
  },
  "visage": {
   "attackType": "Ranged",
-  "primaryAttr": "all"
+  "primaryAttr": "all",
+  "baseStr": 22,
+  "baseAgi": 11,
+  "baseInt": 22,
+  "strGain": 2.8,
+  "agiGain": 1.3,
+  "intGain": 2.9
  },
  "voidspirit": {
   "attackType": "Melee",
-  "primaryAttr": "all"
+  "primaryAttr": "all",
+  "baseStr": 22,
+  "baseAgi": 21,
+  "baseInt": 24,
+  "strGain": 2.6,
+  "agiGain": 2.2,
+  "intGain": 3.1
  },
  "warlock": {
   "attackType": "Ranged",
-  "primaryAttr": "int"
+  "primaryAttr": "int",
+  "baseStr": 22,
+  "baseAgi": 10,
+  "baseInt": 25,
+  "strGain": 2.4,
+  "agiGain": 1,
+  "intGain": 3.1
  },
  "weaver": {
   "attackType": "Ranged",
-  "primaryAttr": "agi"
+  "primaryAttr": "agi",
+  "baseStr": 16,
+  "baseAgi": 17,
+  "baseInt": 20,
+  "strGain": 2,
+  "agiGain": 3.3,
+  "intGain": 2
  },
  "windrunner": {
   "attackType": "Ranged",
-  "primaryAttr": "all"
+  "primaryAttr": "all",
+  "baseStr": 18,
+  "baseAgi": 17,
+  "baseInt": 18,
+  "strGain": 2.6,
+  "agiGain": 2.1,
+  "intGain": 3.2
  },
  "winterwyvern": {
   "attackType": "Ranged",
-  "primaryAttr": "int"
+  "primaryAttr": "int",
+  "baseStr": 22,
+  "baseAgi": 16,
+  "baseInt": 26,
+  "strGain": 2.5,
+  "agiGain": 1.7,
+  "intGain": 3.6
  },
  "wisp": {
   "attackType": "Ranged",
-  "primaryAttr": "all"
+  "primaryAttr": "all",
+  "baseStr": 19,
+  "baseAgi": 14,
+  "baseInt": 21,
+  "strGain": 3,
+  "agiGain": 1.6,
+  "intGain": 1.7
  },
  "witchdoctor": {
   "attackType": "Ranged",
-  "primaryAttr": "int"
+  "primaryAttr": "int",
+  "baseStr": 20,
+  "baseAgi": 13,
+  "baseInt": 22,
+  "strGain": 2.1,
+  "agiGain": 1.4,
+  "intGain": 3.1
  },
  "zeus": {
   "attackType": "Ranged",
-  "primaryAttr": "int"
+  "primaryAttr": "int",
+  "baseStr": 21,
+  "baseAgi": 11,
+  "baseInt": 23,
+  "strGain": 2.1,
+  "agiGain": 1.2,
+  "intGain": 3.3
  }
 }

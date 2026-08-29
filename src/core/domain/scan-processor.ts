@@ -18,11 +18,16 @@ import { computeShiftAxes, type ShiftAxes } from './shift-axes'
 import {
   resolveRoleContext,
   computeRoleScore,
+  computeModelRoleScore,
+  isCoreRoleContext,
+  modelAttrFit,
+  allRoleNeeds,
   toRoleContextDisplay,
   type RoleContext,
   type RoleTagInput,
+  type ModelStatPercentiles,
 } from './role-scoring'
-import { isInertOnModel, type AbilityTag } from './ability-tags'
+import { isInertOnModel, type AbilityTag, type HeroMeta } from './ability-tags'
 import { identifyHeroModels } from './hero-identification'
 import {
   getAbilitySynergySplit,
@@ -41,7 +46,12 @@ import type { ModelTileCapture } from './model-pick-detection'
 import {
   RESCAN_GUARD_MAX_CONSECUTIVE_REJECTIONS,
   PERSONAL_SCORE_DELTA_EPSILON,
-  ROLE_MODEL_WEIGHT_SCALE,
+  NEED_SCARCITY_REF,
+  NEED_SCARCITY_MIN,
+  NEED_SCARCITY_MAX,
+  MODEL_URGENCY_STEP,
+  MODEL_URGENCY_MAX_STEPS,
+  MODEL_SCARCITY_REF,
 } from '@shared/constants/thresholds'
 
 // @DEV-GUIDE: Central business logic — transforms raw ML scan results into a fully-enriched
@@ -365,6 +375,38 @@ export function processScanResults(
     return model !== undefined ? deps.tags.getHeroAttackType(model.heroName) : undefined
   })()
 
+  // Pool scarcity per need: supply among UNPICKED pool abilities scales need
+  // boosts — two stuns left nearly doubles hard_cc's, twelve steroids dilute it.
+  const needScarcity = new Map<string, number>()
+  if (deps.tags !== undefined && roleContext !== null) {
+    const poolTagSets = [...uniquePoolNames]
+      .map((name) => deps.tags!.getTags(name))
+      .filter((t): t is ReadonlySet<AbilityTag> => t !== undefined)
+    for (const need of allRoleNeeds()) {
+      const supply = poolTagSets.filter((tags) =>
+        need.anyOf.some((req) => req.every((tag) => tags.has(tag))),
+      ).length
+      needScarcity.set(
+        need.key,
+        Math.max(
+          NEED_SCARCITY_MIN,
+          Math.min(NEED_SCARCITY_MAX, NEED_SCARCITY_REF / Math.max(1, supply)),
+        ),
+      )
+    }
+  }
+
+  // Core model urgency: cores (positions 1-3) should lock a model by ~round 3 —
+  // ramp a flat model boost with MY pick count (fallback: board round), scaled
+  // by how scarce good core models are among the remaining pool.
+  const totalNamedPicks = selectedAbilities.filter((s) => s.name !== null).length
+  const myPickCount =
+    state.mySelectedSpotHeroOrder !== null
+      ? selectedAbilities.filter(
+          (s) => s.hero_order === state.mySelectedSpotHeroOrder && s.name !== null,
+        ).length
+      : Math.floor(totalNamedPicks / 10)
+
   // --- Phase 4: Build heroes-in-pool set ---
   const heroesInPool = new Set<string>()
   for (const model of state.identifiedHeroModelsCache) {
@@ -509,12 +551,17 @@ export function processScanResults(
     new Set(state.pickedModelHeroOrders),
     personalAbilityStats,
     personalHeroStats,
-    roleContext,
-    shiftAxesByName,
-    heroAxesByName,
-    deps.tags,
-    myPickTags,
-    myModelAttackType,
+    {
+      roleContext,
+      shiftAxesByName,
+      heroAxesByName,
+      tags: deps.tags,
+      myPickTags,
+      myModelAttackType,
+      needScarcity,
+      myPickCount,
+      myModelPicked: state.mySelectedModelDbHeroId !== null,
+    },
   )
 
   // --- Phase 11: Check if My Spot has picked an ultimate ---
@@ -708,6 +755,37 @@ function cloneState(state: DraftSessionState): DraftSessionState {
 // Picked ABILITIES are naturally absent (rescans subtract them from the pool arrays),
 // but the models cache keeps every identified model, so models already drafted by ANY
 // player must be skipped here or they keep surfacing as top-tier suggestions.
+/** Role-layer inputs for scoring, bundled (all inert when role mode is off). */
+interface RoleScoringInputs {
+  roleContext: RoleContext | null
+  shiftAxesByName: ReadonlyMap<string, ShiftAxes>
+  heroAxesByName: ReadonlyMap<string, ShiftAxes>
+  tags: import('./ability-tags').AbilityTagsLookup | undefined
+  myPickTags: ReadonlySet<AbilityTag>[]
+  myModelAttackType: import('./ability-tags').HeroAttackType | undefined
+  needScarcity: ReadonlyMap<string, number>
+  myPickCount: number
+  myModelPicked: boolean
+}
+
+/** Percentile ranks [0,1] with average-rank ties; undefined values -> 0.5. */
+function pctRanks(entries: Array<{ name: string; value: number | undefined }>): Map<string, number> {
+  const known = entries.filter((e): e is { name: string; value: number } => e.value !== undefined)
+  const ranks = new Map<string, number>()
+  for (const e of entries) ranks.set(e.name, 0.5)
+  if (known.length <= 1) return ranks
+  known.sort((a, b) => a.value - b.value)
+  let i = 0
+  while (i < known.length) {
+    let j = i + 1
+    while (j < known.length && known[j].value === known[i].value) j++
+    const pct = (i + j - 1) / 2 / (known.length - 1)
+    for (let k = i; k < j; k++) ranks.set(known[k].name, pct)
+    i = j
+  }
+  return ranks
+}
+
 function buildScoredEntities(
   ultimates: ScanResult[],
   standard: ScanResult[],
@@ -716,13 +794,19 @@ function buildScoredEntities(
   pickedModelHeroOrders: ReadonlySet<number>,
   personalAbilityStats: Map<string, import('@shared/types').PersonalAbilityStats>,
   personalHeroStats: Map<string, import('@shared/types').PersonalHeroStats>,
-  roleContext: RoleContext | null,
-  shiftAxesByName: ReadonlyMap<string, ShiftAxes>,
-  heroAxesByName: ReadonlyMap<string, ShiftAxes>,
-  tags: import('./ability-tags').AbilityTagsLookup | undefined,
-  myPickTags: ReadonlySet<AbilityTag>[],
-  myModelAttackType: import('./ability-tags').HeroAttackType | undefined,
+  role: RoleScoringInputs,
 ): ScoredEntity[] {
+  const {
+    roleContext,
+    shiftAxesByName,
+    heroAxesByName,
+    tags,
+    myPickTags,
+    myModelAttackType,
+    needScarcity,
+    myPickCount,
+    myModelPicked,
+  } = role
   const entities: ScoredEntity[] = []
   const seen = new Set<string>()
 
@@ -741,7 +825,7 @@ function buildScoredEntities(
     // "you win with it" and "it fits your role" stack rather than fight.
     // Heroes are exempt — hero models have no shift data.
     const tagInput: RoleTagInput | undefined =
-      tags !== undefined ? { candidateTags, myPickTags } : undefined
+      tags !== undefined ? { candidateTags, myPickTags, needScarcity } : undefined
     const role = computeRoleScore(
       shiftAxesByName.get(slot.name),
       roleContext,
@@ -771,22 +855,85 @@ function buildScoredEntities(
     })
   }
 
-  for (const model of heroModels) {
-    if (model.dbHeroId === null) continue
-    if (pickedModelHeroOrders.has(model.heroOrder)) continue
+  // --- Hero models: attribute fit (primary), shift greed (secondary), and
+  // core urgency. Stat percentiles are computed among the REMAINING models —
+  // "best stat gain of the ones left in the pool".
+  const remainingModels = heroModels.filter(
+    (m) => m.dbHeroId !== null && !pickedModelHeroOrders.has(m.heroOrder),
+  )
+  const metaByName = new Map<string, HeroMeta | undefined>(
+    remainingModels.map((m) => [m.heroName, tags?.getHeroMeta(m.heroName)]),
+  )
+  const metric = (f: (meta: HeroMeta) => number | undefined) =>
+    pctRanks(
+      remainingModels.map((m) => {
+        const meta = metaByName.get(m.heroName)
+        return { name: m.heroName, value: meta !== undefined ? f(meta) : undefined }
+      }),
+    )
+  const totalGainOf = (meta: HeroMeta): number | undefined =>
+    meta.strGain !== undefined && meta.agiGain !== undefined && meta.intGain !== undefined
+      ? meta.strGain + meta.agiGain + meta.intGain
+      : undefined
+  const strPct = metric((m) => m.strGain)
+  const agiPct = metric((m) => m.agiGain)
+  const intPct = metric((m) => m.intGain)
+  const totalPct = metric(totalGainOf)
+  const intPoolPct = metric((m) =>
+    m.baseInt !== undefined && m.intGain !== undefined
+      ? m.baseInt + 6 * m.intGain
+      : undefined,
+  )
+  const pctOf = (heroName: string): ModelStatPercentiles | undefined =>
+    metaByName.get(heroName) !== undefined
+      ? {
+          strGain: strPct.get(heroName) ?? 0.5,
+          agiGain: agiPct.get(heroName) ?? 0.5,
+          intGain: intPct.get(heroName) ?? 0.5,
+          totalGain: totalPct.get(heroName) ?? 0.5,
+          intPool: intPoolPct.get(heroName) ?? 0.5,
+        }
+      : undefined
+
+  // Core urgency: ramps with my picks, scaled by scarcity of good core models
+  let urgency = 0
+  if (
+    roleContext !== null &&
+    roleContext.effectivePositions.length > 0 &&
+    isCoreRoleContext(roleContext) &&
+    !myModelPicked
+  ) {
+    const corePositions = roleContext.effectivePositions.filter((p) => p <= 3)
+    const goodCoreModels = remainingModels.filter((m) => {
+      const pct = pctOf(m.heroName)
+      if (pct === undefined) return false
+      const meta = metaByName.get(m.heroName)
+      return corePositions.some((p) => modelAttrFit(p, pct, meta?.primaryAttr) >= 0.6)
+    }).length
+    const scarcity = Math.max(
+      NEED_SCARCITY_MIN,
+      Math.min(NEED_SCARCITY_MAX, MODEL_SCARCITY_REF / Math.max(1, goodCoreModels)),
+    )
+    urgency =
+      Math.min(MODEL_URGENCY_MAX_STEPS, myPickCount) * MODEL_URGENCY_STEP * scarcity
+  }
+
+  for (const model of remainingModels) {
     const scored = calculatePersonalizedScore(
       model.winrate,
       model.pickRate,
       personalHeroStats.get(model.heroName),
     )
-    // Models get greed-fit only (no tags/needs), from hero-model shift entries
-    // percentiled among heroes, scaled down — the model barely determines farm
-    // priority compared to the build.
-    const role = computeRoleScore(heroAxesByName.get(model.heroName), roleContext)
-    const roleDelta = role !== null ? role.delta * ROLE_MODEL_WEIGHT_SCALE : undefined
+    const role = computeModelRoleScore(
+      roleContext,
+      heroAxesByName.get(model.heroName),
+      pctOf(model.heroName),
+      metaByName.get(model.heroName)?.primaryAttr,
+      urgency,
+    )
     const consolidatedScore =
-      roleDelta !== undefined
-        ? Math.min(1, Math.max(0, scored.consolidatedScore + roleDelta))
+      role !== null
+        ? Math.min(1, Math.max(0, scored.consolidatedScore + role.delta))
         : scored.consolidatedScore
     entities.push({
       entityType: 'hero',
@@ -798,7 +945,7 @@ function buildScoredEntities(
       personalGames: scored.personalGames,
       personalWinrate: scored.personalWinrate,
       personalScoreDelta: scored.personalScoreDelta,
-      roleScoreDelta: roleDelta,
+      roleScoreDelta: role?.delta,
       roleBestPosition: role?.bestPosition,
       dbHeroId: model.dbHeroId,
       heroOrder: model.heroOrder,

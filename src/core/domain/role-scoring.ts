@@ -7,6 +7,8 @@ import {
   ROLE_NEED_WEIGHT,
   ROLE_DUPLICATE_WEIGHT,
   ROLE_TAG_ACCENT_WEIGHT,
+  ROLE_MODEL_WEIGHT_SCALE,
+  MODEL_ATTR_FIT_WEIGHT,
   DYNAMIC_ROLE_MIN_TEAMMATES,
   DYNAMIC_ROLE_MIN_PICKS,
 } from '@shared/constants/thresholds'
@@ -64,36 +66,55 @@ export interface RoleNeed {
   /** i18n suffix for reason chips (overlay: tooltip.roleNeeds.<key>). */
   key: string
   anyOf: AbilityTag[][]
+  /** Multiplier on ROLE_NEED_WEIGHT — what DEFINES the role and cannot be
+   * bought from the shop ranks highest; what items patch ranks lowest. */
+  priority: number
 }
 
 // Business constants (Position Templates matrix §03) — the needs checklists the
-// dynamic engine evaluates against the user's own drafted abilities.
+// dynamic engine evaluates against the user's own drafted abilities, ordered by
+// hardness-to-itemize (user-tuned 2026-08-29).
 export const POSITION_NEEDS: Readonly<Record<DraftPosition, RoleNeed[]>> = {
   1: [
-    { key: 'steroid', anyOf: [['steroid']] },
-    { key: 'farm', anyOf: [['farm_tool'], ['waveclear']] },
-    { key: 'survival', anyOf: [['mobility'], ['sustain_self']] },
+    { key: 'steroid', anyOf: [['steroid']], priority: 1.0 },
+    { key: 'farm', anyOf: [['farm_tool'], ['waveclear']], priority: 0.75 },
+    { key: 'survival', anyOf: [['mobility'], ['sustain_self']], priority: 0.5 },
   ],
   2: [
-    { key: 'nuke', anyOf: [['nuke']] },
-    { key: 'mobility', anyOf: [['mobility']] },
-    { key: 'kill_ult', anyOf: [['teamfight_ult'], ['hard_cc']] },
+    { key: 'nuke', anyOf: [['nuke']], priority: 1.0 },
+    { key: 'kill_ult', anyOf: [['teamfight_ult'], ['hard_cc']], priority: 0.75 },
+    { key: 'mobility', anyOf: [['mobility']], priority: 0.5 },
   ],
   3: [
-    { key: 'initiation', anyOf: [['initiation']] },
-    { key: 'aoe_cc', anyOf: [['hard_cc', 'aoe']] },
-    { key: 'durability', anyOf: [['sustain_self'], ['passive_value']] },
+    { key: 'aoe_cc', anyOf: [['hard_cc', 'aoe']], priority: 1.0 },
+    { key: 'initiation', anyOf: [['initiation']], priority: 0.75 },
+    { key: 'durability', anyOf: [['sustain_self'], ['passive_value']], priority: 0.5 },
   ],
   4: [
-    { key: 'hard_cc', anyOf: [['hard_cc']] },
-    { key: 'mobility', anyOf: [['mobility']] },
-    { key: 'waveclear', anyOf: [['waveclear'], ['nuke']] },
+    { key: 'hard_cc', anyOf: [['hard_cc']], priority: 1.0 },
+    { key: 'waveclear', anyOf: [['waveclear'], ['nuke']], priority: 0.75 },
+    { key: 'mobility', anyOf: [['mobility']], priority: 0.5 },
   ],
   5: [
-    { key: 'save', anyOf: [['save_ally']] },
-    { key: 'hard_cc', anyOf: [['hard_cc']] },
-    { key: 'waveclear', anyOf: [['waveclear'], ['nuke']] },
+    { key: 'hard_cc', anyOf: [['hard_cc']], priority: 1.0 },
+    { key: 'save', anyOf: [['save_ally']], priority: 0.75 },
+    { key: 'waveclear', anyOf: [['waveclear'], ['nuke']], priority: 0.5 },
   ],
+}
+
+/** Every distinct need key (for pool-supply/scarcity computation). */
+export function allRoleNeeds(): RoleNeed[] {
+  const seen = new Set<string>()
+  const needs: RoleNeed[] = []
+  for (const pos of ALL_POSITIONS) {
+    for (const need of POSITION_NEEDS[pos]) {
+      if (!seen.has(need.key)) {
+        seen.add(need.key)
+        needs.push(need)
+      }
+    }
+  }
+  return needs
 }
 
 /** Static per-position tag accents (±ROLE_TAG_ACCENT_WEIGHT each). */
@@ -144,6 +165,8 @@ export interface RoleTagInput {
   candidateTags: ReadonlySet<AbilityTag> | undefined
   /** Tag sets of the user's own drafted abilities (picks without tags excluded). */
   myPickTags: ReadonlyArray<ReadonlySet<AbilityTag>>
+  /** Pool-scarcity multiplier per need key (clamped; absent key = 1). */
+  needScarcity?: ReadonlyMap<string, number>
 }
 
 function satisfies(tags: ReadonlySet<AbilityTag>, need: RoleNeed): boolean {
@@ -170,7 +193,8 @@ function needsAdjustment(
     if (!satisfies(candidate, need)) continue
     const covered = tagInput.myPickTags.filter((tags) => satisfies(tags, need)).length
     if (covered === 0) {
-      adj += ROLE_NEED_WEIGHT
+      const scarcity = tagInput.needScarcity?.get(need.key) ?? 1
+      adj += ROLE_NEED_WEIGHT * need.priority * scarcity
       reasons.push(`covers:${need.key}`)
     } else if (covered >= 2 && duplicateKey === null) {
       duplicateKey = need.key
@@ -460,6 +484,99 @@ export function computeRoleScore(
     Math.min(ROLE_ADJUSTMENT_CAP, best + teamAdjustment),
   )
   return { delta, bestPosition, reasons: bestReasons }
+}
+
+// ---------------------------------------------------------------------------
+// Hero-model role scoring (attribute-based fit + shift greed + core urgency)
+// ---------------------------------------------------------------------------
+
+/** Stat percentiles of one model among the REMAINING unpicked models, [0,1]. */
+export interface ModelStatPercentiles {
+  strGain: number
+  agiGain: number
+  intGain: number
+  totalGain: number
+  /** Mana-pool proxy: base int + int gain, percentiled. */
+  intPool: number
+}
+
+/** Primary-attribute credit: exact match 1, universal half, else 0. */
+function attrCredit(
+  primaryAttr: string | undefined,
+  wanted: 'str' | 'agi' | 'int',
+): number {
+  if (primaryAttr === wanted) return 1
+  if (primaryAttr === 'all') return 0.5
+  return 0
+}
+
+/**
+ * Per-position attribute fit in [0,1] (user-defined profiles, 2026-08-29):
+ * pos 1 right-click scaling, pos 2 overall stats leaning caster+durability,
+ * pos 3 durable STR, pos 4/5 INT/mana + best remaining stat gain.
+ */
+export function modelAttrFit(
+  position: DraftPosition,
+  pct: ModelStatPercentiles,
+  primaryAttr: string | undefined,
+): number {
+  switch (position) {
+    case 1:
+      return 0.6 * pct.agiGain + 0.4 * pct.totalGain
+    case 2:
+      return 0.5 * pct.totalGain + 0.3 * pct.intGain + 0.2 * pct.strGain
+    case 3:
+      return 0.6 * pct.strGain + 0.4 * attrCredit(primaryAttr, 'str')
+    case 4:
+    case 5:
+      return (
+        0.4 * pct.intPool +
+        0.3 * pct.totalGain +
+        0.3 * attrCredit(primaryAttr, 'int')
+      )
+  }
+}
+
+/**
+ * Role score for a hero MODEL: attribute fit (primary signal) + shift greed
+ * fit (small secondary, ROLE_MODEL_WEIGHT_SCALE applied by the caller is
+ * folded in here instead) + a flat core-urgency boost. Missing stat data
+ * scores fit as neutral (0.5). Returns null when the layer is inactive.
+ */
+export function computeModelRoleScore(
+  context: RoleContext | null,
+  axes: ShiftAxes | undefined,
+  pct: ModelStatPercentiles | undefined,
+  primaryAttr: string | undefined,
+  urgency: number,
+): RoleScore | null {
+  if (context === null || context.effectivePositions.length === 0) return null
+
+  const greed = axes?.greed ?? 0
+  let best = Number.NEGATIVE_INFINITY
+  let bestPosition: DraftPosition = context.effectivePositions[0]
+  for (const pos of context.effectivePositions) {
+    const fit = pct !== undefined ? modelAttrFit(pos, pct, primaryAttr) : 0.5
+    const greedFit = 1 - Math.abs(greed - POSITION_TEMPLATES[pos].greedTarget)
+    const score =
+      MODEL_ATTR_FIT_WEIGHT * (2 * fit - 1) +
+      ROLE_GREED_WEIGHT * ROLE_MODEL_WEIGHT_SCALE * greedFit
+    if (score > best) {
+      best = score
+      bestPosition = pos
+    }
+  }
+
+  const delta = Math.max(
+    -ROLE_ADJUSTMENT_CAP,
+    Math.min(ROLE_ADJUSTMENT_CAP, best + urgency),
+  )
+  return { delta, bestPosition, reasons: [] }
+}
+
+/** True when the effective set makes this a CORE drafter (positions 1-3). */
+export function isCoreRoleContext(context: RoleContext): boolean {
+  return context.effectivePositions.some((p) => p <= 3)
 }
 
 /** Shape the context for the overlay payload (Maps don't survive IPC). */

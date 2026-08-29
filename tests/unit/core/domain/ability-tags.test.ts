@@ -46,16 +46,23 @@ describe('parseAbilityTagsDataset', () => {
 })
 
 describe('parseHeroMeta', () => {
-  it('parses attack types and skips junk entries', () => {
+  it('parses attributes; junk fields become undefined, never fatal', () => {
     const meta = parseHeroMeta({
-      lina: { attackType: 'Ranged', primaryAttr: 'int' },
+      lina: {
+        attackType: 'Ranged', primaryAttr: 'int',
+        baseStr: 18, baseAgi: 23, baseInt: 25,
+        strGain: 2.2, agiGain: 2.3, intGain: 3.7,
+      },
       sven: { attackType: 'Melee' },
-      broken: { attackType: 42 },
+      broken: { attackType: 42, strGain: 'lots' },
     })!
 
-    expect(meta.get('lina')).toBe('Ranged')
-    expect(meta.get('sven')).toBe('Melee')
-    expect(meta.has('broken')).toBe(false)
+    expect(meta.get('lina')!.attackType).toBe('Ranged')
+    expect(meta.get('lina')!.intGain).toBe(3.7)
+    expect(meta.get('sven')!.attackType).toBe('Melee')
+    expect(meta.get('sven')!.strGain).toBeUndefined()
+    expect(meta.get('broken')!.attackType).toBeUndefined()
+    expect(meta.get('broken')!.strGain).toBeUndefined()
   })
 
   it('returns null for invalid input', () => {

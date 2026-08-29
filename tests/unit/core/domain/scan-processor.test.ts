@@ -1085,6 +1085,21 @@ describe('role-aware suggestions', () => {
     getHeroAttackType(heroName: string) {
       return heroName === 'lina' ? 'Ranged' : 'Melee'
     },
+    getHeroMeta(heroName: string) {
+      const table: Record<string, import('@core/domain/ability-tags').HeroMeta> = {
+        lina: {
+          attackType: 'Ranged', primaryAttr: 'int',
+          baseStr: 18, baseAgi: 23, baseInt: 25,
+          strGain: 2.2, agiGain: 2.3, intGain: 3.7,
+        },
+        antimage: {
+          attackType: 'Melee', primaryAttr: 'agi',
+          baseStr: 21, baseAgi: 24, baseInt: 12,
+          strGain: 1.6, agiGain: 2.8, intGain: 1.8,
+        },
+      }
+      return table[heroName]
+    },
   }
 
   it('excludes melee-only abilities from top-tier on a ranged model and marks the slot', () => {

@@ -53,6 +53,7 @@ export function loadAbilityTags(): AbilityTagsLookup | undefined {
 
   return {
     getTags: (name) => parsed.tagsByAbility.get(name),
-    getHeroAttackType: (heroName) => heroMeta.get(heroName),
+    getHeroAttackType: (heroName) => heroMeta.get(heroName)?.attackType,
+    getHeroMeta: (heroName) => heroMeta.get(heroName),
   }
 }
