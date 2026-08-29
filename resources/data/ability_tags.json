@@ -34,7 +34,8 @@
   "abaddon_borrowed_time": {
    "tags": [
     "passive_value",
-    "sustain_self"
+    "sustain_self",
+    "teamfight_ult"
    ]
   },
   "abaddon_death_coil": {
@@ -100,7 +101,9 @@
   "alchemist_unstable_concoction": {
    "tags": [
     "aoe",
+    "channeled",
     "hard_cc",
+    "initiation",
     "nuke",
     "setup_cc"
    ]
@@ -151,9 +154,7 @@
   "antimage_mana_void": {
    "tags": [
     "aoe",
-    "hard_cc",
-    "mana_hungry",
-    "nuke"
+    "mana_hungry"
    ]
   },
   "arc_warden_flux": {
@@ -217,8 +218,7 @@
    "tags": [
     "channeled",
     "hard_cc",
-    "mana_hungry",
-    "nuke"
+    "mana_hungry"
    ]
   },
   "bane_nightmare": {
@@ -260,11 +260,9 @@
   },
   "beastmaster_primal_roar": {
    "tags": [
-    "aoe",
     "hard_cc",
     "initiation",
     "mana_hungry",
-    "nuke",
     "soft_cc"
    ]
   },
@@ -352,6 +350,8 @@
    "tags": [
     "hard_cc",
     "mana_hungry",
+    "setup_cc",
+    "soft_cc",
     "summon",
     "teamfight_ult"
    ]
@@ -427,7 +427,7 @@
    "tags": [
     "aoe",
     "hard_cc",
-    "nuke"
+    "initiation"
    ]
   },
   "centaur_return": {
@@ -448,8 +448,7 @@
   },
   "chaos_knight_chaos_bolt": {
    "tags": [
-    "hard_cc",
-    "nuke"
+    "hard_cc"
    ]
   },
   "chaos_knight_chaos_strike": {
@@ -562,8 +561,8 @@
    "tags": [
     "aoe",
     "hard_cc",
+    "initiation",
     "mana_hungry",
-    "nuke",
     "setup_cc"
    ]
   },
@@ -616,8 +615,9 @@
   "dawnbreaker_fire_wreath": {
    "tags": [
     "aoe",
+    "farm_tool",
     "hard_cc",
-    "nuke"
+    "initiation"
    ]
   },
   "dawnbreaker_luminosity": {
@@ -731,8 +731,7 @@
   },
   "doom_bringer_infernal_blade": {
    "tags": [
-    "hard_cc",
-    "steroid"
+    "hard_cc"
    ]
   },
   "doom_bringer_scorched_earth": {
@@ -753,8 +752,8 @@
   },
   "dragon_knight_dragon_tail": {
    "tags": [
-    "aoe",
-    "hard_cc"
+    "hard_cc",
+    "initiation"
    ]
   },
   "dragon_knight_elder_dragon_form": {
@@ -830,7 +829,9 @@
   "earthshaker_aftershock": {
    "tags": [
     "aoe",
-    "hard_cc"
+    "hard_cc",
+    "initiation",
+    "passive_value"
    ]
   },
   "earthshaker_echo_slam": {
@@ -959,7 +960,7 @@
   "enigma_malefice": {
    "tags": [
     "hard_cc",
-    "nuke"
+    "setup_cc"
    ]
   },
   "enigma_midnight_pulse": {
@@ -1078,7 +1079,6 @@
     "hard_cc",
     "initiation",
     "mana_hungry",
-    "nuke",
     "setup_cc"
    ]
   },
@@ -1098,7 +1098,7 @@
    "tags": [
     "aoe",
     "hard_cc",
-    "nuke",
+    "initiation",
     "setup_cc"
    ]
   },
@@ -1158,7 +1158,6 @@
   "invoker_cold_snap_ad": {
    "tags": [
     "hard_cc",
-    "nuke",
     "setup_cc"
    ]
   },
@@ -1208,6 +1207,7 @@
    "tags": [
     "aoe",
     "hard_cc",
+    "initiation",
     "nuke"
    ]
   },
@@ -1359,7 +1359,6 @@
     "aoe",
     "hard_cc",
     "mana_hungry",
-    "nuke",
     "save_ally",
     "setup_cc",
     "teamfight_ult"
@@ -1369,7 +1368,7 @@
    "tags": [
     "aoe",
     "farm_tool",
-    "melee_only",
+    "passive_value",
     "steroid",
     "waveclear"
    ]
@@ -1378,7 +1377,6 @@
    "tags": [
     "aoe",
     "hard_cc",
-    "nuke",
     "setup_cc",
     "soft_cc"
    ]
@@ -1419,7 +1417,8 @@
   "legion_commander_duel": {
    "tags": [
     "hard_cc",
-    "initiation"
+    "initiation",
+    "steroid"
    ]
   },
   "legion_commander_moment_of_courage": {
@@ -1467,9 +1466,7 @@
    "tags": [
     "aoe",
     "hard_cc",
-    "nuke",
-    "setup_cc",
-    "waveclear"
+    "setup_cc"
    ]
   },
   "lich_chain_frost": {
@@ -1562,6 +1559,7 @@
    "tags": [
     "aoe",
     "hard_cc",
+    "initiation",
     "mana_hungry",
     "nuke"
    ]
@@ -1575,6 +1573,7 @@
   "lion_voodoo": {
    "tags": [
     "hard_cc",
+    "initiation",
     "mana_hungry"
    ]
   },
@@ -1613,8 +1612,8 @@
   },
   "luna_lucent_beam": {
    "tags": [
-    "hard_cc",
-    "nuke"
+    "nuke",
+    "soft_cc"
    ]
   },
   "luna_lunar_orbit": {
@@ -1706,7 +1705,6 @@
   "marci_grapple": {
    "tags": [
     "aoe",
-    "hard_cc",
     "nuke",
     "save_ally",
     "soft_cc"
@@ -1747,7 +1745,8 @@
     "hard_cc",
     "initiation",
     "nuke",
-    "setup_cc"
+    "setup_cc",
+    "waveclear"
    ]
   },
   "medusa_gorgon_grasp": {
@@ -1776,7 +1775,6 @@
     "aoe",
     "hard_cc",
     "mana_hungry",
-    "soft_cc",
     "teamfight_ult"
    ]
   },
@@ -1825,6 +1823,8 @@
    "tags": [
     "aoe",
     "hard_cc",
+    "initiation",
+    "mobility",
     "nuke"
    ]
   },
@@ -1838,8 +1838,7 @@
    "tags": [
     "hard_cc",
     "initiation",
-    "mobility",
-    "nuke"
+    "mobility"
    ]
   },
   "monkey_king_wukongs_command": {
@@ -1910,6 +1909,7 @@
    "tags": [
     "aoe",
     "hard_cc",
+    "initiation",
     "mana_hungry",
     "save_ally",
     "teamfight_ult"
@@ -2002,6 +2002,7 @@
    "tags": [
     "aoe",
     "hard_cc",
+    "initiation",
     "nuke"
    ]
   },
@@ -2031,8 +2032,8 @@
   },
   "obsidian_destroyer_astral_imprisonment": {
    "tags": [
-    "aoe",
     "hard_cc",
+    "initiation",
     "mana_hungry",
     "nuke",
     "save_ally"
