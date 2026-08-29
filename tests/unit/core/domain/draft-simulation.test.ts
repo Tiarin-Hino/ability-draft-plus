@@ -148,16 +148,24 @@ function loadJson<T>(path: string): T {
       if (!mappable) continue
       eligible.push(m)
     }
-    // Prefer high-rated: half league, half high-skill, sorted by rating
-    const byRating = (a: CorpusMatch, b: CorpusMatch) =>
-      (b.avgRating ?? 0) - (a.avgRating ?? 0)
-    const league = eligible.filter((m) => m.source === 'league').sort(byRating)
-    const highskill = eligible.filter((m) => m.source === 'highskill').sort(byRating)
-    const chosen = [
-      ...league.slice(0, Math.ceil(NUM_DRAFTS / 2)),
-      ...highskill.slice(0, Math.floor(NUM_DRAFTS / 2)),
-    ].slice(0, NUM_DRAFTS)
-    expect(chosen.length).toBe(NUM_DRAFTS)
+    // Selection: an explicit id list (DRAFT_SIM_IDS=path to a JSON array, e.g.
+    // the OpenDota-confirmed solo-queue set) wins; otherwise prefer high-rated,
+    // half league / half high-skill.
+    let chosen: CorpusMatch[]
+    if (process.env.DRAFT_SIM_IDS) {
+      const ids = new Set(loadJson<number[]>(process.env.DRAFT_SIM_IDS))
+      chosen = eligible.filter((m) => ids.has(m.matchId))
+    } else {
+      const byRating = (a: CorpusMatch, b: CorpusMatch) =>
+        (b.avgRating ?? 0) - (a.avgRating ?? 0)
+      const league = eligible.filter((m) => m.source === 'league').sort(byRating)
+      const highskill = eligible.filter((m) => m.source === 'highskill').sort(byRating)
+      chosen = [
+        ...league.slice(0, Math.ceil(NUM_DRAFTS / 2)),
+        ...highskill.slice(0, Math.floor(NUM_DRAFTS / 2)),
+      ].slice(0, NUM_DRAFTS)
+      expect(chosen.length).toBe(NUM_DRAFTS)
+    }
 
     // ── Replay ────────────────────────────────────────────────────────────
     const results: object[] = []
@@ -337,6 +345,7 @@ function loadJson<T>(path: string): T {
     )
     // eslint-disable-next-line no-console
     console.log(`Simulated ${results.length} drafts -> sim_results.json`)
-    expect(results.length).toBe(NUM_DRAFTS)
+    if (process.env.DRAFT_SIM_IDS) expect(results.length).toBeGreaterThan(0)
+    else expect(results.length).toBe(NUM_DRAFTS)
   }, 120_000)
 })
