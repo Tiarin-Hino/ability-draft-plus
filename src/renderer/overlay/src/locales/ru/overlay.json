@@ -82,7 +82,8 @@
       "durability": "живучесть",
       "hard_cc": "жёсткий контроль",
       "waveclear": "снос волн",
-      "save": "сейв союзника"
+      "save": "сейв союзника",
+      "mana_budget": "запас маны"
     },
     "roleCovers": "Закрывает недостающее: {{need}}",
     "roleDuplicate": "Уже есть: {{need}}",

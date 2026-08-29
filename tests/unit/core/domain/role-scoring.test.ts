@@ -541,3 +541,65 @@ describe('greed taper by pick index', () => {
     expect(noSpot.myPickCount).toBe(1)
   })
 })
+
+describe('soft_cc half-credit and mana budget', () => {
+  const tags = (...t: string[]) => new Set(t) as ReadonlySet<import('@core/domain/ability-tags').AbilityTag>
+  const ctxPos5: RoleContext = {
+    mode: 'fixed',
+    effectivePositions: [5],
+    myPickCount: 0,
+    teamGreed: null,
+    teammates: [],
+    estimatedPositions: new Map(),
+  }
+
+  it('a soft_cc candidate half-covers an unmet hard_cc need', () => {
+    const hard = computeRoleScore(axes(-0.6), ctxPos5, {
+      candidateTags: tags('hard_cc'),
+      myPickTags: [],
+    })!
+    const soft = computeRoleScore(axes(-0.6), ctxPos5, {
+      candidateTags: tags('soft_cc'),
+      myPickTags: [],
+    })!
+    const none = computeRoleScore(axes(-0.6), ctxPos5, {
+      candidateTags: tags(),
+      myPickTags: [],
+    })!
+
+    expect(soft.reasons).toContain('covers:hard_cc')
+    expect(soft.delta).toBeGreaterThan(none.delta)
+    expect(soft.delta).toBeLessThan(hard.delta)
+  })
+
+  it('an owned soft_cc leaves the disable need half-open (hard_cc still boosted)', () => {
+    const withSlowOwned = computeRoleScore(axes(-0.6), ctxPos5, {
+      candidateTags: tags('hard_cc'),
+      myPickTags: [tags('soft_cc')],
+    })!
+    expect(withSlowOwned.reasons).toContain('covers:hard_cc')
+  })
+
+  it('fractional coverage saturates: four slows make a fifth disable a duplicate', () => {
+    const fifthSlow = computeRoleScore(axes(-0.6), ctxPos5, {
+      candidateTags: tags('soft_cc'),
+      myPickTags: [tags('soft_cc'), tags('soft_cc'), tags('soft_cc'), tags('soft_cc')],
+    })!
+    expect(fifthSlow.reasons).toContain('duplicate:hard_cc')
+  })
+
+  it('third mana-hungry ability gets damped regardless of model', () => {
+    const third = computeRoleScore(axes(-0.6), ctxPos5, {
+      candidateTags: tags('mana_hungry', 'nuke'),
+      myPickTags: [tags('mana_hungry'), tags('mana_hungry')],
+    })!
+    const second = computeRoleScore(axes(-0.6), ctxPos5, {
+      candidateTags: tags('mana_hungry', 'nuke'),
+      myPickTags: [tags('mana_hungry')],
+    })!
+
+    expect(third.reasons).toContain('duplicate:mana_budget')
+    expect(second.reasons).not.toContain('duplicate:mana_budget')
+    expect(third.delta).toBeLessThan(second.delta)
+  })
+})

@@ -8,6 +8,8 @@ import {
   ROLE_NEED_WEIGHT,
   ROLE_DUPLICATE_WEIGHT,
   ROLE_TAG_ACCENT_WEIGHT,
+  MANA_HUNGRY_LIMIT,
+  MANA_BUDGET_WEIGHT,
   ROLE_MODEL_WEIGHT_SCALE,
   MODEL_ATTR_FIT_WEIGHT,
   DYNAMIC_ROLE_MIN_TEAMMATES,
@@ -182,15 +184,36 @@ export interface RoleTagInput {
   needScarcity?: ReadonlyMap<string, number>
 }
 
-function satisfies(tags: ReadonlySet<AbilityTag>, need: RoleNeed): boolean {
-  return need.anyOf.some((req) => req.every((tag) => tags.has(tag)))
+/**
+ * Credit a tag set gives toward one required tag. soft_cc counts as HALF a
+ * hard_cc (user ruling 2026-08-29: a slow/root/silence still contributes to
+ * the disable requirement, but never rates over clear hard CC).
+ */
+function tagCredit(tags: ReadonlySet<AbilityTag>, required: AbilityTag): number {
+  if (tags.has(required)) return 1
+  if (required === 'hard_cc' && tags.has('soft_cc')) return 0.5
+  return 0
+}
+
+/** Credit in [0, 1] a tag set gives toward a need (min over an AND-requirement,
+ * max over the OR-alternatives). */
+function needCredit(tags: ReadonlySet<AbilityTag>, need: RoleNeed): number {
+  let best = 0
+  for (const req of need.anyOf) {
+    let credit = 1
+    for (const tag of req) credit = Math.min(credit, tagCredit(tags, tag))
+    if (credit > best) best = credit
+  }
+  return best
 }
 
 /**
  * Needs engine for one (candidate, position) pair: boost for covering an unmet
- * capability, one damp when the candidate ONLY duplicates a capability the user
- * already covers twice (the third single-target stun). Returns the adjustment
- * and its reason chips.
+ * capability (scaled by the candidate's credit — an AoE slow half-covers an
+ * AoE-stun need), one damp when the candidate ONLY duplicates a capability the
+ * user already covers twice (the third single-target stun; coverage counts
+ * fractionally, so four slows also saturate a disable need). Returns the
+ * adjustment and its reason chips.
  */
 function needsAdjustment(
   position: DraftPosition,
@@ -203,19 +226,33 @@ function needsAdjustment(
   const reasons: string[] = []
   let duplicateKey: string | null = null
   for (const need of POSITION_NEEDS[position]) {
-    if (!satisfies(candidate, need)) continue
-    const covered = tagInput.myPickTags.filter((tags) => satisfies(tags, need)).length
-    if (covered === 0) {
+    const candCredit = needCredit(candidate, need)
+    if (candCredit === 0) continue
+    const coverage = tagInput.myPickTags.reduce(
+      (sum, tags) => sum + needCredit(tags, need),
+      0,
+    )
+    if (coverage < 1) {
       const scarcity = tagInput.needScarcity?.get(need.key) ?? 1
-      adj += ROLE_NEED_WEIGHT * need.priority * scarcity
+      adj += ROLE_NEED_WEIGHT * need.priority * scarcity * candCredit
       reasons.push(`covers:${need.key}`)
-    } else if (covered >= 2 && duplicateKey === null) {
+    } else if (coverage >= 2 && duplicateKey === null) {
       duplicateKey = need.key
     }
   }
   if (reasons.length === 0 && duplicateKey !== null) {
     adj -= ROLE_DUPLICATE_WEIGHT
     reasons.push(`duplicate:${duplicateKey}`)
+  }
+
+  // Mana budget (user ruling): two mana-hungry actives is a full budget on ANY
+  // model — a third gets damped.
+  if (
+    candidate.has('mana_hungry') &&
+    tagInput.myPickTags.filter((t) => t.has('mana_hungry')).length >= MANA_HUNGRY_LIMIT
+  ) {
+    adj -= MANA_BUDGET_WEIGHT
+    reasons.push('duplicate:mana_budget')
   }
   return { adj, reasons }
 }

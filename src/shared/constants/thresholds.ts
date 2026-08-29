@@ -164,6 +164,10 @@ export const MODEL_ATTR_FIT_WEIGHT = 0.08
 // (role mode active + user ult-less only). Applied outside the role cap.
 export const ULT_SECURITY_WEIGHT = 0.04
 export const ULT_SUPPLY_SLACK = 2
+// Mana budget: two mana-hungry actives fill the budget on ANY model (user
+// ruling) — further mana-hungry candidates are damped by this much.
+export const MANA_HUNGRY_LIMIT = 2
+export const MANA_BUDGET_WEIGHT = 0.05
 // "Now-or-never" marker: in the sim, our top suggestion was drafted by someone
 // before the user's next turn in 60% of disagreement cases. A pool ability
 // whose global avg pick position is due within this window of the current

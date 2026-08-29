@@ -462,7 +462,7 @@
    "tags": [
     "farm_tool",
     "mana_hungry",
-    "summon"
+    "sustain_self"
    ]
   },
   "chaos_knight_reality_rift": {
@@ -570,9 +570,10 @@
   "dark_seer_wall_of_replica": {
    "tags": [
     "aoe",
+    "farm_tool",
     "mana_hungry",
     "soft_cc",
-    "summon",
+    "sustain_self",
     "teamfight_ult"
    ]
   },
@@ -1895,7 +1896,7 @@
   "naga_siren_mirror_image": {
    "tags": [
     "farm_tool",
-    "summon"
+    "sustain_self"
    ]
   },
   "naga_siren_rip_tide": {
@@ -2185,14 +2186,15 @@
   },
   "phantom_lancer_doppelwalk": {
    "tags": [
+    "farm_tool",
     "mobility",
-    "summon"
+    "sustain_self"
    ]
   },
   "phantom_lancer_juxtapose": {
    "tags": [
     "farm_tool",
-    "summon"
+    "sustain_self"
    ]
   },
   "phantom_lancer_phantom_edge": {
@@ -2203,9 +2205,10 @@
   },
   "phantom_lancer_spirit_lance": {
    "tags": [
+    "farm_tool",
     "nuke",
     "soft_cc",
-    "summon"
+    "sustain_self"
    ]
   },
   "phoenix_fire_spirits": {
@@ -2562,10 +2565,11 @@
   },
   "shadow_demon_disruption": {
    "tags": [
+    "farm_tool",
     "hard_cc",
     "save_ally",
     "setup_cc",
-    "summon"
+    "sustain_self"
    ]
   },
   "shadow_demon_disseminate": {
@@ -2841,9 +2845,10 @@
   "spectre_shadow_step": {
    "tags": [
     "aoe",
+    "farm_tool",
     "initiation",
     "mobility",
-    "summon"
+    "sustain_self"
    ]
   },
   "spectre_spectral_dagger": {
@@ -3000,7 +3005,7 @@
   "terrorblade_conjure_image": {
    "tags": [
     "farm_tool",
-    "summon"
+    "sustain_self"
    ]
   },
   "terrorblade_metamorphosis": {

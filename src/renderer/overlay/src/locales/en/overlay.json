@@ -82,7 +82,8 @@
       "durability": "durability",
       "hard_cc": "hard disable",
       "waveclear": "waveclear",
-      "save": "ally save"
+      "save": "ally save",
+      "mana_budget": "mana budget"
     },
     "roleCovers": "Covers your missing {{need}}",
     "roleDuplicate": "Already covered: {{need}}",
