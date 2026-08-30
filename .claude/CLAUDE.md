@@ -70,6 +70,20 @@ maintenance spec — the authoritative map of what IS, not a build plan.
 - sql.js gotcha: `run()` returns the Database, so `result.changes` is undefined —
   use SELECT-before-UPDATE or `db.getRowsModified()`
 
+## Role-aware suggestions (docs/ROLE_SUGGESTIONS.md is the full map)
+- Windrun `/ability-shifts` (undocumented, provider-approved) fills shift columns on
+  Abilities AND Heroes (negative ids = hero models) — ordering-only data, consumed as
+  pool percentiles (core/domain/shift-axes.ts). Scrape step is non-fatal, never wipes
+- Scoring layers are strictly ordered: global → personal blend → role (greed taper +
+  needs engine + accents + ult nudge, capped) → top-tier. `roleMode: 'off'` or missing
+  shift data is BIT-IDENTICAL to the role-less path — golden tests enforce it
+- `resources/data/ability_tags.json` + `hero_meta.json` are GENERATED (community Tag
+  Lab on tiarinhino.com + ../ad_data_gather_script/build_ability_tags.py; the durable
+  source of truth is that repo's tag_overrides.json) — never hand-edit, and keep
+  TAG_VOCABULARY (core/domain/ability-tags.ts) in lockstep with the script's VOCAB
+- Role weights in thresholds.ts carry their empirical rationale (expert-draft corpus +
+  simulation) as comments — read them before retuning
+
 ## Business logic constants (do not change casually)
 - Scoring: `0.4 * winrate_normalized + 0.6 * inverted_pick_order_normalized`;
   pick-order normalization range 1.0–50.0
