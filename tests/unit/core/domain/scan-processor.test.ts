@@ -91,6 +91,13 @@ const mockDeps: ScanProcessorDeps = {
       }
       return map[abilityName] ?? null
     },
+    getByName(heroName: string) {
+      const map: Record<string, { heroId: number; displayName: string }> = {
+        lina: { heroId: 1, displayName: 'Lina' },
+        antimage: { heroId: 3, displayName: 'Anti-Mage' },
+      }
+      return map[heroName] ?? null
+    },
     getById(heroId: number) {
       const map: Record<number, {
         heroId: number; name: string; displayName: string;
@@ -827,6 +834,7 @@ describe('processScanResults', () => {
       const deps: ScanProcessorDeps = {
         heroes: {
           getByAbilityName: () => null,
+          getByName: () => null,
           getById: () => null,
         },
         abilities: {
@@ -1085,6 +1093,9 @@ describe('role-aware suggestions', () => {
     getRoleMust() {
       return undefined
     },
+    getRequires() {
+      return undefined
+    },
     getHeroAttackType(heroName: string) {
       return heroName === 'lina' ? 'Ranged' : 'Melee'
     },
@@ -1165,6 +1176,68 @@ describe('role-aware suggestions', () => {
 
     const fireball = overlayPayload.scanData!.standard.find((s) => s.name === 'fireball')!
     expect(fireball.inertOnModel).toBeUndefined()
+  })
+
+  it('an unmet requires gate excludes the ability from suggestions and marks it', () => {
+    const initial = processScanResults(makeInitialScanInput())
+    const state = initial.updatedState
+    const base = depsWithRole('off')
+    const deps: ScanProcessorDeps = {
+      ...base,
+      tags: {
+        ...mockTags,
+        // ice_blast only works with blink; the user has drafted nothing
+        getRequires: (name: string) => (name === 'ice_blast' ? ['blink'] : undefined),
+      },
+    }
+    const input: ScanProcessorInput = {
+      rawResults: [] as ScanResult[],
+      isInitialScan: false,
+      state,
+      deps,
+      modelCoords: [makeCoord(0), makeCoord(1)],
+      heroesCoords: [makeCoord(0), makeCoord(1)],
+      heroesParams: { width: 358, height: 170 },
+      targetResolution: '1920x1080',
+      scaleFactor: 1.0,
+    }
+    const { overlayPayload } = processScanResults(input)
+
+    const iceBlast = overlayPayload.scanData!.standard.find((s) => s.name === 'ice_blast')!
+    expect(iceBlast.unmetRequirement?.kind).toBe('ability')
+    expect(iceBlast.unmetRequirement?.displayName).toBeTruthy()
+    expect(iceBlast.isGeneralTopTier).toBe(false)
+    expect(iceBlast.isSynergySuggestionForMySpot).toBe(false)
+  })
+
+  it('a model: requirement is satisfied by the picked model (Requiem-on-SF ruling)', () => {
+    const initial = processScanResults(makeInitialScanInput())
+    const state = initial.updatedState
+    state.mySelectedModelDbHeroId = 1 // Lina model
+    state.mySelectedModelHeroOrder = 0
+    const base = depsWithRole('off')
+    const deps: ScanProcessorDeps = {
+      ...base,
+      tags: {
+        ...mockTags,
+        getRequires: (name: string) => (name === 'ice_blast' ? ['model:lina'] : undefined),
+      },
+    }
+    const input: ScanProcessorInput = {
+      rawResults: [] as ScanResult[],
+      isInitialScan: false,
+      state,
+      deps,
+      modelCoords: [makeCoord(0), makeCoord(1)],
+      heroesCoords: [makeCoord(0), makeCoord(1)],
+      heroesParams: { width: 358, height: 170 },
+      targetResolution: '1920x1080',
+      scaleFactor: 1.0,
+    }
+    const { overlayPayload } = processScanResults(input)
+
+    const iceBlast = overlayPayload.scanData!.standard.find((s) => s.name === 'ice_blast')!
+    expect(iceBlast.unmetRequirement).toBeUndefined()
   })
 
   it('needs-engine chips reach the enriched slots in a role mode', () => {

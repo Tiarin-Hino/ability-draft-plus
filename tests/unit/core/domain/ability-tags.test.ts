@@ -39,6 +39,24 @@ describe('parseAbilityTagsDataset', () => {
     expect(parseAbilityTagsDataset({})).toBeNull()
   })
 
+  it('parses requires dependency gates; junk dropped, empty omitted', () => {
+    const parsed = parseAbilityTagsDataset({
+      abilities: {
+        luna_eclipse: { tags: [], requires: ['luna_lucent_beam'] },
+        nevermore_requiem: { tags: [], requires: ['model:nevermore'] },
+        junk: { tags: [], requires: [42, '', 'ok_one', 'ok_one'] },
+        none: { tags: [] },
+        empty: { tags: [], requires: [] },
+      },
+    })!
+
+    expect(parsed.requiresByAbility.get('luna_eclipse')).toEqual(['luna_lucent_beam'])
+    expect(parsed.requiresByAbility.get('nevermore_requiem')).toEqual(['model:nevermore'])
+    expect(parsed.requiresByAbility.get('junk')).toEqual(['ok_one'])
+    expect(parsed.requiresByAbility.has('none')).toBe(false)
+    expect(parsed.requiresByAbility.has('empty')).toBe(false)
+  })
+
   it('parses curated roleMust positions; invalid values dropped, empty omitted', () => {
     const parsed = parseAbilityTagsDataset({
       abilities: {
@@ -68,6 +86,8 @@ describe('parseHeroMeta', () => {
         attackType: 'Ranged', primaryAttr: 'int',
         baseStr: 18, baseAgi: 23, baseInt: 25,
         strGain: 2.2, agiGain: 2.3, intGain: 3.7,
+        attackRange: 670, attackRate: 1.6, moveSpeed: 300,
+        baseArmor: 1, baseHealth: 120, baseMana: 75,
       },
       sven: { attackType: 'Melee' },
       broken: { attackType: 42, strGain: 'lots' },
@@ -75,6 +95,10 @@ describe('parseHeroMeta', () => {
 
     expect(meta.get('lina')!.attackType).toBe('Ranged')
     expect(meta.get('lina')!.intGain).toBe(3.7)
+    expect(meta.get('lina')!.attackRange).toBe(670)
+    expect(meta.get('lina')!.attackRate).toBe(1.6)
+    expect(meta.get('lina')!.moveSpeed).toBe(300)
+    expect(meta.get('sven')!.attackRange).toBeUndefined()
     expect(meta.get('sven')!.attackType).toBe('Melee')
     expect(meta.get('sven')!.strGain).toBeUndefined()
     expect(meta.get('broken')!.attackType).toBeUndefined()

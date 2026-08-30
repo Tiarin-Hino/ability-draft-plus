@@ -90,6 +90,8 @@
     "roleCurated": "Curated pick for this role",
     "curatedPick": "Role Pick — curated as a must-have for your role",
     "inertOnModel": "Does not work on your model (melee/ranged mismatch)",
+    "requiresAbility": "Only works with {{name}} — not suggested until you draft it",
+    "requiresModel": "Only works on the {{name}} model — not suggested",
     "contestedSoon": "Usually drafted by now — may not survive another round"
   },
   "role": {

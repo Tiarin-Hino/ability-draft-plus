@@ -45,7 +45,9 @@ const VOCAB_SET: ReadonlySet<string> = new Set(TAG_VOCABULARY)
 export type HeroAttackType = 'Melee' | 'Ranged'
 export type HeroPrimaryAttr = 'str' | 'agi' | 'int' | 'all'
 
-/** Hero-model metadata (hero_meta.json): attributes for role-fit scoring. */
+/** Hero-model metadata (hero_meta.json): attributes for role-fit scoring plus
+ * chassis fields (model-pairing Layer A) — the body properties stat gains
+ * cannot see. All optional: missing data scores as a neutral percentile. */
 export interface HeroMeta {
   attackType?: HeroAttackType
   primaryAttr?: HeroPrimaryAttr
@@ -55,6 +57,16 @@ export interface HeroMeta {
   strGain?: number
   agiGain?: number
   intGain?: number
+  attackRange?: number
+  /** BAT (base attack time) — LOWER is better. */
+  attackRate?: number
+  projectileSpeed?: number
+  moveSpeed?: number
+  baseArmor?: number
+  baseHealth?: number
+  baseMana?: number
+  baseAttackMin?: number
+  baseAttackMax?: number
 }
 
 /** Draft position (1-5). Structurally identical to role-scoring's
@@ -68,6 +80,10 @@ export interface AbilityTagsLookup {
   getTags(abilityName: string): ReadonlySet<AbilityTag> | undefined
   /** Curated must-pick positions for an ability; undefined when not curated. */
   getRoleMust(abilityName: string): ReadonlySet<RoleMustPosition> | undefined
+  /** Dependency gate: entries are ability internal names or 'model:<hero>'.
+   * The ability is only ever SUGGESTED when at least one entry is satisfied
+   * (Eclipse -> Lucent Beam; Requiem -> the SF model whose innate feeds it). */
+  getRequires(abilityName: string): readonly string[] | undefined
   /** Attack type of a hero internal name (hero_meta.json); undefined when unknown. */
   getHeroAttackType(heroName: string): HeroAttackType | undefined
   /** Full hero metadata (attributes/gains) for model role-fit; undefined when unknown. */
@@ -82,6 +98,7 @@ export interface AbilityTagsLookup {
 export function parseAbilityTagsDataset(json: unknown): {
   tagsByAbility: Map<string, ReadonlySet<AbilityTag>>
   roleMustByAbility: Map<string, ReadonlySet<RoleMustPosition>>
+  requiresByAbility: Map<string, readonly string[]>
   droppedTags: string[]
 } | null {
   if (typeof json !== 'object' || json === null) return null
@@ -90,6 +107,7 @@ export function parseAbilityTagsDataset(json: unknown): {
 
   const tagsByAbility = new Map<string, ReadonlySet<AbilityTag>>()
   const roleMustByAbility = new Map<string, ReadonlySet<RoleMustPosition>>()
+  const requiresByAbility = new Map<string, readonly string[]>()
   const dropped = new Set<string>()
   for (const [name, entry] of Object.entries(abilities)) {
     const rawTags = (entry as { tags?: unknown })?.tags
@@ -116,8 +134,19 @@ export function parseAbilityTagsDataset(json: unknown): {
       }
       if (positions.size > 0) roleMustByAbility.set(name, positions)
     }
+
+    // Dependency gates: non-empty strings only, deduped; empty lists omitted.
+    const rawRequires = (entry as { requires?: unknown })?.requires
+    if (Array.isArray(rawRequires)) {
+      const reqs = [
+        ...new Set(
+          rawRequires.filter((r): r is string => typeof r === 'string' && r.length > 0),
+        ),
+      ]
+      if (reqs.length > 0) requiresByAbility.set(name, reqs)
+    }
   }
-  return { tagsByAbility, roleMustByAbility, droppedTags: [...dropped] }
+  return { tagsByAbility, roleMustByAbility, requiresByAbility, droppedTags: [...dropped] }
 }
 
 /** Parse + validate hero_meta.json. Missing/invalid stat fields become
@@ -148,6 +177,15 @@ export function parseHeroMeta(json: unknown): Map<string, HeroMeta> | null {
       strGain: num(e.strGain),
       agiGain: num(e.agiGain),
       intGain: num(e.intGain),
+      attackRange: num(e.attackRange),
+      attackRate: num(e.attackRate),
+      projectileSpeed: num(e.projectileSpeed),
+      moveSpeed: num(e.moveSpeed),
+      baseArmor: num(e.baseArmor),
+      baseHealth: num(e.baseHealth),
+      baseMana: num(e.baseMana),
+      baseAttackMin: num(e.baseAttackMin),
+      baseAttackMax: num(e.baseAttackMax),
     }
     result.set(name, meta)
   }

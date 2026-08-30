@@ -65,6 +65,20 @@ Key mechanics in `core/domain/role-scoring.ts`:
   together), and a drafted `grants_ranged` ability (Psi Blades, Take Aim)
   waives `ranged_only` on melee models for the rest of the draft. No symmetric
   melee waiver — nothing grants melee.
+- **Dependency gates** (`requires: [entries]` on a dataset entry, curated in
+  tag_overrides.json): entries are ability internal names or `model:<hero>`.
+  The ability is HARD-excluded from suggestions until one entry is satisfied —
+  a listed ability among the USER'S drafted picks, or the picked model matching
+  a `model:` entry (its innate provides the mechanic; innates stay with the
+  model in AD since 7.36). Stats stay fully visible; the tooltip names the
+  missing piece. Unknown spot/model counts as unsatisfied (conservative).
+  Seeds: Eclipse -> Lucent Beam, Requiem -> the SF model (souls). The Tag Lab
+  does not carry `requires` yet — `import_site_export.py` preserves it.
+- **Model chassis (Layer A)**: hero_meta.json also ships body properties from
+  dotaconstants (attack range/BAT/projectile, move speed, base armor/HP/mana/
+  damage). Three derived percentiles feed `modelAttrFit`: attackQuality
+  (negated BAT) for pos 1, bulk (baseHealth·(1+0.06·armor)) for pos 3, move
+  speed for pos 4-5. Missing fields score as neutral 0.5 (old datasets safe).
 - **Curated must-picks** (`roleMust: [positions]` on a dataset entry): a
   hand-curated VERDICT — "recommend for these positions even if stats
   disagree" — deliberately OUTSIDE the tag vocabulary (tags are mechanical
@@ -102,6 +116,39 @@ rationale as comments (greed taper, team balance, ult security, etc. come from
   `DRAFT_SIM=1` (+ `DRAFT_SIM_IDS=<json id list>`); replays real drafts through
   the live pipeline. Solo-queue verification of matches via OpenDota
   `party_size` (cached verdicts in `draft_corpus/party_check.json`).
+
+## Model-pairing roadmap: Layers B and C (designed 2026-08-31, not built)
+
+Layer A (chassis data above) is live. What the next two layers need:
+
+**Layer B — curated model tags (talents + innates).** Data first: dotaconstants
+`hero_abilities.json` carries every hero's talent strings and marks the innate
+ability — neither is fetched today. Pipeline: extend `build_ability_tags.py`
+prepare to fetch it, then reuse the existing tagging machinery (mechanical
+parse → LLM judgment → overrides) to produce a SMALL hero-tag vocabulary in a
+new `hero_tags.json` (or a `tags` field inside hero_meta.json):
+`rc_talents`, `caster_talents`, `tank_talents`, `utility_talents` (talent-tree
+profile; semi-generatable) and `innate_offense` / `innate_tank` / `innate_team`
+(innate value; judgment). Consumption: small additive terms in `modelAttrFit`
+per position (rc→1-2, tank→3, caster/utility/team→2/4/5). Tag Lab later gets a
+Models tab on the same proposal loop — until then overrides are the curation
+surface and `import_site_export.py` must learn to preserve hero tags.
+
+**Layer C — ability×model pairing terms.** A new scoring term (own weight
+constants + its own cap, no-op when either input is missing) in two directions:
+- Forward (model picked → ability candidates): steroid/farm_tool boosted by the
+  model's attackQuality percentile; initiation/short-range actives boosted by
+  bulk and damped on low-bulk models; channeled boosted by bulk; mana_hungry
+  damped when the model's intPool percentile is low (extends the pick-side
+  mana budget); `innate_team` models (CM global mana aura) forgive mana_hungry.
+- Reverse (drafted abilities → model candidates): 2+ drafted steroids bump
+  rc-chassis models; drafted teamfight ults bump bulky models. Today model
+  suggestions know role fit but NOT what the user drafted — this closes that.
+Needs before building: pick weights from the expert corpus (re-run
+`analyze_draft_corpus.py` correlating drafted-tag profiles with chosen models),
+golden tests for the off-invariant, and a decision whether Layer C shares
+ROLE_ADJUSTMENT_CAP or gets its own (recommend own, ~0.1, to keep layers
+auditable).
 
 ## Known caveats
 

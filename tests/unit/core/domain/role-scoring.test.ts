@@ -538,6 +538,29 @@ describe('computeModelRoleScore', () => {
     const score = computeModelRoleScore(ctx([1, 4]), undefined, undefined, undefined, 0)!
     expect(Number.isFinite(score.delta)).toBe(true)
   })
+
+  it('chassis percentiles matter: BAT for pos 1, bulk for pos 3, speed for pos 5', () => {
+    const fastAttacker = computeModelRoleScore(
+      ctx([1]), undefined, pct({ attackQuality: 0.95 }), 'agi', 0)!
+    const slowAttacker = computeModelRoleScore(
+      ctx([1]), undefined, pct({ attackQuality: 0.05 }), 'agi', 0)!
+    expect(fastAttacker.delta).toBeGreaterThan(slowAttacker.delta)
+
+    const bulky = computeModelRoleScore(ctx([3]), undefined, pct({ bulk: 0.95 }), 'str', 0)!
+    const squishy = computeModelRoleScore(ctx([3]), undefined, pct({ bulk: 0.05 }), 'str', 0)!
+    expect(bulky.delta).toBeGreaterThan(squishy.delta)
+
+    const runner = computeModelRoleScore(ctx([5]), undefined, pct({ speed: 0.95 }), 'int', 0)!
+    const slowpoke = computeModelRoleScore(ctx([5]), undefined, pct({ speed: 0.05 }), 'int', 0)!
+    expect(runner.delta).toBeGreaterThan(slowpoke.delta)
+  })
+
+  it('absent chassis percentiles score as neutral (old hero_meta compatibility)', () => {
+    const withNeutral = computeModelRoleScore(
+      ctx([1]), undefined, pct({ attackQuality: 0.5, bulk: 0.5, speed: 0.5 }), 'agi', 0)!
+    const withoutChassis = computeModelRoleScore(ctx([1]), undefined, pct({}), 'agi', 0)!
+    expect(withoutChassis.delta).toBe(withNeutral.delta)
+  })
 })
 
 describe('greed taper by pick index', () => {

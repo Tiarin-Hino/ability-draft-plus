@@ -57,6 +57,9 @@ export interface ScoredEntity {
   roleCurated?: boolean
   /** Mechanically inert on the selected model's attack type — excluded from top-tier. */
   inertOnModel?: boolean
+  /** Dependency gate (requires): the unmet requirement, resolved for display —
+   * excluded from top-tier until the user drafts/picks it. */
+  unmetRequirement?: { kind: 'ability' | 'model'; displayName: string }
   /** Global pick timing says this ability is due before the draft wraps around. */
   contestedSoon?: boolean
 }
@@ -124,6 +127,8 @@ export interface HeroLookup {
   getByAbilityName(
     abilityName: string,
   ): { heroId: number; heroName: string; heroDisplayName: string | null } | null
+  /** Display name of a hero by internal name (requires 'model:<hero>' notes). */
+  getByName(heroName: string): { heroId: number; displayName: string } | null
   getById(heroId: number): {
     heroId: number
     name: string

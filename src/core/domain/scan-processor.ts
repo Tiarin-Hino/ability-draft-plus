@@ -312,6 +312,15 @@ export function processScanResults(
   }
 
   const allRelevantNames = new Set([...uniquePoolNames, ...pickedAbilityNames])
+  // Dependency-gated candidates (requires): pull the required abilities'
+  // details too, so the "needs X" tooltip can name them even off-pool.
+  if (deps.tags !== undefined) {
+    for (const name of uniquePoolNames) {
+      for (const req of deps.tags.getRequires(name) ?? []) {
+        if (!req.startsWith('model:')) allRelevantNames.add(req)
+      }
+    }
+  }
   const poolNamesArray = Array.from(uniquePoolNames)
 
   // --- Phase 3: Database lookups ---
@@ -370,13 +379,53 @@ export function processScanResults(
           .map((s) => deps.tags!.getTags(s.name!))
           .filter((t): t is ReadonlySet<AbilityTag> => t !== undefined)
       : []
-  const myModelAttackType = (() => {
-    if (deps.tags === undefined || state.mySelectedModelDbHeroId === null) return undefined
-    const model = state.identifiedHeroModelsCache.find(
-      (m) => m.dbHeroId === state.mySelectedModelDbHeroId,
+  const myPickNames = new Set(
+    state.mySelectedSpotHeroOrder !== null
+      ? selectedAbilities
+          .filter((s) => s.hero_order === state.mySelectedSpotHeroOrder && s.name)
+          .map((s) => s.name!)
+      : [],
+  )
+  const myModel =
+    state.mySelectedModelDbHeroId !== null
+      ? state.identifiedHeroModelsCache.find(
+          (m) => m.dbHeroId === state.mySelectedModelDbHeroId,
+        )
+      : undefined
+  const myModelAttackType =
+    deps.tags !== undefined && myModel !== undefined
+      ? deps.tags.getHeroAttackType(myModel.heroName)
+      : undefined
+
+  // Dependency gate (requires): an ability with requirements is only ever
+  // SUGGESTED once one is satisfied — a listed ability among MY drafted picks,
+  // or my picked model matching a 'model:<hero>' entry (its innate provides
+  // the mechanic, e.g. Requiem needs SF's souls). Stats stay fully visible;
+  // the tooltip explains. Unknown spot/model counts as unsatisfied.
+  const unmetRequirementOf = (
+    name: string,
+  ): { kind: 'ability' | 'model'; displayName: string } | undefined => {
+    const reqs = deps.tags?.getRequires(name)
+    if (reqs === undefined || reqs.length === 0) return undefined
+    const satisfied = reqs.some((req) =>
+      req.startsWith('model:')
+        ? myModel?.heroName === req.slice('model:'.length)
+        : myPickNames.has(req),
     )
-    return model !== undefined ? deps.tags.getHeroAttackType(model.heroName) : undefined
-  })()
+    if (satisfied) return undefined
+    const first = reqs[0]
+    if (first.startsWith('model:')) {
+      const heroName = first.slice('model:'.length)
+      return {
+        kind: 'model',
+        displayName: deps.heroes.getByName(heroName)?.displayName ?? heroName,
+      }
+    }
+    return {
+      kind: 'ability',
+      displayName: abilityDetailsMap.get(first)?.displayName ?? first,
+    }
+  }
 
   // Pool scarcity per need: supply among UNPICKED pool abilities scales need
   // boosts — two stuns left nearly doubles hard_cc's, twelve steroids dilute it.
@@ -583,6 +632,7 @@ export function processScanResults(
       myModelAttackType,
       myModelDbHeroId: state.mySelectedModelDbHeroId,
       ownerHeroIdOf: (name) => deps.heroes.getByAbilityName(name)?.heroId ?? null,
+      unmetRequirementOf,
       needScarcity,
       myPickCount,
       myModelPicked: state.mySelectedModelDbHeroId !== null,
@@ -600,8 +650,11 @@ export function processScanResults(
 
   // --- Phase 12: Determine top-tier entities ---
   // Abilities mechanically inert on the selected model (cleave on a ranged
-  // model) are a HARD exclusion from suggestions, not a score tweak.
-  const topTierCandidates = allScoredEntities.filter((e) => !e.inertOnModel)
+  // model) or with an unmet dependency (Eclipse without Lucent Beam) are a
+  // HARD exclusion from suggestions, not a score tweak.
+  const topTierCandidates = allScoredEntities.filter(
+    (e) => !e.inertOnModel && e.unmetRequirement === undefined,
+  )
   const topTierEntities = determineTopTierEntities(
     topTierCandidates,
     state.mySelectedModelDbHeroId,
@@ -795,6 +848,10 @@ interface RoleScoringInputs {
   myModelDbHeroId: number | null
   /** DB hero id owning an ability name (null when unknown). */
   ownerHeroIdOf: (abilityName: string) => number | null
+  /** Dependency gate: resolved unmet requirement (undefined = suggestible). */
+  unmetRequirementOf: (
+    abilityName: string,
+  ) => { kind: 'ability' | 'model'; displayName: string } | undefined
   needScarcity: ReadonlyMap<string, number>
   myPickCount: number
   myModelPicked: boolean
@@ -841,6 +898,7 @@ function buildScoredEntities(
     myModelAttackType,
     myModelDbHeroId,
     ownerHeroIdOf,
+    unmetRequirementOf,
     needScarcity,
     myPickCount,
     myModelPicked,
@@ -915,6 +973,7 @@ function buildScoredEntities(
             myModelDbHeroId !== null && ownerHeroIdOf(slot.name) === myModelDbHeroId,
           picksGrantRanged,
         }) || undefined,
+      unmetRequirement: unmetRequirementOf(slot.name),
       isUltimateFromCoordSource: slot.is_ultimate,
       isUltimateFromDb: details?.isUltimate,
       heroOrder: slot.hero_order,
@@ -950,6 +1009,17 @@ function buildScoredEntities(
       ? m.baseInt + 6 * m.intGain
       : undefined,
   )
+  // Chassis percentiles (Layer A): BAT negated so faster attacking ranks high;
+  // bulk approximates physical EHP of the base body (armor multiplies HP).
+  const attackQualityPct = metric((m) =>
+    m.attackRate !== undefined ? -m.attackRate : undefined,
+  )
+  const bulkPct = metric((m) =>
+    m.baseHealth !== undefined && m.baseArmor !== undefined
+      ? m.baseHealth * (1 + 0.06 * m.baseArmor)
+      : undefined,
+  )
+  const speedPct = metric((m) => m.moveSpeed)
   const pctOf = (heroName: string): ModelStatPercentiles | undefined =>
     metaByName.get(heroName) !== undefined
       ? {
@@ -958,6 +1028,9 @@ function buildScoredEntities(
           intGain: intPct.get(heroName) ?? 0.5,
           totalGain: totalPct.get(heroName) ?? 0.5,
           intPool: intPoolPct.get(heroName) ?? 0.5,
+          attackQuality: attackQualityPct.get(heroName) ?? 0.5,
+          bulk: bulkPct.get(heroName) ?? 0.5,
+          speed: speedPct.get(heroName) ?? 0.5,
         }
       : undefined
 
@@ -1103,6 +1176,7 @@ function enrichSlots(
       roleBestPosition: scored?.roleBestPosition,
       roleReasons: scored?.roleReasons,
       inertOnModel: scored?.inertOnModel,
+      unmetRequirement: scored?.unmetRequirement,
       contestedSoon: scored?.contestedSoon,
       isGeneralTopTier: topTier?.isGeneralTopTier ?? false,
       isSynergySuggestionForMySpot:

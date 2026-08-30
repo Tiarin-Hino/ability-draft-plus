@@ -55,6 +55,7 @@ export function loadAbilityTags(): AbilityTagsLookup | undefined {
   return {
     getTags: (name) => parsed.tagsByAbility.get(name),
     getRoleMust: (name) => parsed.roleMustByAbility.get(name),
+    getRequires: (name) => parsed.requiresByAbility.get(name),
     getHeroAttackType: (heroName) => heroMeta.get(heroName)?.attackType,
     getHeroMeta: (heroName) => heroMeta.get(heroName),
   }

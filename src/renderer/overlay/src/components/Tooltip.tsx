@@ -264,6 +264,16 @@ function AbilityTooltipContent({
       {slot.inertOnModel && (
         <div className="tooltip-stat tooltip-inert">{t('tooltip.inertOnModel')}</div>
       )}
+      {slot.unmetRequirement && (
+        <div className="tooltip-stat tooltip-inert">
+          {t(
+            slot.unmetRequirement.kind === 'model'
+              ? 'tooltip.requiresModel'
+              : 'tooltip.requiresAbility',
+            { name: slot.unmetRequirement.displayName },
+          )}
+        </div>
+      )}
       {slot.contestedSoon &&
         (slot.isGeneralTopTier || slot.isSynergySuggestionForMySpot) && (
           <div className="tooltip-stat tooltip-contested">

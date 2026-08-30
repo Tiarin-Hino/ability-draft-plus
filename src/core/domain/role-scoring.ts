@@ -577,6 +577,14 @@ export interface ModelStatPercentiles {
   totalGain: number
   /** Mana-pool proxy: base int + int gain, percentiled. */
   intPool: number
+  // Chassis percentiles (model-pairing Layer A, hero_meta chassis fields).
+  // Optional: absent data (older hero_meta) scores as neutral 0.5.
+  /** Attack cadence: percentile of NEGATED BAT (lower BAT = higher pct). */
+  attackQuality?: number
+  /** Physical-EHP proxy: baseHealth · (1 + 0.06·baseArmor), percentiled. */
+  bulk?: number
+  /** Move speed percentile (rotation/positioning value for supports). */
+  speed?: number
 }
 
 /** Primary-attribute credit: exact match 1, universal half, else 0. */
@@ -590,9 +598,13 @@ function attrCredit(
 }
 
 /**
- * Per-position attribute fit in [0,1] (user-defined profiles, 2026-08-29):
- * pos 1 right-click scaling, pos 2 overall stats leaning caster+durability,
- * pos 3 durable STR, pos 4/5 INT/mana + best remaining stat gain.
+ * Per-position attribute fit in [0,1] (user-defined profiles, 2026-08-29;
+ * chassis extension 2026-08-31): pos 1 right-click scaling + attack cadence
+ * (BAT — Anti-Mage/Jugg at 1.4 vs the 1.7 tail is real right-click value the
+ * gains can't see), pos 2 overall stats leaning caster+durability, pos 3
+ * durable STR + base-body bulk (armor/HP outliers like Terrorblade), pos 4/5
+ * INT/mana + move speed (rotation value). Chassis percentiles default to a
+ * neutral 0.5 when hero_meta lacks the fields.
  */
 export function modelAttrFit(
   position: DraftPosition,
@@ -601,17 +613,22 @@ export function modelAttrFit(
 ): number {
   switch (position) {
     case 1:
-      return 0.6 * pct.agiGain + 0.4 * pct.totalGain
+      return 0.45 * pct.agiGain + 0.3 * pct.totalGain + 0.25 * (pct.attackQuality ?? 0.5)
     case 2:
       return 0.5 * pct.totalGain + 0.3 * pct.intGain + 0.2 * pct.strGain
     case 3:
-      return 0.6 * pct.strGain + 0.4 * attrCredit(primaryAttr, 'str')
+      return (
+        0.5 * pct.strGain +
+        0.3 * attrCredit(primaryAttr, 'str') +
+        0.2 * (pct.bulk ?? 0.5)
+      )
     case 4:
     case 5:
       return (
-        0.4 * pct.intPool +
-        0.3 * pct.totalGain +
-        0.3 * attrCredit(primaryAttr, 'int')
+        0.35 * pct.intPool +
+        0.25 * pct.totalGain +
+        0.25 * attrCredit(primaryAttr, 'int') +
+        0.15 * (pct.speed ?? 0.5)
       )
   }
 }
