@@ -7,6 +7,12 @@
 // main-process loader. Tags power the build-needs engine and the reason chips —
 // role RANKING is primarily the shifts-derived greed axis (role-scoring.ts);
 // tags deliberately carry only small static weights to avoid double-counting.
+// Distinct from tags, an entry may carry `roleMust: [positions]` — a hand-
+// curated VERDICT (not a mechanical fact, so deliberately outside the tag
+// vocabulary): "recommend this for these positions even if stats disagree".
+// Reserved for abilities whose value the stats systematically miss (e.g.
+// Glimpse for supports); it guarantees a top-tier slot when the user's active
+// role matches (top-tier.ts) on top of a role-layer boost (role-scoring.ts).
 
 export const TAG_VOCABULARY = [
   'hard_cc',
@@ -50,10 +56,17 @@ export interface HeroMeta {
   intGain?: number
 }
 
+/** Draft position (1-5). Structurally identical to role-scoring's
+ * DraftPosition — declared here too so this module stays import-free of the
+ * scoring layer. */
+export type RoleMustPosition = 1 | 2 | 3 | 4 | 5
+
 /** Injected into the scan processor; absent dep = tags feature off (no-op). */
 export interface AbilityTagsLookup {
   /** Tags for an ability internal name; undefined when untagged/unknown. */
   getTags(abilityName: string): ReadonlySet<AbilityTag> | undefined
+  /** Curated must-pick positions for an ability; undefined when not curated. */
+  getRoleMust(abilityName: string): ReadonlySet<RoleMustPosition> | undefined
   /** Attack type of a hero internal name (hero_meta.json); undefined when unknown. */
   getHeroAttackType(heroName: string): HeroAttackType | undefined
   /** Full hero metadata (attributes/gains) for model role-fit; undefined when unknown. */
@@ -67,6 +80,7 @@ export interface AbilityTagsLookup {
  */
 export function parseAbilityTagsDataset(json: unknown): {
   tagsByAbility: Map<string, ReadonlySet<AbilityTag>>
+  roleMustByAbility: Map<string, ReadonlySet<RoleMustPosition>>
   droppedTags: string[]
 } | null {
   if (typeof json !== 'object' || json === null) return null
@@ -74,6 +88,7 @@ export function parseAbilityTagsDataset(json: unknown): {
   if (typeof abilities !== 'object' || abilities === null) return null
 
   const tagsByAbility = new Map<string, ReadonlySet<AbilityTag>>()
+  const roleMustByAbility = new Map<string, ReadonlySet<RoleMustPosition>>()
   const dropped = new Set<string>()
   for (const [name, entry] of Object.entries(abilities)) {
     const rawTags = (entry as { tags?: unknown })?.tags
@@ -87,8 +102,21 @@ export function parseAbilityTagsDataset(json: unknown): {
       }
     }
     tagsByAbility.set(name, tags)
+
+    // Curated must-pick positions: invalid values are dropped silently (a
+    // newer dataset must never brick an older app), empty sets are omitted.
+    const rawMust = (entry as { roleMust?: unknown })?.roleMust
+    if (Array.isArray(rawMust)) {
+      const positions = new Set<RoleMustPosition>()
+      for (const pos of rawMust) {
+        if (typeof pos === 'number' && Number.isInteger(pos) && pos >= 1 && pos <= 5) {
+          positions.add(pos as RoleMustPosition)
+        }
+      }
+      if (positions.size > 0) roleMustByAbility.set(name, positions)
+    }
   }
-  return { tagsByAbility, droppedTags: [...dropped] }
+  return { tagsByAbility, roleMustByAbility, droppedTags: [...dropped] }
 }
 
 /** Parse + validate hero_meta.json. Missing/invalid stat fields become

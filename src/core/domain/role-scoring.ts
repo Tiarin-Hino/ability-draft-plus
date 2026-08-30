@@ -4,6 +4,7 @@ import {
   ROLE_SHIFT_ACCENT_WEIGHT,
   ROLE_TEAM_BALANCE_WEIGHT,
   ROLE_ADJUSTMENT_CAP,
+  ROLE_CURATED_WEIGHT,
   ROLE_ENABLING_ACCENT_FLOOR,
   ROLE_NEED_WEIGHT,
   ROLE_DUPLICATE_WEIGHT,
@@ -35,8 +36,10 @@ import type { AbilityTag } from './ability-tags'
 // position's needs checklist against the USER'S OWN drafted abilities — a
 // candidate covering an unmet capability is boosted (reason chip 'covers:X'),
 // one that only duplicates a twice-covered capability is damped ('duplicate:X').
-// Small static per-position tag accents ride along. All of it is a no-op when
-// no tag input is supplied (dataset absent).
+// Small static per-position tag accents ride along. Curated must-picks
+// (roleMust in the dataset) get a strong boost + the RoleScore.curated flag,
+// which top-tier.ts turns into a guaranteed suggestion slot. All of it is a
+// no-op when no tag input is supplied (dataset absent).
 // With roleMode 'off' (or My Spot unknown) resolveRoleContext returns null and
 // every scoring output is bit-identical to the role-less path.
 
@@ -170,14 +173,20 @@ export interface RoleScore {
   delta: number
   /** The effective position that produced the best fit. */
   bestPosition: DraftPosition
-  /** Reason chips for the best position: 'covers:<needKey>' | 'duplicate:<needKey>'. */
+  /** Reason chips for the best position: 'covers:<needKey>' | 'duplicate:<needKey>'
+   * | 'curated' (hand-picked must for the position). */
   reasons: string[]
+  /** True when ANY effective position is on the candidate's curated roleMust
+   * list — top-tier.ts then guarantees this candidate a suggestion slot. */
+  curated?: boolean
 }
 
 /** Tag context for the needs engine (absent = tags feature off, no-op). */
 export interface RoleTagInput {
   /** Tags of the candidate ability (undefined = untagged: needs/accents skip it). */
   candidateTags: ReadonlySet<AbilityTag> | undefined
+  /** Curated must-pick positions of the candidate (roleMust in the dataset). */
+  candidateRoleMust?: ReadonlySet<DraftPosition>
   /** Tag sets of the user's own drafted abilities (picks without tags excluded). */
   myPickTags: ReadonlyArray<ReadonlySet<AbilityTag>>
   /** Pool-scarcity multiplier per need key (clamped; absent key = 1). */
@@ -524,17 +533,24 @@ export function computeRoleScore(
     const accentAdj = tagInput
       ? tagAccentAdjustment(pos, tagInput.candidateTags)
       : 0
+    // Curated must-pick for this position: strong boost + its own reason chip
+    // (the surfacing GUARANTEE lives in top-tier.ts; this only ranks it well)
+    const curatedHere = tagInput?.candidateRoleMust?.has(pos) === true
     const score =
       ROLE_GREED_WEIGHT * taper * fit +
       ROLE_SHIFT_ACCENT_WEIGHT * accentValue +
       needs.adj +
-      accentAdj
+      accentAdj +
+      (curatedHere ? ROLE_CURATED_WEIGHT : 0)
     if (score > best) {
       best = score
       bestPosition = pos
-      bestReasons = needs.reasons
+      bestReasons = curatedHere ? ['curated', ...needs.reasons] : needs.reasons
     }
   }
+  const curated =
+    tagInput?.candidateRoleMust !== undefined &&
+    context.effectivePositions.some((p) => tagInput.candidateRoleMust!.has(p))
 
   // Team balance: a farm-heavy team devalues greedy candidates and vice versa
   const teamAdjustment =
@@ -546,7 +562,7 @@ export function computeRoleScore(
     -ROLE_ADJUSTMENT_CAP,
     Math.min(ROLE_ADJUSTMENT_CAP, best + teamAdjustment),
   )
-  return { delta, bestPosition, reasons: bestReasons }
+  return { delta, bestPosition, reasons: bestReasons, curated: curated || undefined }
 }
 
 // ---------------------------------------------------------------------------

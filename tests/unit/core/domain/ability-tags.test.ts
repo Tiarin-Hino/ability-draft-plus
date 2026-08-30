@@ -39,6 +39,22 @@ describe('parseAbilityTagsDataset', () => {
     expect(parseAbilityTagsDataset({})).toBeNull()
   })
 
+  it('parses curated roleMust positions; invalid values dropped, empty omitted', () => {
+    const parsed = parseAbilityTagsDataset({
+      abilities: {
+        disruptor_glimpse: { tags: ['initiation', 'setup_cc'], roleMust: [4, 5] },
+        junk_positions: { tags: [], roleMust: [0, 6, 2.5, 'five', 3] },
+        all_junk: { tags: [], roleMust: [99] },
+        no_role_must: { tags: ['nuke'] },
+      },
+    })!
+
+    expect([...parsed.roleMustByAbility.get('disruptor_glimpse')!]).toEqual([4, 5])
+    expect([...parsed.roleMustByAbility.get('junk_positions')!]).toEqual([3])
+    expect(parsed.roleMustByAbility.has('all_junk')).toBe(false)
+    expect(parsed.roleMustByAbility.has('no_role_must')).toBe(false)
+  })
+
   it('vocabulary matches the build script contract (20 tags)', () => {
     expect(TAG_VOCABULARY).toHaveLength(20)
     expect(new Set(TAG_VOCABULARY).size).toBe(20)

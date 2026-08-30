@@ -2,8 +2,11 @@ import { NUM_TOP_TIER_SUGGESTIONS } from '@shared/constants/thresholds'
 import type { ScoredEntity, TopTierEntity } from './types'
 
 // @DEV-GUIDE: Selects the top 10 recommended entities to highlight in the overlay.
-// Two-tier priority: 1) Synergy suggestions (abilities pairing well with user's picks),
-// 2) General top picks (highest consolidated score from remaining pool).
+// Three-tier priority: 1) Synergy suggestions (abilities pairing well with user's
+// picks), 2) Curated role must-picks (roleCurated — roleMust entries in the tags
+// dataset matching the user's active role; their slot is GUARANTEED even when
+// the stats rank them out, which is the entire point of the curation), 3) General
+// top picks (highest consolidated score from remaining pool).
 // If My Spot already has an ultimate, all ultimates are excluded from recommendations.
 
 /**
@@ -12,8 +15,9 @@ import type { ScoredEntity, TopTierEntity } from './types'
  * Rules:
  * 1. If mySpotHasUlt: filter out all ultimates from candidates AND synergy partners.
  * 2. Synergy suggestions (abilities in synergisticPartnersInPool) come first, sorted by score.
- * 3. If selectedModelId is set: general candidates are abilities-only (no hero models).
- * 4. Remaining slots filled with general top picks sorted by score desc.
+ * 3. Curated role must-picks (roleCurated) take the next slots, sorted by score.
+ * 4. If selectedModelId is set: general candidates are abilities-only (no hero models).
+ * 5. Remaining slots filled with general top picks sorted by score desc.
  */
 export function determineTopTierEntities(
   allScoredEntities: ScoredEntity[],
@@ -73,7 +77,30 @@ export function determineTopTierEntities(
     ...synergySuggestions.slice(0, NUM_TOP_TIER_SUGGESTIONS),
   )
 
-  // Step 3: Fill remaining slots with general top picks
+  // Step 3: Curated role must-picks get guaranteed slots (that guarantee is
+  // their entire mechanism — the stats already voted against them)
+  const curatedSuggestions: TopTierEntity[] = []
+  entitiesToConsider = entitiesToConsider.filter((entity) => {
+    if (entity.roleCurated === true) {
+      curatedSuggestions.push({
+        ...entity,
+        isSynergySuggestionForMySpot: false,
+        isGeneralTopTier: true,
+        isCuratedForRole: true,
+      })
+      return false
+    }
+    return true
+  })
+  curatedSuggestions.sort((a, b) => b.consolidatedScore - a.consolidatedScore)
+  finalTopTier.push(
+    ...curatedSuggestions.slice(
+      0,
+      Math.max(0, NUM_TOP_TIER_SUGGESTIONS - finalTopTier.length),
+    ),
+  )
+
+  // Step 4: Fill remaining slots with general top picks
   const remainingSlots = NUM_TOP_TIER_SUGGESTIONS - finalTopTier.length
   if (remainingSlots > 0) {
     let generalCandidates = [...entitiesToConsider]

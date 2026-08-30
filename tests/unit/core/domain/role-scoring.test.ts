@@ -393,6 +393,41 @@ describe('computeRoleScore with tags (needs engine)', () => {
     expect(save.bestPosition).toBe(5)
     expect(save.reasons).toContain('covers:save')
   })
+
+  it('curated roleMust boosts the matching position and flags the score', () => {
+    const must = new Set<DraftPosition>([5])
+    const plain = computeRoleScore(axes(-0.3), ctxPos5, {
+      candidateTags: tags(),
+      myPickTags: [],
+    })!
+    const curated = computeRoleScore(axes(-0.3), ctxPos5, {
+      candidateTags: tags(),
+      candidateRoleMust: must,
+      myPickTags: [],
+    })!
+
+    expect(curated.delta).toBeGreaterThan(plain.delta)
+    expect(curated.curated).toBe(true)
+    expect(curated.reasons).toContain('curated')
+    expect(plain.curated).toBeUndefined()
+  })
+
+  it('curated roleMust is inert when it does not intersect the effective set', () => {
+    const mustPos1 = new Set<DraftPosition>([1])
+    const plain = computeRoleScore(axes(-0.3), ctxPos5, {
+      candidateTags: tags(),
+      myPickTags: [],
+    })!
+    const offRole = computeRoleScore(axes(-0.3), ctxPos5, {
+      candidateTags: tags(),
+      candidateRoleMust: mustPos1,
+      myPickTags: [],
+    })!
+
+    expect(offRole.delta).toBe(plain.delta)
+    expect(offRole.curated).toBeUndefined()
+    expect(offRole.reasons).not.toContain('curated')
+  })
 })
 
 describe('need priorities and pool scarcity', () => {

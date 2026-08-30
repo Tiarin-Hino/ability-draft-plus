@@ -83,6 +83,11 @@ maintenance spec — the authoritative map of what IS, not a build plan.
   TAG_VOCABULARY (core/domain/ability-tags.ts) in lockstep with the script's VOCAB
 - Role weights in thresholds.ts carry their empirical rationale (expert-draft corpus +
   simulation) as comments — read them before retuning
+- Curated must-picks: `roleMust: [positions]` on a dataset entry (curated in
+  tag_overrides.json, NOT a tag — tags are mechanical facts, this is a verdict)
+  guarantees the ability a top-tier slot when the user's role matches, plus a
+  ROLE_CURATED_WEIGHT boost. For abilities the stats systematically undervalue
+  (e.g. Glimpse for supports); keep the list short and deliberate
 
 ## Business logic constants (do not change casually)
 - Scoring: `0.4 * winrate_normalized + 0.6 * inverted_pick_order_normalized`;

@@ -28,7 +28,7 @@ tiarinhino.com/ability-tags.html with a Lambda/DynamoDB backend).
            + needs engine (priority · pool scarcity · credit)
            + ult-security nudge, all capped        (role-scoring.ts)
 4 team     −TAU · teamGreed · candidateGreed       (inside layer 3's cap)
-5 top-tier synergy-partners-first selection        (top-tier.ts, unchanged)
+5 top-tier synergy → curated must-picks → general  (top-tier.ts)
 ```
 
 Every layer defaults to a no-op: `roleMode: 'off'` (or missing shift data) is
@@ -60,6 +60,18 @@ Key mechanics in `core/domain/role-scoring.ts`:
   ~round 3) scaled by good-core-model scarcity.
 - **Hard filter**: `melee_only`/`ranged_only` vs the selected model's attack
   type excludes candidates from top-tier entirely (tooltip explains).
+- **Curated must-picks** (`roleMust: [positions]` on a dataset entry): a
+  hand-curated VERDICT — "recommend for these positions even if stats
+  disagree" — deliberately OUTSIDE the tag vocabulary (tags are mechanical
+  facts; this is judgment). Reserved for abilities whose value the stats
+  systematically miss (seed case: Disruptor's Glimpse for pos 4/5). Two
+  effects when an effective position matches: `ROLE_CURATED_WEIGHT` boost +
+  `curated` reason chip (role-scoring.ts), and a GUARANTEED top-tier slot
+  after synergy suggestions (top-tier.ts) with its own tooltip badge — the
+  guarantee is the mechanism, since the stats already voted these out.
+  Curated in `tag_overrides.json` (not part of the Tag Lab export;
+  `import_site_export.py` preserves it across site imports). Role mode off →
+  complete no-op like the rest of the layer.
 - **Contested-soon marker**: suggestion whose global avg pick position is due
   within `CONTESTED_SOON_WINDOW` of the board pick count — sim finding: our #1
   gets sniped before the user's next turn in 60% of disagreements.

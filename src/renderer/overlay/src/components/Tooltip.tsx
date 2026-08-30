@@ -103,8 +103,8 @@ function RoleStatLine({
   )
 }
 
-// Needs-engine reason chips ('covers:<need>' / 'duplicate:<need>') — the
-// explainability half of the tags feature: WHY the role layer moved this.
+// Needs-engine reason chips ('covers:<need>' / 'duplicate:<need>' / 'curated')
+// — the explainability half of the tags feature: WHY the role layer moved this.
 function RoleReasonChips({
   reasons,
   t,
@@ -117,6 +117,13 @@ function RoleReasonChips({
     <div className="tooltip-role-chips">
       {reasons.map((reason) => {
         const [kind, key] = reason.split(':')
+        if (kind === 'curated') {
+          return (
+            <span key={reason} className="tooltip-role-chip tooltip-role-chip-curated">
+              {t('tooltip.roleCurated')}
+            </span>
+          )
+        }
         const need = t(`tooltip.roleNeeds.${key}`)
         return (
           <span
@@ -221,7 +228,11 @@ function AbilityTooltipContent({
       )}
       {slot.isGeneralTopTier &&
         !slot.isSynergySuggestionForMySpot &&
-        (slot.isPersonallyDriven ? (
+        (slot.isCuratedForRole ? (
+          <div className="tooltip-badge tooltip-badge-curated">
+            &#x2726; {t('tooltip.curatedPick')}
+          </div>
+        ) : slot.isPersonallyDriven ? (
           <div className="tooltip-badge tooltip-badge-personal">
             &#x2605; {t('tooltip.personalPick')}
           </div>

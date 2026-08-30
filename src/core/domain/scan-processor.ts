@@ -856,7 +856,14 @@ function buildScoredEntities(
     // "you win with it" and "it fits your role" stack rather than fight.
     // Heroes are exempt — hero models have no shift data.
     const tagInput: RoleTagInput | undefined =
-      tags !== undefined ? { candidateTags, myPickTags, needScarcity } : undefined
+      tags !== undefined
+        ? {
+            candidateTags,
+            candidateRoleMust: tags.getRoleMust(slot.name),
+            myPickTags,
+            needScarcity,
+          }
+        : undefined
     const role = computeRoleScore(
       shiftAxesByName.get(slot.name),
       roleContext,
@@ -889,6 +896,7 @@ function buildScoredEntities(
       roleScoreDelta: roleDelta,
       roleBestPosition: role?.bestPosition,
       roleReasons: role !== null && role.reasons.length > 0 ? role.reasons : undefined,
+      roleCurated: role?.curated,
       inertOnModel: isInertOnModel(candidateTags, myModelAttackType) || undefined,
       isUltimateFromCoordSource: slot.is_ultimate,
       isUltimateFromDb: details?.isUltimate,
@@ -1083,6 +1091,7 @@ function enrichSlots(
       isSynergySuggestionForMySpot:
         topTier?.isSynergySuggestionForMySpot ?? false,
       isPersonallyDriven: topTier?.isPersonallyDriven ?? false,
+      isCuratedForRole: topTier?.isCuratedForRole ?? false,
       isUltimateFromDb: details.isUltimate,
       highWinrateCombinations: synergies?.high ?? [],
       lowWinrateCombinations: synergies?.low ?? [],

@@ -178,6 +178,12 @@ export const CONTESTED_SOON_WINDOW = 10
 // penalty on a core-shifted ability is inherently small, so the accents are
 // the main lever separating e.g. a pure steroid from a playmaker for pos 4.
 export const ROLE_TAG_ACCENT_WEIGHT = 0.05
+// Curated must-picks (roleMust in ability_tags.json): hand-picked abilities
+// whose value the stats systematically miss for a role (e.g. Glimpse for
+// supports). Presence in suggestions is GUARANTEED by top-tier.ts when the
+// role matches — this weight only lifts their rank among the suggestions, so
+// it sits well above the needs/accent weights but inside the role cap.
+export const ROLE_CURATED_WEIGHT = 0.15
 
 // Model
 // The class count is NOT a constant — it is defined by resources/model/class_names.json

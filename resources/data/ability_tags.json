@@ -693,6 +693,10 @@
    "tags": [
     "initiation",
     "setup_cc"
+   ],
+   "roleMust": [
+    4,
+    5
    ]
   },
   "disruptor_kinetic_field": {

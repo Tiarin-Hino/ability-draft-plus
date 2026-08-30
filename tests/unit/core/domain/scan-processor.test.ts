@@ -1082,6 +1082,9 @@ describe('role-aware suggestions', () => {
       const tags = table[name]
       return tags ? (new Set(tags) as ReturnType<NonNullable<ScanProcessorDeps['tags']>['getTags']>) : undefined
     },
+    getRoleMust() {
+      return undefined
+    },
     getHeroAttackType(heroName: string) {
       return heroName === 'lina' ? 'Ranged' : 'Melee'
     },

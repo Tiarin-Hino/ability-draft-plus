@@ -157,12 +157,15 @@ export interface EnrichedScanSlot extends ScanResult {
   /** True when this slot is top-tier ONLY because of the linked profile's stats
    * (a global-only ranking would not recommend it). Drives the corner marker. */
   isPersonallyDriven?: boolean
+  /** Curated must-pick (roleMust in the tags dataset) holding a guaranteed
+   * suggestion slot for the user's active role. Drives the curated badge. */
+  isCuratedForRole?: boolean
   /** consolidatedScore minus the role-less score — how far the role layer moved
    * it (present only when a role mode is active and the layer contributed). */
   roleScoreDelta?: number
   /** The effective position that produced roleScoreDelta's best fit (1-5). */
   roleBestPosition?: number
-  /** Needs-engine reason chips ('covers:<need>' | 'duplicate:<need>'). */
+  /** Needs-engine reason chips ('covers:<need>' | 'duplicate:<need>' | 'curated'). */
   roleReasons?: string[]
   /** Mechanically inert on the selected model (cleave on ranged) — never top-tier. */
   inertOnModel?: boolean

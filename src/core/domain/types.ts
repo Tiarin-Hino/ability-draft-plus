@@ -50,8 +50,11 @@ export interface ScoredEntity {
   roleScoreDelta?: number
   /** Effective position (1-5) that produced the best role fit. */
   roleBestPosition?: number
-  /** Needs-engine reason chips ('covers:<need>' | 'duplicate:<need>'). */
+  /** Needs-engine reason chips ('covers:<need>' | 'duplicate:<need>' | 'curated'). */
   roleReasons?: string[]
+  /** Curated must-pick (roleMust) matching an active effective position —
+   * top-tier.ts guarantees this entity a suggestion slot. */
+  roleCurated?: boolean
   /** Mechanically inert on the selected model's attack type — excluded from top-tier. */
   inertOnModel?: boolean
   /** Global pick timing says this ability is due before the draft wraps around. */
@@ -65,6 +68,9 @@ export interface TopTierEntity extends ScoredEntity {
   /** True when this entity made the general top-tier cut ONLY because personal
    * blending raised its score (a global-only ranking would exclude it). */
   isPersonallyDriven?: boolean
+  /** True when this entity holds a GUARANTEED slot as a curated must-pick for
+   * the user's active role (roleMust in the tags dataset). */
+  isCuratedForRole?: boolean
 }
 
 // ---------------------------------------------------------------------------
