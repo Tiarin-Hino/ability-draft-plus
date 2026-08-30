@@ -59,7 +59,12 @@ Key mechanics in `core/domain/role-scoring.ts`:
   (`ROLE_MODEL_WEIGHT_SCALE`); core roles get a model-urgency ramp (lock by
   ~round 3) scaled by good-core-model scarcity.
 - **Hard filter**: `melee_only`/`ranged_only` vs the selected model's attack
-  type excludes candidates from top-tier entirely (tooltip explains).
+  type excludes candidates from top-tier entirely (tooltip explains). Two
+  exceptions (user ruling 2026-08-30, Wukong's Command case): a candidate
+  NATIVE to the selected model's hero is never inert (the game designed them
+  together), and a drafted `grants_ranged` ability (Psi Blades, Take Aim)
+  waives `ranged_only` on melee models for the rest of the draft. No symmetric
+  melee waiver — nothing grants melee.
 - **Curated must-picks** (`roleMust: [positions]` on a dataset entry): a
   hand-curated VERDICT — "recommend for these positions even if stats
   disagree" — deliberately OUTSIDE the tag vocabulary (tags are mechanical

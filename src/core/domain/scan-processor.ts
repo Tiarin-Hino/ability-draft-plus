@@ -581,6 +581,8 @@ export function processScanResults(
       tags: deps.tags,
       myPickTags,
       myModelAttackType,
+      myModelDbHeroId: state.mySelectedModelDbHeroId,
+      ownerHeroIdOf: (name) => deps.heroes.getByAbilityName(name)?.heroId ?? null,
       needScarcity,
       myPickCount,
       myModelPicked: state.mySelectedModelDbHeroId !== null,
@@ -788,6 +790,11 @@ interface RoleScoringInputs {
   tags: import('./ability-tags').AbilityTagsLookup | undefined
   myPickTags: ReadonlySet<AbilityTag>[]
   myModelAttackType: import('./ability-tags').HeroAttackType | undefined
+  /** Selected model's DB hero id — a candidate NATIVE to that hero is exempt
+   * from the inert filter (Wukong's Command on the Monkey King model). */
+  myModelDbHeroId: number | null
+  /** DB hero id owning an ability name (null when unknown). */
+  ownerHeroIdOf: (abilityName: string) => number | null
   needScarcity: ReadonlyMap<string, number>
   myPickCount: number
   myModelPicked: boolean
@@ -832,12 +839,17 @@ function buildScoredEntities(
     tags,
     myPickTags,
     myModelAttackType,
+    myModelDbHeroId,
+    ownerHeroIdOf,
     needScarcity,
     myPickCount,
     myModelPicked,
     ultSecurityActive,
     namedPickCount,
   } = role
+  // A drafted range-granting ability (Psi Blades, Take Aim) waives the
+  // ranged_only inert filter for the rest of the draft.
+  const picksGrantRanged = myPickTags.some((t) => t.has('grants_ranged'))
   const entities: ScoredEntity[] = []
   const seen = new Set<string>()
 
@@ -897,7 +909,12 @@ function buildScoredEntities(
       roleBestPosition: role?.bestPosition,
       roleReasons: role !== null && role.reasons.length > 0 ? role.reasons : undefined,
       roleCurated: role?.curated,
-      inertOnModel: isInertOnModel(candidateTags, myModelAttackType) || undefined,
+      inertOnModel:
+        isInertOnModel(candidateTags, myModelAttackType, {
+          nativeToModel:
+            myModelDbHeroId !== null && ownerHeroIdOf(slot.name) === myModelDbHeroId,
+          picksGrantRanged,
+        }) || undefined,
       isUltimateFromCoordSource: slot.is_ultimate,
       isUltimateFromDb: details?.isUltimate,
       heroOrder: slot.hero_order,

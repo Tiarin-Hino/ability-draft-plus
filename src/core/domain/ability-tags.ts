@@ -33,6 +33,7 @@ export const TAG_VOCABULARY = [
   'passive_value',
   'melee_only',
   'ranged_only',
+  'grants_ranged',
   'mana_hungry',
   'channeled',
 ] as const
@@ -153,18 +154,35 @@ export function parseHeroMeta(json: unknown): Map<string, HeroMeta> | null {
   return result
 }
 
+/** Context that can WAIVE the inert filter for a candidate. */
+export interface InertExceptions {
+  /** The candidate is native to the selected model's hero (Wukong's Command on
+   * the Monkey King model): the game designed them together — never inert. */
+  nativeToModel?: boolean
+  /** One of the user's DRAFTED abilities is tagged grants_ranged (Psi Blades,
+   * Take Aim): ranged_only candidates work on a melee model again. */
+  picksGrantRanged?: boolean
+}
+
 /**
  * True when an ability is mechanically inert or crippled on the given hero
  * model's attack type (cleave on a ranged model, projectile mechanics on a
  * melee one). Used as a HARD top-tier exclusion, not a score tweak.
+ * Exceptions (user ruling 2026-08-30, Wukong's Command case): the candidate's
+ * own native model is always exempt, and a drafted grants_ranged ability
+ * waives ranged_only on melee models (melee_only on ranged models has no
+ * symmetric waiver — nothing grants melee).
  */
 export function isInertOnModel(
   tags: ReadonlySet<AbilityTag> | undefined,
   attackType: HeroAttackType | undefined,
+  exceptions?: InertExceptions,
 ): boolean {
   if (tags === undefined || attackType === undefined) return false
-  return (
-    (attackType === 'Ranged' && tags.has('melee_only')) ||
-    (attackType === 'Melee' && tags.has('ranged_only'))
-  )
+  if (exceptions?.nativeToModel === true) return false
+  if (attackType === 'Ranged' && tags.has('melee_only')) return true
+  if (attackType === 'Melee' && tags.has('ranged_only')) {
+    return exceptions?.picksGrantRanged !== true
+  }
+  return false
 }

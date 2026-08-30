@@ -19,6 +19,7 @@
   "passive_value",
   "melee_only",
   "ranged_only",
+  "grants_ranged",
   "mana_hungry",
   "channeled"
  ],
@@ -2829,6 +2830,7 @@
   },
   "sniper_take_aim": {
    "tags": [
+    "grants_ranged",
     "steroid"
    ]
   },
@@ -2990,6 +2992,7 @@
   "templar_assassin_psi_blades": {
    "tags": [
     "farm_tool",
+    "grants_ranged",
     "steroid"
    ]
   },

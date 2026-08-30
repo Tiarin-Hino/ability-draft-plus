@@ -55,9 +55,9 @@ describe('parseAbilityTagsDataset', () => {
     expect(parsed.roleMustByAbility.has('no_role_must')).toBe(false)
   })
 
-  it('vocabulary matches the build script contract (20 tags)', () => {
-    expect(TAG_VOCABULARY).toHaveLength(20)
-    expect(new Set(TAG_VOCABULARY).size).toBe(20)
+  it('vocabulary matches the build script contract (21 tags)', () => {
+    expect(TAG_VOCABULARY).toHaveLength(21)
+    expect(new Set(TAG_VOCABULARY).size).toBe(21)
   })
 })
 
@@ -100,5 +100,18 @@ describe('isInertOnModel', () => {
     expect(isInertOnModel(undefined, 'Ranged')).toBe(false)
     expect(isInertOnModel(tags('melee_only'), undefined)).toBe(false)
     expect(isInertOnModel(tags('nuke'), 'Ranged')).toBe(false)
+  })
+
+  it('the candidate is never inert on its own native model (Wukong on MK)', () => {
+    expect(isInertOnModel(tags('ranged_only'), 'Melee', { nativeToModel: true })).toBe(false)
+    expect(isInertOnModel(tags('melee_only'), 'Ranged', { nativeToModel: true })).toBe(false)
+    expect(isInertOnModel(tags('ranged_only'), 'Melee', { nativeToModel: false })).toBe(true)
+  })
+
+  it('a drafted grants_ranged pick waives ranged_only on melee, not melee_only on ranged', () => {
+    expect(isInertOnModel(tags('ranged_only'), 'Melee', { picksGrantRanged: true })).toBe(false)
+    expect(isInertOnModel(tags('ranged_only'), 'Melee', { picksGrantRanged: false })).toBe(true)
+    // nothing grants melee — the melee_only filter has no symmetric waiver
+    expect(isInertOnModel(tags('melee_only'), 'Ranged', { picksGrantRanged: true })).toBe(true)
   })
 })

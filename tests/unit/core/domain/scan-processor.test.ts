@@ -1132,6 +1132,41 @@ describe('role-aware suggestions', () => {
     expect(iceBlast.inertOnModel).toBeUndefined()
   })
 
+  it('a candidate native to the selected model is never inert (Wukong-on-MK ruling)', () => {
+    const initial = processScanResults(makeInitialScanInput())
+    const state = initial.updatedState
+    state.mySelectedModelDbHeroId = 1 // Lina model -> Ranged
+    state.mySelectedModelHeroOrder = 0
+    const base = depsWithRole('off')
+    // Same melee_only fireball as above, but now OWNED by the selected model's hero
+    const deps: ScanProcessorDeps = {
+      ...base,
+      tags: mockTags,
+      heroes: {
+        ...base.heroes,
+        getByAbilityName: (name: string) =>
+          name === 'fireball'
+            ? { heroId: 1, heroName: 'lina', heroDisplayName: 'Lina' }
+            : base.heroes.getByAbilityName(name),
+      },
+    }
+    const input: ScanProcessorInput = {
+      rawResults: [] as ScanResult[],
+      isInitialScan: false,
+      state,
+      deps,
+      modelCoords: [makeCoord(0), makeCoord(1)],
+      heroesCoords: [makeCoord(0), makeCoord(1)],
+      heroesParams: { width: 358, height: 170 },
+      targetResolution: '1920x1080',
+      scaleFactor: 1.0,
+    }
+    const { overlayPayload } = processScanResults(input)
+
+    const fireball = overlayPayload.scanData!.standard.find((s) => s.name === 'fireball')!
+    expect(fireball.inertOnModel).toBeUndefined()
+  })
+
   it('needs-engine chips reach the enriched slots in a role mode', () => {
     const initial = processScanResults(makeInitialScanInput())
     const state = initial.updatedState
