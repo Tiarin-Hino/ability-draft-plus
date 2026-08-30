@@ -41,19 +41,18 @@
   },
   "abaddon_death_coil": {
    "tags": [
-    "nuke",
     "save_ally"
    ]
   },
   "abaddon_frostmourne": {
    "tags": [
+    "passive_value",
     "soft_cc",
     "steroid"
    ]
   },
   "abyssal_underlord_atrophy_aura": {
    "tags": [
-    "aoe",
     "passive_value",
     "steroid"
    ]
@@ -77,14 +76,14 @@
   "abyssal_underlord_pit_of_malice": {
    "tags": [
     "aoe",
-    "setup_cc"
+    "setup_cc",
+    "soft_cc"
    ]
   },
   "alchemist_acid_spray": {
    "tags": [
     "aoe",
-    "farm_tool",
-    "waveclear"
+    "farm_tool"
    ]
   },
   "alchemist_chemical_rage": {
@@ -95,13 +94,12 @@
   },
   "alchemist_corrosive_weaponry": {
    "tags": [
-    "soft_cc",
-    "steroid"
+    "passive_value",
+    "soft_cc"
    ]
   },
   "alchemist_unstable_concoction": {
    "tags": [
-    "aoe",
     "channeled",
     "hard_cc",
     "initiation",
@@ -111,8 +109,7 @@
   },
   "ancient_apparition_chilling_touch": {
    "tags": [
-    "soft_cc",
-    "steroid"
+    "soft_cc"
    ]
   },
   "ancient_apparition_cold_feet": {
@@ -126,6 +123,8 @@
     "aoe",
     "mana_hungry",
     "nuke",
+    "setup_cc",
+    "soft_cc",
     "teamfight_ult"
    ]
   },
@@ -139,6 +138,13 @@
    "tags": [
     "initiation",
     "mobility"
+   ],
+   "roleMust": [
+    1,
+    2,
+    3,
+    4,
+    5
    ]
   },
   "antimage_counterspell": {
@@ -149,6 +155,7 @@
   },
   "antimage_mana_break": {
    "tags": [
+    "passive_value",
     "steroid"
    ]
   },
@@ -199,8 +206,7 @@
   },
   "axe_culling_blade": {
    "tags": [
-    "mana_hungry",
-    "nuke"
+    "mana_hungry"
    ]
   },
   "bane_brain_sap": {
@@ -219,7 +225,12 @@
    "tags": [
     "channeled",
     "hard_cc",
+    "initiation",
     "mana_hungry"
+   ],
+   "roleMust": [
+    4,
+    5
    ]
   },
   "bane_nightmare": {
@@ -304,6 +315,7 @@
   },
   "bloodseeker_rupture": {
    "tags": [
+    "initiation",
     "mana_hungry",
     "nuke"
    ]
@@ -316,6 +328,7 @@
   },
   "bounty_hunter_jinada": {
    "tags": [
+    "passive_value",
     "steroid"
    ]
   },
@@ -327,7 +340,9 @@
    ]
   },
   "bounty_hunter_track": {
-   "tags": []
+   "tags": [
+    "soft_cc"
+   ]
   },
   "bounty_hunter_wind_walk": {
    "tags": [
@@ -344,6 +359,7 @@
   },
   "brewmaster_drunken_brawler": {
    "tags": [
+    "passive_value",
     "steroid"
    ]
   },
@@ -361,21 +377,19 @@
    "tags": [
     "aoe",
     "nuke",
-    "soft_cc",
-    "waveclear"
+    "soft_cc"
    ]
   },
   "bristleback_bristleback": {
    "tags": [
-    "aoe",
-    "passive_value"
+    "passive_value",
+    "sustain_self"
    ]
   },
   "bristleback_quill_spray": {
    "tags": [
     "aoe",
-    "farm_tool",
-    "waveclear"
+    "farm_tool"
    ]
   },
   "bristleback_viscous_nasal_goo": {
@@ -385,11 +399,13 @@
   },
   "bristleback_warpath": {
    "tags": [
+    "passive_value",
     "steroid"
    ]
   },
   "broodmother_incapacitating_bite": {
    "tags": [
+    "passive_value",
     "soft_cc",
     "steroid"
    ]
@@ -405,8 +421,7 @@
     "farm_tool",
     "nuke",
     "soft_cc",
-    "summon",
-    "waveclear"
+    "summon"
    ]
   },
   "broodmother_spin_web": {
@@ -433,6 +448,7 @@
   },
   "centaur_return": {
    "tags": [
+    "farm_tool",
     "passive_value"
    ]
   },
@@ -454,6 +470,7 @@
   },
   "chaos_knight_chaos_strike": {
    "tags": [
+    "passive_value",
     "steroid",
     "sustain_self"
    ]
@@ -461,8 +478,7 @@
   "chaos_knight_phantasm": {
    "tags": [
     "farm_tool",
-    "mana_hungry",
-    "sustain_self"
+    "mana_hungry"
    ]
   },
   "chaos_knight_reality_rift": {
@@ -473,8 +489,7 @@
   },
   "chen_divine_favor": {
    "tags": [
-    "save_ally",
-    "sustain_self",
+    "passive_value",
     "team_aura"
    ]
   },
@@ -499,6 +514,7 @@
   },
   "clinkz_death_pact": {
    "tags": [
+    "farm_tool",
     "sustain_self"
    ]
   },
@@ -542,13 +558,16 @@
     "mana_hungry",
     "nuke",
     "soft_cc"
+   ],
+   "roleMust": [
+    4,
+    5
    ]
   },
   "dark_seer_ion_shell": {
    "tags": [
     "aoe",
-    "farm_tool",
-    "waveclear"
+    "farm_tool"
    ]
   },
   "dark_seer_surge": {
@@ -570,10 +589,9 @@
   "dark_seer_wall_of_replica": {
    "tags": [
     "aoe",
-    "farm_tool",
+    "initiation",
     "mana_hungry",
     "soft_cc",
-    "sustain_self",
     "teamfight_ult"
    ]
   },
@@ -593,7 +611,8 @@
   },
   "dark_willow_shadow_realm": {
    "tags": [
-    "nuke"
+    "nuke",
+    "steroid"
    ]
   },
   "dark_willow_terrorize": {
@@ -601,6 +620,7 @@
     "aoe",
     "mana_hungry",
     "setup_cc",
+    "soft_cc",
     "teamfight_ult"
    ]
   },
@@ -624,6 +644,7 @@
   "dawnbreaker_luminosity": {
    "tags": [
     "aoe",
+    "passive_value",
     "steroid",
     "sustain_self"
    ]
@@ -673,7 +694,6 @@
   "death_prophet_exorcism": {
    "tags": [
     "aoe",
-    "farm_tool",
     "mana_hungry",
     "sustain_self",
     "teamfight_ult"
@@ -718,18 +738,21 @@
   },
   "disruptor_thunder_strike": {
    "tags": [
-    "aoe",
     "nuke",
     "soft_cc"
    ]
   },
   "doom_bringer_devour": {
    "tags": [
-    "farm_tool"
+    "farm_tool",
+    "passive_value",
+    "steroid"
    ]
   },
   "doom_bringer_doom": {
    "tags": [
+    "hard_cc",
+    "initiation",
     "mana_hungry",
     "soft_cc"
    ]
@@ -751,7 +774,6 @@
    "tags": [
     "aoe",
     "nuke",
-    "soft_cc",
     "waveclear"
    ]
   },
@@ -766,12 +788,12 @@
     "aoe",
     "farm_tool",
     "soft_cc",
-    "steroid",
-    "waveclear"
+    "steroid"
    ]
   },
   "dragon_knight_wyrms_wrath": {
    "tags": [
+    "passive_value",
     "steroid"
    ]
   },
@@ -783,6 +805,7 @@
   },
   "drow_ranger_marksmanship": {
    "tags": [
+    "passive_value",
     "ranged_only",
     "steroid"
    ]
@@ -791,6 +814,7 @@
    "tags": [
     "aoe",
     "channeled",
+    "farm_tool",
     "nuke",
     "waveclear"
    ]
@@ -886,16 +910,14 @@
   "elder_titan_natural_order": {
    "tags": [
     "aoe",
-    "passive_value",
-    "team_aura"
+    "passive_value"
    ]
   },
   "ember_spirit_fire_remnant": {
    "tags": [
     "aoe",
     "initiation",
-    "mobility",
-    "nuke"
+    "mobility"
    ]
   },
   "ember_spirit_flame_guard": {
@@ -908,7 +930,6 @@
   "ember_spirit_searing_chains": {
    "tags": [
     "aoe",
-    "nuke",
     "soft_cc"
    ]
   },
@@ -916,7 +937,6 @@
    "tags": [
     "aoe",
     "farm_tool",
-    "nuke",
     "waveclear"
    ]
   },
@@ -942,7 +962,8 @@
   "enchantress_untouchable": {
    "tags": [
     "passive_value",
-    "soft_cc"
+    "soft_cc",
+    "sustain_self"
    ]
   },
   "enigma_black_hole": {
@@ -991,6 +1012,7 @@
   "faceless_void_time_lock": {
    "tags": [
     "hard_cc",
+    "passive_value",
     "steroid"
    ]
   },
@@ -1003,27 +1025,23 @@
   },
   "furion_force_of_nature": {
    "tags": [
-    "aoe",
     "farm_tool",
     "summon"
    ]
   },
   "furion_sprout": {
    "tags": [
-    "aoe",
     "setup_cc",
     "soft_cc"
    ]
   },
   "furion_teleportation": {
    "tags": [
-    "aoe",
     "mobility"
    ]
   },
   "furion_wrath_of_nature": {
    "tags": [
-    "aoe",
     "farm_tool",
     "mana_hungry",
     "nuke",
@@ -1040,13 +1058,11 @@
   },
   "grimstroke_ink_creature": {
    "tags": [
-    "nuke",
     "soft_cc"
    ]
   },
   "grimstroke_soul_chain": {
    "tags": [
-    "aoe",
     "mana_hungry",
     "setup_cc",
     "soft_cc"
@@ -1067,16 +1083,13 @@
     "mana_hungry",
     "nuke",
     "soft_cc",
-    "teamfight_ult",
-    "waveclear"
+    "teamfight_ult"
    ]
   },
   "gyrocopter_flak_cannon": {
    "tags": [
-    "aoe",
     "farm_tool",
-    "steroid",
-    "waveclear"
+    "steroid"
    ]
   },
   "gyrocopter_homing_missile": {
@@ -1088,14 +1101,13 @@
    ]
   },
   "gyrocopter_rocket_barrage": {
-   "tags": [
-    "waveclear"
-   ]
+   "tags": []
   },
   "hoodwink_acorn_shot": {
    "tags": [
-    "nuke",
+    "farm_tool",
     "soft_cc",
+    "steroid",
     "waveclear"
    ]
   },
@@ -1114,9 +1126,7 @@
   },
   "hoodwink_sharpshooter": {
    "tags": [
-    "aoe",
     "mana_hungry",
-    "mobility",
     "nuke",
     "soft_cc"
    ]
@@ -1143,7 +1153,6 @@
   "huskar_life_break": {
    "tags": [
     "initiation",
-    "mobility",
     "nuke"
    ]
   },
@@ -1177,7 +1186,9 @@
   "invoker_emp_ad": {
    "tags": [
     "aoe",
-    "nuke"
+    "nuke",
+    "setup_cc",
+    "soft_cc"
    ]
   },
   "invoker_forge_spirit_ad": {
@@ -1235,9 +1246,7 @@
   "jakiro_liquid_fire": {
    "tags": [
     "aoe",
-    "soft_cc",
-    "steroid",
-    "waveclear"
+    "soft_cc"
    ]
   },
   "jakiro_liquid_ice": {
@@ -1255,6 +1264,7 @@
   },
   "juggernaut_blade_dance": {
    "tags": [
+    "passive_value",
     "steroid"
    ]
   },
@@ -1262,25 +1272,22 @@
    "tags": [
     "aoe",
     "farm_tool",
-    "sustain_self",
-    "waveclear"
+    "sustain_self"
    ]
   },
   "juggernaut_healing_ward": {
    "tags": [
     "aoe",
     "save_ally",
-    "summon",
     "sustain_self",
     "team_aura"
    ]
   },
   "juggernaut_omni_slash": {
    "tags": [
-    "aoe",
+    "initiation",
     "mana_hungry",
-    "mobility",
-    "nuke"
+    "steroid"
    ]
   },
   "keeper_of_the_light_blinding_light": {
@@ -1292,7 +1299,10 @@
    ]
   },
   "keeper_of_the_light_chakra_magic": {
-   "tags": []
+   "tags": [
+    "save_ally",
+    "sustain_self"
+   ]
   },
   "keeper_of_the_light_illuminate": {
    "tags": [
@@ -1311,8 +1321,8 @@
   "kez_echo_slash": {
    "tags": [
     "aoe",
-    "soft_cc",
-    "waveclear"
+    "farm_tool",
+    "soft_cc"
    ]
   },
   "kez_falcon_rush_ad": {
@@ -1337,7 +1347,6 @@
    "tags": [
     "aoe",
     "mana_hungry",
-    "nuke",
     "sustain_self"
    ]
   },
@@ -1354,7 +1363,6 @@
   },
   "kez_talon_toss_ad": {
    "tags": [
-    "aoe",
     "nuke",
     "soft_cc"
    ]
@@ -1374,8 +1382,7 @@
     "aoe",
     "farm_tool",
     "passive_value",
-    "steroid",
-    "waveclear"
+    "steroid"
    ]
   },
   "kunkka_torrent": {
@@ -1388,14 +1395,15 @@
   },
   "kunkka_x_marks_the_spot": {
    "tags": [
-    "mobility",
-    "save_ally",
+    "initiation",
     "setup_cc"
    ]
   },
   "largo_amphibian_rhapsody": {
    "tags": [
     "aoe",
+    "save_ally",
+    "sustain_self",
     "team_aura",
     "teamfight_ult"
    ]
@@ -1403,8 +1411,7 @@
   "largo_catchy_lick": {
    "tags": [
     "nuke",
-    "save_ally",
-    "sustain_self"
+    "save_ally"
    ]
   },
   "largo_croak_of_genius": {
@@ -1413,7 +1420,6 @@
   "largo_frogstomp": {
    "tags": [
     "aoe",
-    "nuke",
     "setup_cc",
     "soft_cc",
     "waveclear"
@@ -1428,6 +1434,7 @@
   },
   "legion_commander_moment_of_courage": {
    "tags": [
+    "passive_value",
     "steroid",
     "sustain_self"
    ]
@@ -1435,9 +1442,7 @@
   "legion_commander_overwhelming_odds": {
    "tags": [
     "aoe",
-    "nuke",
-    "steroid",
-    "waveclear"
+    "nuke"
    ]
   },
   "legion_commander_press_the_attack": {
@@ -1501,11 +1506,13 @@
   },
   "lich_sinister_gaze": {
    "tags": [
-    "channeled"
+    "channeled",
+    "hard_cc"
    ]
   },
   "life_stealer_feast": {
    "tags": [
+    "passive_value",
     "steroid",
     "sustain_self"
    ]
@@ -1514,8 +1521,8 @@
    "tags": [
     "aoe",
     "mana_hungry",
-    "mobility",
     "nuke",
+    "save_ally",
     "sustain_self"
    ]
   },
@@ -1526,7 +1533,9 @@
    ]
   },
   "life_stealer_rage": {
-   "tags": []
+   "tags": [
+    "sustain_self"
+   ]
   },
   "lina_dragon_slave": {
    "tags": [
@@ -1537,6 +1546,7 @@
   },
   "lina_fiery_soul": {
    "tags": [
+    "passive_value",
     "steroid"
    ]
   },
@@ -1567,6 +1577,10 @@
     "initiation",
     "mana_hungry",
     "nuke"
+   ],
+   "roleMust": [
+    4,
+    5
    ]
   },
   "lion_mana_drain": {
@@ -1580,6 +1594,10 @@
     "hard_cc",
     "initiation",
     "mana_hungry"
+   ],
+   "roleMust": [
+    4,
+    5
    ]
   },
   "lone_druid_entangle": {
@@ -1597,22 +1615,24 @@
   },
   "lone_druid_spirit_link": {
    "tags": [
-    "passive_value",
-    "sustain_self"
+    "passive_value"
    ]
   },
   "lone_druid_true_form": {
    "tags": [
-    "steroid"
+    "steroid",
+    "sustain_self"
    ]
   },
   "luna_eclipse": {
    "tags": [
     "aoe",
     "mana_hungry",
-    "nuke",
     "soft_cc",
     "teamfight_ult"
+   ],
+   "requires": [
+    "luna_lucent_beam"
    ]
   },
   "luna_lucent_beam": {
@@ -1631,8 +1651,11 @@
   "luna_moon_glaive": {
    "tags": [
     "farm_tool",
-    "steroid",
-    "waveclear"
+    "passive_value",
+    "steroid"
+   ],
+   "roleMust": [
+    1
    ]
   },
   "lycan_feral_impulse": {
@@ -1694,6 +1717,7 @@
   },
   "marci_bodyguard": {
    "tags": [
+    "passive_value",
     "steroid",
     "sustain_self"
    ]
@@ -1734,7 +1758,8 @@
   },
   "mars_bulwark": {
    "tags": [
-    "passive_value"
+    "passive_value",
+    "sustain_self"
    ]
   },
   "mars_gods_rebuke": {
@@ -1785,7 +1810,8 @@
   },
   "meepo_earthbind": {
    "tags": [
-    "aoe"
+    "aoe",
+    "soft_cc"
    ]
   },
   "meepo_poof": {
@@ -1835,6 +1861,7 @@
   },
   "monkey_king_jingu_mastery": {
    "tags": [
+    "passive_value",
     "steroid",
     "sustain_self"
    ]
@@ -1849,6 +1876,7 @@
   "monkey_king_wukongs_command": {
    "tags": [
     "aoe",
+    "ranged_only",
     "teamfight_ult"
    ]
   },
@@ -1876,6 +1904,7 @@
   },
   "muerta_gunslinger": {
    "tags": [
+    "passive_value",
     "steroid"
    ]
   },
@@ -1899,8 +1928,7 @@
   },
   "naga_siren_mirror_image": {
    "tags": [
-    "farm_tool",
-    "sustain_self"
+    "farm_tool"
    ]
   },
   "naga_siren_rip_tide": {
@@ -1953,8 +1981,7 @@
   "nevermore_dark_lord": {
    "tags": [
     "aoe",
-    "passive_value",
-    "team_aura"
+    "passive_value"
    ]
   },
   "nevermore_frenzy": {
@@ -1969,6 +1996,9 @@
     "nuke",
     "soft_cc",
     "teamfight_ult"
+   ],
+   "requires": [
+    "model:nevermore"
    ]
   },
   "nevermore_shadowraze2": {
@@ -1994,6 +2024,7 @@
   },
   "night_stalker_midnight_feast": {
    "tags": [
+    "passive_value",
     "sustain_self"
    ]
   },
@@ -2009,11 +2040,14 @@
     "hard_cc",
     "initiation",
     "nuke"
+   ],
+   "roleMust": [
+    4,
+    5
    ]
   },
   "nyx_assassin_jolt": {
    "tags": [
-    "aoe",
     "nuke"
    ]
   },
@@ -2065,8 +2099,7 @@
   },
   "ogre_magi_fireblast": {
    "tags": [
-    "hard_cc",
-    "nuke"
+    "hard_cc"
    ]
   },
   "ogre_magi_ignite": {
@@ -2086,8 +2119,7 @@
   },
   "omniknight_hammer_of_purity": {
    "tags": [
-    "steroid",
-    "sustain_self"
+    "steroid"
    ]
   },
   "omniknight_martyr": {
@@ -2125,6 +2157,10 @@
     "save_ally",
     "setup_cc",
     "soft_cc"
+   ],
+   "roleMust": [
+    4,
+    5
    ]
   },
   "oracle_purifying_flames": {
@@ -2146,13 +2182,13 @@
   },
   "pangolier_lucky_shot": {
    "tags": [
+    "passive_value",
     "soft_cc"
    ]
   },
   "pangolier_shield_crash": {
    "tags": [
     "aoe",
-    "nuke",
     "sustain_self",
     "waveclear"
    ]
@@ -2162,26 +2198,26 @@
     "aoe",
     "initiation",
     "mobility",
-    "nuke",
     "soft_cc"
    ]
   },
   "phantom_assassin_coup_de_grace": {
    "tags": [
+    "passive_value",
     "steroid"
    ]
   },
   "phantom_assassin_immaterial": {
    "tags": [
-    "passive_value"
+    "passive_value",
+    "sustain_self"
    ]
   },
   "phantom_assassin_phantom_strike": {
    "tags": [
     "initiation",
     "mobility",
-    "steroid",
-    "sustain_self"
+    "steroid"
    ]
   },
   "phantom_assassin_stifling_dagger": {
@@ -2192,7 +2228,6 @@
   },
   "phantom_lancer_doppelwalk": {
    "tags": [
-    "farm_tool",
     "mobility",
     "sustain_self"
    ]
@@ -2200,21 +2235,18 @@
   "phantom_lancer_juxtapose": {
    "tags": [
     "farm_tool",
-    "sustain_self"
+    "steroid"
    ]
   },
   "phantom_lancer_phantom_edge": {
    "tags": [
-    "initiation",
     "mobility"
    ]
   },
   "phantom_lancer_spirit_lance": {
    "tags": [
-    "farm_tool",
     "nuke",
-    "soft_cc",
-    "sustain_self"
+    "soft_cc"
    ]
   },
   "phoenix_fire_spirits": {
@@ -2244,7 +2276,7 @@
     "aoe",
     "hard_cc",
     "mana_hungry",
-    "soft_cc",
+    "setup_cc",
     "sustain_self",
     "teamfight_ult"
    ]
@@ -2254,8 +2286,7 @@
     "aoe",
     "hard_cc",
     "initiation",
-    "mobility",
-    "nuke"
+    "mobility"
    ]
   },
   "primal_beast_pulverize": {
@@ -2270,6 +2301,7 @@
   "primal_beast_trample": {
    "tags": [
     "aoe",
+    "farm_tool",
     "waveclear"
    ]
   },
@@ -2277,7 +2309,8 @@
    "tags": [
     "aoe",
     "soft_cc",
-    "steroid"
+    "steroid",
+    "sustain_self"
    ]
   },
   "puck_dream_coil": {
@@ -2301,13 +2334,12 @@
   },
   "puck_phase_shift": {
    "tags": [
-    "channeled"
+    "sustain_self"
    ]
   },
   "puck_waning_rift": {
    "tags": [
     "aoe",
-    "initiation",
     "mobility",
     "nuke",
     "soft_cc"
@@ -2317,8 +2349,8 @@
    "tags": [
     "channeled",
     "hard_cc",
+    "initiation",
     "mana_hungry",
-    "nuke",
     "sustain_self"
    ]
   },
@@ -2337,7 +2369,7 @@
   "pudge_rot": {
    "tags": [
     "aoe",
-    "waveclear"
+    "farm_tool"
    ]
   },
   "pugna_decrepify": {
@@ -2358,7 +2390,6 @@
   "pugna_nether_blast": {
    "tags": [
     "aoe",
-    "farm_tool",
     "nuke",
     "waveclear"
    ]
@@ -2366,13 +2397,20 @@
   "pugna_nether_ward": {
    "tags": [
     "aoe",
-    "summon"
+    "soft_cc"
    ]
   },
   "queenofpain_blink": {
    "tags": [
     "initiation",
     "mobility"
+   ],
+   "roleMust": [
+    1,
+    2,
+    3,
+    4,
+    5
    ]
   },
   "queenofpain_scream_of_pain": {
@@ -2399,8 +2437,7 @@
   "rattletrap_battery_assault": {
    "tags": [
     "aoe",
-    "hard_cc",
-    "nuke"
+    "soft_cc"
    ]
   },
   "rattletrap_hookshot": {
@@ -2415,10 +2452,10 @@
   "rattletrap_power_cogs": {
    "tags": [
     "aoe",
-    "hard_cc",
     "initiation",
     "nuke",
-    "setup_cc"
+    "setup_cc",
+    "soft_cc"
    ]
   },
   "rattletrap_rocket_flare": {
@@ -2431,7 +2468,10 @@
   },
   "razor_eye_of_the_storm": {
    "tags": [
-    "mana_hungry"
+    "aoe",
+    "farm_tool",
+    "mana_hungry",
+    "teamfight_ult"
    ]
   },
   "razor_plasma_field": {
@@ -2495,7 +2535,6 @@
   },
   "ringmaster_the_box": {
    "tags": [
-    "mobility",
     "save_ally"
    ]
   },
@@ -2503,21 +2542,24 @@
    "tags": [
     "aoe",
     "mana_hungry",
-    "nuke",
     "setup_cc",
     "soft_cc",
     "teamfight_ult"
    ]
   },
   "rubick_arcane_supremacy": {
-   "tags": []
+   "tags": [
+    "passive_value"
+   ],
+   "roleMust": [
+    2
+   ]
   },
   "rubick_fade_bolt": {
    "tags": [
     "aoe",
     "mana_hungry",
     "nuke",
-    "soft_cc",
     "waveclear"
    ]
   },
@@ -2535,11 +2577,18 @@
     "initiation",
     "mobility",
     "nuke"
+   ],
+   "roleMust": [
+    2,
+    3,
+    4,
+    5
    ]
   },
   "sandking_epicenter": {
    "tags": [
     "aoe",
+    "initiation",
     "mana_hungry",
     "nuke",
     "soft_cc",
@@ -2549,9 +2598,7 @@
   "sandking_sand_storm": {
    "tags": [
     "aoe",
-    "farm_tool",
-    "nuke",
-    "waveclear"
+    "farm_tool"
    ]
   },
   "sandking_scorpion_strike": {
@@ -2571,11 +2618,10 @@
   },
   "shadow_demon_disruption": {
    "tags": [
-    "farm_tool",
     "hard_cc",
+    "initiation",
     "save_ally",
-    "setup_cc",
-    "sustain_self"
+    "setup_cc"
    ]
   },
   "shadow_demon_disseminate": {
@@ -2586,7 +2632,7 @@
   "shadow_demon_shadow_poison": {
    "tags": [
     "aoe",
-    "farm_tool",
+    "nuke",
     "waveclear"
    ]
   },
@@ -2608,14 +2654,24 @@
    "tags": [
     "channeled",
     "hard_cc",
+    "initiation",
     "mana_hungry",
     "sustain_self"
+   ],
+   "roleMust": [
+    4,
+    5
    ]
   },
   "shadow_shaman_voodoo": {
    "tags": [
     "hard_cc",
+    "initiation",
     "mana_hungry"
+   ],
+   "roleMust": [
+    4,
+    5
    ]
   },
   "shredder_chakram": {
@@ -2637,7 +2693,6 @@
   "shredder_timber_chain": {
    "tags": [
     "aoe",
-    "initiation",
     "mobility",
     "nuke"
    ]
@@ -2701,6 +2756,11 @@
     "mana_hungry",
     "passive_value",
     "soft_cc"
+   ],
+   "roleMust": [
+    1,
+    2,
+    3
    ]
   },
   "skywrath_mage_ancient_seal": {
@@ -2735,6 +2795,7 @@
   "slardar_bash": {
    "tags": [
     "hard_cc",
+    "passive_value",
     "steroid"
    ]
   },
@@ -2742,13 +2803,13 @@
    "tags": [
     "aoe",
     "hard_cc",
+    "initiation",
     "nuke",
     "soft_cc"
    ]
   },
   "slardar_sprint": {
    "tags": [
-    "initiation",
     "mobility"
    ]
   },
@@ -2761,13 +2822,13 @@
   "slark_pounce": {
    "tags": [
     "initiation",
-    "mobility"
+    "mobility",
+    "soft_cc"
    ]
   },
   "slark_saltwater_shiv": {
    "tags": [
     "soft_cc",
-    "steroid",
     "sustain_self"
    ]
   },
@@ -2776,6 +2837,10 @@
     "mobility",
     "passive_value",
     "sustain_self"
+   ],
+   "roleMust": [
+    4,
+    5
    ]
   },
   "snapfire_firesnap_cookie": {
@@ -2816,6 +2881,7 @@
   },
   "sniper_headshot": {
    "tags": [
+    "passive_value",
     "soft_cc",
     "steroid"
    ]
@@ -2831,6 +2897,7 @@
   "sniper_take_aim": {
    "tags": [
     "grants_ranged",
+    "passive_value",
     "steroid"
    ]
   },
@@ -2839,23 +2906,21 @@
     "aoe",
     "passive_value",
     "sustain_self"
+   ],
+   "roleMust": [
+    3
    ]
   },
   "spectre_haunt": {
    "tags": [
     "aoe",
     "initiation",
-    "mana_hungry",
-    "mobility"
+    "mana_hungry"
    ]
   },
   "spectre_shadow_step": {
    "tags": [
-    "aoe",
-    "farm_tool",
-    "initiation",
-    "mobility",
-    "sustain_self"
+    "initiation"
    ]
   },
   "spectre_spectral_dagger": {
@@ -2869,7 +2934,7 @@
   },
   "spirit_breaker_bulldoze": {
    "tags": [
-    "mobility"
+    "sustain_self"
    ]
   },
   "spirit_breaker_charge_of_darkness": {
@@ -2883,6 +2948,7 @@
   "spirit_breaker_greater_bash": {
    "tags": [
     "hard_cc",
+    "passive_value",
     "steroid"
    ]
   },
@@ -2898,6 +2964,7 @@
   "storm_spirit_ball_lightning": {
    "tags": [
     "initiation",
+    "mana_hungry",
     "mobility",
     "nuke"
    ]
@@ -2911,6 +2978,7 @@
   "storm_spirit_overload": {
    "tags": [
     "aoe",
+    "passive_value",
     "soft_cc",
     "steroid"
    ]
@@ -2934,13 +3002,21 @@
     "aoe",
     "farm_tool",
     "steroid"
+   ],
+   "roleMust": [
+    1
    ]
   },
   "sven_storm_bolt": {
    "tags": [
     "aoe",
     "hard_cc",
+    "initiation",
     "nuke"
+   ],
+   "roleMust": [
+    4,
+    5
    ]
   },
   "sven_warcry": {
@@ -2979,7 +3055,6 @@
     "hard_cc",
     "initiation",
     "mana_hungry",
-    "mobility",
     "nuke",
     "waveclear"
    ]
@@ -3019,12 +3094,19 @@
   "terrorblade_metamorphosis": {
    "tags": [
     "steroid"
+   ],
+   "roleMust": [
+    1
    ]
   },
   "terrorblade_reflection": {
    "tags": [
     "aoe",
     "soft_cc"
+   ],
+   "roleMust": [
+    4,
+    5
    ]
   },
   "terrorblade_sunder": {
@@ -3037,7 +3119,6 @@
    "tags": [
     "aoe",
     "farm_tool",
-    "soft_cc",
     "waveclear"
    ]
   },
@@ -3049,14 +3130,21 @@
   },
   "tidehunter_kraken_shell": {
    "tags": [
+    "farm_tool",
     "passive_value",
     "sustain_self"
+   ],
+   "roleMust": [
+    1,
+    2,
+    3
    ]
   },
   "tidehunter_ravage": {
    "tags": [
     "aoe",
     "hard_cc",
+    "initiation",
     "mana_hungry",
     "nuke",
     "teamfight_ult"
@@ -3065,7 +3153,7 @@
   "tinker_deploy_turrets": {
    "tags": [
     "mana_hungry",
-    "summon"
+    "nuke"
    ]
   },
   "tinker_laser": {
@@ -3093,15 +3181,21 @@
    "tags": [
     "aoe",
     "hard_cc",
+    "initiation",
     "mana_hungry",
     "nuke",
     "waveclear"
+   ],
+   "roleMust": [
+    4,
+    5
    ]
   },
   "tiny_grow": {
    "tags": [
     "passive_value",
-    "steroid"
+    "steroid",
+    "sustain_self"
    ]
   },
   "tiny_toss": {
@@ -3116,8 +3210,7 @@
   "tiny_tree_grab": {
    "tags": [
     "farm_tool",
-    "steroid",
-    "waveclear"
+    "steroid"
    ]
   },
   "treant_leech_seed": {
@@ -3164,6 +3257,7 @@
   },
   "troll_warlord_fervor": {
    "tags": [
+    "passive_value",
     "steroid"
    ]
   },
@@ -3194,6 +3288,10 @@
     "mobility",
     "nuke",
     "save_ally"
+   ],
+   "roleMust": [
+    4,
+    5
    ]
   },
   "tusk_tag_team": {
@@ -3207,6 +3305,7 @@
   "tusk_walrus_punch": {
    "tags": [
     "hard_cc",
+    "initiation",
     "steroid"
    ]
   },
@@ -3238,6 +3337,10 @@
     "mana_hungry",
     "summon",
     "teamfight_ult"
+   ],
+   "roleMust": [
+    4,
+    5
    ]
   },
   "ursa_earthshock": {
@@ -3255,6 +3358,7 @@
   },
   "ursa_fury_swipes": {
    "tags": [
+    "passive_value",
     "steroid"
    ]
   },
@@ -3265,6 +3369,7 @@
   },
   "vengefulspirit_command_aura": {
    "tags": [
+    "passive_value",
     "steroid",
     "team_aura"
    ]
@@ -3306,7 +3411,8 @@
   },
   "venomancer_snakebite": {
    "tags": [
-    "nuke"
+    "nuke",
+    "soft_cc"
    ]
   },
   "venomancer_venomous_gale": {
@@ -3346,8 +3452,7 @@
   },
   "visage_grave_chill": {
    "tags": [
-    "soft_cc",
-    "steroid"
+    "soft_cc"
    ]
   },
   "visage_gravekeepers_cloak": {
@@ -3411,6 +3516,7 @@
    "tags": [
     "aoe",
     "hard_cc",
+    "initiation",
     "mana_hungry",
     "summon",
     "teamfight_ult"
@@ -3433,6 +3539,7 @@
   },
   "weaver_geminate_attack": {
    "tags": [
+    "passive_value",
     "steroid"
    ]
   },
@@ -3441,17 +3548,24 @@
     "aoe",
     "mobility",
     "waveclear"
+   ],
+   "roleMust": [
+    1,
+    2,
+    3,
+    4,
+    5
    ]
   },
   "weaver_the_swarm": {
    "tags": [
-    "aoe"
+    "aoe",
+    "soft_cc"
    ]
   },
   "weaver_time_lapse": {
    "tags": [
     "mana_hungry",
-    "mobility",
     "sustain_self"
    ]
   },
@@ -3485,11 +3599,17 @@
     "mobility",
     "soft_cc",
     "steroid"
+   ],
+   "roleMust": [
+    1,
+    2,
+    3,
+    4,
+    5
    ]
   },
   "winter_wyvern_cold_embrace": {
    "tags": [
-    "hard_cc",
     "save_ally",
     "sustain_self"
    ]
@@ -3506,6 +3626,7 @@
    "tags": [
     "aoe",
     "hard_cc",
+    "initiation",
     "mana_hungry",
     "teamfight_ult"
    ]
@@ -3526,6 +3647,7 @@
   "wisp_spirits": {
    "tags": [
     "aoe",
+    "farm_tool",
     "nuke"
    ]
   },
@@ -3580,15 +3702,20 @@
   },
   "zuus_lightning_bolt": {
    "tags": [
-    "hard_cc",
-    "nuke"
+    "nuke",
+    "soft_cc"
+   ],
+   "roleMust": [
+    4,
+    5
    ]
   },
   "zuus_thundergods_wrath": {
    "tags": [
     "aoe",
     "mana_hungry",
-    "nuke"
+    "nuke",
+    "teamfight_ult"
    ]
   }
  }

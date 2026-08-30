@@ -7,7 +7,16 @@
   "baseInt": 18,
   "strGain": 2.6,
   "agiGain": 1.5,
-  "intGain": 2
+  "intGain": 2,
+  "attackRange": 150,
+  "attackRate": 1.5,
+  "projectileSpeed": 900,
+  "moveSpeed": 325,
+  "baseArmor": -1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 22,
+  "baseAttackMax": 32
  },
  "abyssalunderlord": {
   "attackType": "Melee",
@@ -17,7 +26,16 @@
   "baseInt": 18,
   "strGain": 3.2,
   "agiGain": 1.6,
-  "intGain": 2.3
+  "intGain": 2.3,
+  "attackRange": 200,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 290,
+  "baseArmor": 3,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 37,
+  "baseAttackMax": 43
  },
  "alchemist": {
   "attackType": "Melee",
@@ -27,7 +45,16 @@
   "baseInt": 25,
   "strGain": 2.7,
   "agiGain": 1.5,
-  "intGain": 1.8
+  "intGain": 1.8,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 295,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 27,
+  "baseAttackMax": 33
  },
  "ancientapparition": {
   "attackType": "Ranged",
@@ -37,7 +64,16 @@
   "baseInt": 23,
   "strGain": 1.9,
   "agiGain": 2,
-  "intGain": 3.1
+  "intGain": 3.1,
+  "attackRange": 675,
+  "attackRate": 1.7,
+  "projectileSpeed": 1250,
+  "moveSpeed": 285,
+  "baseArmor": -1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 21,
+  "baseAttackMax": 31
  },
  "antimage": {
   "attackType": "Melee",
@@ -47,7 +83,16 @@
   "baseInt": 12,
   "strGain": 1.6,
   "agiGain": 2.8,
-  "intGain": 1.8
+  "intGain": 1.8,
+  "attackRange": 150,
+  "attackRate": 1.4,
+  "projectileSpeed": 0,
+  "moveSpeed": 310,
+  "baseArmor": 2,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 29,
+  "baseAttackMax": 33
  },
  "arc_warden": {
   "attackType": "Ranged",
@@ -57,7 +102,16 @@
   "baseInt": 24,
   "strGain": 2.2,
   "agiGain": 2.7,
-  "intGain": 2.6
+  "intGain": 2.6,
+  "attackRange": 625,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 300,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 23,
+  "baseAttackMax": 29
  },
  "axe": {
   "attackType": "Melee",
@@ -67,7 +121,16 @@
   "baseInt": 18,
   "strGain": 2.7,
   "agiGain": 1.7,
-  "intGain": 1.6
+  "intGain": 1.6,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 315,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 31,
+  "baseAttackMax": 35
  },
  "bane": {
   "attackType": "Ranged",
@@ -77,7 +140,16 @@
   "baseInt": 23,
   "strGain": 2.5,
   "agiGain": 2.5,
-  "intGain": 2.5
+  "intGain": 2.5,
+  "attackRange": 425,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 305,
+  "baseArmor": 1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 24,
+  "baseAttackMax": 30
  },
  "batrider": {
   "attackType": "Ranged",
@@ -87,7 +159,16 @@
   "baseInt": 22,
   "strGain": 2.9,
   "agiGain": 2,
-  "intGain": 2.9
+  "intGain": 2.9,
+  "attackRange": 400,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 320,
+  "baseArmor": 2,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 12,
+  "baseAttackMax": 16
  },
  "beastmaster": {
   "attackType": "Melee",
@@ -97,7 +178,16 @@
   "baseInt": 16,
   "strGain": 2.9,
   "agiGain": 2,
-  "intGain": 1.9
+  "intGain": 1.9,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 0,
+  "moveSpeed": 305,
+  "baseArmor": -1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 23,
+  "baseAttackMax": 27
  },
  "bloodseeker": {
   "attackType": "Melee",
@@ -107,7 +197,16 @@
   "baseInt": 17,
   "strGain": 2.7,
   "agiGain": 3.1,
-  "intGain": 2
+  "intGain": 2,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 285,
+  "baseArmor": 2,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 35,
+  "baseAttackMax": 41
  },
  "bountyhunter": {
   "attackType": "Melee",
@@ -117,7 +216,16 @@
   "baseInt": 20,
   "strGain": 2.5,
   "agiGain": 2.6,
-  "intGain": 1.9
+  "intGain": 1.9,
+  "attackRange": 150,
+  "attackRate": 1.5,
+  "projectileSpeed": 900,
+  "moveSpeed": 325,
+  "baseArmor": 5,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 33,
+  "baseAttackMax": 41
  },
  "brewmaster": {
   "attackType": "Melee",
@@ -127,7 +235,16 @@
   "baseInt": 17,
   "strGain": 3.2,
   "agiGain": 2,
-  "intGain": 1.9
+  "intGain": 1.9,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 310,
+  "baseArmor": 1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 26,
+  "baseAttackMax": 33
  },
  "bristleback": {
   "attackType": "Melee",
@@ -137,7 +254,16 @@
   "baseInt": 14,
   "strGain": 2.8,
   "agiGain": 1.8,
-  "intGain": 2.8
+  "intGain": 2.8,
+  "attackRange": 150,
+  "attackRate": 1.8,
+  "projectileSpeed": 900,
+  "moveSpeed": 295,
+  "baseArmor": 1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 31,
+  "baseAttackMax": 37
  },
  "broodmother": {
   "attackType": "Melee",
@@ -147,7 +273,16 @@
   "baseInt": 18,
   "strGain": 2.9,
   "agiGain": 3.4,
-  "intGain": 2
+  "intGain": 2,
+  "attackRange": 175,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 285,
+  "baseArmor": -1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 27,
+  "baseAttackMax": 33
  },
  "centaur": {
   "attackType": "Melee",
@@ -157,7 +292,16 @@
   "baseInt": 15,
   "strGain": 4.2,
   "agiGain": 1,
-  "intGain": 1.6
+  "intGain": 1.6,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 300,
+  "baseArmor": -2,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 36,
+  "baseAttackMax": 38
  },
  "chaosknight": {
   "attackType": "Melee",
@@ -167,7 +311,16 @@
   "baseInt": 18,
   "strGain": 3.1,
   "agiGain": 1.8,
-  "intGain": 1.2
+  "intGain": 1.2,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 325,
+  "baseArmor": 2,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 29,
+  "baseAttackMax": 49
  },
  "chen": {
   "attackType": "Ranged",
@@ -177,7 +330,16 @@
   "baseInt": 19,
   "strGain": 2,
   "agiGain": 2.1,
-  "intGain": 3.2
+  "intGain": 3.2,
+  "attackRange": 650,
+  "attackRate": 1.7,
+  "projectileSpeed": 1100,
+  "moveSpeed": 305,
+  "baseArmor": -1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 29,
+  "baseAttackMax": 39
  },
  "clinkz": {
   "attackType": "Ranged",
@@ -187,7 +349,16 @@
   "baseInt": 21,
   "strGain": 2,
   "agiGain": 2.7,
-  "intGain": 2.2
+  "intGain": 2.2,
+  "attackRange": 600,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 285,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 19,
+  "baseAttackMax": 25
  },
  "crystalmaiden": {
   "attackType": "Ranged",
@@ -197,7 +368,16 @@
   "baseInt": 20,
   "strGain": 2.2,
   "agiGain": 1.8,
-  "intGain": 3.3
+  "intGain": 3.3,
+  "attackRange": 600,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 280,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 28,
+  "baseAttackMax": 34
  },
  "darkseer": {
   "attackType": "Melee",
@@ -207,7 +387,16 @@
   "baseInt": 22,
   "strGain": 2.6,
   "agiGain": 1.5,
-  "intGain": 2.7
+  "intGain": 2.7,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 295,
+  "baseArmor": 2,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 31,
+  "baseAttackMax": 37
  },
  "darkwillow": {
   "attackType": "Ranged",
@@ -217,7 +406,16 @@
   "baseInt": 21,
   "strGain": 2,
   "agiGain": 1.6,
-  "intGain": 3.5
+  "intGain": 3.5,
+  "attackRange": 475,
+  "attackRate": 1.5,
+  "projectileSpeed": 1200,
+  "moveSpeed": 290,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 27,
+  "baseAttackMax": 35
  },
  "dawnbreaker": {
   "attackType": "Melee",
@@ -227,7 +425,16 @@
   "baseInt": 20,
   "strGain": 3.4,
   "agiGain": 1.7,
-  "intGain": 2
+  "intGain": 2,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 300,
+  "baseArmor": 2,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 31,
+  "baseAttackMax": 35
  },
  "dazzle": {
   "attackType": "Ranged",
@@ -237,7 +444,16 @@
   "baseInt": 25,
   "strGain": 2.3,
   "agiGain": 1.7,
-  "intGain": 3.5
+  "intGain": 3.5,
+  "attackRange": 575,
+  "attackRate": 1.7,
+  "projectileSpeed": 1200,
+  "moveSpeed": 305,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 19,
+  "baseAttackMax": 25
  },
  "deathprophet": {
   "attackType": "Ranged",
@@ -247,7 +463,16 @@
   "baseInt": 24,
   "strGain": 2.9,
   "agiGain": 2,
-  "intGain": 3
+  "intGain": 3,
+  "attackRange": 600,
+  "attackRate": 1.7,
+  "projectileSpeed": 1000,
+  "moveSpeed": 290,
+  "baseArmor": 1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 22,
+  "baseAttackMax": 32
  },
  "disruptor": {
   "attackType": "Ranged",
@@ -257,7 +482,16 @@
   "baseInt": 20,
   "strGain": 2.4,
   "agiGain": 1.4,
-  "intGain": 2.9
+  "intGain": 2.9,
+  "attackRange": 625,
+  "attackRate": 1.7,
+  "projectileSpeed": 1200,
+  "moveSpeed": 295,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 27,
+  "baseAttackMax": 31
  },
  "doombringer": {
   "attackType": "Melee",
@@ -267,7 +501,16 @@
   "baseInt": 15,
   "strGain": 3.6,
   "agiGain": 1.5,
-  "intGain": 1.9
+  "intGain": 1.9,
+  "attackRange": 200,
+  "attackRate": 1.9,
+  "projectileSpeed": 900,
+  "moveSpeed": 290,
+  "baseArmor": 2,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 32,
+  "baseAttackMax": 42
  },
  "dragonknight": {
   "attackType": "Melee",
@@ -277,7 +520,16 @@
   "baseInt": 18,
   "strGain": 3.2,
   "agiGain": 2,
-  "intGain": 1.7
+  "intGain": 1.7,
+  "attackRange": 150,
+  "attackRate": 1.6,
+  "projectileSpeed": 900,
+  "moveSpeed": 310,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 34,
+  "baseAttackMax": 40
  },
  "drowranger": {
   "attackType": "Ranged",
@@ -287,7 +539,16 @@
   "baseInt": 15,
   "strGain": 1.9,
   "agiGain": 2.8,
-  "intGain": 1.4
+  "intGain": 1.4,
+  "attackRange": 625,
+  "attackRate": 1.7,
+  "projectileSpeed": 1250,
+  "moveSpeed": 310,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 27,
+  "baseAttackMax": 34
  },
  "earthshaker": {
   "attackType": "Melee",
@@ -297,7 +558,16 @@
   "baseInt": 18,
   "strGain": 3.7,
   "agiGain": 1.4,
-  "intGain": 2.1
+  "intGain": 2.1,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 0,
+  "moveSpeed": 315,
+  "baseArmor": 2,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 27,
+  "baseAttackMax": 37
  },
  "earthspirit": {
   "attackType": "Melee",
@@ -307,7 +577,16 @@
   "baseInt": 18,
   "strGain": 3.8,
   "agiGain": 2.4,
-  "intGain": 2.1
+  "intGain": 2.1,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 290,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 25,
+  "baseAttackMax": 29
  },
  "eldertitan": {
   "attackType": "Melee",
@@ -317,7 +596,16 @@
   "baseInt": 23,
   "strGain": 3,
   "agiGain": 1.8,
-  "intGain": 1.6
+  "intGain": 1.6,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 305,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 23,
+  "baseAttackMax": 33
  },
  "emberspirit": {
   "attackType": "Melee",
@@ -327,7 +615,16 @@
   "baseInt": 20,
   "strGain": 2.5,
   "agiGain": 3.2,
-  "intGain": 2.2
+  "intGain": 2.2,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 300,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 33,
+  "baseAttackMax": 37
  },
  "enchantress": {
   "attackType": "Ranged",
@@ -337,7 +634,16 @@
   "baseInt": 22,
   "strGain": 2,
   "agiGain": 2.1,
-  "intGain": 4
+  "intGain": 4,
+  "attackRange": 575,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 320,
+  "baseArmor": 1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 21,
+  "baseAttackMax": 31
  },
  "enigma": {
   "attackType": "Ranged",
@@ -347,7 +653,16 @@
   "baseInt": 19,
   "strGain": 2.5,
   "agiGain": 1,
-  "intGain": 3.6
+  "intGain": 3.6,
+  "attackRange": 500,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 280,
+  "baseArmor": 1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 19,
+  "baseAttackMax": 25
  },
  "facelessvoid": {
   "attackType": "Melee",
@@ -357,7 +672,16 @@
   "baseInt": 15,
   "strGain": 2.6,
   "agiGain": 3.3,
-  "intGain": 1.5
+  "intGain": 1.5,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 300,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 34,
+  "baseAttackMax": 40
  },
  "furion": {
   "attackType": "Ranged",
@@ -367,7 +691,16 @@
   "baseInt": 22,
   "strGain": 2.6,
   "agiGain": 2.6,
-  "intGain": 3.5
+  "intGain": 3.5,
+  "attackRange": 600,
+  "attackRate": 1.5,
+  "projectileSpeed": 1125,
+  "moveSpeed": 295,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 20,
+  "baseAttackMax": 26
  },
  "grimstroke": {
   "attackType": "Ranged",
@@ -377,7 +710,16 @@
   "baseInt": 25,
   "strGain": 2.4,
   "agiGain": 1.9,
-  "intGain": 3.8
+  "intGain": 3.8,
+  "attackRange": 600,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 290,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 22,
+  "baseAttackMax": 26
  },
  "gyrocopter": {
   "attackType": "Ranged",
@@ -387,7 +729,16 @@
   "baseInt": 21,
   "strGain": 2.5,
   "agiGain": 3.4,
-  "intGain": 2.4
+  "intGain": 2.4,
+  "attackRange": 365,
+  "attackRate": 1.7,
+  "projectileSpeed": 3000,
+  "moveSpeed": 315,
+  "baseArmor": 1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 18,
+  "baseAttackMax": 24
  },
  "hoodwink": {
   "attackType": "Ranged",
@@ -397,7 +748,16 @@
   "baseInt": 21,
   "strGain": 2,
   "agiGain": 3.6,
-  "intGain": 2.9
+  "intGain": 2.9,
+  "attackRange": 575,
+  "attackRate": 2,
+  "projectileSpeed": 1800,
+  "moveSpeed": 315,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 22,
+  "baseAttackMax": 29
  },
  "huskar": {
   "attackType": "Ranged",
@@ -407,7 +767,16 @@
   "baseInt": 18,
   "strGain": 3.3,
   "agiGain": 1.5,
-  "intGain": 0
+  "intGain": 0,
+  "attackRange": 400,
+  "attackRate": 1.6,
+  "projectileSpeed": 1400,
+  "moveSpeed": 290,
+  "baseArmor": 1,
+  "baseHealth": 120,
+  "baseMana": 0,
+  "baseAttackMin": 21,
+  "baseAttackMax": 26
  },
  "invoker": {
   "attackType": "Ranged",
@@ -417,7 +786,16 @@
   "baseInt": 20,
   "strGain": 2.5,
   "agiGain": 2,
-  "intGain": 4
+  "intGain": 4,
+  "attackRange": 600,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 285,
+  "baseArmor": -1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 19,
+  "baseAttackMax": 25
  },
  "jakiro": {
   "attackType": "Ranged",
@@ -427,7 +805,16 @@
   "baseInt": 25,
   "strGain": 2.5,
   "agiGain": 1.2,
-  "intGain": 3
+  "intGain": 3,
+  "attackRange": 400,
+  "attackRate": 1.7,
+  "projectileSpeed": 1100,
+  "moveSpeed": 290,
+  "baseArmor": 1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 27,
+  "baseAttackMax": 35
  },
  "juggernaut": {
   "attackType": "Melee",
@@ -437,7 +824,16 @@
   "baseInt": 14,
   "strGain": 2,
   "agiGain": 2.8,
-  "intGain": 1.4
+  "intGain": 1.4,
+  "attackRange": 150,
+  "attackRate": 1.4,
+  "projectileSpeed": 0,
+  "moveSpeed": 300,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 22,
+  "baseAttackMax": 24
  },
  "keeperofthelight": {
   "attackType": "Ranged",
@@ -447,7 +843,16 @@
   "baseInt": 24,
   "strGain": 2.3,
   "agiGain": 1.6,
-  "intGain": 3.3
+  "intGain": 3.3,
+  "attackRange": 600,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 315,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 20,
+  "baseAttackMax": 27
  },
  "kez": {
   "attackType": "Melee",
@@ -457,7 +862,16 @@
   "baseInt": 20,
   "strGain": 2.8,
   "agiGain": 3.5,
-  "intGain": 1.7
+  "intGain": 1.7,
+  "attackRange": 225,
+  "attackRate": 1.9,
+  "projectileSpeed": 900,
+  "moveSpeed": 310,
+  "baseArmor": 1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 23,
+  "baseAttackMax": 29
  },
  "kunkka": {
   "attackType": "Melee",
@@ -467,7 +881,16 @@
   "baseInt": 18,
   "strGain": 3.6,
   "agiGain": 1.6,
-  "intGain": 1.8
+  "intGain": 1.8,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 315,
+  "baseArmor": 2,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 30,
+  "baseAttackMax": 36
  },
  "largo": {
   "attackType": "Melee",
@@ -477,7 +900,16 @@
   "baseInt": 21,
   "strGain": 3.6,
   "agiGain": 1.3,
-  "intGain": 2.6
+  "intGain": 2.6,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 0,
+  "moveSpeed": 290,
+  "baseArmor": 2,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 39,
+  "baseAttackMax": 45
  },
  "legioncommander": {
   "attackType": "Melee",
@@ -487,7 +919,16 @@
   "baseInt": 20,
   "strGain": 3.1,
   "agiGain": 1.7,
-  "intGain": 2.2
+  "intGain": 2.2,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 325,
+  "baseArmor": -1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 33,
+  "baseAttackMax": 37
  },
  "leshrac": {
   "attackType": "Ranged",
@@ -497,7 +938,16 @@
   "baseInt": 22,
   "strGain": 2.8,
   "agiGain": 2.5,
-  "intGain": 3.5
+  "intGain": 3.5,
+  "attackRange": 575,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 325,
+  "baseArmor": 1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 27,
+  "baseAttackMax": 31
  },
  "lich": {
   "attackType": "Ranged",
@@ -507,7 +957,16 @@
   "baseInt": 28,
   "strGain": 2.1,
   "agiGain": 1.7,
-  "intGain": 3.4
+  "intGain": 3.4,
+  "attackRange": 550,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 290,
+  "baseArmor": -1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 24,
+  "baseAttackMax": 33
  },
  "lifestealer": {
   "attackType": "Melee",
@@ -517,7 +976,16 @@
   "baseInt": 15,
   "strGain": 2.4,
   "agiGain": 1.9,
-  "intGain": 1.8
+  "intGain": 1.8,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 320,
+  "baseArmor": 1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 26,
+  "baseAttackMax": 32
  },
  "lina": {
   "attackType": "Ranged",
@@ -527,7 +995,16 @@
   "baseInt": 30,
   "strGain": 2.4,
   "agiGain": 2.4,
-  "intGain": 4
+  "intGain": 4,
+  "attackRange": 670,
+  "attackRate": 1.6,
+  "projectileSpeed": 1000,
+  "moveSpeed": 290,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 21,
+  "baseAttackMax": 29
  },
  "lion": {
   "attackType": "Ranged",
@@ -537,7 +1014,16 @@
   "baseInt": 19,
   "strGain": 2.4,
   "agiGain": 1.7,
-  "intGain": 3.5
+  "intGain": 3.5,
+  "attackRange": 600,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 290,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 29,
+  "baseAttackMax": 35
  },
  "lonedruid": {
   "attackType": "Ranged",
@@ -547,7 +1033,16 @@
   "baseInt": 13,
   "strGain": 2.5,
   "agiGain": 2.8,
-  "intGain": 1.4
+  "intGain": 1.4,
+  "attackRange": 550,
+  "attackRate": 1.6,
+  "projectileSpeed": 1125,
+  "moveSpeed": 300,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 22,
+  "baseAttackMax": 26
  },
  "luna": {
   "attackType": "Ranged",
@@ -557,7 +1052,16 @@
   "baseInt": 23,
   "strGain": 2.2,
   "agiGain": 3.4,
-  "intGain": 1.9
+  "intGain": 1.9,
+  "attackRange": 330,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 325,
+  "baseArmor": 2,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 26,
+  "baseAttackMax": 32
  },
  "lycan": {
   "attackType": "Melee",
@@ -567,7 +1071,16 @@
   "baseInt": 23,
   "strGain": 3.4,
   "agiGain": 1.7,
-  "intGain": 1.7
+  "intGain": 1.7,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 305,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 24,
+  "baseAttackMax": 29
  },
  "magnataur": {
   "attackType": "Melee",
@@ -577,7 +1090,16 @@
   "baseInt": 20,
   "strGain": 3.1,
   "agiGain": 2,
-  "intGain": 2.1
+  "intGain": 2.1,
+  "attackRange": 200,
+  "attackRate": 1.8,
+  "projectileSpeed": 900,
+  "moveSpeed": 305,
+  "baseArmor": 1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 31,
+  "baseAttackMax": 39
  },
  "marci": {
   "attackType": "Melee",
@@ -587,7 +1109,16 @@
   "baseInt": 19,
   "strGain": 3.2,
   "agiGain": 2.2,
-  "intGain": 1.9
+  "intGain": 1.9,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 0,
+  "moveSpeed": 315,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 29,
+  "baseAttackMax": 33
  },
  "mars": {
   "attackType": "Melee",
@@ -597,7 +1128,16 @@
   "baseInt": 21,
   "strGain": 3.7,
   "agiGain": 1.7,
-  "intGain": 2.2
+  "intGain": 2.2,
+  "attackRange": 250,
+  "attackRate": 1.8,
+  "projectileSpeed": 900,
+  "moveSpeed": 310,
+  "baseArmor": -1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 26,
+  "baseAttackMax": 34
  },
  "medusa": {
   "attackType": "Ranged",
@@ -607,7 +1147,16 @@
   "baseInt": 25,
   "strGain": 0,
   "agiGain": 3.6,
-  "intGain": 3.6
+  "intGain": 3.6,
+  "attackRange": 600,
+  "attackRate": 1.7,
+  "projectileSpeed": 1200,
+  "moveSpeed": 275,
+  "baseArmor": -1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 26,
+  "baseAttackMax": 32
  },
  "meepo": {
   "attackType": "Melee",
@@ -617,7 +1166,16 @@
   "baseInt": 18,
   "strGain": 2.2,
   "agiGain": 2.1,
-  "intGain": 1.9
+  "intGain": 1.9,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 315,
+  "baseArmor": 3,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 29,
+  "baseAttackMax": 35
  },
  "mirana": {
   "attackType": "Ranged",
@@ -627,7 +1185,16 @@
   "baseInt": 22,
   "strGain": 2.2,
   "agiGain": 3.1,
-  "intGain": 1.9
+  "intGain": 1.9,
+  "attackRange": 630,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 285,
+  "baseArmor": -2,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 22,
+  "baseAttackMax": 28
  },
  "monkey_king": {
   "attackType": "Melee",
@@ -637,7 +1204,16 @@
   "baseInt": 20,
   "strGain": 2.8,
   "agiGain": 3.7,
-  "intGain": 1.8
+  "intGain": 1.8,
+  "attackRange": 300,
+  "attackRate": 1.6,
+  "projectileSpeed": 900,
+  "moveSpeed": 300,
+  "baseArmor": 1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 29,
+  "baseAttackMax": 33
  },
  "morphling": {
   "attackType": "Ranged",
@@ -647,7 +1223,16 @@
   "baseInt": 19,
   "strGain": 2.6,
   "agiGain": 3.9,
-  "intGain": 1.8
+  "intGain": 1.8,
+  "attackRange": 350,
+  "attackRate": 1.5,
+  "projectileSpeed": 1300,
+  "moveSpeed": 285,
+  "baseArmor": -1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 12,
+  "baseAttackMax": 21
  },
  "muerta": {
   "attackType": "Ranged",
@@ -657,7 +1242,16 @@
   "baseInt": 23,
   "strGain": 2,
   "agiGain": 2.7,
-  "intGain": 3.6
+  "intGain": 3.6,
+  "attackRange": 575,
+  "attackRate": 1.7,
+  "projectileSpeed": 3000,
+  "moveSpeed": 295,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 24,
+  "baseAttackMax": 32
  },
  "nagasiren": {
   "attackType": "Melee",
@@ -667,7 +1261,16 @@
   "baseInt": 19,
   "strGain": 2.4,
   "agiGain": 3.4,
-  "intGain": 2
+  "intGain": 2,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 330,
+  "baseArmor": 1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 23,
+  "baseAttackMax": 25
  },
  "necrolyte": {
   "attackType": "Ranged",
@@ -677,7 +1280,16 @@
   "baseInt": 23,
   "strGain": 2.3,
   "agiGain": 1.3,
-  "intGain": 2.7
+  "intGain": 2.7,
+  "attackRange": 500,
+  "attackRate": 1.7,
+  "projectileSpeed": 1200,
+  "moveSpeed": 280,
+  "baseArmor": 2,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 26,
+  "baseAttackMax": 30
  },
  "nevermore": {
   "attackType": "Ranged",
@@ -687,7 +1299,16 @@
   "baseInt": 18,
   "strGain": 2.7,
   "agiGain": 3.6,
-  "intGain": 2.2
+  "intGain": 2.2,
+  "attackRange": 525,
+  "attackRate": 1.6,
+  "projectileSpeed": 1200,
+  "moveSpeed": 305,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 16,
+  "baseAttackMax": 22
  },
  "nightstalker": {
   "attackType": "Melee",
@@ -697,7 +1318,16 @@
   "baseInt": 15,
   "strGain": 3,
   "agiGain": 2.2,
-  "intGain": 1.6
+  "intGain": 1.6,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 295,
+  "baseArmor": 2,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 40,
+  "baseAttackMax": 44
  },
  "nyxassassin": {
   "attackType": "Melee",
@@ -707,7 +1337,16 @@
   "baseInt": 21,
   "strGain": 2.7,
   "agiGain": 2.9,
-  "intGain": 2.6
+  "intGain": 2.6,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 310,
+  "baseArmor": 1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 26,
+  "baseAttackMax": 30
  },
  "obsidiandestroyer": {
   "attackType": "Ranged",
@@ -717,7 +1356,16 @@
   "baseInt": 30,
   "strGain": 2.9,
   "agiGain": 1.6,
-  "intGain": 4.2
+  "intGain": 4.2,
+  "attackRange": 450,
+  "attackRate": 1.9,
+  "projectileSpeed": 900,
+  "moveSpeed": 315,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 19,
+  "baseAttackMax": 31
  },
  "ogremagi": {
   "attackType": "Melee",
@@ -727,7 +1375,16 @@
   "baseInt": 0,
   "strGain": 4.2,
   "agiGain": 1.5,
-  "intGain": 0
+  "intGain": 0,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 290,
+  "baseArmor": 4,
+  "baseHealth": 120,
+  "baseMana": 120,
+  "baseAttackMin": 45,
+  "baseAttackMax": 51
  },
  "omniknight": {
   "attackType": "Melee",
@@ -737,7 +1394,16 @@
   "baseInt": 16,
   "strGain": 3.1,
   "agiGain": 1.7,
-  "intGain": 2.1
+  "intGain": 2.1,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 310,
+  "baseArmor": 2,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 31,
+  "baseAttackMax": 41
  },
  "oracle": {
   "attackType": "Ranged",
@@ -747,7 +1413,16 @@
   "baseInt": 26,
   "strGain": 2.2,
   "agiGain": 1.7,
-  "intGain": 3.6
+  "intGain": 3.6,
+  "attackRange": 625,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 295,
+  "baseArmor": 1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 13,
+  "baseAttackMax": 19
  },
  "pangolier": {
   "attackType": "Melee",
@@ -757,7 +1432,16 @@
   "baseInt": 16,
   "strGain": 2.7,
   "agiGain": 3.2,
-  "intGain": 2.5
+  "intGain": 2.5,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 300,
+  "baseArmor": 2,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 26,
+  "baseAttackMax": 32
  },
  "phantomassassin": {
   "attackType": "Melee",
@@ -767,7 +1451,16 @@
   "baseInt": 15,
   "strGain": 2,
   "agiGain": 3.4,
-  "intGain": 1.7
+  "intGain": 1.7,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 310,
+  "baseArmor": 1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 35,
+  "baseAttackMax": 37
  },
  "phantomlancer": {
   "attackType": "Melee",
@@ -777,7 +1470,16 @@
   "baseInt": 21,
   "strGain": 2.2,
   "agiGain": 3.4,
-  "intGain": 1.8
+  "intGain": 1.8,
+  "attackRange": 225,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 285,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 26,
+  "baseAttackMax": 36
  },
  "phoenix": {
   "attackType": "Ranged",
@@ -787,7 +1489,16 @@
   "baseInt": 16,
   "strGain": 3.3,
   "agiGain": 1.5,
-  "intGain": 1.8
+  "intGain": 1.8,
+  "attackRange": 525,
+  "attackRate": 1.7,
+  "projectileSpeed": 1100,
+  "moveSpeed": 280,
+  "baseArmor": -1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 21,
+  "baseAttackMax": 31
  },
  "primal_beast": {
   "attackType": "Melee",
@@ -797,7 +1508,16 @@
   "baseInt": 16,
   "strGain": 4.3,
   "agiGain": 1,
-  "intGain": 1.7
+  "intGain": 1.7,
+  "attackRange": 150,
+  "attackRate": 1.8,
+  "projectileSpeed": 900,
+  "moveSpeed": 305,
+  "baseArmor": 2,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 36,
+  "baseAttackMax": 38
  },
  "puck": {
   "attackType": "Ranged",
@@ -807,7 +1527,16 @@
   "baseInt": 23,
   "strGain": 2.4,
   "agiGain": 2.3,
-  "intGain": 3.8
+  "intGain": 3.8,
+  "attackRange": 550,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 290,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 22,
+  "baseAttackMax": 30
  },
  "pudge": {
   "attackType": "Melee",
@@ -817,7 +1546,16 @@
   "baseInt": 16,
   "strGain": 3,
   "agiGain": 1.4,
-  "intGain": 1.8
+  "intGain": 1.8,
+  "attackRange": 175,
+  "attackRate": 1.7,
+  "projectileSpeed": 0,
+  "moveSpeed": 280,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 45,
+  "baseAttackMax": 51
  },
  "pugna": {
   "attackType": "Ranged",
@@ -827,7 +1565,16 @@
   "baseInt": 26,
   "strGain": 2,
   "agiGain": 1.3,
-  "intGain": 5.2
+  "intGain": 5.2,
+  "attackRange": 630,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 325,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 21,
+  "baseAttackMax": 28
  },
  "queenofpain": {
   "attackType": "Ranged",
@@ -837,7 +1584,16 @@
   "baseInt": 25,
   "strGain": 2.4,
   "agiGain": 2.5,
-  "intGain": 3.4
+  "intGain": 3.4,
+  "attackRange": 550,
+  "attackRate": 1.5,
+  "projectileSpeed": 1500,
+  "moveSpeed": 290,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 26,
+  "baseAttackMax": 32
  },
  "rattletrap": {
   "attackType": "Melee",
@@ -847,7 +1603,16 @@
   "baseInt": 18,
   "strGain": 3.2,
   "agiGain": 2.3,
-  "intGain": 1.7
+  "intGain": 1.7,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 310,
+  "baseArmor": 1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 24,
+  "baseAttackMax": 26
  },
  "razor": {
   "attackType": "Ranged",
@@ -857,7 +1622,16 @@
   "baseInt": 21,
   "strGain": 2.8,
   "agiGain": 2.8,
-  "intGain": 2.2
+  "intGain": 2.2,
+  "attackRange": 475,
+  "attackRate": 1.7,
+  "projectileSpeed": 2000,
+  "moveSpeed": 280,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 23,
+  "baseAttackMax": 25
  },
  "riki": {
   "attackType": "Melee",
@@ -867,7 +1641,16 @@
   "baseInt": 14,
   "strGain": 2,
   "agiGain": 2.4,
-  "intGain": 1.3
+  "intGain": 1.3,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 315,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 22,
+  "baseAttackMax": 26
  },
  "ringmaster": {
   "attackType": "Ranged",
@@ -877,7 +1660,16 @@
   "baseInt": 25,
   "strGain": 2.1,
   "agiGain": 1.6,
-  "intGain": 3
+  "intGain": 3,
+  "attackRange": 575,
+  "attackRate": 1.7,
+  "projectileSpeed": 1200,
+  "moveSpeed": 310,
+  "baseArmor": 1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 23,
+  "baseAttackMax": 33
  },
  "rubick": {
   "attackType": "Ranged",
@@ -887,7 +1679,16 @@
   "baseInt": 24,
   "strGain": 2,
   "agiGain": 2.5,
-  "intGain": 3.7
+  "intGain": 3.7,
+  "attackRange": 550,
+  "attackRate": 1.7,
+  "projectileSpeed": 1125,
+  "moveSpeed": 290,
+  "baseArmor": 1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 25,
+  "baseAttackMax": 31
  },
  "sandking": {
   "attackType": "Melee",
@@ -897,7 +1698,16 @@
   "baseInt": 17,
   "strGain": 2.3,
   "agiGain": 2,
-  "intGain": 2
+  "intGain": 2,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 290,
+  "baseArmor": 1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 19,
+  "baseAttackMax": 29
  },
  "shadowdemon": {
   "attackType": "Ranged",
@@ -907,7 +1717,16 @@
   "baseInt": 22,
   "strGain": 2.6,
   "agiGain": 2.2,
-  "intGain": 3.6
+  "intGain": 3.6,
+  "attackRange": 500,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 290,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 29,
+  "baseAttackMax": 33
  },
  "shadowshaman": {
   "attackType": "Ranged",
@@ -917,7 +1736,16 @@
   "baseInt": 23,
   "strGain": 2.3,
   "agiGain": 1.6,
-  "intGain": 3.5
+  "intGain": 3.5,
+  "attackRange": 400,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 285,
+  "baseArmor": 2,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 40,
+  "baseAttackMax": 47
  },
  "shredder": {
   "attackType": "Melee",
@@ -927,7 +1755,16 @@
   "baseInt": 23,
   "strGain": 3.6,
   "agiGain": 1.6,
-  "intGain": 2.7
+  "intGain": 2.7,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 280,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 23,
+  "baseAttackMax": 27
  },
  "silencer": {
   "attackType": "Ranged",
@@ -937,7 +1774,16 @@
   "baseInt": 25,
   "strGain": 2.2,
   "agiGain": 2.2,
-  "intGain": 2.9
+  "intGain": 2.9,
+  "attackRange": 600,
+  "attackRate": 1.6,
+  "projectileSpeed": 900,
+  "moveSpeed": 300,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 18,
+  "baseAttackMax": 32
  },
  "skeletonking": {
   "attackType": "Melee",
@@ -947,7 +1793,16 @@
   "baseInt": 16,
   "strGain": 2.8,
   "agiGain": 1.7,
-  "intGain": 1.6
+  "intGain": 1.6,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 0,
+  "moveSpeed": 310,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 38,
+  "baseAttackMax": 40
  },
  "skywrathmage": {
   "attackType": "Ranged",
@@ -957,7 +1812,16 @@
   "baseInt": 25,
   "strGain": 2,
   "agiGain": 0.8,
-  "intGain": 4.1
+  "intGain": 4.1,
+  "attackRange": 625,
+  "attackRate": 1.7,
+  "projectileSpeed": 1000,
+  "moveSpeed": 325,
+  "baseArmor": -2,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 16,
+  "baseAttackMax": 26
  },
  "slardar": {
   "attackType": "Melee",
@@ -967,7 +1831,16 @@
   "baseInt": 15,
   "strGain": 3.4,
   "agiGain": 2.1,
-  "intGain": 1.5
+  "intGain": 1.5,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 0,
+  "moveSpeed": 300,
+  "baseArmor": 2,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 30,
+  "baseAttackMax": 38
  },
  "slark": {
   "attackType": "Melee",
@@ -977,7 +1850,16 @@
   "baseInt": 16,
   "strGain": 2.1,
   "agiGain": 1.5,
-  "intGain": 1.9
+  "intGain": 1.9,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 0,
+  "moveSpeed": 300,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 37,
+  "baseAttackMax": 43
  },
  "snapfire": {
   "attackType": "Ranged",
@@ -987,7 +1869,16 @@
   "baseInt": 21,
   "strGain": 3.5,
   "agiGain": 1.9,
-  "intGain": 2.2
+  "intGain": 2.2,
+  "attackRange": 400,
+  "attackRate": 1.8,
+  "projectileSpeed": 1800,
+  "moveSpeed": 300,
+  "baseArmor": 1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 25,
+  "baseAttackMax": 31
  },
  "sniper": {
   "attackType": "Ranged",
@@ -997,7 +1888,16 @@
   "baseInt": 15,
   "strGain": 2,
   "agiGain": 3.2,
-  "intGain": 2.6
+  "intGain": 2.6,
+  "attackRange": 550,
+  "attackRate": 1.7,
+  "projectileSpeed": 3000,
+  "moveSpeed": 285,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 13,
+  "baseAttackMax": 19
  },
  "spectre": {
   "attackType": "Melee",
@@ -1007,7 +1907,16 @@
   "baseInt": 16,
   "strGain": 2.4,
   "agiGain": 2.4,
-  "intGain": 1.7
+  "intGain": 1.7,
+  "attackRange": 150,
+  "attackRate": 1.8,
+  "projectileSpeed": 900,
+  "moveSpeed": 295,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 23,
+  "baseAttackMax": 27
  },
  "spiritbreaker": {
   "attackType": "Melee",
@@ -1017,7 +1926,16 @@
   "baseInt": 14,
   "strGain": 3.3,
   "agiGain": 1.7,
-  "intGain": 1.8
+  "intGain": 1.8,
+  "attackRange": 170,
+  "attackRate": 1.9,
+  "projectileSpeed": 900,
+  "moveSpeed": 295,
+  "baseArmor": 1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 34,
+  "baseAttackMax": 44
  },
  "stormspirit": {
   "attackType": "Ranged",
@@ -1027,7 +1945,16 @@
   "baseInt": 23,
   "strGain": 2,
   "agiGain": 2.6,
-  "intGain": 3.7
+  "intGain": 3.7,
+  "attackRange": 480,
+  "attackRate": 1.6,
+  "projectileSpeed": 1100,
+  "moveSpeed": 285,
+  "baseArmor": 1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 24,
+  "baseAttackMax": 34
  },
  "sven": {
   "attackType": "Melee",
@@ -1037,7 +1964,16 @@
   "baseInt": 16,
   "strGain": 3.5,
   "agiGain": 2.2,
-  "intGain": 1.5
+  "intGain": 1.5,
+  "attackRange": 150,
+  "attackRate": 1.9,
+  "projectileSpeed": 0,
+  "moveSpeed": 325,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 37,
+  "baseAttackMax": 39
  },
  "techies": {
   "attackType": "Ranged",
@@ -1047,7 +1983,16 @@
   "baseInt": 25,
   "strGain": 2.6,
   "agiGain": 1.8,
-  "intGain": 3
+  "intGain": 3,
+  "attackRange": 600,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 310,
+  "baseArmor": 2,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 20,
+  "baseAttackMax": 22
  },
  "templarassassin": {
   "attackType": "Ranged",
@@ -1057,7 +2002,16 @@
   "baseInt": 20,
   "strGain": 2.4,
   "agiGain": 3.4,
-  "intGain": 2
+  "intGain": 2,
+  "attackRange": 250,
+  "attackRate": 1.6,
+  "projectileSpeed": 1000,
+  "moveSpeed": 310,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 28,
+  "baseAttackMax": 33
  },
  "terrorblade": {
   "attackType": "Melee",
@@ -1067,7 +2021,16 @@
   "baseInt": 19,
   "strGain": 2,
   "agiGain": 4,
-  "intGain": 1.6
+  "intGain": 1.6,
+  "attackRange": 150,
+  "attackRate": 1.5,
+  "projectileSpeed": 900,
+  "moveSpeed": 315,
+  "baseArmor": 6,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 26,
+  "baseAttackMax": 32
  },
  "tidehunter": {
   "attackType": "Melee",
@@ -1077,7 +2040,16 @@
   "baseInt": 20,
   "strGain": 3.7,
   "agiGain": 1.5,
-  "intGain": 1.7
+  "intGain": 1.7,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 300,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 25,
+  "baseAttackMax": 31
  },
  "tinker": {
   "attackType": "Ranged",
@@ -1087,7 +2059,16 @@
   "baseInt": 30,
   "strGain": 2.3,
   "agiGain": 1.4,
-  "intGain": 3.3
+  "intGain": 3.3,
+  "attackRange": 500,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 305,
+  "baseArmor": 2,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 22,
+  "baseAttackMax": 28
  },
  "tiny": {
   "attackType": "Melee",
@@ -1097,7 +2078,16 @@
   "baseInt": 17,
   "strGain": 4.2,
   "agiGain": 0,
-  "intGain": 2.2
+  "intGain": 2.2,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 275,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 31,
+  "baseAttackMax": 37
  },
  "treant": {
   "attackType": "Melee",
@@ -1107,7 +2097,16 @@
   "baseInt": 20,
   "strGain": 3.4,
   "agiGain": 1.8,
-  "intGain": 1.8
+  "intGain": 1.8,
+  "attackRange": 150,
+  "attackRate": 1.9,
+  "projectileSpeed": 900,
+  "moveSpeed": 280,
+  "baseArmor": 1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 60,
+  "baseAttackMax": 68
  },
  "trollwarlord": {
   "attackType": "Ranged",
@@ -1117,7 +2116,16 @@
   "baseInt": 13,
   "strGain": 2.5,
   "agiGain": 3.3,
-  "intGain": 1
+  "intGain": 1,
+  "attackRange": 500,
+  "attackRate": 1.7,
+  "projectileSpeed": 1200,
+  "moveSpeed": 290,
+  "baseArmor": -1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 27,
+  "baseAttackMax": 35
  },
  "tusk": {
   "attackType": "Melee",
@@ -1127,7 +2135,16 @@
   "baseInt": 18,
   "strGain": 3.9,
   "agiGain": 1.9,
-  "intGain": 1.7
+  "intGain": 1.7,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 310,
+  "baseArmor": 1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 27,
+  "baseAttackMax": 31
  },
  "undying": {
   "attackType": "Melee",
@@ -1137,7 +2154,16 @@
   "baseInt": 27,
   "strGain": 2.4,
   "agiGain": 1.2,
-  "intGain": 2.8
+  "intGain": 2.8,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 300,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 33,
+  "baseAttackMax": 41
  },
  "ursa": {
   "attackType": "Melee",
@@ -1147,7 +2173,16 @@
   "baseInt": 16,
   "strGain": 2.4,
   "agiGain": 2.8,
-  "intGain": 1.5
+  "intGain": 1.5,
+  "attackRange": 150,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 310,
+  "baseArmor": 1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 24,
+  "baseAttackMax": 28
  },
  "vengefulspirit": {
   "attackType": "Ranged",
@@ -1157,7 +2192,16 @@
   "baseInt": 19,
   "strGain": 2.6,
   "agiGain": 3,
-  "intGain": 1.5
+  "intGain": 1.5,
+  "attackRange": 400,
+  "attackRate": 1.5,
+  "projectileSpeed": 1500,
+  "moveSpeed": 300,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 28,
+  "baseAttackMax": 34
  },
  "venomancer": {
   "attackType": "Ranged",
@@ -1167,7 +2211,16 @@
   "baseInt": 19,
   "strGain": 2.1,
   "agiGain": 2.8,
-  "intGain": 1.8
+  "intGain": 1.8,
+  "attackRange": 450,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 280,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 18,
+  "baseAttackMax": 21
  },
  "viper": {
   "attackType": "Ranged",
@@ -1177,7 +2230,16 @@
   "baseInt": 17,
   "strGain": 2.4,
   "agiGain": 2.9,
-  "intGain": 2
+  "intGain": 2,
+  "attackRange": 575,
+  "attackRate": 1.7,
+  "projectileSpeed": 1200,
+  "moveSpeed": 275,
+  "baseArmor": -2,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 27,
+  "baseAttackMax": 29
  },
  "visage": {
   "attackType": "Ranged",
@@ -1187,7 +2249,16 @@
   "baseInt": 22,
   "strGain": 2.8,
   "agiGain": 1.3,
-  "intGain": 2.9
+  "intGain": 2.9,
+  "attackRange": 600,
+  "attackRate": 1.7,
+  "projectileSpeed": 1400,
+  "moveSpeed": 285,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 21,
+  "baseAttackMax": 31
  },
  "voidspirit": {
   "attackType": "Melee",
@@ -1197,7 +2268,16 @@
   "baseInt": 24,
   "strGain": 2.6,
   "agiGain": 2.2,
-  "intGain": 3.1
+  "intGain": 3.1,
+  "attackRange": 200,
+  "attackRate": 1.7,
+  "projectileSpeed": 900,
+  "moveSpeed": 290,
+  "baseArmor": -1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 18,
+  "baseAttackMax": 22
  },
  "warlock": {
   "attackType": "Ranged",
@@ -1207,7 +2287,16 @@
   "baseInt": 25,
   "strGain": 2.4,
   "agiGain": 1,
-  "intGain": 3.1
+  "intGain": 3.1,
+  "attackRange": 600,
+  "attackRate": 1.7,
+  "projectileSpeed": 1200,
+  "moveSpeed": 300,
+  "baseArmor": 1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 27,
+  "baseAttackMax": 37
  },
  "weaver": {
   "attackType": "Ranged",
@@ -1217,7 +2306,16 @@
   "baseInt": 20,
   "strGain": 2,
   "agiGain": 3.3,
-  "intGain": 2
+  "intGain": 2,
+  "attackRange": 425,
+  "attackRate": 1.8,
+  "projectileSpeed": 900,
+  "moveSpeed": 275,
+  "baseArmor": 1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 37,
+  "baseAttackMax": 43
  },
  "windrunner": {
   "attackType": "Ranged",
@@ -1227,7 +2325,16 @@
   "baseInt": 18,
   "strGain": 2.6,
   "agiGain": 2.1,
-  "intGain": 3.2
+  "intGain": 3.2,
+  "attackRange": 600,
+  "attackRate": 1.5,
+  "projectileSpeed": 1250,
+  "moveSpeed": 285,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 24,
+  "baseAttackMax": 36
  },
  "winterwyvern": {
   "attackType": "Ranged",
@@ -1237,7 +2344,16 @@
   "baseInt": 26,
   "strGain": 2.5,
   "agiGain": 1.7,
-  "intGain": 3.6
+  "intGain": 3.6,
+  "attackRange": 450,
+  "attackRate": 1.7,
+  "projectileSpeed": 700,
+  "moveSpeed": 285,
+  "baseArmor": 1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 16,
+  "baseAttackMax": 23
  },
  "wisp": {
   "attackType": "Ranged",
@@ -1247,7 +2363,16 @@
   "baseInt": 21,
   "strGain": 3,
   "agiGain": 1.6,
-  "intGain": 1.7
+  "intGain": 1.7,
+  "attackRange": 500,
+  "attackRate": 1.7,
+  "projectileSpeed": 1200,
+  "moveSpeed": 320,
+  "baseArmor": 1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 21,
+  "baseAttackMax": 27
  },
  "witchdoctor": {
   "attackType": "Ranged",
@@ -1257,7 +2382,16 @@
   "baseInt": 22,
   "strGain": 2.1,
   "agiGain": 1.4,
-  "intGain": 3.1
+  "intGain": 3.1,
+  "attackRange": 550,
+  "attackRate": 1.7,
+  "projectileSpeed": 1200,
+  "moveSpeed": 300,
+  "baseArmor": 0,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 26,
+  "baseAttackMax": 36
  },
  "zeus": {
   "attackType": "Ranged",
@@ -1267,6 +2401,15 @@
   "baseInt": 23,
   "strGain": 2.1,
   "agiGain": 1.2,
-  "intGain": 3.3
+  "intGain": 3.3,
+  "attackRange": 380,
+  "attackRate": 1.7,
+  "projectileSpeed": 1100,
+  "moveSpeed": 305,
+  "baseArmor": 1,
+  "baseHealth": 120,
+  "baseMana": 75,
+  "baseAttackMin": 30,
+  "baseAttackMax": 40
  }
 }
