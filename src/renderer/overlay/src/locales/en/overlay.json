@@ -68,6 +68,40 @@
     "strongAbilities": "Strong Abilities for This Hero",
     "weakAbilities": "Weak Abilities for This Hero",
     "unknownAbility": "Unknown Ability",
-    "unknownHint": "The model could not identify this icon — consider using 'Report Failed Recognition'"
+    "unknownHint": "The model could not identify this icon — consider using 'Report Failed Recognition'",
+    "roleFit": "Role fit: pos {{position}}",
+    "roleNeeds": {
+      "steroid": "attack steroid",
+      "farm": "farming tool",
+      "survival": "survivability",
+      "nuke": "nuke",
+      "mobility": "mobility",
+      "kill_ult": "kill ultimate",
+      "initiation": "initiation",
+      "aoe_cc": "AoE control",
+      "durability": "durability",
+      "hard_cc": "hard disable",
+      "waveclear": "waveclear",
+      "save": "ally save",
+      "mana_budget": "mana budget"
+    },
+    "roleCovers": "Covers your missing {{need}}",
+    "roleDuplicate": "Already covered: {{need}}",
+    "inertOnModel": "Does not work on your model (melee/ranged mismatch)",
+    "contestedSoon": "Usually drafted by now — may not survive another round"
+  },
+  "role": {
+    "aria": "Role suggestions",
+    "label": "Role",
+    "off": "Off",
+    "auto": "Auto",
+    "offStatus": "Role suggestions off",
+    "scoringFor": "Scoring for pos {{positions}}",
+    "watching": "Watching team trend…",
+    "teamNeeds": "Team needs pos {{positions}}",
+    "needSpot": "Select My Spot to enable",
+    "appliesNextScan": "Applies on the next scan",
+    "needData": "Run a data update to enable",
+    "waitingSpot": "Waiting for automatic spot detection…"
   }
 }

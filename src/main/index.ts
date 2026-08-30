@@ -9,6 +9,7 @@ import { createLayoutService } from './services/layout-service'
 import { createScreenshotService } from './services/screenshot-service'
 import { createCachedWindowCaptureService } from './services/cached-window-capture-service'
 import { createScanProcessingService } from './services/scan-processing-service'
+import { loadAbilityTags } from './services/ability-tags-service'
 import { createStreamServerService } from './services/stream-server-service'
 import { createIconCacheService } from './services/icon-cache-service'
 import { createGsiCfgService } from './services/gsi-cfg-service'
@@ -166,6 +167,7 @@ app.whenReady().then(async () => {
     streamService,
     spotDetectionService,
     slotMappingService,
+    loadAbilityTags(),
   )
   const appHandlers = createAppStoreHandlers(appStore)
   const bridge = createZustandBridge(appStore, { handlers: appHandlers })

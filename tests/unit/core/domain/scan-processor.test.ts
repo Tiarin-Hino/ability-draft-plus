@@ -75,6 +75,15 @@ const abilityDb: Record<string, AbilityDetail> = {
 
 const mockDeps: ScanProcessorDeps = {
   heroes: {
+    // Hero-model role fingerprints: lina reads (slightly) support-shifted,
+    // antimage (slightly) greedy — magnitudes far below ability shifts, as live
+    getAllShifts() {
+      const base = { killsShift: 0, deathsShift: 0, kaShift: 0, dmgShift: 0 }
+      return [
+        { name: 'lina', ...base, gpmShift: -0.02, xpmShift: -0.01, healingShift: 0.1 },
+        { name: 'antimage', ...base, gpmShift: 0.03, xpmShift: 0.02, healingShift: -0.01 },
+      ]
+    },
     getByAbilityName(abilityName: string) {
       const map: Record<string, { heroId: number; heroName: string; heroDisplayName: string | null }> = {
         firestorm: { heroId: 1, heroName: 'lina', heroDisplayName: 'Lina' },
@@ -101,6 +110,18 @@ const mockDeps: ScanProcessorDeps = {
         if (abilityDb[name]) map.set(name, abilityDb[name])
       }
       return map
+    },
+    // Role fingerprint fixtures: fireball reads greedy, ice_blast support-shifted
+    // with high healing, the rest in between (only queried with a role mode on).
+    getAllShifts() {
+      const base = { killsShift: 0, deathsShift: 0, kaShift: 0, dmgShift: 0 }
+      return [
+        { name: 'fireball', ...base, gpmShift: 0.5, xpmShift: 0.3, healingShift: -0.05 },
+        { name: 'ice_blast', ...base, gpmShift: -0.4, xpmShift: -0.2, healingShift: 0.5 },
+        { name: 'laguna_blade', ...base, gpmShift: 0.2, xpmShift: 0.1, healingShift: 0 },
+        { name: 'firestorm', ...base, gpmShift: 0.1, xpmShift: 0, healingShift: -0.02 },
+        { name: 'blink', ...base, gpmShift: -0.1, xpmShift: 0, healingShift: -0.01 },
+      ]
     },
   },
   synergies: {
@@ -918,5 +939,302 @@ describe('processScanResults', () => {
       // Global display winrate stays global
       expect(lina.winrate).toBe(baseLina.winrate)
     })
+  })
+})
+
+describe('role-aware suggestions', () => {
+  function depsWithRole(
+    roleMode: string,
+    roleFixedPositions: number[] = [],
+  ): ScanProcessorDeps {
+    return {
+      ...mockDeps,
+      settings: {
+        getSettings() {
+          return {
+            opThreshold: 0.13,
+            trapThreshold: 0.05,
+            language: 'en',
+            roleMode,
+            roleFixedPositions,
+          } as unknown as ReturnType<ScanProcessorDeps['settings']['getSettings']>
+        },
+      },
+    }
+  }
+
+  /** Initial scan (spot resets), then set My Spot and run an empty rescan. */
+  function runRescanWithRole(roleMode: string, roleFixedPositions: number[] = []) {
+    const initial = processScanResults(makeInitialScanInput())
+    const state = initial.updatedState
+    state.mySelectedSpotDbId = 1
+    state.mySelectedSpotHeroOrder = 0
+    const input: ScanProcessorInput = {
+      rawResults: [] as ScanResult[],
+      isInitialScan: false,
+      state,
+      deps: depsWithRole(roleMode, roleFixedPositions),
+      modelCoords: [makeCoord(0), makeCoord(1)],
+      heroesCoords: [makeCoord(0), makeCoord(1)],
+      heroesParams: { width: 358, height: 170 },
+      targetResolution: '1920x1080',
+      scaleFactor: 1.0,
+    }
+    return processScanResults(input)
+  }
+
+  it('mode off (and absent) leaves the payload bit-identical and without role context', () => {
+    const withoutMode = processScanResults(makeInitialScanInput())
+    const initialOff = makeInitialScanInput()
+    initialOff.deps = depsWithRole('off')
+    const withOff = processScanResults(initialOff)
+
+    expect(withOff.overlayPayload.roleContext).toBeUndefined()
+    expect(withOff.overlayPayload).toEqual(withoutMode.overlayPayload)
+    const slots = withOff.overlayPayload.scanData!.standard
+    for (const slot of slots) expect(slot.roleScoreDelta).toBeUndefined()
+  })
+
+  it('fixed mode tailors suggestions from the INITIAL scan, before any spot is known', () => {
+    const input = makeInitialScanInput()
+    input.deps = depsWithRole('fixed', [5])
+    const { overlayPayload } = processScanResults(input)
+
+    expect(overlayPayload.roleContext).toBeDefined()
+    expect(overlayPayload.roleContext!.status).toBe('active')
+    expect(overlayPayload.roleContext!.effectivePositions).toEqual([5])
+    expect(overlayPayload.roleContext!.teammates).toEqual([])
+    for (const slot of overlayPayload.scanData!.standard) {
+      expect(slot.roleScoreDelta).toBeDefined()
+      expect(slot.roleBestPosition).toBe(5)
+    }
+  })
+
+  it('hero models get a scaled role delta (support-shifted model beats greedy for pos 5)', () => {
+    const input = makeInitialScanInput()
+    input.deps = depsWithRole('fixed', [5])
+    const { overlayPayload } = processScanResults(input)
+
+    const lina = overlayPayload.heroModels.find((m) => m.heroName === 'lina')!
+    const antimage = overlayPayload.heroModels.find((m) => m.heroName === 'antimage')!
+    expect(lina.roleScoreDelta).toBeDefined()
+    expect(antimage.roleScoreDelta).toBeDefined()
+    expect(lina.roleScoreDelta!).toBeGreaterThan(antimage.roleScoreDelta!)
+    expect(lina.roleBestPosition).toBe(5)
+  })
+
+  it('dynamic mode with My Spot unknown reports noSpot and stays inert', () => {
+    const input = makeInitialScanInput()
+    input.deps = depsWithRole('dynamic')
+    const { overlayPayload } = processScanResults(input)
+
+    expect(overlayPayload.roleContext).toBeDefined()
+    expect(overlayPayload.roleContext!.status).toBe('noSpot')
+    for (const slot of overlayPayload.scanData!.standard) {
+      expect(slot.roleScoreDelta).toBeUndefined()
+    }
+  })
+
+  it('fixed mode without a selection stays inert', () => {
+    const { overlayPayload } = runRescanWithRole('fixed', [])
+
+    expect(overlayPayload.roleContext).toBeUndefined()
+    for (const slot of overlayPayload.scanData!.standard) {
+      expect(slot.roleScoreDelta).toBeUndefined()
+    }
+  })
+
+  it('fixed mode attaches the role context and per-slot role deltas', () => {
+    const { overlayPayload } = runRescanWithRole('fixed', [5])
+
+    expect(overlayPayload.roleContext).toBeDefined()
+    expect(overlayPayload.roleContext!.mode).toBe('fixed')
+    expect(overlayPayload.roleContext!.effectivePositions).toEqual([5])
+    expect(overlayPayload.roleContext!.teammates.map((t) => t.heroOrder)).toEqual([
+      1, 2, 3, 4,
+    ])
+    for (const slot of overlayPayload.scanData!.standard) {
+      expect(slot.roleScoreDelta).toBeDefined()
+      expect(slot.roleBestPosition).toBe(5)
+    }
+  })
+
+  it('pos-5 fixed mode moves the support-shifted ability above the greedy one', () => {
+    const { overlayPayload } = runRescanWithRole('fixed', [5])
+    const standard = overlayPayload.scanData!.standard
+    const iceBlast = standard.find((s) => s.name === 'ice_blast')!
+    const fireball = standard.find((s) => s.name === 'fireball')!
+
+    expect(iceBlast.roleScoreDelta!).toBeGreaterThan(fireball.roleScoreDelta!)
+    expect(fireball.roleScoreDelta!).toBeLessThan(0)
+    expect(iceBlast.roleScoreDelta!).toBeGreaterThan(0)
+  })
+
+  const mockTags: NonNullable<ScanProcessorDeps['tags']> = {
+    getTags(name: string) {
+      const table: Record<string, string[]> = {
+        fireball: ['farm_tool', 'steroid', 'melee_only'],
+        ice_blast: ['hard_cc', 'aoe', 'nuke'],
+        firestorm: ['waveclear', 'aoe'],
+        blink: ['mobility'],
+        laguna_blade: ['nuke'],
+      }
+      const tags = table[name]
+      return tags ? (new Set(tags) as ReturnType<NonNullable<ScanProcessorDeps['tags']>['getTags']>) : undefined
+    },
+    getHeroAttackType(heroName: string) {
+      return heroName === 'lina' ? 'Ranged' : 'Melee'
+    },
+    getHeroMeta(heroName: string) {
+      const table: Record<string, import('@core/domain/ability-tags').HeroMeta> = {
+        lina: {
+          attackType: 'Ranged', primaryAttr: 'int',
+          baseStr: 18, baseAgi: 23, baseInt: 25,
+          strGain: 2.2, agiGain: 2.3, intGain: 3.7,
+        },
+        antimage: {
+          attackType: 'Melee', primaryAttr: 'agi',
+          baseStr: 21, baseAgi: 24, baseInt: 12,
+          strGain: 1.6, agiGain: 2.8, intGain: 1.8,
+        },
+      }
+      return table[heroName]
+    },
+  }
+
+  it('excludes melee-only abilities from top-tier on a ranged model and marks the slot', () => {
+    const initial = processScanResults(makeInitialScanInput())
+    const state = initial.updatedState
+    state.mySelectedModelDbHeroId = 1 // Lina model -> Ranged
+    state.mySelectedModelHeroOrder = 0
+    const deps = { ...depsWithRole('off'), tags: mockTags }
+    const input: ScanProcessorInput = {
+      rawResults: [] as ScanResult[],
+      isInitialScan: false,
+      state,
+      deps,
+      modelCoords: [makeCoord(0), makeCoord(1)],
+      heroesCoords: [makeCoord(0), makeCoord(1)],
+      heroesParams: { width: 358, height: 170 },
+      targetResolution: '1920x1080',
+      scaleFactor: 1.0,
+    }
+    const { overlayPayload } = processScanResults(input)
+
+    const fireball = overlayPayload.scanData!.standard.find((s) => s.name === 'fireball')!
+    expect(fireball.inertOnModel).toBe(true)
+    expect(fireball.isGeneralTopTier).toBe(false)
+    expect(fireball.isSynergySuggestionForMySpot).toBe(false)
+    const iceBlast = overlayPayload.scanData!.standard.find((s) => s.name === 'ice_blast')!
+    expect(iceBlast.inertOnModel).toBeUndefined()
+  })
+
+  it('needs-engine chips reach the enriched slots in a role mode', () => {
+    const initial = processScanResults(makeInitialScanInput())
+    const state = initial.updatedState
+    state.mySelectedSpotDbId = 1
+    state.mySelectedSpotHeroOrder = 0
+    const deps = { ...depsWithRole('fixed', [5]), tags: mockTags }
+    const input: ScanProcessorInput = {
+      rawResults: [] as ScanResult[],
+      isInitialScan: false,
+      state,
+      deps,
+      modelCoords: [makeCoord(0), makeCoord(1)],
+      heroesCoords: [makeCoord(0), makeCoord(1)],
+      heroesParams: { width: 358, height: 170 },
+      targetResolution: '1920x1080',
+      scaleFactor: 1.0,
+    }
+    const { overlayPayload } = processScanResults(input)
+
+    // No picks yet: ice_blast (hard_cc) covers the unmet pos-5 disable need
+    const iceBlast = overlayPayload.scanData!.standard.find((s) => s.name === 'ice_blast')!
+    expect(iceBlast.roleReasons).toContain('covers:hard_cc')
+    // firestorm (waveclear) covers the unmet waveclear|nuke need
+    const firestorm = overlayPayload.scanData!.standard.find((s) => s.name === 'firestorm')!
+    expect(firestorm.roleReasons).toContain('covers:waveclear')
+  })
+
+  it('flags contested-soon abilities on suggestions (global pick timing)', () => {
+    // fireball pickRate 10 <= 0 named picks + window(10) -> contested;
+    // firestorm pickRate 25 -> not
+    const { overlayPayload } = processScanResults(makeInitialScanInput())
+    const fireball = overlayPayload.scanData!.standard.find((s) => s.name === 'fireball')!
+    const firestorm = overlayPayload.scanData!.standard.find((s) => s.name === 'firestorm')!
+
+    expect(fireball.contestedSoon).toBe(true)
+    expect(firestorm.contestedSoon).toBeUndefined()
+  })
+
+  it('ult security boosts ultimates when supply is tight and I lack one', () => {
+    // Pool has 1 ult (laguna) and 10 ult-less drafters -> 1 <= 10 + slack: active
+    const withRole = runRescanWithRole('fixed', [2])
+    const laguna = withRole.overlayPayload.scanData!.ultimates.find(
+      (s) => s.name === 'laguna_blade',
+    )!
+    // Compare against a slot-identical run with role off (no role layer at all)
+    const withoutRole = runRescanWithRole('off')
+    const lagunaOff = withoutRole.overlayPayload.scanData!.ultimates.find(
+      (s) => s.name === 'laguna_blade',
+    )!
+
+    expect(laguna.roleScoreDelta).toBeDefined()
+    expect(lagunaOff.roleScoreDelta).toBeUndefined()
+    // The nudge is part of the role delta; a standard ability with similar greed
+    // does not receive it
+    const iceBlast = withRole.overlayPayload.scanData!.standard.find(
+      (s) => s.name === 'ice_blast',
+    )!
+    expect(laguna.roleScoreDelta! - iceBlast.roleScoreDelta!).toBeGreaterThan(0.03)
+  })
+
+  it('a database with no shift data suppresses role scoring entirely', () => {
+    const initial = processScanResults(makeInitialScanInput())
+    const state = initial.updatedState
+    state.mySelectedSpotDbId = 1
+    state.mySelectedSpotHeroOrder = 0
+    const noShiftDeps = depsWithRole('fixed', [5])
+    noShiftDeps.abilities = {
+      ...mockDeps.abilities,
+      getAllShifts: () =>
+        mockDeps.abilities.getAllShifts().map((row) => ({
+          ...row,
+          gpmShift: null,
+          xpmShift: null,
+          healingShift: null,
+        })),
+    }
+    const input: ScanProcessorInput = {
+      rawResults: [] as ScanResult[],
+      isInitialScan: false,
+      state,
+      deps: noShiftDeps,
+      modelCoords: [makeCoord(0), makeCoord(1)],
+      heroesCoords: [makeCoord(0), makeCoord(1)],
+      heroesParams: { width: 358, height: 170 },
+      targetResolution: '1920x1080',
+      scaleFactor: 1.0,
+    }
+    const { overlayPayload } = processScanResults(input)
+
+    expect(overlayPayload.roleContext).toBeDefined()
+    expect(overlayPayload.roleContext!.status).toBe('noData')
+    expect(overlayPayload.roleContext!.effectivePositions).toEqual([])
+    for (const slot of overlayPayload.scanData!.standard) {
+      expect(slot.roleScoreDelta).toBeUndefined()
+    }
+  })
+
+  it('dynamic mode with no teammate picks keeps the gate closed and scoring neutral', () => {
+    const { overlayPayload } = runRescanWithRole('dynamic')
+
+    expect(overlayPayload.roleContext).toBeDefined()
+    expect(overlayPayload.roleContext!.mode).toBe('dynamic')
+    expect(overlayPayload.roleContext!.dynamicGateOpen).toBe(false)
+    expect(overlayPayload.roleContext!.effectivePositions).toEqual([])
+    for (const slot of overlayPayload.scanData!.standard) {
+      expect(slot.roleScoreDelta).toBeUndefined()
+    }
   })
 })

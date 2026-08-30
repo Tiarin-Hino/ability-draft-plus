@@ -111,6 +111,32 @@ export interface WindrunPatchesResponse {
   data: string[]
 }
 
+// ── Ability shifts (role fingerprint) ────────────────────────────────────────
+
+/**
+ * One /ability-shifts entry: average deviation of drafters' end-of-game stats
+ * vs the game average, computed by Windrun over its whole corpus. Units are
+ * standardized (z-score-like) and deliberately treated as ORDERING-ONLY here —
+ * every derived quantity uses percentile ranks across the pool (shift-axes.ts).
+ */
+export interface WindrunAbilityShift {
+  abilityId: number
+  killsShift: number
+  deathsShift: number
+  killAssistShift: number
+  gpmShift: number
+  xpmShift: number
+  dmgShift: number
+  healingShift: number
+}
+
+export interface WindrunAbilityShiftsResponse {
+  data: {
+    patches: { overall: string[] }
+    abilityShifts: WindrunAbilityShift[]
+  }
+}
+
 // ── Player (personalization) endpoints ───────────────────────────────────────
 
 /** GET /players/{id32} — profile summary (used to validate a linked profile). */

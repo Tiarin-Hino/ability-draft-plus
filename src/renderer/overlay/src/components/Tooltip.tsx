@@ -1,7 +1,10 @@
 import { useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { EnrichedScanSlot, HeroModelDisplay, SynergyPairDisplay, HeroSynergyDisplay } from '@shared/types'
-import { PERSONAL_SCORE_DELTA_EPSILON } from '@shared/constants/thresholds'
+import {
+  PERSONAL_SCORE_DELTA_EPSILON,
+  ROLE_SCORE_DELTA_EPSILON,
+} from '@shared/constants/thresholds'
 
 export type TooltipData =
   | { type: 'ability'; slot: EnrichedScanSlot }
@@ -69,6 +72,63 @@ function PersonalStatLine({
         games: String(games),
       })}
       {arrow && <span className={arrowClass}> {arrow}</span>}
+    </div>
+  )
+}
+
+// Role-fit line (role-aware suggestions): which effective position this ability
+// fits best and whether the role layer moved its score up or down. Negligible
+// shifts render nothing — same anti-noise rule as the personal line.
+function RoleStatLine({
+  scoreDelta,
+  position,
+  t,
+}: {
+  scoreDelta?: number
+  position?: number
+  t: (key: string, opts?: Record<string, string>) => string
+}): React.ReactElement | null {
+  if (scoreDelta == null || position == null) return null
+  if (Math.abs(scoreDelta) <= ROLE_SCORE_DELTA_EPSILON) return null
+
+  const up = scoreDelta > 0
+  return (
+    <div className="tooltip-stat tooltip-role">
+      {t('tooltip.roleFit', { position: String(position) })}
+      <span className={up ? 'tooltip-role-up' : 'tooltip-role-down'}>
+        {' '}
+        {up ? '▲' : '▼'}
+      </span>
+    </div>
+  )
+}
+
+// Needs-engine reason chips ('covers:<need>' / 'duplicate:<need>') — the
+// explainability half of the tags feature: WHY the role layer moved this.
+function RoleReasonChips({
+  reasons,
+  t,
+}: {
+  reasons?: string[]
+  t: (key: string, opts?: Record<string, string>) => string
+}): React.ReactElement | null {
+  if (!reasons || reasons.length === 0) return null
+  return (
+    <div className="tooltip-role-chips">
+      {reasons.map((reason) => {
+        const [kind, key] = reason.split(':')
+        const need = t(`tooltip.roleNeeds.${key}`)
+        return (
+          <span
+            key={reason}
+            className={`tooltip-role-chip${kind === 'duplicate' ? ' tooltip-role-chip-dup' : ''}`}
+          >
+            {kind === 'duplicate'
+              ? t('tooltip.roleDuplicate', { need })
+              : t('tooltip.roleCovers', { need })}
+          </span>
+        )
+      })}
     </div>
   )
 }
@@ -184,6 +244,21 @@ function AbilityTooltipContent({
         scoreDelta={slot.personalScoreDelta}
         t={t}
       />
+      <RoleStatLine
+        scoreDelta={slot.roleScoreDelta}
+        position={slot.roleBestPosition}
+        t={t}
+      />
+      <RoleReasonChips reasons={slot.roleReasons} t={t} />
+      {slot.inertOnModel && (
+        <div className="tooltip-stat tooltip-inert">{t('tooltip.inertOnModel')}</div>
+      )}
+      {slot.contestedSoon &&
+        (slot.isGeneralTopTier || slot.isSynergySuggestionForMySpot) && (
+          <div className="tooltip-stat tooltip-contested">
+            {t('tooltip.contestedSoon')}
+          </div>
+        )}
 
       <SynergySection
         title={t('tooltip.strongSynergies')}
@@ -241,6 +316,11 @@ function HeroTooltipContent({
         games={model.personalGames}
         winrate={model.personalWinrate}
         scoreDelta={model.personalScoreDelta}
+        t={t}
+      />
+      <RoleStatLine
+        scoreDelta={model.roleScoreDelta}
+        position={model.roleBestPosition}
         t={t}
       />
 

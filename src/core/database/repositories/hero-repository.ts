@@ -1,7 +1,11 @@
-import { eq, sql } from 'drizzle-orm'
+import { eq, inArray, sql } from 'drizzle-orm'
 import type { SQLJsDatabase } from 'drizzle-orm/sql-js'
 import { heroes, abilities } from '../schema'
 import type { Hero } from '@shared/types'
+import type {
+  AbilityShiftUpdate,
+  AbilityShiftRow,
+} from './ability-repository'
 
 // @DEV-GUIDE: Hero CRUD repository. Provides getAll, getById, getByAbilityName (joins
 // Abilities table to find which hero owns a given ability), upsertHeroes (batch insert
@@ -27,6 +31,14 @@ export interface HeroRepository {
   ): { heroId: number; heroName: string; heroDisplayName: string | null } | null
   upsertHeroes(batch: HeroUpsertData[]): Map<string, number>
   deduplicateByDisplayName(): number
+  /**
+   * Apply hero-MODEL /ability-shifts entries (negative-id rows, keyed here by
+   * the positive hero windrun_id). Same never-wipe contract as the ability
+   * variant. Returns the number of hero rows matched.
+   */
+  applyHeroShifts(shifts: AbilityShiftUpdate[]): number
+  /** All heroes with their raw shift columns (name = hero internal name). */
+  getAllShifts(): AbilityShiftRow[]
 }
 
 export function createHeroRepository(db: SQLJsDatabase): HeroRepository {
@@ -132,6 +144,53 @@ export function createHeroRepository(db: SQLJsDatabase): HeroRepository {
         nameToIdMap.set(row.name, row.heroId)
       }
       return nameToIdMap
+    },
+
+    applyHeroShifts(shifts: AbilityShiftUpdate[]): number {
+      if (shifts.length === 0) return 0
+      // sql.js run() doesn't report changes — count matches via SELECT first
+      const known = new Set(
+        db
+          .select({ windrunId: heroes.windrunId })
+          .from(heroes)
+          .where(inArray(heroes.windrunId, shifts.map((s) => s.windrunId)))
+          .all()
+          .map((row) => row.windrunId),
+      )
+      let applied = 0
+      for (const s of shifts) {
+        if (!known.has(s.windrunId)) continue
+        db.update(heroes)
+          .set({
+            killsShift: s.killsShift,
+            deathsShift: s.deathsShift,
+            kaShift: s.kaShift,
+            gpmShift: s.gpmShift,
+            xpmShift: s.xpmShift,
+            dmgShift: s.dmgShift,
+            healingShift: s.healingShift,
+          })
+          .where(eq(heroes.windrunId, s.windrunId))
+          .run()
+        applied += 1
+      }
+      return applied
+    },
+
+    getAllShifts(): AbilityShiftRow[] {
+      return db
+        .select({
+          name: heroes.name,
+          killsShift: heroes.killsShift,
+          deathsShift: heroes.deathsShift,
+          kaShift: heroes.kaShift,
+          gpmShift: heroes.gpmShift,
+          xpmShift: heroes.xpmShift,
+          dmgShift: heroes.dmgShift,
+          healingShift: heroes.healingShift,
+        })
+        .from(heroes)
+        .all()
     },
 
     deduplicateByDisplayName(): number {

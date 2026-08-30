@@ -7,6 +7,7 @@ import { StatusToast } from './components/StatusToast'
 import { HotspotLayer } from './components/HotspotLayer'
 import { CombinationPanel } from './components/CombinationPanel'
 import { DynamicButtons } from './components/DynamicButtons'
+import { RolePanel } from './components/RolePanel'
 import { useAppStore } from './hooks/use-app-store'
 import i18n from './i18n'
 
@@ -196,6 +197,14 @@ function App(): React.ReactElement {
             {t('scanSummary', { recognized: recognizedCount, total: poolSlots.length })}
           </div>
         )}
+
+        {/* Role-aware suggestions quick control */}
+        <RolePanel
+          roleContext={overlayData?.roleContext}
+          hasScanData={overlayData?.scanData != null}
+          mySpotSelected={selectedSpotHeroOrder !== null}
+          autoTracking={overlayData?.autoDraftTrackingEnabled ?? false}
+        />
 
         {/* OP Combinations Panel - z-index 9999 */}
         {overlayData && (

@@ -46,6 +46,16 @@ export interface ScoredEntity {
   personalWinrate?: number
   /** consolidatedScore minus the global-only score. */
   personalScoreDelta?: number
+  /** Role-layer adjustment included in consolidatedScore (role mode active only). */
+  roleScoreDelta?: number
+  /** Effective position (1-5) that produced the best role fit. */
+  roleBestPosition?: number
+  /** Needs-engine reason chips ('covers:<need>' | 'duplicate:<need>'). */
+  roleReasons?: string[]
+  /** Mechanically inert on the selected model's attack type — excluded from top-tier. */
+  inertOnModel?: boolean
+  /** Global pick timing says this ability is due before the draft wraps around. */
+  contestedSoon?: boolean
 }
 
 /** Entity with top-tier selection flags applied. */
@@ -103,6 +113,8 @@ export interface DraftSessionState {
 // ---------------------------------------------------------------------------
 
 export interface HeroLookup {
+  /** Hero-MODEL shift rows (name = hero internal name) for role-axes derivation. */
+  getAllShifts(): import('@core/database/repositories/ability-repository').AbilityShiftRow[]
   getByAbilityName(
     abilityName: string,
   ): { heroId: number; heroName: string; heroDisplayName: string | null } | null
@@ -119,6 +131,11 @@ export interface HeroLookup {
 
 export interface AbilityLookup {
   getDetails(names: string[]): Map<string, AbilityDetail>
+}
+
+/** Raw /ability-shifts columns for the whole pool (role-axes derivation). */
+export interface AbilityShiftsLookup {
+  getAllShifts(): import('@core/database/repositories/ability-repository').AbilityShiftRow[]
 }
 
 export interface SynergyLookup {
@@ -157,9 +174,11 @@ export interface PersonalStatsLookup {
 
 export interface ScanProcessorDeps {
   heroes: HeroLookup
-  abilities: AbilityLookup & AbilityIdLookup
+  abilities: AbilityLookup & AbilityIdLookup & AbilityShiftsLookup
   synergies: SynergyLookup
   triplets?: TripletLookup
   settings: SettingsLookup
   playerStats?: PersonalStatsLookup
+  /** Ability function tags + hero meta (resources/data). Absent = tags feature off. */
+  tags?: import('./ability-tags').AbilityTagsLookup
 }

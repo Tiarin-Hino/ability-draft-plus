@@ -105,6 +105,29 @@ describe('runColumnMigrations', () => {
     db.close()
   })
 
+  it('adds the ability shift columns (2.6 role fingerprint) to a pre-shift DB', () => {
+    const db = new SQL.Database()
+    db.run(V1_SCHEMA_SQL)
+
+    runColumnMigrations(db)
+
+    for (const table of ['Abilities', 'Heroes']) {
+      const cols = getColumns(db, table)
+      for (const col of [
+        'kills_shift',
+        'deaths_shift',
+        'ka_shift',
+        'gpm_shift',
+        'xpm_shift',
+        'dmg_shift',
+        'healing_shift',
+      ]) {
+        expect(cols).toContain(col)
+      }
+    }
+    db.close()
+  })
+
   it('preserves existing rows in AbilitySynergies after migration', () => {
     const db = new SQL.Database()
     db.run(V1_SCHEMA_SQL)

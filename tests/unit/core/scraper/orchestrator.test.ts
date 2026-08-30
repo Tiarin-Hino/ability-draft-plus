@@ -66,6 +66,21 @@ function createMockApiClient(): WindrunApiClient {
         abilityTriplets: [],
       },
     }),
+    fetchAbilityShifts: vi.fn().mockResolvedValue({
+      data: {
+        patches: { overall: ['7.40c'] },
+        abilityShifts: [
+          {
+            abilityId: 5359, killsShift: 0.1, deathsShift: -0.05, killAssistShift: 0.2,
+            gpmShift: 0.45, xpmShift: 0.31, dmgShift: 0.43, healingShift: -0.02,
+          },
+          {
+            abilityId: -70, killsShift: 0.01, deathsShift: 0, killAssistShift: 0.01,
+            gpmShift: 0.02, xpmShift: 0.01, dmgShift: 0.03, healingShift: 0.05,
+          },
+        ],
+      },
+    }),
   }
 }
 
@@ -74,6 +89,7 @@ function createMockDeps(apiClient?: WindrunApiClient): ScraperDeps {
     apiClient: apiClient ?? createMockApiClient(),
     heroes: {
       upsertHeroes: vi.fn().mockReturnValue(new Map([['ursa', 1]])),
+      applyHeroShifts: vi.fn().mockReturnValue(1),
       getAll: vi.fn().mockReturnValue([]),
       getById: vi.fn(),
       getByName: vi.fn(),
@@ -85,6 +101,7 @@ function createMockDeps(apiClient?: WindrunApiClient): ScraperDeps {
       getAllNames: vi.fn().mockReturnValue(['ursa_fury_swipes']),
       applyLiquipediaMeta: vi.fn().mockReturnValue(1),
       setSlotMetadata: vi.fn().mockReturnValue(0),
+      applyAbilityShifts: vi.fn().mockReturnValue(1),
       getAll: vi.fn().mockReturnValue([]),
       getById: vi.fn(),
       getByName: vi.fn(),
@@ -230,6 +247,38 @@ describe('performFullScrape', () => {
     expect(client.fetchAbilityHighSkill).toHaveBeenCalledWith('7.40c')
     expect(client.fetchAbilityPairs).toHaveBeenCalledWith('7.40c')
     expect(client.fetchAbilityTriplets).toHaveBeenCalledWith('7.40c')
+    expect(client.fetchAbilityShifts).toHaveBeenCalledWith('7.40c')
+  })
+
+  it('applies ability shifts keyed by windrun id (killAssistShift -> kaShift)', async () => {
+    await performFullScrape(deps, onProgress)
+
+    expect(deps.abilities.applyAbilityShifts).toHaveBeenCalledWith([
+      {
+        windrunId: 5359,
+        killsShift: 0.1,
+        deathsShift: -0.05,
+        kaShift: 0.2,
+        gpmShift: 0.45,
+        xpmShift: 0.31,
+        dmgShift: 0.43,
+        healingShift: -0.02,
+      },
+    ])
+  })
+
+  it('shift fetch failure is non-fatal: scrape still succeeds, no shifts applied', async () => {
+    const client = createMockApiClient()
+    ;(client.fetchAbilityShifts as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new Error('Windrun API error: 500'),
+    )
+    deps = createMockDeps(client)
+
+    const result = await performFullScrape(deps, onProgress)
+
+    expect(result.success).toBe(true)
+    expect(deps.abilities.applyAbilityShifts).not.toHaveBeenCalled()
+    expect(progress.some((p) => p.message.includes('Ability shifts unavailable'))).toBe(true)
   })
 
   it('returns error on API failure', async () => {

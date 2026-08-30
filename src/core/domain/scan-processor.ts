@@ -14,6 +14,20 @@ import type {
   IdentifiedHeroModel,
 } from './types'
 import { calculateConsolidatedScore, calculatePersonalizedScore } from './scoring'
+import { computeShiftAxes, type ShiftAxes } from './shift-axes'
+import {
+  resolveRoleContext,
+  computeRoleScore,
+  computeModelRoleScore,
+  isCoreRoleContext,
+  modelAttrFit,
+  allRoleNeeds,
+  toRoleContextDisplay,
+  type RoleContext,
+  type RoleTagInput,
+  type ModelStatPercentiles,
+} from './role-scoring'
+import { isInertOnModel, type AbilityTag, type HeroMeta } from './ability-tags'
 import { identifyHeroModels } from './hero-identification'
 import {
   getAbilitySynergySplit,
@@ -32,6 +46,15 @@ import type { ModelTileCapture } from './model-pick-detection'
 import {
   RESCAN_GUARD_MAX_CONSECUTIVE_REJECTIONS,
   PERSONAL_SCORE_DELTA_EPSILON,
+  NEED_SCARCITY_REF,
+  NEED_SCARCITY_MIN,
+  NEED_SCARCITY_MAX,
+  MODEL_URGENCY_STEP,
+  MODEL_URGENCY_MAX_STEPS,
+  MODEL_SCARCITY_REF,
+  ULT_SECURITY_WEIGHT,
+  ULT_SUPPLY_SLACK,
+  CONTESTED_SOON_WINDOW,
 } from '@shared/constants/thresholds'
 
 // @DEV-GUIDE: Central business logic — transforms raw ML scan results into a fully-enriched
@@ -41,6 +64,8 @@ import {
 // 1. Branch initial scan vs rescan (rescan diffs against cached pool)
 // 2. Collect unique ability names from pool and picked abilities
 // 3. Batch DB lookup for ability details (winrate, pick rate, display name)
+// 3.5. Role context (role-aware suggestions): shift axes + effective positions +
+//      teammate estimates — null with roleMode 'off' (bit-identical path)
 // 4. Build heroes-in-pool set (from identified hero models)
 // 5. Per-ability synergy enrichment (high/low winrate partner pairs)
 // 6. Per-ability hero synergies (which heroes synergize with each ability)
@@ -49,7 +74,8 @@ import {
 // 8.5. Enrich pairs with triplet context (suggested third ability badge)
 // 9. My Spot synergistic partners (abilities synergizing with user's picked abilities)
 // 10. Score all entities (consolidated score = 0.4 * winrate + 0.6 * pickOrder;
-//     with a linked Windrun profile the inputs are personal-blended — scoring.ts)
+//     with a linked Windrun profile the inputs are personal-blended — scoring.ts;
+//     with a role mode active, abilities get the capped role delta on top — role-scoring.ts)
 // 11. Check if My Spot already picked an ultimate
 // 12. Determine top-tier entities (max 10, synergy suggestions prioritized)
 // 13. Enrich scan slots with all computed data for overlay display
@@ -304,6 +330,106 @@ export function processScanResults(
     deps.playerStats?.getHeroStatsByName() ??
     new Map<string, import('@shared/types').PersonalHeroStats>()
 
+  // --- Phase 3.5: Role context (role-aware suggestions) ---
+  // Only computed with a role mode EXPLICITLY active AND My Spot known —
+  // otherwise null, and every downstream score is bit-identical to the
+  // role-less path (anything but 'fixed'/'dynamic' counts as off).
+  const roleModeActive =
+    settings.roleMode === 'fixed' || settings.roleMode === 'dynamic'
+  const allShifts = roleModeActive ? deps.abilities.getAllShifts() : []
+  // A database that predates the shifts scrape has NULL in every shift column;
+  // role scoring would then hand every ability the same meaningless delta.
+  // Treat "no shift data at all" as role-off until the next data update.
+  const hasShiftData = allShifts.some((row) => row.gpmShift !== null)
+  const shiftAxesByName: Map<string, ShiftAxes> =
+    roleModeActive && hasShiftData ? computeShiftAxes(allShifts) : new Map()
+  // Hero MODELS have their own shift entries — percentiled among heroes only
+  // (their raw magnitudes are far below ability shifts) and weight-scaled at
+  // scoring time (ROLE_MODEL_WEIGHT_SCALE).
+  const heroAxesByName: Map<string, ShiftAxes> =
+    roleModeActive && hasShiftData
+      ? computeShiftAxes(deps.heroes.getAllShifts())
+      : new Map()
+  const roleContext: RoleContext | null =
+    roleModeActive && hasShiftData
+      ? resolveRoleContext(
+          settings,
+          selectedAbilities,
+          state.mySelectedSpotHeroOrder,
+          shiftAxesByName,
+        )
+      : null
+
+  // Tags layer: my own picks' tag sets feed the needs engine; the selected
+  // model's attack type drives the inert-ability hard filter. Both are no-ops
+  // without the tags dep (dataset not shipped/loaded).
+  const myPickTags: ReadonlySet<AbilityTag>[] =
+    deps.tags !== undefined && state.mySelectedSpotHeroOrder !== null
+      ? selectedAbilities
+          .filter((s) => s.hero_order === state.mySelectedSpotHeroOrder && s.name)
+          .map((s) => deps.tags!.getTags(s.name!))
+          .filter((t): t is ReadonlySet<AbilityTag> => t !== undefined)
+      : []
+  const myModelAttackType = (() => {
+    if (deps.tags === undefined || state.mySelectedModelDbHeroId === null) return undefined
+    const model = state.identifiedHeroModelsCache.find(
+      (m) => m.dbHeroId === state.mySelectedModelDbHeroId,
+    )
+    return model !== undefined ? deps.tags.getHeroAttackType(model.heroName) : undefined
+  })()
+
+  // Pool scarcity per need: supply among UNPICKED pool abilities scales need
+  // boosts — two stuns left nearly doubles hard_cc's, twelve steroids dilute it.
+  const needScarcity = new Map<string, number>()
+  if (deps.tags !== undefined && roleContext !== null) {
+    const poolTagSets = [...uniquePoolNames]
+      .map((name) => deps.tags!.getTags(name))
+      .filter((t): t is ReadonlySet<AbilityTag> => t !== undefined)
+    for (const need of allRoleNeeds()) {
+      const supply = poolTagSets.filter((tags) =>
+        need.anyOf.some((req) => req.every((tag) => tags.has(tag))),
+      ).length
+      needScarcity.set(
+        need.key,
+        Math.max(
+          NEED_SCARCITY_MIN,
+          Math.min(NEED_SCARCITY_MAX, NEED_SCARCITY_REF / Math.max(1, supply)),
+        ),
+      )
+    }
+  }
+
+  // Core model urgency + greed taper both key off the user's pick count,
+  // which resolveRoleContext computes (board-round estimate without a spot).
+  const myPickCount = roleContext?.myPickCount ?? 0
+
+  // Ult security (role mode only): when remaining pool ults get tight relative
+  // to drafters still without one, ult candidates deserve a mild boost — the
+  // sim showed experts secure ults proactively (67% taken before forced).
+  const namedPickCount = selectedAbilities.filter((s) => s.name !== null).length
+  const ultSecurityActive = (() => {
+    if (roleContext === null) return false
+    const isUltPick = (s: ScanResult): boolean => {
+      if (!s.name) return false
+      const d = abilityDetailsMap.get(s.name)
+      return d?.isUltimate === true || s.is_ultimate
+    }
+    if (
+      state.mySelectedSpotHeroOrder !== null &&
+      selectedAbilities.some(
+        (s) => s.hero_order === state.mySelectedSpotHeroOrder && isUltPick(s),
+      )
+    ) {
+      return false // I already have my ult
+    }
+    const playersWithUlt = new Set(
+      selectedAbilities.filter(isUltPick).map((s) => s.hero_order),
+    ).size
+    const ultlessDrafters = 10 - playersWithUlt
+    const remainingUlts = ultimates.filter((s) => s.name !== null).length
+    return remainingUlts <= ultlessDrafters + ULT_SUPPLY_SLACK
+  })()
+
   // --- Phase 4: Build heroes-in-pool set ---
   const heroesInPool = new Set<string>()
   for (const model of state.identifiedHeroModelsCache) {
@@ -448,6 +574,19 @@ export function processScanResults(
     new Set(state.pickedModelHeroOrders),
     personalAbilityStats,
     personalHeroStats,
+    {
+      roleContext,
+      shiftAxesByName,
+      heroAxesByName,
+      tags: deps.tags,
+      myPickTags,
+      myModelAttackType,
+      needScarcity,
+      myPickCount,
+      myModelPicked: state.mySelectedModelDbHeroId !== null,
+      ultSecurityActive,
+      namedPickCount,
+    },
   )
 
   // --- Phase 11: Check if My Spot has picked an ultimate ---
@@ -458,8 +597,11 @@ export function processScanResults(
   )
 
   // --- Phase 12: Determine top-tier entities ---
+  // Abilities mechanically inert on the selected model (cleave on a ranged
+  // model) are a HARD exclusion from suggestions, not a score tweak.
+  const topTierCandidates = allScoredEntities.filter((e) => !e.inertOnModel)
   const topTierEntities = determineTopTierEntities(
-    allScoredEntities,
+    topTierCandidates,
     state.mySelectedModelDbHeroId,
     mySpotHasUlt,
     synergisticPartnersInPool,
@@ -473,7 +615,7 @@ export function processScanResults(
   // from a personally-DEMOTED competitor is not claimed as "because of you").
   // Synergy suggestions are exempt — their inclusion is membership-driven.
   if (allScoredEntities.some((e) => e.personalScoreDelta !== undefined)) {
-    const baselineEntities = allScoredEntities.map((e) => ({
+    const baselineEntities = topTierCandidates.map((e) => ({
       ...e,
       consolidatedScore: e.consolidatedScore - (e.personalScoreDelta ?? 0),
     }))
@@ -566,6 +708,13 @@ export function processScanResults(
     heroesParams,
     modelsCoords: modelCoords,
     autoDraftTrackingEnabled: settings.experimentalAutoDraftTracking === true,
+    roleContext: buildRoleContextDisplay(
+      roleModeActive,
+      hasShiftData,
+      settings.roleMode as 'fixed' | 'dynamic',
+      state.mySelectedSpotHeroOrder,
+      roleContext,
+    ),
   }
 
   return {
@@ -581,6 +730,25 @@ export function processScanResults(
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+// A scan processed with a role mode ON always carries a roleContext with a
+// status, so the overlay can say WHY the layer is inactive ('noData'/'noSpot')
+// instead of guessing. An absent roleContext then only ever means the last
+// scan predates the mode toggle (or fixed mode with nothing selected).
+function buildRoleContextDisplay(
+  roleModeActive: boolean,
+  hasShiftData: boolean,
+  mode: 'fixed' | 'dynamic',
+  mySpotHeroOrder: number | null,
+  roleContext: RoleContext | null,
+): import('@shared/types').RoleContextDisplay | undefined {
+  if (roleContext !== null) return toRoleContextDisplay(roleContext)
+  if (!roleModeActive) return undefined
+  const inactive = { effectivePositions: [], teamGreed: null, teammates: [] }
+  if (!hasShiftData) return { mode, status: 'noData', ...inactive }
+  if (mySpotHeroOrder === null) return { mode, status: 'noSpot', ...inactive }
+  return undefined // fixed mode with an empty selection
+}
 
 // @DEV-GUIDE: Deep-clones the mutable DraftSessionState to avoid mutating the caller's copy.
 // Arrays are shallow-copied (ScanResult objects are treated as immutable).
@@ -612,6 +780,41 @@ function cloneState(state: DraftSessionState): DraftSessionState {
 // Picked ABILITIES are naturally absent (rescans subtract them from the pool arrays),
 // but the models cache keeps every identified model, so models already drafted by ANY
 // player must be skipped here or they keep surfacing as top-tier suggestions.
+/** Role-layer inputs for scoring, bundled (all inert when role mode is off). */
+interface RoleScoringInputs {
+  roleContext: RoleContext | null
+  shiftAxesByName: ReadonlyMap<string, ShiftAxes>
+  heroAxesByName: ReadonlyMap<string, ShiftAxes>
+  tags: import('./ability-tags').AbilityTagsLookup | undefined
+  myPickTags: ReadonlySet<AbilityTag>[]
+  myModelAttackType: import('./ability-tags').HeroAttackType | undefined
+  needScarcity: ReadonlyMap<string, number>
+  myPickCount: number
+  myModelPicked: boolean
+  /** Ult supply is tight and the user lacks one — boost ult candidates. */
+  ultSecurityActive: boolean
+  /** Named picks on the whole board (drives the contested-soon marker). */
+  namedPickCount: number
+}
+
+/** Percentile ranks [0,1] with average-rank ties; undefined values -> 0.5. */
+function pctRanks(entries: Array<{ name: string; value: number | undefined }>): Map<string, number> {
+  const known = entries.filter((e): e is { name: string; value: number } => e.value !== undefined)
+  const ranks = new Map<string, number>()
+  for (const e of entries) ranks.set(e.name, 0.5)
+  if (known.length <= 1) return ranks
+  known.sort((a, b) => a.value - b.value)
+  let i = 0
+  while (i < known.length) {
+    let j = i + 1
+    while (j < known.length && known[j].value === known[i].value) j++
+    const pct = (i + j - 1) / 2 / (known.length - 1)
+    for (let k = i; k < j; k++) ranks.set(known[k].name, pct)
+    i = j
+  }
+  return ranks
+}
+
 function buildScoredEntities(
   ultimates: ScanResult[],
   standard: ScanResult[],
@@ -620,7 +823,21 @@ function buildScoredEntities(
   pickedModelHeroOrders: ReadonlySet<number>,
   personalAbilityStats: Map<string, import('@shared/types').PersonalAbilityStats>,
   personalHeroStats: Map<string, import('@shared/types').PersonalHeroStats>,
+  role: RoleScoringInputs,
 ): ScoredEntity[] {
+  const {
+    roleContext,
+    shiftAxesByName,
+    heroAxesByName,
+    tags,
+    myPickTags,
+    myModelAttackType,
+    needScarcity,
+    myPickCount,
+    myModelPicked,
+    ultSecurityActive,
+    namedPickCount,
+  } = role
   const entities: ScoredEntity[] = []
   const seen = new Set<string>()
 
@@ -634,40 +851,143 @@ function buildScoredEntities(
       details?.pickRate ?? null,
       personalAbilityStats.get(slot.name),
     )
+    const candidateTags = tags?.getTags(slot.name)
+    // Role layer applies AFTER the personal blend (fixed layer order), so
+    // "you win with it" and "it fits your role" stack rather than fight.
+    // Heroes are exempt — hero models have no shift data.
+    const tagInput: RoleTagInput | undefined =
+      tags !== undefined ? { candidateTags, myPickTags, needScarcity } : undefined
+    const role = computeRoleScore(
+      shiftAxesByName.get(slot.name),
+      roleContext,
+      tagInput,
+    )
+    // Ult-security nudge rides outside the role cap (small, flat, ults only)
+    const isUlt = details?.isUltimate === true || slot.is_ultimate
+    const ultNudge = ultSecurityActive && isUlt && role !== null ? ULT_SECURITY_WEIGHT : 0
+    const roleDelta = role !== null ? role.delta + ultNudge : undefined
+    const consolidatedScore =
+      roleDelta !== undefined
+        ? Math.min(1, Math.max(0, scored.consolidatedScore + roleDelta))
+        : scored.consolidatedScore
+    // Now-or-never marker: this ability's global pick timing says it is due
+    // before the draft comes back around
+    const contestedSoon =
+      details?.pickRate != null &&
+      details.pickRate <= namedPickCount + CONTESTED_SOON_WINDOW
     entities.push({
       entityType: 'ability',
       internalName: slot.name,
       displayName: details?.displayName ?? slot.name,
       winrate: details?.winrate ?? null,
       pickRate: details?.pickRate ?? null,
-      consolidatedScore: scored.consolidatedScore,
+      consolidatedScore,
+      contestedSoon: contestedSoon || undefined,
       personalGames: scored.personalGames,
       personalWinrate: scored.personalWinrate,
       personalScoreDelta: scored.personalScoreDelta,
+      roleScoreDelta: roleDelta,
+      roleBestPosition: role?.bestPosition,
+      roleReasons: role !== null && role.reasons.length > 0 ? role.reasons : undefined,
+      inertOnModel: isInertOnModel(candidateTags, myModelAttackType) || undefined,
       isUltimateFromCoordSource: slot.is_ultimate,
       isUltimateFromDb: details?.isUltimate,
       heroOrder: slot.hero_order,
     })
   }
 
-  for (const model of heroModels) {
-    if (model.dbHeroId === null) continue
-    if (pickedModelHeroOrders.has(model.heroOrder)) continue
+  // --- Hero models: attribute fit (primary), shift greed (secondary), and
+  // core urgency. Stat percentiles are computed among the REMAINING models —
+  // "best stat gain of the ones left in the pool".
+  const remainingModels = heroModels.filter(
+    (m) => m.dbHeroId !== null && !pickedModelHeroOrders.has(m.heroOrder),
+  )
+  const metaByName = new Map<string, HeroMeta | undefined>(
+    remainingModels.map((m) => [m.heroName, tags?.getHeroMeta(m.heroName)]),
+  )
+  const metric = (f: (meta: HeroMeta) => number | undefined) =>
+    pctRanks(
+      remainingModels.map((m) => {
+        const meta = metaByName.get(m.heroName)
+        return { name: m.heroName, value: meta !== undefined ? f(meta) : undefined }
+      }),
+    )
+  const totalGainOf = (meta: HeroMeta): number | undefined =>
+    meta.strGain !== undefined && meta.agiGain !== undefined && meta.intGain !== undefined
+      ? meta.strGain + meta.agiGain + meta.intGain
+      : undefined
+  const strPct = metric((m) => m.strGain)
+  const agiPct = metric((m) => m.agiGain)
+  const intPct = metric((m) => m.intGain)
+  const totalPct = metric(totalGainOf)
+  const intPoolPct = metric((m) =>
+    m.baseInt !== undefined && m.intGain !== undefined
+      ? m.baseInt + 6 * m.intGain
+      : undefined,
+  )
+  const pctOf = (heroName: string): ModelStatPercentiles | undefined =>
+    metaByName.get(heroName) !== undefined
+      ? {
+          strGain: strPct.get(heroName) ?? 0.5,
+          agiGain: agiPct.get(heroName) ?? 0.5,
+          intGain: intPct.get(heroName) ?? 0.5,
+          totalGain: totalPct.get(heroName) ?? 0.5,
+          intPool: intPoolPct.get(heroName) ?? 0.5,
+        }
+      : undefined
+
+  // Core urgency: ramps with my picks, scaled by scarcity of good core models
+  let urgency = 0
+  if (
+    roleContext !== null &&
+    roleContext.effectivePositions.length > 0 &&
+    isCoreRoleContext(roleContext) &&
+    !myModelPicked
+  ) {
+    const corePositions = roleContext.effectivePositions.filter((p) => p <= 3)
+    const goodCoreModels = remainingModels.filter((m) => {
+      const pct = pctOf(m.heroName)
+      if (pct === undefined) return false
+      const meta = metaByName.get(m.heroName)
+      return corePositions.some((p) => modelAttrFit(p, pct, meta?.primaryAttr) >= 0.6)
+    }).length
+    const scarcity = Math.max(
+      NEED_SCARCITY_MIN,
+      Math.min(NEED_SCARCITY_MAX, MODEL_SCARCITY_REF / Math.max(1, goodCoreModels)),
+    )
+    urgency =
+      Math.min(MODEL_URGENCY_MAX_STEPS, myPickCount) * MODEL_URGENCY_STEP * scarcity
+  }
+
+  for (const model of remainingModels) {
     const scored = calculatePersonalizedScore(
       model.winrate,
       model.pickRate,
       personalHeroStats.get(model.heroName),
     )
+    const role = computeModelRoleScore(
+      roleContext,
+      heroAxesByName.get(model.heroName),
+      pctOf(model.heroName),
+      metaByName.get(model.heroName)?.primaryAttr,
+      urgency,
+    )
+    const consolidatedScore =
+      role !== null
+        ? Math.min(1, Math.max(0, scored.consolidatedScore + role.delta))
+        : scored.consolidatedScore
     entities.push({
       entityType: 'hero',
       internalName: model.heroName,
       displayName: model.heroDisplayName,
       winrate: model.winrate,
       pickRate: model.pickRate,
-      consolidatedScore: scored.consolidatedScore,
+      consolidatedScore,
       personalGames: scored.personalGames,
       personalWinrate: scored.personalWinrate,
       personalScoreDelta: scored.personalScoreDelta,
+      roleScoreDelta: role?.delta,
+      roleBestPosition: role?.bestPosition,
       dbHeroId: model.dbHeroId,
       heroOrder: model.heroOrder,
     })
@@ -754,6 +1074,11 @@ function enrichSlots(
       personalGames: scored?.personalGames,
       personalWinrate: scored?.personalWinrate,
       personalScoreDelta: scored?.personalScoreDelta,
+      roleScoreDelta: scored?.roleScoreDelta,
+      roleBestPosition: scored?.roleBestPosition,
+      roleReasons: scored?.roleReasons,
+      inertOnModel: scored?.inertOnModel,
+      contestedSoon: scored?.contestedSoon,
       isGeneralTopTier: topTier?.isGeneralTopTier ?? false,
       isSynergySuggestionForMySpot:
         topTier?.isSynergySuggestionForMySpot ?? false,
@@ -821,6 +1146,8 @@ function enrichHeroModels(
       personalGames: scored?.personalGames,
       personalWinrate: scored?.personalWinrate,
       personalScoreDelta: scored?.personalScoreDelta,
+      roleScoreDelta: scored?.roleScoreDelta,
+      roleBestPosition: scored?.roleBestPosition,
       isGeneralTopTier: topTier?.isGeneralTopTier ?? false,
       isPersonallyDriven: topTier?.isPersonallyDriven ?? false,
       identificationConfidence: model.identificationConfidence,

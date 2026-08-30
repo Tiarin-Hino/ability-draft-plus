@@ -1,0 +1,3588 @@
+{
+ "version": 1,
+ "vocab": [
+  "hard_cc",
+  "soft_cc",
+  "setup_cc",
+  "aoe",
+  "nuke",
+  "waveclear",
+  "farm_tool",
+  "steroid",
+  "sustain_self",
+  "save_ally",
+  "team_aura",
+  "mobility",
+  "initiation",
+  "summon",
+  "teamfight_ult",
+  "passive_value",
+  "melee_only",
+  "ranged_only",
+  "mana_hungry",
+  "channeled"
+ ],
+ "attribution": "CC family sourced from Liquipedia (CC-BY-SA 3.0, liquipedia.net/dota2)",
+ "abilities": {
+  "abaddon_aphotic_shield": {
+   "tags": [
+    "aoe",
+    "save_ally",
+    "sustain_self"
+   ]
+  },
+  "abaddon_borrowed_time": {
+   "tags": [
+    "passive_value",
+    "sustain_self",
+    "teamfight_ult"
+   ]
+  },
+  "abaddon_death_coil": {
+   "tags": [
+    "nuke",
+    "save_ally"
+   ]
+  },
+  "abaddon_frostmourne": {
+   "tags": [
+    "soft_cc",
+    "steroid"
+   ]
+  },
+  "abyssal_underlord_atrophy_aura": {
+   "tags": [
+    "aoe",
+    "passive_value",
+    "steroid"
+   ]
+  },
+  "abyssal_underlord_dark_portal": {
+   "tags": [
+    "initiation",
+    "mana_hungry",
+    "mobility"
+   ]
+  },
+  "abyssal_underlord_firestorm": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "mana_hungry",
+    "nuke",
+    "waveclear"
+   ]
+  },
+  "abyssal_underlord_pit_of_malice": {
+   "tags": [
+    "aoe",
+    "setup_cc"
+   ]
+  },
+  "alchemist_acid_spray": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "waveclear"
+   ]
+  },
+  "alchemist_chemical_rage": {
+   "tags": [
+    "steroid",
+    "sustain_self"
+   ]
+  },
+  "alchemist_corrosive_weaponry": {
+   "tags": [
+    "soft_cc",
+    "steroid"
+   ]
+  },
+  "alchemist_unstable_concoction": {
+   "tags": [
+    "aoe",
+    "channeled",
+    "hard_cc",
+    "initiation",
+    "nuke",
+    "setup_cc"
+   ]
+  },
+  "ancient_apparition_chilling_touch": {
+   "tags": [
+    "soft_cc",
+    "steroid"
+   ]
+  },
+  "ancient_apparition_cold_feet": {
+   "tags": [
+    "hard_cc",
+    "setup_cc"
+   ]
+  },
+  "ancient_apparition_ice_blast": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "nuke",
+    "teamfight_ult"
+   ]
+  },
+  "ancient_apparition_ice_vortex": {
+   "tags": [
+    "aoe",
+    "soft_cc"
+   ]
+  },
+  "antimage_blink": {
+   "tags": [
+    "initiation",
+    "mobility"
+   ]
+  },
+  "antimage_counterspell": {
+   "tags": [
+    "passive_value",
+    "sustain_self"
+   ]
+  },
+  "antimage_mana_break": {
+   "tags": [
+    "steroid"
+   ]
+  },
+  "antimage_mana_void": {
+   "tags": [
+    "aoe",
+    "mana_hungry"
+   ]
+  },
+  "arc_warden_flux": {
+   "tags": [
+    "soft_cc"
+   ]
+  },
+  "arc_warden_magnetic_field": {
+   "tags": [
+    "aoe",
+    "save_ally",
+    "steroid"
+   ]
+  },
+  "arc_warden_spark_wraith": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "setup_cc",
+    "soft_cc"
+   ]
+  },
+  "axe_battle_hunger": {
+   "tags": [
+    "soft_cc"
+   ]
+  },
+  "axe_berserkers_call": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "initiation"
+   ]
+  },
+  "axe_counter_helix": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "passive_value"
+   ]
+  },
+  "axe_culling_blade": {
+   "tags": [
+    "mana_hungry",
+    "nuke"
+   ]
+  },
+  "bane_brain_sap": {
+   "tags": [
+    "mana_hungry",
+    "nuke",
+    "sustain_self"
+   ]
+  },
+  "bane_enfeeble": {
+   "tags": [
+    "soft_cc"
+   ]
+  },
+  "bane_fiends_grip": {
+   "tags": [
+    "channeled",
+    "hard_cc",
+    "mana_hungry"
+   ]
+  },
+  "bane_nightmare": {
+   "tags": [
+    "hard_cc",
+    "mana_hungry",
+    "save_ally",
+    "setup_cc"
+   ]
+  },
+  "batrider_firefly": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "mobility",
+    "waveclear"
+   ]
+  },
+  "batrider_flamebreak": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "setup_cc",
+    "soft_cc"
+   ]
+  },
+  "batrider_flaming_lasso": {
+   "tags": [
+    "hard_cc",
+    "initiation",
+    "mana_hungry"
+   ]
+  },
+  "batrider_sticky_napalm": {
+   "tags": [
+    "aoe",
+    "soft_cc"
+   ]
+  },
+  "beastmaster_primal_roar": {
+   "tags": [
+    "hard_cc",
+    "initiation",
+    "mana_hungry",
+    "soft_cc"
+   ]
+  },
+  "beastmaster_summon_raptor": {
+   "tags": [
+    "soft_cc",
+    "summon"
+   ]
+  },
+  "beastmaster_summon_razorback": {
+   "tags": [
+    "farm_tool",
+    "soft_cc",
+    "summon"
+   ]
+  },
+  "beastmaster_wild_axes": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "nuke",
+    "waveclear"
+   ]
+  },
+  "bloodseeker_blood_bath": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "setup_cc",
+    "soft_cc",
+    "waveclear"
+   ]
+  },
+  "bloodseeker_bloodrage": {
+   "tags": [
+    "steroid"
+   ]
+  },
+  "bloodseeker_rupture": {
+   "tags": [
+    "mana_hungry",
+    "nuke"
+   ]
+  },
+  "bloodseeker_thirst": {
+   "tags": [
+    "mobility",
+    "passive_value"
+   ]
+  },
+  "bounty_hunter_jinada": {
+   "tags": [
+    "steroid"
+   ]
+  },
+  "bounty_hunter_shuriken_toss": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "soft_cc"
+   ]
+  },
+  "bounty_hunter_track": {
+   "tags": []
+  },
+  "bounty_hunter_wind_walk": {
+   "tags": [
+    "hard_cc",
+    "initiation",
+    "mobility"
+   ]
+  },
+  "brewmaster_cinder_brew": {
+   "tags": [
+    "aoe",
+    "soft_cc"
+   ]
+  },
+  "brewmaster_drunken_brawler": {
+   "tags": [
+    "steroid"
+   ]
+  },
+  "brewmaster_primal_split": {
+   "tags": [
+    "hard_cc",
+    "mana_hungry",
+    "setup_cc",
+    "soft_cc",
+    "summon",
+    "teamfight_ult"
+   ]
+  },
+  "brewmaster_thunder_clap": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "soft_cc",
+    "waveclear"
+   ]
+  },
+  "bristleback_bristleback": {
+   "tags": [
+    "aoe",
+    "passive_value"
+   ]
+  },
+  "bristleback_quill_spray": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "waveclear"
+   ]
+  },
+  "bristleback_viscous_nasal_goo": {
+   "tags": [
+    "soft_cc"
+   ]
+  },
+  "bristleback_warpath": {
+   "tags": [
+    "steroid"
+   ]
+  },
+  "broodmother_incapacitating_bite": {
+   "tags": [
+    "soft_cc",
+    "steroid"
+   ]
+  },
+  "broodmother_insatiable_hunger": {
+   "tags": [
+    "steroid",
+    "sustain_self"
+   ]
+  },
+  "broodmother_spawn_spiderlings": {
+   "tags": [
+    "farm_tool",
+    "nuke",
+    "soft_cc",
+    "summon",
+    "waveclear"
+   ]
+  },
+  "broodmother_spin_web": {
+   "tags": [
+    "aoe",
+    "mobility",
+    "sustain_self"
+   ]
+  },
+  "centaur_double_edge": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "nuke",
+    "waveclear"
+   ]
+  },
+  "centaur_hoof_stomp": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "initiation"
+   ]
+  },
+  "centaur_return": {
+   "tags": [
+    "passive_value"
+   ]
+  },
+  "centaur_stampede": {
+   "tags": [
+    "aoe",
+    "initiation",
+    "mana_hungry",
+    "mobility",
+    "save_ally",
+    "soft_cc",
+    "teamfight_ult"
+   ]
+  },
+  "chaos_knight_chaos_bolt": {
+   "tags": [
+    "hard_cc"
+   ]
+  },
+  "chaos_knight_chaos_strike": {
+   "tags": [
+    "steroid",
+    "sustain_self"
+   ]
+  },
+  "chaos_knight_phantasm": {
+   "tags": [
+    "farm_tool",
+    "mana_hungry",
+    "sustain_self"
+   ]
+  },
+  "chaos_knight_reality_rift": {
+   "tags": [
+    "initiation",
+    "mobility"
+   ]
+  },
+  "chen_divine_favor": {
+   "tags": [
+    "save_ally",
+    "sustain_self",
+    "team_aura"
+   ]
+  },
+  "chen_hand_of_god": {
+   "tags": [
+    "mana_hungry",
+    "save_ally",
+    "sustain_self"
+   ]
+  },
+  "chen_holy_persuasion": {
+   "tags": [
+    "mana_hungry",
+    "summon"
+   ]
+  },
+  "chen_penitence": {
+   "tags": [
+    "soft_cc",
+    "steroid"
+   ]
+  },
+  "clinkz_death_pact": {
+   "tags": [
+    "sustain_self"
+   ]
+  },
+  "clinkz_searing_arrows": {
+   "tags": [
+    "steroid"
+   ]
+  },
+  "clinkz_strafe": {
+   "tags": [
+    "steroid"
+   ]
+  },
+  "clinkz_wind_walk": {
+   "tags": [
+    "initiation",
+    "mobility",
+    "summon"
+   ]
+  },
+  "crystal_maiden_crystal_nova": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "nuke",
+    "soft_cc",
+    "waveclear"
+   ]
+  },
+  "crystal_maiden_freezing_field": {
+   "tags": [
+    "aoe",
+    "channeled",
+    "mana_hungry",
+    "teamfight_ult"
+   ]
+  },
+  "crystal_maiden_frostbite": {
+   "tags": [
+    "farm_tool",
+    "mana_hungry",
+    "nuke",
+    "soft_cc"
+   ]
+  },
+  "dark_seer_ion_shell": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "waveclear"
+   ]
+  },
+  "dark_seer_surge": {
+   "tags": [
+    "initiation",
+    "mobility",
+    "save_ally"
+   ]
+  },
+  "dark_seer_vacuum": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "initiation",
+    "mana_hungry",
+    "setup_cc"
+   ]
+  },
+  "dark_seer_wall_of_replica": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "mana_hungry",
+    "soft_cc",
+    "sustain_self",
+    "teamfight_ult"
+   ]
+  },
+  "dark_willow_bramble_maze": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "setup_cc"
+   ]
+  },
+  "dark_willow_cursed_crown": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "setup_cc"
+   ]
+  },
+  "dark_willow_shadow_realm": {
+   "tags": [
+    "nuke"
+   ]
+  },
+  "dark_willow_terrorize": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "setup_cc",
+    "teamfight_ult"
+   ]
+  },
+  "dawnbreaker_celestial_hammer": {
+   "tags": [
+    "aoe",
+    "initiation",
+    "mobility",
+    "nuke",
+    "soft_cc"
+   ]
+  },
+  "dawnbreaker_fire_wreath": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "hard_cc",
+    "initiation"
+   ]
+  },
+  "dawnbreaker_luminosity": {
+   "tags": [
+    "aoe",
+    "steroid",
+    "sustain_self"
+   ]
+  },
+  "dawnbreaker_solar_guardian": {
+   "tags": [
+    "aoe",
+    "channeled",
+    "hard_cc",
+    "mana_hungry",
+    "mobility",
+    "save_ally",
+    "teamfight_ult"
+   ]
+  },
+  "dazzle_nothl_projection": {
+   "tags": [
+    "mana_hungry"
+   ]
+  },
+  "dazzle_poison_touch": {
+   "tags": [
+    "aoe",
+    "soft_cc"
+   ]
+  },
+  "dazzle_shadow_wave": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "save_ally",
+    "sustain_self"
+   ]
+  },
+  "dazzle_shallow_grave": {
+   "tags": [
+    "save_ally"
+   ]
+  },
+  "death_prophet_carrion_swarm": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "waveclear"
+   ]
+  },
+  "death_prophet_exorcism": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "mana_hungry",
+    "sustain_self",
+    "teamfight_ult"
+   ]
+  },
+  "death_prophet_silence": {
+   "tags": [
+    "aoe",
+    "soft_cc"
+   ]
+  },
+  "death_prophet_spirit_siphon": {
+   "tags": [
+    "sustain_self"
+   ]
+  },
+  "disruptor_glimpse": {
+   "tags": [
+    "initiation",
+    "setup_cc"
+   ]
+  },
+  "disruptor_kinetic_field": {
+   "tags": [
+    "aoe",
+    "setup_cc",
+    "soft_cc"
+   ]
+  },
+  "disruptor_static_storm": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "setup_cc",
+    "soft_cc",
+    "teamfight_ult"
+   ]
+  },
+  "disruptor_thunder_strike": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "soft_cc"
+   ]
+  },
+  "doom_bringer_devour": {
+   "tags": [
+    "farm_tool"
+   ]
+  },
+  "doom_bringer_doom": {
+   "tags": [
+    "mana_hungry",
+    "soft_cc"
+   ]
+  },
+  "doom_bringer_infernal_blade": {
+   "tags": [
+    "hard_cc"
+   ]
+  },
+  "doom_bringer_scorched_earth": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "mobility",
+    "sustain_self"
+   ]
+  },
+  "dragon_knight_breathe_fire": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "soft_cc",
+    "waveclear"
+   ]
+  },
+  "dragon_knight_dragon_tail": {
+   "tags": [
+    "hard_cc",
+    "initiation"
+   ]
+  },
+  "dragon_knight_elder_dragon_form": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "soft_cc",
+    "steroid",
+    "waveclear"
+   ]
+  },
+  "dragon_knight_wyrms_wrath": {
+   "tags": [
+    "steroid"
+   ]
+  },
+  "drow_ranger_frost_arrows": {
+   "tags": [
+    "soft_cc",
+    "steroid"
+   ]
+  },
+  "drow_ranger_marksmanship": {
+   "tags": [
+    "ranged_only",
+    "steroid"
+   ]
+  },
+  "drow_ranger_multishot": {
+   "tags": [
+    "aoe",
+    "channeled",
+    "nuke",
+    "waveclear"
+   ]
+  },
+  "drow_ranger_wave_of_silence": {
+   "tags": [
+    "aoe",
+    "soft_cc"
+   ]
+  },
+  "earth_spirit_boulder_smash": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "save_ally",
+    "soft_cc"
+   ]
+  },
+  "earth_spirit_geomagnetic_grip": {
+   "tags": [
+    "aoe",
+    "save_ally",
+    "soft_cc"
+   ]
+  },
+  "earth_spirit_magnetize": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "teamfight_ult"
+   ]
+  },
+  "earth_spirit_rolling_boulder": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "initiation",
+    "mobility"
+   ]
+  },
+  "earthshaker_aftershock": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "initiation",
+    "passive_value"
+   ]
+  },
+  "earthshaker_echo_slam": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "nuke",
+    "teamfight_ult"
+   ]
+  },
+  "earthshaker_enchant_totem": {
+   "tags": [
+    "steroid"
+   ]
+  },
+  "earthshaker_fissure": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "initiation",
+    "nuke"
+   ]
+  },
+  "elder_titan_ancestral_spirit": {
+   "tags": [
+    "steroid"
+   ]
+  },
+  "elder_titan_earth_splitter": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "nuke",
+    "setup_cc",
+    "soft_cc",
+    "teamfight_ult"
+   ]
+  },
+  "elder_titan_echo_stomp": {
+   "tags": [
+    "aoe",
+    "channeled",
+    "hard_cc",
+    "setup_cc"
+   ]
+  },
+  "elder_titan_natural_order": {
+   "tags": [
+    "aoe",
+    "passive_value",
+    "team_aura"
+   ]
+  },
+  "ember_spirit_fire_remnant": {
+   "tags": [
+    "aoe",
+    "initiation",
+    "mobility",
+    "nuke"
+   ]
+  },
+  "ember_spirit_flame_guard": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "sustain_self"
+   ]
+  },
+  "ember_spirit_searing_chains": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "soft_cc"
+   ]
+  },
+  "ember_spirit_sleight_of_fist": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "nuke",
+    "waveclear"
+   ]
+  },
+  "enchantress_enchant": {
+   "tags": [
+    "soft_cc",
+    "summon"
+   ]
+  },
+  "enchantress_impetus": {
+   "tags": [
+    "ranged_only",
+    "steroid"
+   ]
+  },
+  "enchantress_natures_attendants": {
+   "tags": [
+    "aoe",
+    "save_ally",
+    "sustain_self"
+   ]
+  },
+  "enchantress_untouchable": {
+   "tags": [
+    "passive_value",
+    "soft_cc"
+   ]
+  },
+  "enigma_black_hole": {
+   "tags": [
+    "aoe",
+    "channeled",
+    "hard_cc",
+    "initiation",
+    "mana_hungry",
+    "soft_cc",
+    "teamfight_ult"
+   ]
+  },
+  "enigma_demonic_conversion": {
+   "tags": [
+    "farm_tool",
+    "summon"
+   ]
+  },
+  "enigma_malefice": {
+   "tags": [
+    "hard_cc",
+    "setup_cc"
+   ]
+  },
+  "enigma_midnight_pulse": {
+   "tags": [
+    "aoe"
+   ]
+  },
+  "faceless_void_chronosphere": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "initiation",
+    "mana_hungry",
+    "teamfight_ult"
+   ]
+  },
+  "faceless_void_time_dilation": {
+   "tags": [
+    "aoe",
+    "soft_cc"
+   ]
+  },
+  "faceless_void_time_lock": {
+   "tags": [
+    "hard_cc",
+    "steroid"
+   ]
+  },
+  "faceless_void_time_walk": {
+   "tags": [
+    "initiation",
+    "mobility",
+    "sustain_self"
+   ]
+  },
+  "furion_force_of_nature": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "summon"
+   ]
+  },
+  "furion_sprout": {
+   "tags": [
+    "aoe",
+    "setup_cc",
+    "soft_cc"
+   ]
+  },
+  "furion_teleportation": {
+   "tags": [
+    "aoe",
+    "mobility"
+   ]
+  },
+  "furion_wrath_of_nature": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "mana_hungry",
+    "nuke",
+    "waveclear"
+   ]
+  },
+  "grimstroke_dark_artistry": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "soft_cc",
+    "waveclear"
+   ]
+  },
+  "grimstroke_ink_creature": {
+   "tags": [
+    "nuke",
+    "soft_cc"
+   ]
+  },
+  "grimstroke_soul_chain": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "setup_cc",
+    "soft_cc"
+   ]
+  },
+  "grimstroke_spirit_walk": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "mana_hungry",
+    "save_ally",
+    "setup_cc"
+   ]
+  },
+  "gyrocopter_call_down": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "nuke",
+    "soft_cc",
+    "teamfight_ult",
+    "waveclear"
+   ]
+  },
+  "gyrocopter_flak_cannon": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "steroid",
+    "waveclear"
+   ]
+  },
+  "gyrocopter_homing_missile": {
+   "tags": [
+    "hard_cc",
+    "initiation",
+    "mana_hungry",
+    "setup_cc"
+   ]
+  },
+  "gyrocopter_rocket_barrage": {
+   "tags": [
+    "waveclear"
+   ]
+  },
+  "hoodwink_acorn_shot": {
+   "tags": [
+    "nuke",
+    "soft_cc",
+    "waveclear"
+   ]
+  },
+  "hoodwink_bushwhack": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "initiation",
+    "setup_cc"
+   ]
+  },
+  "hoodwink_scurry": {
+   "tags": [
+    "mobility"
+   ]
+  },
+  "hoodwink_sharpshooter": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "mobility",
+    "nuke",
+    "soft_cc"
+   ]
+  },
+  "huskar_berserkers_blood": {
+   "tags": [
+    "passive_value",
+    "steroid",
+    "sustain_self"
+   ]
+  },
+  "huskar_burning_spear": {
+   "tags": [
+    "steroid"
+   ]
+  },
+  "huskar_inner_fire": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "soft_cc"
+   ]
+  },
+  "huskar_life_break": {
+   "tags": [
+    "initiation",
+    "mobility",
+    "nuke"
+   ]
+  },
+  "invoker_alacrity_ad": {
+   "tags": [
+    "steroid"
+   ]
+  },
+  "invoker_chaos_meteor_ad": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "nuke",
+    "waveclear"
+   ]
+  },
+  "invoker_cold_snap_ad": {
+   "tags": [
+    "hard_cc",
+    "setup_cc"
+   ]
+  },
+  "invoker_deafening_blast_ad": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "nuke",
+    "soft_cc"
+   ]
+  },
+  "invoker_emp_ad": {
+   "tags": [
+    "aoe",
+    "nuke"
+   ]
+  },
+  "invoker_forge_spirit_ad": {
+   "tags": [
+    "farm_tool",
+    "summon"
+   ]
+  },
+  "invoker_ghost_walk_ad": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "mobility",
+    "soft_cc"
+   ]
+  },
+  "invoker_ice_wall_ad": {
+   "tags": [
+    "aoe",
+    "setup_cc",
+    "soft_cc"
+   ]
+  },
+  "invoker_sun_strike_ad": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "nuke"
+   ]
+  },
+  "invoker_tornado_ad": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "initiation",
+    "nuke"
+   ]
+  },
+  "jakiro_dual_breath": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "nuke",
+    "soft_cc",
+    "waveclear"
+   ]
+  },
+  "jakiro_ice_path": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "setup_cc"
+   ]
+  },
+  "jakiro_liquid_fire": {
+   "tags": [
+    "aoe",
+    "soft_cc",
+    "steroid",
+    "waveclear"
+   ]
+  },
+  "jakiro_liquid_ice": {
+   "tags": [
+    "soft_cc"
+   ]
+  },
+  "jakiro_macropyre": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "teamfight_ult",
+    "waveclear"
+   ]
+  },
+  "juggernaut_blade_dance": {
+   "tags": [
+    "steroid"
+   ]
+  },
+  "juggernaut_blade_fury": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "sustain_self",
+    "waveclear"
+   ]
+  },
+  "juggernaut_healing_ward": {
+   "tags": [
+    "aoe",
+    "save_ally",
+    "summon",
+    "sustain_self",
+    "team_aura"
+   ]
+  },
+  "juggernaut_omni_slash": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "mobility",
+    "nuke"
+   ]
+  },
+  "keeper_of_the_light_blinding_light": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "nuke",
+    "soft_cc"
+   ]
+  },
+  "keeper_of_the_light_chakra_magic": {
+   "tags": []
+  },
+  "keeper_of_the_light_illuminate": {
+   "tags": [
+    "aoe",
+    "channeled",
+    "mana_hungry",
+    "nuke",
+    "waveclear"
+   ]
+  },
+  "keeper_of_the_light_spirit_form": {
+   "tags": [
+    "mana_hungry"
+   ]
+  },
+  "kez_echo_slash": {
+   "tags": [
+    "aoe",
+    "soft_cc",
+    "waveclear"
+   ]
+  },
+  "kez_falcon_rush_ad": {
+   "tags": [
+    "mobility",
+    "steroid"
+   ]
+  },
+  "kez_grappling_claw": {
+   "tags": [
+    "initiation",
+    "mobility",
+    "soft_cc"
+   ]
+  },
+  "kez_kazurai_katana": {
+   "tags": [
+    "steroid"
+   ]
+  },
+  "kez_raptor_dance": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "nuke",
+    "sustain_self"
+   ]
+  },
+  "kez_ravens_veil_ad": {
+   "tags": [
+    "mobility",
+    "sustain_self"
+   ]
+  },
+  "kez_shodo_sai_ad": {
+   "tags": [
+    "steroid"
+   ]
+  },
+  "kez_talon_toss_ad": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "soft_cc"
+   ]
+  },
+  "kunkka_ghostship": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "mana_hungry",
+    "save_ally",
+    "setup_cc",
+    "teamfight_ult"
+   ]
+  },
+  "kunkka_tidebringer": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "passive_value",
+    "steroid",
+    "waveclear"
+   ]
+  },
+  "kunkka_torrent": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "setup_cc",
+    "soft_cc"
+   ]
+  },
+  "kunkka_x_marks_the_spot": {
+   "tags": [
+    "mobility",
+    "save_ally",
+    "setup_cc"
+   ]
+  },
+  "largo_amphibian_rhapsody": {
+   "tags": [
+    "aoe",
+    "team_aura",
+    "teamfight_ult"
+   ]
+  },
+  "largo_catchy_lick": {
+   "tags": [
+    "nuke",
+    "save_ally",
+    "sustain_self"
+   ]
+  },
+  "largo_croak_of_genius": {
+   "tags": []
+  },
+  "largo_frogstomp": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "setup_cc",
+    "soft_cc",
+    "waveclear"
+   ]
+  },
+  "legion_commander_duel": {
+   "tags": [
+    "hard_cc",
+    "initiation",
+    "steroid"
+   ]
+  },
+  "legion_commander_moment_of_courage": {
+   "tags": [
+    "steroid",
+    "sustain_self"
+   ]
+  },
+  "legion_commander_overwhelming_odds": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "steroid",
+    "waveclear"
+   ]
+  },
+  "legion_commander_press_the_attack": {
+   "tags": [
+    "save_ally",
+    "sustain_self"
+   ]
+  },
+  "leshrac_diabolic_edict": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "nuke"
+   ]
+  },
+  "leshrac_lightning_storm": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "soft_cc"
+   ]
+  },
+  "leshrac_pulse_nova": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "waveclear"
+   ]
+  },
+  "leshrac_split_earth": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "setup_cc"
+   ]
+  },
+  "lich_chain_frost": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "nuke",
+    "soft_cc",
+    "teamfight_ult"
+   ]
+  },
+  "lich_frost_nova": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "soft_cc",
+    "waveclear"
+   ]
+  },
+  "lich_frost_shield": {
+   "tags": [
+    "aoe",
+    "save_ally",
+    "soft_cc",
+    "sustain_self"
+   ]
+  },
+  "lich_sinister_gaze": {
+   "tags": [
+    "channeled"
+   ]
+  },
+  "life_stealer_feast": {
+   "tags": [
+    "steroid",
+    "sustain_self"
+   ]
+  },
+  "life_stealer_infest": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "mobility",
+    "nuke",
+    "sustain_self"
+   ]
+  },
+  "life_stealer_open_wounds": {
+   "tags": [
+    "soft_cc",
+    "sustain_self"
+   ]
+  },
+  "life_stealer_rage": {
+   "tags": []
+  },
+  "lina_dragon_slave": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "waveclear"
+   ]
+  },
+  "lina_fiery_soul": {
+   "tags": [
+    "steroid"
+   ]
+  },
+  "lina_laguna_blade": {
+   "tags": [
+    "mana_hungry",
+    "nuke"
+   ]
+  },
+  "lina_light_strike_array": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "nuke",
+    "setup_cc"
+   ]
+  },
+  "lion_finger_of_death": {
+   "tags": [
+    "mana_hungry",
+    "nuke"
+   ]
+  },
+  "lion_impale": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "initiation",
+    "mana_hungry",
+    "nuke"
+   ]
+  },
+  "lion_mana_drain": {
+   "tags": [
+    "channeled",
+    "soft_cc"
+   ]
+  },
+  "lion_voodoo": {
+   "tags": [
+    "hard_cc",
+    "initiation",
+    "mana_hungry"
+   ]
+  },
+  "lone_druid_entangle": {
+   "tags": [
+    "aoe",
+    "setup_cc",
+    "soft_cc"
+   ]
+  },
+  "lone_druid_savage_roar": {
+   "tags": [
+    "aoe",
+    "soft_cc"
+   ]
+  },
+  "lone_druid_spirit_link": {
+   "tags": [
+    "passive_value",
+    "sustain_self"
+   ]
+  },
+  "lone_druid_true_form": {
+   "tags": [
+    "steroid"
+   ]
+  },
+  "luna_eclipse": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "nuke",
+    "soft_cc",
+    "teamfight_ult"
+   ]
+  },
+  "luna_lucent_beam": {
+   "tags": [
+    "nuke",
+    "soft_cc"
+   ]
+  },
+  "luna_lunar_orbit": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "sustain_self"
+   ]
+  },
+  "luna_moon_glaive": {
+   "tags": [
+    "farm_tool",
+    "steroid",
+    "waveclear"
+   ]
+  },
+  "lycan_feral_impulse": {
+   "tags": [
+    "passive_value",
+    "steroid",
+    "sustain_self"
+   ]
+  },
+  "lycan_howl": {
+   "tags": [
+    "aoe",
+    "soft_cc"
+   ]
+  },
+  "lycan_shapeshift": {
+   "tags": [
+    "mobility",
+    "steroid",
+    "sustain_self"
+   ]
+  },
+  "lycan_summon_wolves": {
+   "tags": [
+    "summon"
+   ]
+  },
+  "magnataur_empower": {
+   "tags": [
+    "farm_tool",
+    "steroid"
+   ]
+  },
+  "magnataur_reverse_polarity": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "initiation",
+    "mana_hungry",
+    "teamfight_ult"
+   ]
+  },
+  "magnataur_shockwave": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "soft_cc",
+    "waveclear"
+   ]
+  },
+  "magnataur_skewer": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "initiation",
+    "mobility",
+    "soft_cc"
+   ]
+  },
+  "marci_bodyguard": {
+   "tags": [
+    "steroid",
+    "sustain_self"
+   ]
+  },
+  "marci_companion_run": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "initiation",
+    "mobility",
+    "save_ally"
+   ]
+  },
+  "marci_grapple": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "save_ally",
+    "soft_cc"
+   ]
+  },
+  "marci_unleash": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "steroid"
+   ]
+  },
+  "mars_arena_of_blood": {
+   "tags": [
+    "aoe",
+    "initiation",
+    "mana_hungry",
+    "setup_cc",
+    "soft_cc",
+    "teamfight_ult"
+   ]
+  },
+  "mars_bulwark": {
+   "tags": [
+    "passive_value"
+   ]
+  },
+  "mars_gods_rebuke": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "soft_cc"
+   ]
+  },
+  "mars_spear": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "initiation",
+    "nuke",
+    "setup_cc",
+    "waveclear"
+   ]
+  },
+  "medusa_gorgon_grasp": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "setup_cc"
+   ]
+  },
+  "medusa_mystic_snake": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "nuke",
+    "waveclear"
+   ]
+  },
+  "medusa_split_shot": {
+   "tags": [
+    "farm_tool",
+    "steroid"
+   ]
+  },
+  "medusa_stone_gaze": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "mana_hungry",
+    "teamfight_ult"
+   ]
+  },
+  "meepo_earthbind": {
+   "tags": [
+    "aoe"
+   ]
+  },
+  "meepo_poof": {
+   "tags": [
+    "mobility"
+   ]
+  },
+  "meepo_ransack": {
+   "tags": []
+  },
+  "mirana_arrow": {
+   "tags": [
+    "hard_cc",
+    "initiation",
+    "nuke",
+    "setup_cc"
+   ]
+  },
+  "mirana_invis": {
+   "tags": [
+    "initiation",
+    "mobility",
+    "save_ally"
+   ]
+  },
+  "mirana_leap": {
+   "tags": [
+    "mobility",
+    "steroid"
+   ]
+  },
+  "mirana_starfall": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "waveclear"
+   ]
+  },
+  "monkey_king_boundless_strike": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "initiation",
+    "mobility",
+    "nuke"
+   ]
+  },
+  "monkey_king_jingu_mastery": {
+   "tags": [
+    "steroid",
+    "sustain_self"
+   ]
+  },
+  "monkey_king_tree_dance": {
+   "tags": [
+    "hard_cc",
+    "initiation",
+    "mobility"
+   ]
+  },
+  "monkey_king_wukongs_command": {
+   "tags": [
+    "aoe",
+    "teamfight_ult"
+   ]
+  },
+  "morphling_adaptive_strike_agi": {
+   "tags": [
+    "hard_cc",
+    "nuke"
+   ]
+  },
+  "morphling_waveform": {
+   "tags": [
+    "aoe",
+    "initiation",
+    "mobility",
+    "waveclear"
+   ]
+  },
+  "muerta_dead_shot": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "nuke",
+    "soft_cc"
+   ]
+  },
+  "muerta_gunslinger": {
+   "tags": [
+    "steroid"
+   ]
+  },
+  "muerta_pierce_the_veil": {
+   "tags": [
+    "mana_hungry",
+    "steroid"
+   ]
+  },
+  "muerta_the_calling": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "soft_cc"
+   ]
+  },
+  "naga_siren_ensnare": {
+   "tags": [
+    "soft_cc"
+   ]
+  },
+  "naga_siren_mirror_image": {
+   "tags": [
+    "farm_tool",
+    "sustain_self"
+   ]
+  },
+  "naga_siren_rip_tide": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "steroid"
+   ]
+  },
+  "naga_siren_song_of_the_siren": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "initiation",
+    "mana_hungry",
+    "save_ally",
+    "teamfight_ult"
+   ]
+  },
+  "necrolyte_death_pulse": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "nuke",
+    "save_ally",
+    "sustain_self",
+    "waveclear"
+   ]
+  },
+  "necrolyte_ghost_shroud": {
+   "tags": [
+    "aoe",
+    "soft_cc",
+    "sustain_self"
+   ]
+  },
+  "necrolyte_heartstopper_aura": {
+   "tags": [
+    "aoe",
+    "passive_value"
+   ]
+  },
+  "necrolyte_reapers_scythe": {
+   "tags": [
+    "hard_cc",
+    "mana_hungry",
+    "nuke"
+   ]
+  },
+  "nevermore_dark_lord": {
+   "tags": [
+    "aoe",
+    "passive_value",
+    "team_aura"
+   ]
+  },
+  "nevermore_frenzy": {
+   "tags": [
+    "steroid"
+   ]
+  },
+  "nevermore_requiem": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "nuke",
+    "soft_cc",
+    "teamfight_ult"
+   ]
+  },
+  "nevermore_shadowraze2": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "nuke",
+    "waveclear"
+   ]
+  },
+  "night_stalker_crippling_fear": {
+   "tags": [
+    "aoe",
+    "soft_cc"
+   ]
+  },
+  "night_stalker_darkness": {
+   "tags": [
+    "mana_hungry",
+    "mobility",
+    "steroid"
+   ]
+  },
+  "night_stalker_midnight_feast": {
+   "tags": [
+    "sustain_self"
+   ]
+  },
+  "night_stalker_void": {
+   "tags": [
+    "nuke",
+    "soft_cc"
+   ]
+  },
+  "nyx_assassin_impale": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "initiation",
+    "nuke"
+   ]
+  },
+  "nyx_assassin_jolt": {
+   "tags": [
+    "aoe",
+    "nuke"
+   ]
+  },
+  "nyx_assassin_spiked_carapace": {
+   "tags": [
+    "aoe",
+    "hard_cc"
+   ]
+  },
+  "nyx_assassin_vendetta": {
+   "tags": [
+    "initiation",
+    "mana_hungry",
+    "mobility"
+   ]
+  },
+  "obsidian_destroyer_arcane_orb": {
+   "tags": [
+    "steroid"
+   ]
+  },
+  "obsidian_destroyer_astral_imprisonment": {
+   "tags": [
+    "hard_cc",
+    "initiation",
+    "mana_hungry",
+    "nuke",
+    "save_ally"
+   ]
+  },
+  "obsidian_destroyer_objurgation": {
+   "tags": [
+    "mana_hungry",
+    "sustain_self"
+   ]
+  },
+  "obsidian_destroyer_sanity_eclipse": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "nuke",
+    "teamfight_ult"
+   ]
+  },
+  "ogre_magi_bloodlust": {
+   "tags": [
+    "steroid"
+   ]
+  },
+  "ogre_magi_fireblast": {
+   "tags": [
+    "hard_cc",
+    "nuke"
+   ]
+  },
+  "ogre_magi_ignite": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "soft_cc"
+   ]
+  },
+  "omniknight_guardian_angel": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "save_ally",
+    "teamfight_ult"
+   ]
+  },
+  "omniknight_hammer_of_purity": {
+   "tags": [
+    "steroid",
+    "sustain_self"
+   ]
+  },
+  "omniknight_martyr": {
+   "tags": [
+    "save_ally",
+    "sustain_self"
+   ]
+  },
+  "omniknight_purification": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "save_ally",
+    "sustain_self"
+   ]
+  },
+  "oracle_false_promise": {
+   "tags": [
+    "mana_hungry",
+    "save_ally",
+    "sustain_self"
+   ]
+  },
+  "oracle_fates_edict": {
+   "tags": [
+    "save_ally",
+    "soft_cc"
+   ]
+  },
+  "oracle_fortunes_end": {
+   "tags": [
+    "aoe",
+    "channeled",
+    "nuke",
+    "save_ally",
+    "setup_cc",
+    "soft_cc"
+   ]
+  },
+  "oracle_purifying_flames": {
+   "tags": [
+    "nuke",
+    "save_ally",
+    "sustain_self"
+   ]
+  },
+  "pangolier_gyroshell": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "initiation",
+    "mana_hungry",
+    "mobility",
+    "teamfight_ult"
+   ]
+  },
+  "pangolier_lucky_shot": {
+   "tags": [
+    "soft_cc"
+   ]
+  },
+  "pangolier_shield_crash": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "sustain_self",
+    "waveclear"
+   ]
+  },
+  "pangolier_swashbuckle": {
+   "tags": [
+    "aoe",
+    "initiation",
+    "mobility",
+    "nuke",
+    "soft_cc"
+   ]
+  },
+  "phantom_assassin_coup_de_grace": {
+   "tags": [
+    "steroid"
+   ]
+  },
+  "phantom_assassin_immaterial": {
+   "tags": [
+    "passive_value"
+   ]
+  },
+  "phantom_assassin_phantom_strike": {
+   "tags": [
+    "initiation",
+    "mobility",
+    "steroid",
+    "sustain_self"
+   ]
+  },
+  "phantom_assassin_stifling_dagger": {
+   "tags": [
+    "nuke",
+    "soft_cc"
+   ]
+  },
+  "phantom_lancer_doppelwalk": {
+   "tags": [
+    "farm_tool",
+    "mobility",
+    "sustain_self"
+   ]
+  },
+  "phantom_lancer_juxtapose": {
+   "tags": [
+    "farm_tool",
+    "sustain_self"
+   ]
+  },
+  "phantom_lancer_phantom_edge": {
+   "tags": [
+    "initiation",
+    "mobility"
+   ]
+  },
+  "phantom_lancer_spirit_lance": {
+   "tags": [
+    "farm_tool",
+    "nuke",
+    "soft_cc",
+    "sustain_self"
+   ]
+  },
+  "phoenix_fire_spirits": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "soft_cc",
+    "waveclear"
+   ]
+  },
+  "phoenix_icarus_dive": {
+   "tags": [
+    "aoe",
+    "initiation",
+    "mobility",
+    "soft_cc"
+   ]
+  },
+  "phoenix_sun_ray": {
+   "tags": [
+    "aoe",
+    "save_ally"
+   ]
+  },
+  "phoenix_supernova": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "mana_hungry",
+    "soft_cc",
+    "sustain_self",
+    "teamfight_ult"
+   ]
+  },
+  "primal_beast_onslaught": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "initiation",
+    "mobility",
+    "nuke"
+   ]
+  },
+  "primal_beast_pulverize": {
+   "tags": [
+    "aoe",
+    "channeled",
+    "hard_cc",
+    "teamfight_ult",
+    "waveclear"
+   ]
+  },
+  "primal_beast_trample": {
+   "tags": [
+    "aoe",
+    "waveclear"
+   ]
+  },
+  "primal_beast_uproar": {
+   "tags": [
+    "aoe",
+    "soft_cc",
+    "steroid"
+   ]
+  },
+  "puck_dream_coil": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "mana_hungry",
+    "nuke",
+    "setup_cc",
+    "teamfight_ult"
+   ]
+  },
+  "puck_illusory_orb": {
+   "tags": [
+    "aoe",
+    "initiation",
+    "mobility",
+    "nuke",
+    "waveclear"
+   ]
+  },
+  "puck_phase_shift": {
+   "tags": [
+    "channeled"
+   ]
+  },
+  "puck_waning_rift": {
+   "tags": [
+    "aoe",
+    "initiation",
+    "mobility",
+    "nuke",
+    "soft_cc"
+   ]
+  },
+  "pudge_dismember": {
+   "tags": [
+    "channeled",
+    "hard_cc",
+    "mana_hungry",
+    "nuke",
+    "sustain_self"
+   ]
+  },
+  "pudge_flesh_heap": {
+   "tags": [
+    "sustain_self"
+   ]
+  },
+  "pudge_meat_hook": {
+   "tags": [
+    "hard_cc",
+    "initiation",
+    "nuke"
+   ]
+  },
+  "pudge_rot": {
+   "tags": [
+    "aoe",
+    "waveclear"
+   ]
+  },
+  "pugna_decrepify": {
+   "tags": [
+    "save_ally",
+    "soft_cc"
+   ]
+  },
+  "pugna_life_drain": {
+   "tags": [
+    "channeled",
+    "mana_hungry",
+    "nuke",
+    "save_ally",
+    "sustain_self"
+   ]
+  },
+  "pugna_nether_blast": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "nuke",
+    "waveclear"
+   ]
+  },
+  "pugna_nether_ward": {
+   "tags": [
+    "aoe",
+    "summon"
+   ]
+  },
+  "queenofpain_blink": {
+   "tags": [
+    "initiation",
+    "mobility"
+   ]
+  },
+  "queenofpain_scream_of_pain": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "nuke",
+    "waveclear"
+   ]
+  },
+  "queenofpain_shadow_strike": {
+   "tags": [
+    "soft_cc"
+   ]
+  },
+  "queenofpain_sonic_wave": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "nuke",
+    "teamfight_ult"
+   ]
+  },
+  "rattletrap_battery_assault": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "nuke"
+   ]
+  },
+  "rattletrap_hookshot": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "initiation",
+    "mana_hungry",
+    "mobility"
+   ]
+  },
+  "rattletrap_power_cogs": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "initiation",
+    "nuke",
+    "setup_cc"
+   ]
+  },
+  "rattletrap_rocket_flare": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "soft_cc",
+    "waveclear"
+   ]
+  },
+  "razor_eye_of_the_storm": {
+   "tags": [
+    "mana_hungry"
+   ]
+  },
+  "razor_plasma_field": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "soft_cc",
+    "waveclear"
+   ]
+  },
+  "razor_static_link": {
+   "tags": [
+    "steroid"
+   ]
+  },
+  "razor_storm_surge": {
+   "tags": [
+    "aoe",
+    "passive_value",
+    "soft_cc"
+   ]
+  },
+  "riki_backstab": {
+   "tags": [
+    "initiation",
+    "passive_value"
+   ]
+  },
+  "riki_blink_strike": {
+   "tags": [
+    "initiation",
+    "mobility",
+    "soft_cc"
+   ]
+  },
+  "riki_smoke_screen": {
+   "tags": [
+    "aoe",
+    "soft_cc"
+   ]
+  },
+  "riki_tricks_of_the_trade": {
+   "tags": [
+    "aoe",
+    "channeled"
+   ]
+  },
+  "ringmaster_impalement": {
+   "tags": [
+    "nuke",
+    "soft_cc"
+   ]
+  },
+  "ringmaster_tame_the_beasts": {
+   "tags": [
+    "aoe",
+    "channeled",
+    "hard_cc",
+    "nuke"
+   ]
+  },
+  "ringmaster_the_box": {
+   "tags": [
+    "mobility",
+    "save_ally"
+   ]
+  },
+  "ringmaster_wheel": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "nuke",
+    "setup_cc",
+    "soft_cc",
+    "teamfight_ult"
+   ]
+  },
+  "rubick_arcane_supremacy": {
+   "tags": []
+  },
+  "rubick_fade_bolt": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "nuke",
+    "soft_cc",
+    "waveclear"
+   ]
+  },
+  "rubick_telekinesis": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "setup_cc"
+   ]
+  },
+  "sandking_burrowstrike": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "initiation",
+    "mobility",
+    "nuke"
+   ]
+  },
+  "sandking_epicenter": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "nuke",
+    "soft_cc",
+    "teamfight_ult"
+   ]
+  },
+  "sandking_sand_storm": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "nuke",
+    "waveclear"
+   ]
+  },
+  "sandking_scorpion_strike": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "soft_cc",
+    "waveclear"
+   ]
+  },
+  "shadow_demon_demonic_purge": {
+   "tags": [
+    "mana_hungry",
+    "nuke",
+    "soft_cc"
+   ]
+  },
+  "shadow_demon_disruption": {
+   "tags": [
+    "farm_tool",
+    "hard_cc",
+    "save_ally",
+    "setup_cc",
+    "sustain_self"
+   ]
+  },
+  "shadow_demon_disseminate": {
+   "tags": [
+    "aoe"
+   ]
+  },
+  "shadow_demon_shadow_poison": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "waveclear"
+   ]
+  },
+  "shadow_shaman_ether_shock": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "waveclear"
+   ]
+  },
+  "shadow_shaman_mass_serpent_ward": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "summon"
+   ]
+  },
+  "shadow_shaman_shackles": {
+   "tags": [
+    "channeled",
+    "hard_cc",
+    "mana_hungry",
+    "sustain_self"
+   ]
+  },
+  "shadow_shaman_voodoo": {
+   "tags": [
+    "hard_cc",
+    "mana_hungry"
+   ]
+  },
+  "shredder_chakram": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "mana_hungry",
+    "nuke",
+    "soft_cc",
+    "waveclear"
+   ]
+  },
+  "shredder_reactive_armor": {
+   "tags": [
+    "passive_value",
+    "sustain_self"
+   ]
+  },
+  "shredder_timber_chain": {
+   "tags": [
+    "aoe",
+    "initiation",
+    "mobility",
+    "nuke"
+   ]
+  },
+  "shredder_whirling_death": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "nuke",
+    "waveclear"
+   ]
+  },
+  "silencer_curse_of_the_silent": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "nuke",
+    "soft_cc"
+   ]
+  },
+  "silencer_glaives_of_wisdom": {
+   "tags": [
+    "steroid"
+   ]
+  },
+  "silencer_global_silence": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "soft_cc",
+    "teamfight_ult"
+   ]
+  },
+  "silencer_last_word": {
+   "tags": [
+    "nuke",
+    "soft_cc"
+   ]
+  },
+  "skeleton_king_bone_guard": {
+   "tags": [
+    "farm_tool",
+    "summon"
+   ]
+  },
+  "skeleton_king_hellfire_blast": {
+   "tags": [
+    "hard_cc",
+    "nuke",
+    "soft_cc"
+   ]
+  },
+  "skeleton_king_mortal_strike": {
+   "tags": [
+    "steroid"
+   ]
+  },
+  "skeleton_king_reincarnation": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "passive_value",
+    "soft_cc"
+   ]
+  },
+  "skywrath_mage_ancient_seal": {
+   "tags": [
+    "soft_cc"
+   ]
+  },
+  "skywrath_mage_arcane_bolt": {
+   "tags": [
+    "nuke"
+   ]
+  },
+  "skywrath_mage_concussive_shot": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "soft_cc"
+   ]
+  },
+  "skywrath_mage_mystic_flare": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "nuke"
+   ]
+  },
+  "slardar_amplify_damage": {
+   "tags": [
+    "steroid"
+   ]
+  },
+  "slardar_bash": {
+   "tags": [
+    "hard_cc",
+    "steroid"
+   ]
+  },
+  "slardar_slithereen_crush": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "nuke",
+    "soft_cc"
+   ]
+  },
+  "slardar_sprint": {
+   "tags": [
+    "initiation",
+    "mobility"
+   ]
+  },
+  "slark_dark_pact": {
+   "tags": [
+    "aoe",
+    "waveclear"
+   ]
+  },
+  "slark_pounce": {
+   "tags": [
+    "initiation",
+    "mobility"
+   ]
+  },
+  "slark_saltwater_shiv": {
+   "tags": [
+    "soft_cc",
+    "steroid",
+    "sustain_self"
+   ]
+  },
+  "slark_shadow_dance": {
+   "tags": [
+    "mobility",
+    "passive_value",
+    "sustain_self"
+   ]
+  },
+  "snapfire_firesnap_cookie": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "initiation",
+    "mobility",
+    "save_ally",
+    "setup_cc"
+   ]
+  },
+  "snapfire_lil_shredder": {
+   "tags": []
+  },
+  "snapfire_mortimer_kisses": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "nuke",
+    "teamfight_ult"
+   ]
+  },
+  "snapfire_scatterblast": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "soft_cc",
+    "waveclear"
+   ]
+  },
+  "sniper_assassinate": {
+   "tags": [
+    "hard_cc",
+    "mana_hungry",
+    "nuke"
+   ]
+  },
+  "sniper_headshot": {
+   "tags": [
+    "soft_cc",
+    "steroid"
+   ]
+  },
+  "sniper_shrapnel": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "soft_cc",
+    "waveclear"
+   ]
+  },
+  "sniper_take_aim": {
+   "tags": [
+    "steroid"
+   ]
+  },
+  "spectre_dispersion": {
+   "tags": [
+    "aoe",
+    "passive_value",
+    "sustain_self"
+   ]
+  },
+  "spectre_haunt": {
+   "tags": [
+    "aoe",
+    "initiation",
+    "mana_hungry",
+    "mobility"
+   ]
+  },
+  "spectre_shadow_step": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "initiation",
+    "mobility",
+    "sustain_self"
+   ]
+  },
+  "spectre_spectral_dagger": {
+   "tags": [
+    "aoe",
+    "mobility",
+    "nuke",
+    "soft_cc",
+    "waveclear"
+   ]
+  },
+  "spirit_breaker_bulldoze": {
+   "tags": [
+    "mobility"
+   ]
+  },
+  "spirit_breaker_charge_of_darkness": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "initiation",
+    "mobility"
+   ]
+  },
+  "spirit_breaker_greater_bash": {
+   "tags": [
+    "hard_cc",
+    "steroid"
+   ]
+  },
+  "spirit_breaker_nether_strike": {
+   "tags": [
+    "hard_cc",
+    "initiation",
+    "mana_hungry",
+    "mobility",
+    "nuke"
+   ]
+  },
+  "storm_spirit_ball_lightning": {
+   "tags": [
+    "initiation",
+    "mobility",
+    "nuke"
+   ]
+  },
+  "storm_spirit_electric_vortex": {
+   "tags": [
+    "hard_cc",
+    "setup_cc"
+   ]
+  },
+  "storm_spirit_overload": {
+   "tags": [
+    "aoe",
+    "soft_cc",
+    "steroid"
+   ]
+  },
+  "storm_spirit_static_remnant": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "nuke",
+    "waveclear"
+   ]
+  },
+  "sven_gods_strength": {
+   "tags": [
+    "mana_hungry",
+    "steroid"
+   ]
+  },
+  "sven_great_cleave": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "steroid"
+   ]
+  },
+  "sven_storm_bolt": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "nuke"
+   ]
+  },
+  "sven_warcry": {
+   "tags": [
+    "aoe",
+    "save_ally",
+    "team_aura"
+   ]
+  },
+  "techies_land_mines": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "nuke"
+   ]
+  },
+  "techies_reactive_tazer": {
+   "tags": [
+    "aoe",
+    "save_ally",
+    "soft_cc"
+   ]
+  },
+  "techies_sticky_bomb": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "setup_cc",
+    "soft_cc",
+    "waveclear"
+   ]
+  },
+  "techies_suicide": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "initiation",
+    "mana_hungry",
+    "mobility",
+    "nuke",
+    "waveclear"
+   ]
+  },
+  "templar_assassin_meld": {
+   "tags": [
+    "steroid"
+   ]
+  },
+  "templar_assassin_psi_blades": {
+   "tags": [
+    "farm_tool",
+    "steroid"
+   ]
+  },
+  "templar_assassin_psionic_trap": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "setup_cc",
+    "soft_cc"
+   ]
+  },
+  "templar_assassin_refraction": {
+   "tags": [
+    "steroid",
+    "sustain_self"
+   ]
+  },
+  "terrorblade_conjure_image": {
+   "tags": [
+    "farm_tool",
+    "sustain_self"
+   ]
+  },
+  "terrorblade_metamorphosis": {
+   "tags": [
+    "steroid"
+   ]
+  },
+  "terrorblade_reflection": {
+   "tags": [
+    "aoe",
+    "soft_cc"
+   ]
+  },
+  "terrorblade_sunder": {
+   "tags": [
+    "save_ally",
+    "sustain_self"
+   ]
+  },
+  "tidehunter_anchor_smash": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "soft_cc",
+    "waveclear"
+   ]
+  },
+  "tidehunter_gush": {
+   "tags": [
+    "nuke",
+    "soft_cc"
+   ]
+  },
+  "tidehunter_kraken_shell": {
+   "tags": [
+    "passive_value",
+    "sustain_self"
+   ]
+  },
+  "tidehunter_ravage": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "mana_hungry",
+    "nuke",
+    "teamfight_ult"
+   ]
+  },
+  "tinker_deploy_turrets": {
+   "tags": [
+    "mana_hungry",
+    "summon"
+   ]
+  },
+  "tinker_laser": {
+   "tags": [
+    "nuke",
+    "soft_cc"
+   ]
+  },
+  "tinker_march_of_the_machines": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "mana_hungry",
+    "nuke",
+    "waveclear"
+   ]
+  },
+  "tinker_rearm": {
+   "tags": [
+    "channeled",
+    "mana_hungry"
+   ]
+  },
+  "tiny_avalanche": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "mana_hungry",
+    "nuke",
+    "waveclear"
+   ]
+  },
+  "tiny_grow": {
+   "tags": [
+    "passive_value",
+    "steroid"
+   ]
+  },
+  "tiny_toss": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "initiation",
+    "nuke",
+    "setup_cc"
+   ]
+  },
+  "tiny_tree_grab": {
+   "tags": [
+    "farm_tool",
+    "steroid",
+    "waveclear"
+   ]
+  },
+  "treant_leech_seed": {
+   "tags": [
+    "soft_cc",
+    "steroid",
+    "sustain_self"
+   ]
+  },
+  "treant_living_armor": {
+   "tags": [
+    "save_ally",
+    "sustain_self"
+   ]
+  },
+  "treant_natures_grasp": {
+   "tags": [
+    "aoe",
+    "setup_cc",
+    "soft_cc",
+    "waveclear"
+   ]
+  },
+  "treant_overgrowth": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "soft_cc",
+    "teamfight_ult"
+   ]
+  },
+  "troll_warlord_battle_trance": {
+   "tags": [
+    "mana_hungry",
+    "steroid",
+    "sustain_self"
+   ]
+  },
+  "troll_warlord_berserkers_rage": {
+   "tags": [
+    "soft_cc",
+    "steroid"
+   ]
+  },
+  "troll_warlord_fervor": {
+   "tags": [
+    "steroid"
+   ]
+  },
+  "troll_warlord_whirling_axes_melee": {
+   "tags": [
+    "aoe",
+    "soft_cc"
+   ]
+  },
+  "troll_warlord_whirling_axes_ranged": {
+   "tags": [
+    "aoe",
+    "soft_cc"
+   ]
+  },
+  "tusk_ice_shards": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "setup_cc"
+   ]
+  },
+  "tusk_snowball": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "initiation",
+    "mobility",
+    "nuke",
+    "save_ally"
+   ]
+  },
+  "tusk_tag_team": {
+   "tags": [
+    "aoe",
+    "soft_cc",
+    "steroid",
+    "team_aura"
+   ]
+  },
+  "tusk_walrus_punch": {
+   "tags": [
+    "hard_cc",
+    "steroid"
+   ]
+  },
+  "undying_decay": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "waveclear"
+   ]
+  },
+  "undying_flesh_golem": {
+   "tags": [
+    "mana_hungry",
+    "steroid",
+    "sustain_self",
+    "teamfight_ult"
+   ]
+  },
+  "undying_soul_rip": {
+   "tags": [
+    "nuke",
+    "save_ally",
+    "sustain_self"
+   ]
+  },
+  "undying_tombstone": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "summon",
+    "teamfight_ult"
+   ]
+  },
+  "ursa_earthshock": {
+   "tags": [
+    "aoe",
+    "mobility",
+    "nuke",
+    "soft_cc"
+   ]
+  },
+  "ursa_enrage": {
+   "tags": [
+    "sustain_self"
+   ]
+  },
+  "ursa_fury_swipes": {
+   "tags": [
+    "steroid"
+   ]
+  },
+  "ursa_overpower": {
+   "tags": [
+    "steroid"
+   ]
+  },
+  "vengefulspirit_command_aura": {
+   "tags": [
+    "steroid",
+    "team_aura"
+   ]
+  },
+  "vengefulspirit_magic_missile": {
+   "tags": [
+    "hard_cc",
+    "nuke"
+   ]
+  },
+  "vengefulspirit_nether_swap": {
+   "tags": [
+    "initiation",
+    "mana_hungry",
+    "mobility",
+    "save_ally",
+    "setup_cc"
+   ]
+  },
+  "vengefulspirit_wave_of_terror": {
+   "tags": [
+    "aoe",
+    "soft_cc"
+   ]
+  },
+  "venomancer_noxious_plague": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "soft_cc",
+    "teamfight_ult"
+   ]
+  },
+  "venomancer_plague_ward": {
+   "tags": [
+    "farm_tool",
+    "summon"
+   ]
+  },
+  "venomancer_snakebite": {
+   "tags": [
+    "nuke"
+   ]
+  },
+  "venomancer_venomous_gale": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "soft_cc"
+   ]
+  },
+  "viper_corrosive_skin": {
+   "tags": [
+    "aoe",
+    "passive_value",
+    "soft_cc"
+   ]
+  },
+  "viper_nethertoxin": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "soft_cc",
+    "waveclear"
+   ]
+  },
+  "viper_poison_attack": {
+   "tags": [
+    "soft_cc",
+    "steroid"
+   ]
+  },
+  "viper_viper_strike": {
+   "tags": [
+    "mana_hungry",
+    "nuke",
+    "soft_cc"
+   ]
+  },
+  "visage_grave_chill": {
+   "tags": [
+    "soft_cc",
+    "steroid"
+   ]
+  },
+  "visage_gravekeepers_cloak": {
+   "tags": [
+    "passive_value"
+   ]
+  },
+  "visage_soul_assumption": {
+   "tags": [
+    "nuke"
+   ]
+  },
+  "visage_summon_familiars": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "hard_cc",
+    "mana_hungry",
+    "summon"
+   ]
+  },
+  "void_spirit_aether_remnant": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "setup_cc",
+    "soft_cc"
+   ]
+  },
+  "void_spirit_astral_step": {
+   "tags": [
+    "aoe",
+    "initiation",
+    "mobility",
+    "nuke",
+    "soft_cc"
+   ]
+  },
+  "void_spirit_dissimilate": {
+   "tags": [
+    "aoe",
+    "mobility",
+    "nuke",
+    "soft_cc"
+   ]
+  },
+  "void_spirit_resonant_pulse": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "sustain_self"
+   ]
+  },
+  "warlock_fatal_bonds": {
+   "tags": [
+    "aoe",
+    "mana_hungry"
+   ]
+  },
+  "warlock_rain_of_chaos": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "mana_hungry",
+    "summon",
+    "teamfight_ult"
+   ]
+  },
+  "warlock_shadow_word": {
+   "tags": [
+    "aoe",
+    "save_ally",
+    "sustain_self"
+   ]
+  },
+  "warlock_upheaval": {
+   "tags": [
+    "aoe",
+    "channeled",
+    "setup_cc",
+    "soft_cc"
+   ]
+  },
+  "weaver_geminate_attack": {
+   "tags": [
+    "steroid"
+   ]
+  },
+  "weaver_shukuchi": {
+   "tags": [
+    "aoe",
+    "mobility",
+    "waveclear"
+   ]
+  },
+  "weaver_the_swarm": {
+   "tags": [
+    "aoe"
+   ]
+  },
+  "weaver_time_lapse": {
+   "tags": [
+    "mana_hungry",
+    "mobility",
+    "sustain_self"
+   ]
+  },
+  "windrunner_focusfire": {
+   "tags": [
+    "steroid"
+   ]
+  },
+  "windrunner_powershot": {
+   "tags": [
+    "aoe",
+    "channeled",
+    "nuke",
+    "soft_cc",
+    "waveclear"
+   ]
+  },
+  "windrunner_shackleshot": {
+   "tags": [
+    "hard_cc",
+    "setup_cc"
+   ]
+  },
+  "windrunner_windrun": {
+   "tags": [
+    "mobility"
+   ]
+  },
+  "winter_wyvern_arctic_burn": {
+   "tags": [
+    "mobility",
+    "soft_cc",
+    "steroid"
+   ]
+  },
+  "winter_wyvern_cold_embrace": {
+   "tags": [
+    "hard_cc",
+    "save_ally",
+    "sustain_self"
+   ]
+  },
+  "winter_wyvern_splinter_blast": {
+   "tags": [
+    "aoe",
+    "nuke",
+    "soft_cc",
+    "waveclear"
+   ]
+  },
+  "winter_wyvern_winters_curse": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "mana_hungry",
+    "teamfight_ult"
+   ]
+  },
+  "wisp_overcharge": {
+   "tags": [
+    "steroid",
+    "sustain_self"
+   ]
+  },
+  "wisp_relocate": {
+   "tags": [
+    "initiation",
+    "mana_hungry",
+    "mobility"
+   ]
+  },
+  "wisp_spirits": {
+   "tags": [
+    "aoe",
+    "nuke"
+   ]
+  },
+  "wisp_tether": {
+   "tags": [
+    "mobility",
+    "save_ally"
+   ]
+  },
+  "witch_doctor_death_ward": {
+   "tags": [
+    "channeled",
+    "mana_hungry",
+    "teamfight_ult"
+   ]
+  },
+  "witch_doctor_maledict": {
+   "tags": [
+    "aoe",
+    "nuke"
+   ]
+  },
+  "witch_doctor_paralyzing_cask": {
+   "tags": [
+    "aoe",
+    "hard_cc",
+    "nuke"
+   ]
+  },
+  "witch_doctor_voodoo_restoration": {
+   "tags": [
+    "aoe",
+    "save_ally",
+    "sustain_self",
+    "team_aura"
+   ]
+  },
+  "zuus_arc_lightning": {
+   "tags": [
+    "aoe",
+    "farm_tool",
+    "nuke",
+    "waveclear"
+   ]
+  },
+  "zuus_heavenly_jump": {
+   "tags": [
+    "mobility",
+    "nuke",
+    "soft_cc"
+   ]
+  },
+  "zuus_lightning_bolt": {
+   "tags": [
+    "hard_cc",
+    "nuke"
+   ]
+  },
+  "zuus_thundergods_wrath": {
+   "tags": [
+    "aoe",
+    "mana_hungry",
+    "nuke"
+   ]
+  }
+ }
+}

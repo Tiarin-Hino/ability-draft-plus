@@ -29,6 +29,30 @@ export interface AbilityUpsertData {
   windrunId?: number
 }
 
+/** One /ability-shifts entry keyed by Windrun/Valve ability id. */
+export interface AbilityShiftUpdate {
+  windrunId: number
+  killsShift: number
+  deathsShift: number
+  kaShift: number
+  gpmShift: number
+  xpmShift: number
+  dmgShift: number
+  healingShift: number
+}
+
+/** Shift row for the axes computation (core/domain/shift-axes.ts). */
+export interface AbilityShiftRow {
+  name: string
+  killsShift: number | null
+  deathsShift: number | null
+  kaShift: number | null
+  gpmShift: number | null
+  xpmShift: number | null
+  dmgShift: number | null
+  healingShift: number | null
+}
+
 export interface LiquipediaMetaUpdate {
   /** Hero display name as stored in Heroes.display_name, e.g. "Drow Ranger" */
   heroDisplayName: string
@@ -66,6 +90,15 @@ export interface AbilityRepository {
   setSlotMetadata(
     entries: Array<{ name: string; abilityOrder: number; isUltimate: boolean }>,
   ): number
+  /**
+   * Apply /ability-shifts data by windrun_id. Rows without a windrun_id (or
+   * ids absent from the batch) keep their previous values — shifts describe
+   * long-run behavior and a stale value beats a wiped one. Returns the number
+   * of ability rows matched.
+   */
+  applyAbilityShifts(shifts: AbilityShiftUpdate[]): number
+  /** All abilities with their raw shift columns (nulls preserved) for axis derivation. */
+  getAllShifts(): AbilityShiftRow[]
 }
 
 function mapRow(row: typeof abilities.$inferSelect): AbilityDetail {
@@ -206,6 +239,53 @@ export function createAbilityRepository(db: SQLJsDatabase): AbilityRepository {
           .run()
       }
       return existing.size
+    },
+
+    applyAbilityShifts(shifts: AbilityShiftUpdate[]): number {
+      if (shifts.length === 0) return 0
+      // sql.js run() doesn't report changes — count matches via SELECT first
+      const known = new Set(
+        db
+          .select({ windrunId: abilities.windrunId })
+          .from(abilities)
+          .where(inArray(abilities.windrunId, shifts.map((s) => s.windrunId)))
+          .all()
+          .map((row) => row.windrunId),
+      )
+      let applied = 0
+      for (const s of shifts) {
+        if (!known.has(s.windrunId)) continue
+        db.update(abilities)
+          .set({
+            killsShift: s.killsShift,
+            deathsShift: s.deathsShift,
+            kaShift: s.kaShift,
+            gpmShift: s.gpmShift,
+            xpmShift: s.xpmShift,
+            dmgShift: s.dmgShift,
+            healingShift: s.healingShift,
+          })
+          .where(eq(abilities.windrunId, s.windrunId))
+          .run()
+        applied += 1
+      }
+      return applied
+    },
+
+    getAllShifts(): AbilityShiftRow[] {
+      return db
+        .select({
+          name: abilities.name,
+          killsShift: abilities.killsShift,
+          deathsShift: abilities.deathsShift,
+          kaShift: abilities.kaShift,
+          gpmShift: abilities.gpmShift,
+          xpmShift: abilities.xpmShift,
+          dmgShift: abilities.dmgShift,
+          healingShift: abilities.healingShift,
+        })
+        .from(abilities)
+        .all()
     },
 
     applyLiquipediaMeta(updates: LiquipediaMetaUpdate[]): number {

@@ -92,6 +92,93 @@ export const PERSONAL_PRIOR_STRENGTH = 20
 // up/down marker in the overlay (avoids arrow noise on negligible shifts).
 export const PERSONAL_SCORE_DELTA_EPSILON = 0.005
 
+// Role-aware suggestions: shift-derived axes (core/domain/shift-axes.ts).
+// The greed axis combines gpm_shift + SHIFT_GREED_XPM_WEIGHT * xpm_shift before
+// percentile-ranking across the pool; shifts are ordering-only (units are
+// undocumented), so weights here only trade off the two orderings.
+export const SHIFT_GREED_XPM_WEIGHT = 0.5
+
+// Role scoring (core/domain/role-scoring.ts — see the Position Templates spec).
+// Starting values, eyeball-calibrated: the pos-5 spread between a low-greed stun
+// and a high-greed farming tool lands around 0.10 of score — enough to reorder
+// within a tier without burying a globally OP pick. The summed role adjustment
+// is hard-capped so role influence can never exceed roughly one score tier.
+// Live-feedback tuning (2026-08-29): the base score's pick-order term (0.6
+// weight, ~0.4 typical spread) prices CORE-contested value and buries role
+// signals; the role layer is sized so greed+tags clearly outweigh winrate
+// differences (~0.08 spread) and meaningfully dent pick-order gaps. If core
+// pollution persists, the next lever is discounting pick order itself while
+// a role is active — not raising these further.
+export const ROLE_GREED_WEIGHT = 0.16
+// Corpus finding (2,981 expert drafts, 2026-08-29): greed is drafted FIRST —
+// cores' picks average +0.52 → −0.04 greed across their four slots, supports
+// descend too. The greed term tapers with the user's own pick index so late
+// picks are scored by needs/coverage instead; index past the table clamps.
+export const ROLE_GREED_TAPER: readonly number[] = [1.0, 0.85, 0.6, 0.4]
+export const ROLE_SHIFT_ACCENT_WEIGHT = 0.03
+// Corpus finding: within-team greed SPREAD is the strongest win separator
+// measured (won-lost gap grows with skill: +0.044 league → +0.057 top slice).
+export const ROLE_TEAM_BALANCE_WEIGHT = 0.05
+export const ROLE_ADJUSTMENT_CAP = 0.25
+// Hero MODELS get role-scored from their own shift entries, scaled down: model
+// shifts are ~20-50x weaker than ability shifts (the build determines farm
+// priority, not the model), so within-hero percentiles overstate their weight.
+export const ROLE_MODEL_WEIGHT_SCALE = 0.5
+// Below this |delta| the overlay renders no role badge (anti-noise, mirrors
+// PERSONAL_SCORE_DELTA_EPSILON).
+export const ROLE_SCORE_DELTA_EPSILON = 0.005
+// Dynamic mode evidence gate: no vacancy inference until this many teammates
+// have this many named picks each — below that, trajectories are noise and
+// scoring stays neutral (off-equivalent).
+export const DYNAMIC_ROLE_MIN_TEAMMATES = 2
+export const DYNAMIC_ROLE_MIN_PICKS = 2
+// The pos-5 "enabling" accent only counts in the top band of the healing axis —
+// the raw healing shift is zero-inflated, so mid-axis values carry no signal.
+export const ROLE_ENABLING_ACCENT_FLOOR = 0.7
+// Build-needs engine (tags): an unmet role need the candidate covers is worth
+// more than a mild greed mismatch; a candidate that ONLY duplicates an already
+// twice-covered capability (the third single-target stun) drops several ranks.
+export const ROLE_NEED_WEIGHT = 0.08
+export const ROLE_DUPLICATE_WEIGHT = 0.06
+// Pool scarcity: a need's boost scales with its supply among UNPICKED pool
+// abilities — multiplier = clamp(REF / supply, MIN, MAX). Two stuns left in
+// the pool nearly doubles the hard_cc boost; twelve steroids dilute it.
+export const NEED_SCARCITY_REF = 6
+export const NEED_SCARCITY_MIN = 0.6
+export const NEED_SCARCITY_MAX = 1.8
+// Model urgency (core roles 1-3): cores should have their model locked by
+// ~round 3 — a flat boost on ALL model suggestions ramps with the user's own
+// pick count (step per pick, capped at 3 steps), scaled by how scarce good
+// core models are among the remaining pool. Supports (4-5) stay neutral.
+export const MODEL_URGENCY_STEP = 0.03
+export const MODEL_URGENCY_MAX_STEPS = 3
+export const MODEL_SCARCITY_REF = 4
+// Attribute-based model fit weight: per-position stat profiles (agi gain for
+// pos 1 right-click scaling, STR for pos 3, INT/mana for pos 4-5) percentiled
+// among the REMAINING models. This is the primary model role signal; the
+// shift-based greed fit stays as the small secondary (ROLE_MODEL_WEIGHT_SCALE).
+export const MODEL_ATTR_FIT_WEIGHT = 0.08
+// Ult security (sim finding, 2,000 solo-queue expert picks): 67% of expert ult
+// picks happen BEFORE being forced. When the remaining ult supply gets tight
+// relative to drafters still without one, ult candidates get this mild boost
+// (role mode active + user ult-less only). Applied outside the role cap.
+export const ULT_SECURITY_WEIGHT = 0.04
+export const ULT_SUPPLY_SLACK = 2
+// Mana budget: two mana-hungry actives fill the budget on ANY model (user
+// ruling) — further mana-hungry candidates are damped by this much.
+export const MANA_HUNGRY_LIMIT = 2
+export const MANA_BUDGET_WEIGHT = 0.05
+// "Now-or-never" marker: in the sim, our top suggestion was drafted by someone
+// before the user's next turn in 60% of disagreement cases. A pool ability
+// whose global avg pick position is due within this window of the current
+// board pick count gets flagged as unlikely to survive another round.
+export const CONTESTED_SOON_WINDOW = 10
+// Static per-position tag accents (Position Templates matrix). Raised from the
+// initial 0.02 after live feedback: for MID greed targets (pos 3/4) the greed
+// penalty on a core-shifted ability is inherently small, so the accents are
+// the main lever separating e.g. a pure steroid from a playmaker for pos 4.
+export const ROLE_TAG_ACCENT_WEIGHT = 0.05
+
 // Model
 // The class count is NOT a constant — it is defined by resources/model/class_names.json
 // and validated against the model's output width at classifier init.

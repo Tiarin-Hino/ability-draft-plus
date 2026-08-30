@@ -24,6 +24,16 @@ export const heroes = sqliteTable('Heroes', {
   pickRate: real('pick_rate'),
   hsPickRate: real('hs_pick_rate'),
   windrunId: integer('windrun_id'),
+  // /ability-shifts role fingerprint for the hero MODEL (negative-id entries;
+  // ~20-50x weaker than ability shifts — the build determines farm priority,
+  // not the model — so scoring scales them down; see ROLE_MODEL_WEIGHT_SCALE).
+  killsShift: real('kills_shift'),
+  deathsShift: real('deaths_shift'),
+  kaShift: real('ka_shift'),
+  gpmShift: real('gpm_shift'),
+  xpmShift: real('xpm_shift'),
+  dmgShift: real('dmg_shift'),
+  healingShift: real('healing_shift'),
 })
 
 // ── Abilities ───────────────────────────────────────────────────────────────────
@@ -46,6 +56,17 @@ export const abilities = sqliteTable(
     // PlayerAbilityStats. Nullable: rows from pre-2.6 databases lack it until
     // the next scrape.
     windrunId: integer('windrun_id'),
+    // /ability-shifts role fingerprint: average deviation of this ability's
+    // drafters vs the game average (standardized units, ordering-only — see
+    // core/domain/shift-axes.ts). Nullable: populated by scrape, and the
+    // endpoint may lack entries for low-sample abilities.
+    killsShift: real('kills_shift'),
+    deathsShift: real('deaths_shift'),
+    kaShift: real('ka_shift'),
+    gpmShift: real('gpm_shift'),
+    xpmShift: real('xpm_shift'),
+    dmgShift: real('dmg_shift'),
+    healingShift: real('healing_shift'),
   },
   (table) => [index('idx_abilities_hero_id').on(table.heroId)],
 )
@@ -186,7 +207,14 @@ export const SCHEMA_SQL = `
     high_skill_winrate REAL,
     pick_rate REAL,
     hs_pick_rate REAL,
-    windrun_id INTEGER
+    windrun_id INTEGER,
+    kills_shift REAL,
+    deaths_shift REAL,
+    ka_shift REAL,
+    gpm_shift REAL,
+    xpm_shift REAL,
+    dmg_shift REAL,
+    healing_shift REAL
   );
 
   CREATE TABLE IF NOT EXISTS Abilities (
@@ -200,7 +228,14 @@ export const SCHEMA_SQL = `
     hs_pick_rate REAL,
     is_ultimate INTEGER,
     ability_order INTEGER,
-    windrun_id INTEGER
+    windrun_id INTEGER,
+    kills_shift REAL,
+    deaths_shift REAL,
+    ka_shift REAL,
+    gpm_shift REAL,
+    xpm_shift REAL,
+    dmg_shift REAL,
+    healing_shift REAL
   );
   CREATE INDEX IF NOT EXISTS idx_abilities_hero_id ON Abilities (hero_id);
 
