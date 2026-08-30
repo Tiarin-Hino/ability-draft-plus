@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { computeShiftAxes, type ShiftAxes } from '@core/domain/shift-axes'
+import { computeShiftAxes } from '@core/domain/shift-axes'
 import {
   resolveRoleContext,
   computeRoleScore,
@@ -78,7 +78,6 @@ function loadJson<T>(path: string): T {
       join(CORPUS, 'static_abilities.json'),
     )
     const heroShortById = new Map<number, string>()
-    for (const [name, meta] of heroMeta) void name, meta // (heroMeta keyed by name)
 
     const nameById = new Map<number, string>()
     for (const [name, s] of Object.entries(stats)) nameById.set(s.windrunId, name)
