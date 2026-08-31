@@ -89,6 +89,10 @@ export interface HeroMeta {
   tags?: ReadonlySet<HeroTag>
   /** Curated must-pick positions for the MODEL (mirrors ability roleMust). */
   roleMust?: ReadonlySet<RoleMustPosition>
+  /** Curated never-recommend positions for the MODEL (Drow/Luna for supports:
+   * a premier core body should not be stolen from your cores). LIFTED once
+   * every teammate has picked a model — then taking it only denies enemies. */
+  roleAvoid?: ReadonlySet<RoleMustPosition>
 }
 
 /** Draft position (1-5). Structurally identical to role-scoring's
@@ -234,15 +238,20 @@ export function parseHeroMeta(json: unknown): Map<string, HeroMeta> | null {
       }
       if (heroTags.size > 0) meta.tags = heroTags
     }
-    if (Array.isArray(e.roleMust)) {
+    const parseHeroPositions = (raw: unknown): Set<RoleMustPosition> | null => {
+      if (!Array.isArray(raw)) return null
       const positions = new Set<RoleMustPosition>()
-      for (const p of e.roleMust) {
+      for (const p of raw) {
         if (typeof p === 'number' && Number.isInteger(p) && p >= 1 && p <= 5) {
           positions.add(p as RoleMustPosition)
         }
       }
-      if (positions.size > 0) meta.roleMust = positions
+      return positions
     }
+    const heroMust = parseHeroPositions(e.roleMust)
+    if (heroMust !== null && heroMust.size > 0) meta.roleMust = heroMust
+    const heroAvoid = parseHeroPositions(e.roleAvoid)
+    if (heroAvoid !== null && heroAvoid.size > 0) meta.roleAvoid = heroAvoid
     result.set(name, meta)
   }
   return result

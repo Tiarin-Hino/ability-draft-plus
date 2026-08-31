@@ -84,9 +84,15 @@
       "hard_cc": "hard disable",
       "waveclear": "waveclear",
       "save": "ally save",
-      "mana_budget": "mana budget"
+      "mana_budget": "mana budget",
+      "farm_tool": "farming tool",
+      "sustain_self": "self sustain",
+      "teamfight_ult": "teamfight ult",
+      "passive_value": "value passive",
+      "save_ally": "ally save"
     },
     "roleCovers": "Covers your missing {{need}}",
+    "roleCoversVia": "Covers your missing {{need}} (via {{via}})",
     "roleDuplicate": "Already covered: {{need}}",
     "roleCurated": "Curated pick for this role",
     "curatedPick": "Role Pick — curated as a must-have for your role",

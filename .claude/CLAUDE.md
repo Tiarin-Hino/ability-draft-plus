@@ -97,7 +97,9 @@ maintenance spec — the authoritative map of what IS, not a build plan.
   ROLE_CURATED_WEIGHT boost. For abilities the stats systematically undervalue
   (e.g. Glimpse for supports); keep the list short and deliberate. The negative
   counterpart `roleAvoid: [positions]` excludes from suggestions (all five =
-  never suggested at all, e.g. Ransack)
+  never suggested at all, e.g. Ransack). Hero MODELS take roleAvoid too
+  (Drow/Luna [4,5]) — model avoids and the MODEL_RESERVATION damp both LIFT
+  once every teammate has picked a model (then it only denies enemies)
 - Hero MODELS carry tags too (hero_meta.json `tags` + `roleMust`, 7-tag
   HERO_TAG_VOCABULARY: talent profile + innate value; talent tags count GENERIC
   talents only — ability-specific talents are dead on an AD model). They feed

@@ -223,6 +223,31 @@ function needCredit(tags: ReadonlySet<AbilityTag>, need: RoleNeed): number {
   return best
 }
 
+/** Like needCredit, but also names the winning alternative's tag when it is a
+ * single tag DIFFERENT from the need key — so the reason chip can say
+ * "covers: waveclear (via nuke)" instead of implying a tag the ability lacks
+ * (Shadow Realm case, user report 2026-08-31). */
+function needCreditWithVia(
+  tags: ReadonlySet<AbilityTag>,
+  need: RoleNeed,
+): { credit: number; via: AbilityTag | undefined } {
+  let best = 0
+  let bestReq: AbilityTag[] | undefined
+  for (const req of need.anyOf) {
+    let credit = 1
+    for (const tag of req) credit = Math.min(credit, tagCredit(tags, tag))
+    if (credit > best) {
+      best = credit
+      bestReq = req
+    }
+  }
+  const via =
+    bestReq !== undefined && bestReq.length === 1 && bestReq[0] !== need.key
+      ? bestReq[0]
+      : undefined
+  return { credit: best, via }
+}
+
 /**
  * Needs engine for one (candidate, position) pair: boost for covering an unmet
  * capability (scaled by the candidate's credit — an AoE slow half-covers an
@@ -242,7 +267,7 @@ function needsAdjustment(
   const reasons: string[] = []
   let duplicateKey: string | null = null
   for (const need of POSITION_NEEDS[position]) {
-    const candCredit = needCredit(candidate, need)
+    const { credit: candCredit, via } = needCreditWithVia(candidate, need)
     if (candCredit === 0) continue
     const coverage = tagInput.myPickTags.reduce(
       (sum, tags) => sum + needCredit(tags, need),
@@ -251,7 +276,9 @@ function needsAdjustment(
     if (coverage < 1) {
       const scarcity = tagInput.needScarcity?.get(need.key) ?? 1
       adj += ROLE_NEED_WEIGHT * need.priority * scarcity * candCredit
-      reasons.push(`covers:${need.key}`)
+      // Chip format: covers:<needKey>[:<viaTag>] — the via suffix names the
+      // alternative that actually matched when it differs from the key.
+      reasons.push(via !== undefined ? `covers:${need.key}:${via}` : `covers:${need.key}`)
     } else if (coverage >= 2 && duplicateKey === null) {
       duplicateKey = need.key
     }

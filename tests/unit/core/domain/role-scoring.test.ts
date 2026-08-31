@@ -341,8 +341,26 @@ describe('computeRoleScore with tags (needs engine)', () => {
       myPickTags: [tags('hard_cc'), tags('hard_cc')],
     })!
 
-    expect(stunNuke.reasons).toEqual(['covers:waveclear'])
+    expect(stunNuke.reasons).toEqual(['covers:waveclear:nuke'])
     expect(stunNuke.delta).toBeGreaterThan(0)
+  })
+
+  it('the covers chip names the matched alternative when it differs from the key', () => {
+    // Shadow Realm case: a pure nuke covering the wave need must not claim
+    // the waveclear tag — the chip carries the via suffix instead.
+    const nukeOnly = computeRoleScore(axes(-0.3), ctxPos5, {
+      candidateTags: tags('nuke'),
+      myPickTags: [],
+    })!
+    expect(nukeOnly.reasons).toContain('covers:waveclear:nuke')
+
+    // A real waveclear matches the key itself — no via suffix
+    const realWave = computeRoleScore(axes(-0.3), ctxPos5, {
+      candidateTags: tags('waveclear'),
+      myPickTags: [],
+    })!
+    expect(realWave.reasons).toContain('covers:waveclear')
+    expect(realWave.reasons.some((r) => r.startsWith('covers:waveclear:'))).toBe(false)
   })
 
   it('AND requirements: pos-3 aoe_cc needs hard_cc AND aoe on one ability', () => {
@@ -394,7 +412,9 @@ describe('computeRoleScore with tags (needs engine)', () => {
     })!
 
     expect(save.bestPosition).toBe(5)
-    expect(save.reasons).toContain('covers:save')
+    // save_ally is the matched alternative; the renderer collapses the via
+    // suffix when its label equals the need's ("ally save")
+    expect(save.reasons).toContain('covers:save:save_ally')
   })
 
   it('curated roleMust boosts the matching position and flags the score', () => {

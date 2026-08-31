@@ -25,6 +25,7 @@ import {
   modelAttrFit,
   allRoleNeeds,
   toRoleContextDisplay,
+  type DraftPosition,
   type PairingModelProfile,
   type RoleContext,
   type RoleTagInput,
@@ -59,6 +60,8 @@ import {
   OVERRATED_WINRATE_MAX,
   OVERRATED_PICK_ORDER_MAX,
   OVERRATED_DAMP,
+  MODEL_RESERVATION_FIT_GAP,
+  MODEL_RESERVATION_DAMP,
   ULT_SUPPLY_SLACK,
   CONTESTED_SOON_WINDOW,
 } from '@shared/constants/thresholds'
@@ -638,6 +641,7 @@ export function processScanResults(
       myModelAttackType,
       myModelDbHeroId: state.mySelectedModelDbHeroId,
       myModelHeroName: myModel?.heroName,
+      myHeroOrder: state.mySelectedSpotHeroOrder,
       ownerHeroIdOf: (name) => deps.heroes.getByAbilityName(name)?.heroId ?? null,
       unmetRequirementOf,
       needScarcity,
@@ -856,6 +860,9 @@ interface RoleScoringInputs {
   myModelDbHeroId: number | null
   /** Selected model's internal hero name (forward pairing input). */
   myModelHeroName: string | undefined
+  /** My Spot PLAYER row (0-9); null when unknown. Drives the teammates-modeled
+   * lift for hero roleAvoid and the model-reservation damp. */
+  myHeroOrder: number | null
   /** DB hero id owning an ability name (null when unknown). */
   ownerHeroIdOf: (abilityName: string) => number | null
   /** Dependency gate: resolved unmet requirement (undefined = suggestible). */
@@ -908,6 +915,7 @@ function buildScoredEntities(
     myModelAttackType,
     myModelDbHeroId,
     myModelHeroName,
+    myHeroOrder,
     ownerHeroIdOf,
     unmetRequirementOf,
     needScarcity,
@@ -1116,6 +1124,18 @@ function buildScoredEntities(
         }
       : undefined
 
+  // Teammates-modeled lift: once every teammate on MY team has picked a
+  // model, hero roleAvoid and the reservation damp stop applying — taking a
+  // contested body then only denies the enemy team. Unknown spot = no lift.
+  const allTeammatesModeled = (() => {
+    if (myHeroOrder === null) return false
+    const base = myHeroOrder < 5 ? 0 : 5
+    for (let order = base; order < base + 5; order++) {
+      if (order !== myHeroOrder && !pickedModelHeroOrders.has(order)) return false
+    }
+    return true
+  })()
+
   // Core urgency: ramps with my picks, scaled by scarcity of good core models
   let urgency = 0
   if (
@@ -1161,11 +1181,49 @@ function buildScoredEntities(
       roleContext !== null
         ? computeModelPairing(myPickTags, pctOf(model.heroName), meta?.tags)
         : 0
+    // Curated hero roleAvoid (Drow/Luna for supports): excluded when it
+    // covers the drafter's positions (all five = always) — unless every
+    // teammate already has a model.
+    const heroAvoid = meta?.roleAvoid
+    const modelAvoided =
+      heroAvoid !== undefined &&
+      !allTeammatesModeled &&
+      (heroAvoid.size === 5 ||
+        (roleContext !== null &&
+          roleContext.effectivePositions.length > 0 &&
+          roleContext.effectivePositions.every((p) => heroAvoid.has(p))))
+    // Model reservation (curation-free generalization): a support drafter is
+    // damped on bodies that fit positions 1-3 far better than 4-5 while core
+    // teammates still need models.
+    let reservationDamp = 0
+    if (
+      roleContext !== null &&
+      roleContext.effectivePositions.length > 0 &&
+      roleContext.effectivePositions.every((p) => p >= 4) &&
+      !allTeammatesModeled
+    ) {
+      const pctM = pctOf(model.heroName)
+      if (pctM !== undefined) {
+        const attr = meta?.primaryAttr
+        const fitAt = (p: DraftPosition): number => modelAttrFit(p, pctM, attr)
+        const coreFit = Math.max(fitAt(1), fitAt(2), fitAt(3))
+        const supportFit = Math.max(fitAt(4), fitAt(5))
+        if (coreFit - supportFit > MODEL_RESERVATION_FIT_GAP) {
+          reservationDamp = MODEL_RESERVATION_DAMP
+        }
+      }
+    }
     const consolidatedScore =
       role !== null || pairingDelta !== 0
         ? Math.min(
             1,
-            Math.max(0, scored.consolidatedScore + (role?.delta ?? 0) + pairingDelta),
+            Math.max(
+              0,
+              scored.consolidatedScore +
+                (role?.delta ?? 0) +
+                pairingDelta -
+                reservationDamp,
+            ),
           )
         : scored.consolidatedScore
     entities.push({
@@ -1178,9 +1236,11 @@ function buildScoredEntities(
       personalGames: scored.personalGames,
       personalWinrate: scored.personalWinrate,
       personalScoreDelta: scored.personalScoreDelta,
-      roleScoreDelta: role?.delta,
+      // Reservation folds into the displayed role delta (it is role-gated)
+      roleScoreDelta: role !== null ? role.delta - reservationDamp : undefined,
       roleBestPosition: role?.bestPosition,
       roleCurated: role?.curated,
+      roleAvoided: modelAvoided || undefined,
       pairingScoreDelta: pairingDelta !== 0 ? pairingDelta : undefined,
       dbHeroId: model.dbHeroId,
       heroOrder: model.heroOrder,
@@ -1351,6 +1411,7 @@ function enrichHeroModels(
       isGeneralTopTier: topTier?.isGeneralTopTier ?? false,
       isPersonallyDriven: topTier?.isPersonallyDriven ?? false,
       isCuratedForRole: topTier?.isCuratedForRole ?? false,
+      roleAvoided: scored?.roleAvoided,
       identificationConfidence: model.identificationConfidence,
       strongAbilitySynergies: synergies?.strong ?? [],
       weakAbilitySynergies: synergies?.weak ?? [],

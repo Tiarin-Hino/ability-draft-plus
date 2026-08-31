@@ -1345,6 +1345,75 @@ describe('role-aware suggestions', () => {
     expect(run([4, 5]).roleAvoided).toBeUndefined()
   })
 
+  it('hero roleAvoid hides the model for supports until every teammate has a model', () => {
+    const avoidTags: NonNullable<ScanProcessorDeps['tags']> = {
+      ...mockTags,
+      getHeroMeta(heroName: string) {
+        const base = mockTags.getHeroMeta(heroName)
+        return heroName === 'lina'
+          ? { ...base, roleAvoid: new Set([4, 5]) as ReadonlySet<1 | 2 | 3 | 4 | 5> }
+          : base
+      },
+    }
+    const run = (pickedModels: number[]) => {
+      const initial = processScanResults(makeInitialScanInput())
+      const state = initial.updatedState
+      state.mySelectedSpotDbId = 1
+      state.mySelectedSpotHeroOrder = 0
+      state.pickedModelHeroOrders = pickedModels
+      const deps = { ...depsWithRole('fixed', [5]), tags: avoidTags }
+      const input: ScanProcessorInput = {
+        rawResults: [] as ScanResult[],
+        isInitialScan: false,
+        state,
+        deps,
+        modelCoords: [makeCoord(0), makeCoord(1)],
+        heroesCoords: [makeCoord(0), makeCoord(1)],
+        heroesParams: { width: 358, height: 170 },
+        targetResolution: '1920x1080',
+        scaleFactor: 1.0,
+      }
+      return processScanResults(input).overlayPayload.heroModels.find(
+        (m) => m.heroName === 'lina',
+      )!
+    }
+
+    expect(run([]).roleAvoided).toBe(true)
+    // Every teammate (orders 1-4) has a model -> the avoid lifts
+    expect(run([1, 2, 3, 4]).roleAvoided).toBeUndefined()
+  })
+
+  it('model reservation damps core-shaped bodies for supports until teammates model up', () => {
+    // My Spot is row 1 (the Anti-Mage model's row) so its model stays
+    // suggestible while rows 0+2-4 are the teammates that model up.
+    const run = (pickedModels: number[]) => {
+      const initial = processScanResults(makeInitialScanInput())
+      const state = initial.updatedState
+      state.mySelectedSpotDbId = 1
+      state.mySelectedSpotHeroOrder = 1
+      state.pickedModelHeroOrders = pickedModels
+      const deps = { ...depsWithRole('fixed', [5]), tags: mockTags }
+      const input: ScanProcessorInput = {
+        rawResults: [] as ScanResult[],
+        isInitialScan: false,
+        state,
+        deps,
+        modelCoords: [makeCoord(0), makeCoord(1)],
+        heroesCoords: [makeCoord(0), makeCoord(1)],
+        heroesParams: { width: 358, height: 170 },
+        targetResolution: '1920x1080',
+        scaleFactor: 1.0,
+      }
+      return processScanResults(input).overlayPayload.heroModels
+    }
+
+    // Anti-Mage body: pure pos-1 shape (top agi gain, no mana) -> damped for
+    // a pos-5 drafter while teammates lack models, restored once they have them
+    const before = run([]).find((m) => m.heroName === 'antimage')!
+    const after = run([0, 2, 3, 4]).find((m) => m.heroName === 'antimage')!
+    expect(before.roleScoreDelta!).toBeLessThan(after.roleScoreDelta!)
+  })
+
   it('overrated abilities (early pick, low winrate) get damped and marked', () => {
     const initial = processScanResults(makeInitialScanInput())
     const state = initial.updatedState

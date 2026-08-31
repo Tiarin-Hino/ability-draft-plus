@@ -295,6 +295,9 @@ export interface HeroModelDisplay {
   pairingScoreDelta?: number
   /** Curated must-pick model for the user's active role (hero roleMust). */
   isCuratedForRole?: boolean
+  /** Curated never-recommend model for the drafter's positions (lifted once
+   * every teammate has a model) — excluded from suggestions. */
+  roleAvoided?: boolean
   identificationConfidence: number
   strongAbilitySynergies: HeroSynergyDisplay[]
   weakAbilitySynergies: HeroSynergyDisplay[]

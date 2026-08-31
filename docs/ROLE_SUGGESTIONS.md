@@ -96,6 +96,22 @@ Key mechanics in `core/domain/role-scoring.ts`:
   explains; stats stay visible. Tag Lab: the position toggles are tri-state
   (neutral → must → avoid), submitting `role_avoid` proposals with the same
   replace semantics, mandatory rationale, and newest-accepted-wins.
+- **Hero-model roleAvoid + teammates-modeled lift** (Drow/Luna case): hero
+  entries carry `roleAvoid` too (seeded Drow/Luna [4,5] — a premier core body
+  should not be stolen from your cores; note their model greed axes sit at
+  the 1st-2nd percentile because supports DO pick them for the aura, which is
+  exactly the play the lift permits). The avoid — and the reservation damp
+  below — LIFT once every teammate has picked a model: taking the body then
+  only denies the enemy team. Unknown My Spot = no lift (conservative).
+- **Model reservation** (curation-free generalization): a support drafter
+  (effective positions all 4-5) is damped `MODEL_RESERVATION_DAMP` on bodies
+  whose best pos-1-3 attr fit beats their best pos-4-5 fit by more than
+  `MODEL_RESERVATION_FIT_GAP`, while core teammates still need models. Folded
+  into the displayed role delta.
+- **Reason-chip via suffix** (`covers:<need>:<viaTag>`): when a need is
+  covered by an ALTERNATIVE tag rather than its namesake (nuke covering the
+  pos-4/5 wave need — Shadow Realm case), the chip says "covers: waveclear
+  (via nuke)". The renderer collapses the suffix when the labels coincide.
 - **Role-off invariant, amended**: `roleMode: 'off'` remains bit-identical to
   the role-less path EXCEPT for role-independent verdicts and facts: an
   all-five roleMust is guaranteed a slot, an all-five roleAvoid is excluded,

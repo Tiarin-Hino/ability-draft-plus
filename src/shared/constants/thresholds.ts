@@ -205,6 +205,14 @@ export const PAIRING_ADJUSTMENT_CAP = 0.1
 export const OVERRATED_WINRATE_MAX = 0.48
 export const OVERRATED_PICK_ORDER_MAX = 15
 export const OVERRATED_DAMP = 0.12
+// Model reservation (Drow-for-pos-5 case, 2026-08-31): while core teammates
+// still need models, a body whose attr fit for positions 1-3 beats its 4-5
+// fit by more than the gap is damped for a support drafter — don't steal the
+// premier core chassis. The curated hero roleAvoid handles the flagship
+// cases; this is the curation-free generalization. Both LIFT once every
+// teammate has a model (then taking it only denies the enemy team).
+export const MODEL_RESERVATION_FIT_GAP = 0.15
+export const MODEL_RESERVATION_DAMP = 0.08
 
 // Model
 // The class count is NOT a constant — it is defined by resources/model/class_names.json

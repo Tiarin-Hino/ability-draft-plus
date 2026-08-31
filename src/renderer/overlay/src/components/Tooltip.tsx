@@ -140,7 +140,7 @@ function RoleReasonChips({
   return (
     <div className="tooltip-role-chips">
       {reasons.map((reason) => {
-        const [kind, key] = reason.split(':')
+        const [kind, key, via] = reason.split(':')
         if (kind === 'curated') {
           return (
             <span key={reason} className="tooltip-role-chip tooltip-role-chip-curated">
@@ -149,6 +149,9 @@ function RoleReasonChips({
           )
         }
         const need = t(`tooltip.roleNeeds.${key}`)
+        // The via suffix names the alternative that matched (nuke covering the
+        // wave need). Suppressed when its label adds nothing over the need's.
+        const viaLabel = via ? t(`tooltip.roleNeeds.${via}`) : undefined
         return (
           <span
             key={reason}
@@ -156,7 +159,9 @@ function RoleReasonChips({
           >
             {kind === 'duplicate'
               ? t('tooltip.roleDuplicate', { need })
-              : t('tooltip.roleCovers', { need })}
+              : viaLabel !== undefined && viaLabel !== need
+                ? t('tooltip.roleCoversVia', { need, via: viaLabel })
+                : t('tooltip.roleCovers', { need })}
           </span>
         )
       })}
@@ -382,6 +387,9 @@ function HeroTooltipContent({
         t={t}
       />
       <PairingStatLine scoreDelta={model.pairingScoreDelta} t={t} />
+      {model.roleAvoided && (
+        <div className="tooltip-stat tooltip-inert">{t('tooltip.roleAvoided')}</div>
+      )}
 
       <HeroSynergySection
         title={t('tooltip.strongAbilities')}
