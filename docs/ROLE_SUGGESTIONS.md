@@ -79,6 +79,28 @@ Key mechanics in `core/domain/role-scoring.ts`:
   damage). Three derived percentiles feed `modelAttrFit`: attackQuality
   (negated BAT) for pos 1, bulk (baseHealth·(1+0.06·armor)) for pos 3, move
   speed for pos 4-5. Missing fields score as neutral 0.5 (old datasets safe).
+- **Overrated marker + damp**: an ability BOTH below `OVERRATED_WINRATE_MAX`
+  (0.48) AND picked earlier than `OVERRATED_PICK_ORDER_MAX` (15) gets a flat
+  `OVERRATED_DAMP` (0.12) off its score plus an explanatory tooltip line —
+  the 0.6 pick-order weight otherwise rewards popularity over quality (Rearm:
+  wr 45.7%, picked ~9th, was suggested to every role). Checked on GLOBAL
+  inputs, applied role mode or not. Calibrated 2026-08-31: catches 21/513
+  abilities, all textbook traps. FUTURE LEVER if core/trap pollution
+  persists (documented, deliberately not built yet): discount
+  `WEIGHT_PICK_ORDER` itself while a role mode is active, so role-aware
+  drafters trust winrate over herd behavior.
+- **Curated never-recommend** (`roleAvoid: [positions]`): the negative
+  counterpart of roleMust. Excluded from suggestions when the drafter's
+  effective positions are ALL inside the avoid set — or unconditionally when
+  it covers all five positions (role mode on or off; Ransack class). Tooltip
+  explains; stats stay visible. Tag Lab: the position toggles are tri-state
+  (neutral → must → avoid), submitting `role_avoid` proposals with the same
+  replace semantics, mandatory rationale, and newest-accepted-wins.
+- **Role-off invariant, amended**: `roleMode: 'off'` remains bit-identical to
+  the role-less path EXCEPT for role-independent verdicts and facts: an
+  all-five roleMust is guaranteed a slot, an all-five roleAvoid is excluded,
+  the overrated damp applies, and the inert/requires filters apply — all by
+  design (they are not role opinions).
 - **Curated must-picks** (`roleMust: [positions]` on a dataset entry): a
   hand-curated VERDICT — "recommend for these positions even if stats
   disagree" — deliberately OUTSIDE the tag vocabulary (tags are mechanical

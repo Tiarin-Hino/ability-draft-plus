@@ -299,6 +299,14 @@ function AbilityTooltipContent({
           )}
         </div>
       )}
+      {slot.roleAvoided && (
+        <div className="tooltip-stat tooltip-inert">{t('tooltip.roleAvoided')}</div>
+      )}
+      {slot.overrated && (
+        <div className="tooltip-stat tooltip-inert">
+          {t('tooltip.overrated', { value: formatWinrate(slot.winrate) })}
+        </div>
+      )}
       {slot.contestedSoon &&
         (slot.isGeneralTopTier || slot.isSynergySuggestionForMySpot) && (
           <div className="tooltip-stat tooltip-contested">

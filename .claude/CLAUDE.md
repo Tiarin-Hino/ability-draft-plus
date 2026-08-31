@@ -76,7 +76,10 @@ maintenance spec — the authoritative map of what IS, not a build plan.
   pool percentiles (core/domain/shift-axes.ts). Scrape step is non-fatal, never wipes
 - Scoring layers are strictly ordered: global → personal blend → role (greed taper +
   needs engine + accents + ult nudge, capped) → top-tier. `roleMode: 'off'` or missing
-  shift data is BIT-IDENTICAL to the role-less path — golden tests enforce it
+  shift data is BIT-IDENTICAL to the role-less path — golden tests enforce it —
+  EXCEPT role-independent verdicts/facts: all-five roleMust (guaranteed slot),
+  all-five roleAvoid (excluded), the overrated damp (wr<0.48 & pick<=15 →
+  −OVERRATED_DAMP + tooltip), and the inert/requires filters apply role mode or not
 - `resources/data/ability_tags.json` + `hero_meta.json` are GENERATED (community Tag
   Lab on tiarinhino.com + ../ad_data_gather_script/build_ability_tags.py; the durable
   source of truth is that repo's tag_overrides.json) — never hand-edit, and keep
@@ -92,7 +95,9 @@ maintenance spec — the authoritative map of what IS, not a build plan.
   tag_overrides.json, NOT a tag — tags are mechanical facts, this is a verdict)
   guarantees the ability a top-tier slot when the user's role matches, plus a
   ROLE_CURATED_WEIGHT boost. For abilities the stats systematically undervalue
-  (e.g. Glimpse for supports); keep the list short and deliberate
+  (e.g. Glimpse for supports); keep the list short and deliberate. The negative
+  counterpart `roleAvoid: [positions]` excludes from suggestions (all five =
+  never suggested at all, e.g. Ransack)
 - Hero MODELS carry tags too (hero_meta.json `tags` + `roleMust`, 7-tag
   HERO_TAG_VOCABULARY: talent profile + innate value; talent tags count GENERIC
   talents only — ability-specific talents are dead on an AD model). They feed

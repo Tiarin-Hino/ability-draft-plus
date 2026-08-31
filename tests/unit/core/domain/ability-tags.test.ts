@@ -57,6 +57,20 @@ describe('parseAbilityTagsDataset', () => {
     expect(parsed.requiresByAbility.has('empty')).toBe(false)
   })
 
+  it('parses roleAvoid never-recommend positions like roleMust', () => {
+    const parsed = parseAbilityTagsDataset({
+      abilities: {
+        meepo_ransack: { tags: [], roleAvoid: [1, 2, 3, 4, 5] },
+        partial: { tags: [], roleAvoid: [4, 5, 9] },
+        none: { tags: [] },
+      },
+    })!
+
+    expect([...parsed.roleAvoidByAbility.get('meepo_ransack')!]).toEqual([1, 2, 3, 4, 5])
+    expect([...parsed.roleAvoidByAbility.get('partial')!]).toEqual([4, 5])
+    expect(parsed.roleAvoidByAbility.has('none')).toBe(false)
+  })
+
   it('parses curated roleMust positions; invalid values dropped, empty omitted', () => {
     const parsed = parseAbilityTagsDataset({
       abilities: {

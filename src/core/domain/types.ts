@@ -53,8 +53,15 @@ export interface ScoredEntity {
   /** Needs-engine reason chips ('covers:<need>' | 'duplicate:<need>' | 'curated'). */
   roleReasons?: string[]
   /** Curated must-pick (roleMust) matching an active effective position —
-   * top-tier.ts guarantees this entity a suggestion slot. */
+   * top-tier.ts guarantees this entity a suggestion slot. An all-five
+   * roleMust sets this with role mode OFF too (universal must). */
   roleCurated?: boolean
+  /** Curated never-recommend (roleAvoid) covering the active positions — or
+   * all five positions, role mode regardless. Hard-excluded from top-tier. */
+  roleAvoided?: boolean
+  /** Picked far earlier than its winrate justifies (community darling) —
+   * score damped by OVERRATED_DAMP, tooltip explains. */
+  overrated?: boolean
   /** Layer C ability×model pairing adjustment included in consolidatedScore
    * (own cap; role mode active only). */
   pairingScoreDelta?: number

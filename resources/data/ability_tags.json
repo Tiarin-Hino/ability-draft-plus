@@ -87,6 +87,11 @@
     "aoe",
     "setup_cc",
     "soft_cc"
+   ],
+   "roleMust": [
+    3,
+    4,
+    5
    ]
   },
   "alchemist_acid_spray": {
@@ -1145,6 +1150,11 @@
     "passive_value",
     "steroid",
     "sustain_self"
+   ],
+   "roleMust": [
+    1,
+    2,
+    3
    ]
   },
   "huskar_burning_spear": {
@@ -1588,6 +1598,7 @@
     "nuke"
    ],
    "roleMust": [
+    2,
     4,
     5
    ]
@@ -1696,6 +1707,9 @@
    "tags": [
     "farm_tool",
     "steroid"
+   ],
+   "roleMust": [
+    1
    ]
   },
   "magnataur_reverse_polarity": {
@@ -1829,7 +1843,14 @@
    ]
   },
   "meepo_ransack": {
-   "tags": []
+   "tags": [],
+   "roleAvoid": [
+    1,
+    2,
+    3,
+    4,
+    5
+   ]
   },
   "mirana_arrow": {
    "tags": [
@@ -2631,6 +2652,10 @@
     "initiation",
     "save_ally",
     "setup_cc"
+   ],
+   "roleMust": [
+    4,
+    5
    ]
   },
   "shadow_demon_disseminate": {
@@ -2848,6 +2873,9 @@
     "sustain_self"
    ],
    "roleMust": [
+    1,
+    2,
+    3,
     4,
     5
    ]
@@ -2952,6 +2980,11 @@
     "hard_cc",
     "initiation",
     "mobility"
+   ],
+   "roleMust": [
+    3,
+    4,
+    5
    ]
   },
   "spirit_breaker_greater_bash": {
@@ -3078,6 +3111,9 @@
     "farm_tool",
     "grants_ranged",
     "steroid"
+   ],
+   "roleMust": [
+    1
    ]
   },
   "templar_assassin_psionic_trap": {
@@ -3196,6 +3232,9 @@
     "waveclear"
    ],
    "roleMust": [
+    1,
+    2,
+    3,
     4,
     5
    ]
@@ -3299,6 +3338,8 @@
     "save_ally"
    ],
    "roleMust": [
+    2,
+    3,
     4,
     5
    ]
@@ -3498,6 +3539,11 @@
     "mobility",
     "nuke",
     "soft_cc"
+   ],
+   "roleMust": [
+    1,
+    2,
+    3
    ]
   },
   "void_spirit_dissimilate": {

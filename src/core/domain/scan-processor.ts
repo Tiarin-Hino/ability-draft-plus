@@ -56,6 +56,9 @@ import {
   MODEL_URGENCY_MAX_STEPS,
   MODEL_SCARCITY_REF,
   ULT_SECURITY_WEIGHT,
+  OVERRATED_WINRATE_MAX,
+  OVERRATED_PICK_ORDER_MAX,
+  OVERRATED_DAMP,
   ULT_SUPPLY_SLACK,
   CONTESTED_SOON_WINDOW,
 } from '@shared/constants/thresholds'
@@ -654,10 +657,11 @@ export function processScanResults(
 
   // --- Phase 12: Determine top-tier entities ---
   // Abilities mechanically inert on the selected model (cleave on a ranged
-  // model) or with an unmet dependency (Eclipse without Lucent Beam) are a
-  // HARD exclusion from suggestions, not a score tweak.
+  // model), with an unmet dependency (Eclipse without Lucent Beam), or with a
+  // curated roleAvoid covering the drafter's positions are a HARD exclusion
+  // from suggestions, not a score tweak.
   const topTierCandidates = allScoredEntities.filter(
-    (e) => !e.inertOnModel && e.unmetRequirement === undefined,
+    (e) => !e.inertOnModel && e.unmetRequirement === undefined && !e.roleAvoided,
   )
   const topTierEntities = determineTopTierEntities(
     topTierCandidates,
@@ -991,13 +995,37 @@ function buildScoredEntities(
     const roleDelta = role !== null ? role.delta + ultNudge : undefined
     // Forward pairing (Layer C): candidate vs the picked model's chassis/tags
     const pairingDelta = computeAbilityPairing(candidateTags, forwardProfile)
+    // Overrated damp: picked way earlier than its winrate justifies (Rearm:
+    // wr 45.7%, picked 9th). Checked on GLOBAL inputs — it marks community
+    // behavior, not the user's — and applied role mode or not.
+    const overrated =
+      details?.winrate != null &&
+      details?.pickRate != null &&
+      details.winrate < OVERRATED_WINRATE_MAX &&
+      details.pickRate <= OVERRATED_PICK_ORDER_MAX
+    const overratedDamp = overrated ? OVERRATED_DAMP : 0
     const consolidatedScore =
-      roleDelta !== undefined || pairingDelta !== 0
+      roleDelta !== undefined || pairingDelta !== 0 || overratedDamp !== 0
         ? Math.min(
             1,
-            Math.max(0, scored.consolidatedScore + (roleDelta ?? 0) + pairingDelta),
+            Math.max(
+              0,
+              scored.consolidatedScore + (roleDelta ?? 0) + pairingDelta - overratedDamp,
+            ),
           )
         : scored.consolidatedScore
+    // Curated verdicts are role-independent at the extremes: an all-five
+    // roleMust is guaranteed a slot even with role mode off, and an avoid set
+    // covering the active positions (or all five, mode regardless) excludes.
+    const mustSet = tags?.getRoleMust(slot.name)
+    const universalMust = mustSet !== undefined && mustSet.size === 5
+    const avoidSet = tags?.getRoleAvoid(slot.name)
+    const roleAvoided =
+      avoidSet !== undefined &&
+      (avoidSet.size === 5 ||
+        (roleContext !== null &&
+          roleContext.effectivePositions.length > 0 &&
+          roleContext.effectivePositions.every((p) => avoidSet.has(p))))
     // Now-or-never marker: this ability's global pick timing says it is due
     // before the draft comes back around
     const contestedSoon =
@@ -1017,7 +1045,9 @@ function buildScoredEntities(
       roleScoreDelta: roleDelta,
       roleBestPosition: role?.bestPosition,
       roleReasons: role !== null && role.reasons.length > 0 ? role.reasons : undefined,
-      roleCurated: role?.curated,
+      roleCurated: role?.curated || universalMust || undefined,
+      roleAvoided: roleAvoided || undefined,
+      overrated: overrated || undefined,
       pairingScoreDelta: pairingDelta !== 0 ? pairingDelta : undefined,
       inertOnModel:
         isInertOnModel(candidateTags, myModelAttackType, {
@@ -1244,6 +1274,8 @@ function enrichSlots(
       pairingScoreDelta: scored?.pairingScoreDelta,
       inertOnModel: scored?.inertOnModel,
       unmetRequirement: scored?.unmetRequirement,
+      roleAvoided: scored?.roleAvoided,
+      overrated: scored?.overrated,
       contestedSoon: scored?.contestedSoon,
       isGeneralTopTier: topTier?.isGeneralTopTier ?? false,
       isSynergySuggestionForMySpot:

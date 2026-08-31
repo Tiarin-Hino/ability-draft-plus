@@ -135,7 +135,11 @@ export function allRoleNeeds(): RoleNeed[] {
 }
 
 /** Static per-position tag accents (±ROLE_TAG_ACCENT_WEIGHT each). */
-// sustain_self added to the core rows per the sim's durable-passives finding
+// sustain_self added to the core rows per the sim's durable-passives finding.
+// passive_value REMOVED from the pos-5 plus list (user ruling 2026-08-31,
+// Heartstopper case): supports want farm-free ACTIVES — most value passives
+// need farm to come online, and the empirical greed axis of passive_value
+// picks skews core; the accent was cancelling that penalty.
 const POSITION_TAG_ACCENTS: Readonly<
   Record<DraftPosition, { plus: AbilityTag[]; minus: AbilityTag[] }>
 > = {
@@ -143,7 +147,7 @@ const POSITION_TAG_ACCENTS: Readonly<
   2: { plus: ['waveclear', 'sustain_self'], minus: ['passive_value'] },
   3: { plus: ['team_aura', 'teamfight_ult'], minus: [] },
   4: { plus: ['setup_cc', 'initiation'], minus: ['steroid', 'farm_tool'] },
-  5: { plus: ['team_aura', 'passive_value'], minus: ['steroid', 'farm_tool'] },
+  5: { plus: ['team_aura'], minus: ['steroid', 'farm_tool'] },
 }
 
 export interface TeammateBuild {

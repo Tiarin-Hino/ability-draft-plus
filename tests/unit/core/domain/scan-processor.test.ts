@@ -1096,6 +1096,9 @@ describe('role-aware suggestions', () => {
     getRequires() {
       return undefined
     },
+    getRoleAvoid() {
+      return undefined
+    },
     getHeroAttackType(heroName: string) {
       return heroName === 'lina' ? 'Ranged' : 'Melee'
     },
@@ -1238,6 +1241,150 @@ describe('role-aware suggestions', () => {
 
     const iceBlast = overlayPayload.scanData!.standard.find((s) => s.name === 'ice_blast')!
     expect(iceBlast.unmetRequirement).toBeUndefined()
+  })
+
+  it('an all-five roleMust is guaranteed a slot even with role mode OFF', () => {
+    const initial = processScanResults(makeInitialScanInput())
+    const state = initial.updatedState
+    const base = depsWithRole('off')
+    const deps: ScanProcessorDeps = {
+      ...base,
+      tags: {
+        ...mockTags,
+        getRoleMust: (name: string) =>
+          name === 'firestorm'
+            ? (new Set([1, 2, 3, 4, 5]) as ReadonlySet<1 | 2 | 3 | 4 | 5>)
+            : undefined,
+      },
+    }
+    const input: ScanProcessorInput = {
+      rawResults: [] as ScanResult[],
+      isInitialScan: false,
+      state,
+      deps,
+      modelCoords: [makeCoord(0), makeCoord(1)],
+      heroesCoords: [makeCoord(0), makeCoord(1)],
+      heroesParams: { width: 358, height: 170 },
+      targetResolution: '1920x1080',
+      scaleFactor: 1.0,
+    }
+    const { overlayPayload } = processScanResults(input)
+
+    const firestorm = overlayPayload.scanData!.standard.find((s) => s.name === 'firestorm')!
+    expect(firestorm.isCuratedForRole).toBe(true)
+    expect(firestorm.isGeneralTopTier).toBe(true)
+    // No role mode -> no role delta, the guarantee is pure selection
+    expect(firestorm.roleScoreDelta).toBeUndefined()
+  })
+
+  it('an all-five roleAvoid excludes from suggestions role mode or not', () => {
+    const initial = processScanResults(makeInitialScanInput())
+    const state = initial.updatedState
+    const base = depsWithRole('off')
+    const deps: ScanProcessorDeps = {
+      ...base,
+      tags: {
+        ...mockTags,
+        getRoleAvoid: (name: string) =>
+          name === 'laguna_blade'
+            ? (new Set([1, 2, 3, 4, 5]) as ReadonlySet<1 | 2 | 3 | 4 | 5>)
+            : undefined,
+      },
+    }
+    const input: ScanProcessorInput = {
+      rawResults: [] as ScanResult[],
+      isInitialScan: false,
+      state,
+      deps,
+      modelCoords: [makeCoord(0), makeCoord(1)],
+      heroesCoords: [makeCoord(0), makeCoord(1)],
+      heroesParams: { width: 358, height: 170 },
+      targetResolution: '1920x1080',
+      scaleFactor: 1.0,
+    }
+    const { overlayPayload } = processScanResults(input)
+
+    // laguna_blade has the best mock stats (wr .60, pick 5) — avoid still wins
+    const laguna = overlayPayload.scanData!.ultimates.find((s) => s.name === 'laguna_blade')!
+    expect(laguna.roleAvoided).toBe(true)
+    expect(laguna.isGeneralTopTier).toBe(false)
+    expect(laguna.isSynergySuggestionForMySpot).toBe(false)
+  })
+
+  it('a partial roleAvoid gates only when it covers ALL effective positions', () => {
+    const avoidTags = {
+      ...mockTags,
+      getRoleAvoid: (name: string) =>
+        name === 'ice_blast' ? (new Set([5]) as ReadonlySet<1 | 2 | 3 | 4 | 5>) : undefined,
+    }
+    const run = (positions: number[]) => {
+      const initial = processScanResults(makeInitialScanInput())
+      const state = initial.updatedState
+      state.mySelectedSpotDbId = 1
+      state.mySelectedSpotHeroOrder = 0
+      const deps = { ...depsWithRole('fixed', positions), tags: avoidTags }
+      const input: ScanProcessorInput = {
+        rawResults: [] as ScanResult[],
+        isInitialScan: false,
+        state,
+        deps,
+        modelCoords: [makeCoord(0), makeCoord(1)],
+        heroesCoords: [makeCoord(0), makeCoord(1)],
+        heroesParams: { width: 358, height: 170 },
+        targetResolution: '1920x1080',
+        scaleFactor: 1.0,
+      }
+      return processScanResults(input).overlayPayload.scanData!.standard.find(
+        (s) => s.name === 'ice_blast',
+      )!
+    }
+
+    expect(run([5]).roleAvoided).toBe(true)
+    expect(run([3]).roleAvoided).toBeUndefined()
+    // Mixed selection where one position is NOT avoided -> allowed
+    expect(run([4, 5]).roleAvoided).toBeUndefined()
+  })
+
+  it('overrated abilities (early pick, low winrate) get damped and marked', () => {
+    const initial = processScanResults(makeInitialScanInput())
+    const state = initial.updatedState
+    const base = depsWithRole('off')
+    const overratedDb: typeof abilityDb = {
+      ...abilityDb,
+      ice_blast: { ...abilityDb.ice_blast, winrate: 0.45, pickRate: 9 },
+    }
+    const deps: ScanProcessorDeps = {
+      ...base,
+      abilities: {
+        ...base.abilities,
+        getDetails(names: string[]) {
+          const map = new Map<string, AbilityDetail>()
+          for (const name of names) {
+            if (overratedDb[name]) map.set(name, overratedDb[name])
+          }
+          return map
+        },
+      },
+    }
+    const input: ScanProcessorInput = {
+      rawResults: [] as ScanResult[],
+      isInitialScan: false,
+      state,
+      deps,
+      modelCoords: [makeCoord(0), makeCoord(1)],
+      heroesCoords: [makeCoord(0), makeCoord(1)],
+      heroesParams: { width: 358, height: 170 },
+      targetResolution: '1920x1080',
+      scaleFactor: 1.0,
+    }
+    const { overlayPayload } = processScanResults(input)
+
+    const iceBlast = overlayPayload.scanData!.standard.find((s) => s.name === 'ice_blast')!
+    expect(iceBlast.overrated).toBe(true)
+    // damped: 0.4*0.45 + 0.6*(50-9)/49 = 0.682 -> minus OVERRATED_DAMP
+    expect(iceBlast.consolidatedScore).toBeCloseTo(0.682 - 0.12, 2)
+    const fireball = overlayPayload.scanData!.standard.find((s) => s.name === 'fireball')!
+    expect(fireball.overrated).toBeUndefined()
   })
 
   it('needs-engine chips reach the enriched slots in a role mode', () => {

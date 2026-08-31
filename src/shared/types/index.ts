@@ -174,6 +174,11 @@ export interface EnrichedScanSlot extends ScanResult {
   /** Dependency gate: unmet requirement (Eclipse without Lucent Beam) — never
    * top-tier until satisfied; the tooltip names what is missing. */
   unmetRequirement?: { kind: 'ability' | 'model'; displayName: string }
+  /** Curated never-recommend for the drafter's positions (all five = always)
+   * — hard-excluded from suggestions; the tooltip explains. */
+  roleAvoided?: boolean
+  /** Picked far earlier than its winrate justifies — damped, tooltip explains. */
+  overrated?: boolean
   /** Now-or-never: usually drafted by this point — unlikely to survive another round. */
   contestedSoon?: boolean
   highWinrateCombinations: SynergyPairDisplay[]

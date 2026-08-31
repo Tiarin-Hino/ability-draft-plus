@@ -194,6 +194,17 @@ export const MODEL_TAG_ACCENT_WEIGHT = 0.03
 // role mode is on (preserves the role-off bit-identity invariant).
 export const PAIRING_WEIGHT = 0.04
 export const PAIRING_ADJUSTMENT_CAP = 0.1
+// Overrated marker (Rearm case, 2026-08-31): winrate 45.7% yet picked ~9th —
+// the 0.6 pick-order weight rewards popularity, not quality. An ability BOTH
+// below the winrate bar AND above the early-pick bar gets a flat damp + an
+// explanatory tooltip marker. Calibrated on live data: wr<0.48 & pick<=15
+// catches 21/513 abilities, all textbook traps (Finger of Death, Sleight of
+// Fist, Walrus Punch, Coup de Grace, Rearm); role-independent by design.
+// Future lever if pollution persists (documented, not built): discount
+// WEIGHT_PICK_ORDER itself while a role mode is active.
+export const OVERRATED_WINRATE_MAX = 0.48
+export const OVERRATED_PICK_ORDER_MAX = 15
+export const OVERRATED_DAMP = 0.12
 
 // Model
 // The class count is NOT a constant — it is defined by resources/model/class_names.json

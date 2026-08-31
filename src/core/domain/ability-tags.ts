@@ -102,6 +102,9 @@ export interface AbilityTagsLookup {
   getTags(abilityName: string): ReadonlySet<AbilityTag> | undefined
   /** Curated must-pick positions for an ability; undefined when not curated. */
   getRoleMust(abilityName: string): ReadonlySet<RoleMustPosition> | undefined
+  /** Curated never-recommend positions (roleAvoid); all five = never suggest
+   * at all, role mode on or off (blatantly bad picks, e.g. Ransack). */
+  getRoleAvoid(abilityName: string): ReadonlySet<RoleMustPosition> | undefined
   /** Dependency gate: entries are ability internal names or 'model:<hero>'.
    * The ability is only ever SUGGESTED when at least one entry is satisfied
    * (Eclipse -> Lucent Beam; Requiem -> the SF model whose innate feeds it). */
@@ -120,6 +123,7 @@ export interface AbilityTagsLookup {
 export function parseAbilityTagsDataset(json: unknown): {
   tagsByAbility: Map<string, ReadonlySet<AbilityTag>>
   roleMustByAbility: Map<string, ReadonlySet<RoleMustPosition>>
+  roleAvoidByAbility: Map<string, ReadonlySet<RoleMustPosition>>
   requiresByAbility: Map<string, readonly string[]>
   droppedTags: string[]
 } | null {
@@ -129,8 +133,19 @@ export function parseAbilityTagsDataset(json: unknown): {
 
   const tagsByAbility = new Map<string, ReadonlySet<AbilityTag>>()
   const roleMustByAbility = new Map<string, ReadonlySet<RoleMustPosition>>()
+  const roleAvoidByAbility = new Map<string, ReadonlySet<RoleMustPosition>>()
   const requiresByAbility = new Map<string, readonly string[]>()
   const dropped = new Set<string>()
+  const parsePositions = (raw: unknown): Set<RoleMustPosition> | null => {
+    if (!Array.isArray(raw)) return null
+    const positions = new Set<RoleMustPosition>()
+    for (const pos of raw) {
+      if (typeof pos === 'number' && Number.isInteger(pos) && pos >= 1 && pos <= 5) {
+        positions.add(pos as RoleMustPosition)
+      }
+    }
+    return positions
+  }
   for (const [name, entry] of Object.entries(abilities)) {
     const rawTags = (entry as { tags?: unknown })?.tags
     if (!Array.isArray(rawTags)) continue
@@ -144,18 +159,13 @@ export function parseAbilityTagsDataset(json: unknown): {
     }
     tagsByAbility.set(name, tags)
 
-    // Curated must-pick positions: invalid values are dropped silently (a
-    // newer dataset must never brick an older app), empty sets are omitted.
-    const rawMust = (entry as { roleMust?: unknown })?.roleMust
-    if (Array.isArray(rawMust)) {
-      const positions = new Set<RoleMustPosition>()
-      for (const pos of rawMust) {
-        if (typeof pos === 'number' && Number.isInteger(pos) && pos >= 1 && pos <= 5) {
-          positions.add(pos as RoleMustPosition)
-        }
-      }
-      if (positions.size > 0) roleMustByAbility.set(name, positions)
-    }
+    // Curated must-pick / never-recommend positions: invalid values are
+    // dropped silently (a newer dataset must never brick an older app),
+    // empty sets are omitted.
+    const must = parsePositions((entry as { roleMust?: unknown })?.roleMust)
+    if (must !== null && must.size > 0) roleMustByAbility.set(name, must)
+    const avoid = parsePositions((entry as { roleAvoid?: unknown })?.roleAvoid)
+    if (avoid !== null && avoid.size > 0) roleAvoidByAbility.set(name, avoid)
 
     // Dependency gates: non-empty strings only, deduped; empty lists omitted.
     const rawRequires = (entry as { requires?: unknown })?.requires
@@ -168,7 +178,13 @@ export function parseAbilityTagsDataset(json: unknown): {
       if (reqs.length > 0) requiresByAbility.set(name, reqs)
     }
   }
-  return { tagsByAbility, roleMustByAbility, requiresByAbility, droppedTags: [...dropped] }
+  return {
+    tagsByAbility,
+    roleMustByAbility,
+    roleAvoidByAbility,
+    requiresByAbility,
+    droppedTags: [...dropped],
+  }
 }
 
 /** Parse + validate hero_meta.json. Missing/invalid stat fields become

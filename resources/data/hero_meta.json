@@ -163,7 +163,9 @@
   "baseMana": 75,
   "baseAttackMin": 24,
   "baseAttackMax": 30,
-  "tags": []
+  "tags": [
+   "innate_offense"
+  ]
  },
  "batrider": {
   "attackType": "Ranged",
@@ -227,7 +229,9 @@
   "baseMana": 75,
   "baseAttackMin": 35,
   "baseAttackMax": 41,
-  "tags": []
+  "tags": [
+   "innate_tank"
+  ]
  },
  "bountyhunter": {
   "attackType": "Melee",
@@ -1102,7 +1106,13 @@
   "baseAttackMin": 21,
   "baseAttackMax": 29,
   "tags": [
+   "caster_talents",
    "innate_offense"
+  ],
+  "roleMust": [
+   2,
+   4,
+   5
   ]
  },
  "lion": {
@@ -1445,6 +1455,9 @@
   "baseAttackMax": 22,
   "tags": [
    "innate_offense"
+  ],
+  "roleMust": [
+   1
   ]
  },
  "nightstalker": {
