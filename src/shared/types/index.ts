@@ -173,7 +173,7 @@ export interface EnrichedScanSlot extends ScanResult {
   inertOnModel?: boolean
   /** Dependency gate: unmet requirement (Eclipse without Lucent Beam) — never
    * top-tier until satisfied; the tooltip names what is missing. */
-  unmetRequirement?: { kind: 'ability' | 'model'; displayName: string }
+  unmetRequirement?: { kind: 'ability' | 'model' | 'tag'; displayName: string }
   /** Curated never-recommend for the drafter's positions (all five = always)
    * — hard-excluded from suggestions; the tooltip explains. */
   roleAvoided?: boolean

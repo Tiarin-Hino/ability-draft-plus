@@ -66,14 +66,30 @@ Key mechanics in `core/domain/role-scoring.ts`:
   waives `ranged_only` on melee models for the rest of the draft. No symmetric
   melee waiver — nothing grants melee.
 - **Dependency gates** (`requires: [entries]` on a dataset entry, curated in
-  tag_overrides.json): entries are ability internal names or `model:<hero>`.
-  The ability is HARD-excluded from suggestions until one entry is satisfied —
-  a listed ability among the USER'S drafted picks, or the picked model matching
-  a `model:` entry (its innate provides the mechanic; innates stay with the
-  model in AD since 7.36). Stats stay fully visible; the tooltip names the
-  missing piece. Unknown spot/model counts as unsatisfied (conservative).
-  Seeds: Eclipse -> Lucent Beam, Requiem -> the SF model (souls). The Tag Lab
-  does not carry `requires` yet — `import_site_export.py` preserves it.
+  tag_overrides.json): entries are ability internal names, `model:<hero>`, or
+  `tag:<tag>`. The ability is HARD-excluded from suggestions until one entry
+  is satisfied — a listed ability among the USER'S drafted picks, the picked
+  model matching a `model:` entry (its innate provides the mechanic; innates
+  stay with the model in AD since 7.36), or for `tag:` entries a tagged
+  ability among my picks OR still in the unpicked pool (Rearm case: the
+  enabler goes ~9th, long before partners, so pool presence keeps it
+  suggestible). Stats stay fully visible; the tooltip names the missing
+  piece. Unknown spot/model counts as unsatisfied (conservative). Seeds:
+  Eclipse -> Lucent Beam, Requiem -> the SF model (souls), Rearm ->
+  `tag:good_with_rearm` (Torrent seeded; curate more in the Tag Lab). The
+  Tag Lab does not carry `requires` yet — `import_site_export.py` preserves
+  it.
+- **Soft-CC candidate suppression** (Shadow Strike ruling 2026-09-01): the
+  soft_cc half-credit toward disable needs applies to CANDIDATES only while
+  the pool holds NO real hard_cc — suggest a slow as your disable only when
+  no actual stun is left. Coverage counting of the user's own picks keeps the
+  original half-credit semantics.
+- **Model shift-greed term disabled** (Drow-for-pos-1 ruling 2026-09-01):
+  `ROLE_MODEL_WEIGHT_SCALE = 0`. The model greed axis is poisoned by
+  selection effects (supports pick Drow/Luna for the aura → their model greed
+  reads 1st-2nd percentile, tanking pos-1 fit). Attribute fit + chassis +
+  hero tags + verdicts carry the model-role signal now; set the constant back
+  to 0.5 to revert.
 - **Model chassis (Layer A)**: hero_meta.json also ships body properties from
   dotaconstants (attack range/BAT/projectile, move speed, base armor/HP/mana/
   damage). Three derived percentiles feed `modelAttrFit`: attackQuality

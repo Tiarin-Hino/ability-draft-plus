@@ -120,10 +120,13 @@ export const ROLE_SHIFT_ACCENT_WEIGHT = 0.03
 // measured (won-lost gap grows with skill: +0.044 league → +0.057 top slice).
 export const ROLE_TEAM_BALANCE_WEIGHT = 0.05
 export const ROLE_ADJUSTMENT_CAP = 0.25
-// Hero MODELS get role-scored from their own shift entries, scaled down: model
-// shifts are ~20-50x weaker than ability shifts (the build determines farm
-// priority, not the model), so within-hero percentiles overstate their weight.
-export const ROLE_MODEL_WEIGHT_SCALE = 0.5
+// Hero MODELS' shift-greed term is DISABLED (2026-09-01, Drow-for-pos-1 case):
+// the model greed axis is poisoned by selection effects — supports pick
+// Drow/Luna for the aura, driving their model greed to the 1st-2nd
+// percentile, which then wrongly tanks their pos-1 fit. Attribute fit,
+// chassis percentiles, hero tags and verdicts carry the model-role signal on
+// cleaner data. Set back to 0.5 to revert to the shift-greed blend.
+export const ROLE_MODEL_WEIGHT_SCALE = 0
 // Below this |delta| the overlay renders no role badge (anti-noise, mirrors
 // PERSONAL_SCORE_DELTA_EPSILON).
 export const ROLE_SCORE_DELTA_EPSILON = 0.005

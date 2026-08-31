@@ -87,9 +87,9 @@ describe('parseAbilityTagsDataset', () => {
     expect(parsed.roleMustByAbility.has('no_role_must')).toBe(false)
   })
 
-  it('vocabulary matches the build script contract (21 tags)', () => {
-    expect(TAG_VOCABULARY).toHaveLength(21)
-    expect(new Set(TAG_VOCABULARY).size).toBe(21)
+  it('vocabulary matches the build script contract (22 tags)', () => {
+    expect(TAG_VOCABULARY).toHaveLength(22)
+    expect(new Set(TAG_VOCABULARY).size).toBe(22)
   })
 })
 

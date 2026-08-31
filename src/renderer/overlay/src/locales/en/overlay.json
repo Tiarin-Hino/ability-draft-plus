@@ -99,6 +99,7 @@
     "inertOnModel": "Does not work on your model (melee/ranged mismatch)",
     "requiresAbility": "Only works with {{name}} — not suggested until you draft it",
     "requiresModel": "Only works on the {{name}} model — not suggested",
+    "requiresTag": "Needs a {{name}} ability — none drafted or left in the pool",
     "roleAvoided": "Curated skip for this spot — not suggested",
     "overrated": "Picked early but wins only {{value}} — likely overrated",
     "contestedSoon": "Usually drafted by now — may not survive another round"

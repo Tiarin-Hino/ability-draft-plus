@@ -299,7 +299,9 @@ function AbilityTooltipContent({
           {t(
             slot.unmetRequirement.kind === 'model'
               ? 'tooltip.requiresModel'
-              : 'tooltip.requiresAbility',
+              : slot.unmetRequirement.kind === 'tag'
+                ? 'tooltip.requiresTag'
+                : 'tooltip.requiresAbility',
             { name: slot.unmetRequirement.displayName },
           )}
         </div>

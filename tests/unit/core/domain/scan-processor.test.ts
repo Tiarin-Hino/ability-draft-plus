@@ -1018,17 +1018,27 @@ describe('role-aware suggestions', () => {
     }
   })
 
-  it('hero models get a scaled role delta (support-shifted model beats greedy for pos 5)', () => {
+  it('hero models get an ATTRIBUTE-fit role delta; the shift-greed term is disabled', () => {
+    // ROLE_MODEL_WEIGHT_SCALE=0 ruling (Drow case): shift-greed no longer
+    // separates models. Without hero_meta (no tags dep here) both models
+    // score a neutral, identical delta...
     const input = makeInitialScanInput()
     input.deps = depsWithRole('fixed', [5])
     const { overlayPayload } = processScanResults(input)
-
     const lina = overlayPayload.heroModels.find((m) => m.heroName === 'lina')!
     const antimage = overlayPayload.heroModels.find((m) => m.heroName === 'antimage')!
     expect(lina.roleScoreDelta).toBeDefined()
-    expect(antimage.roleScoreDelta).toBeDefined()
-    expect(lina.roleScoreDelta!).toBeGreaterThan(antimage.roleScoreDelta!)
-    expect(lina.roleBestPosition).toBe(5)
+    expect(lina.roleScoreDelta!).toBeCloseTo(antimage.roleScoreDelta!, 10)
+
+    // ...and WITH hero_meta, the INT/mana-pool body (Lina) beats the agi
+    // carry body (Anti-Mage) for pos 5 purely on attribute fit.
+    const withMeta = makeInitialScanInput()
+    withMeta.deps = { ...depsWithRole('fixed', [5]), tags: mockTags }
+    const payload = processScanResults(withMeta).overlayPayload
+    const linaFit = payload.heroModels.find((m) => m.heroName === 'lina')!
+    const amFit = payload.heroModels.find((m) => m.heroName === 'antimage')!
+    expect(linaFit.roleScoreDelta!).toBeGreaterThan(amFit.roleScoreDelta!)
+    expect(linaFit.roleBestPosition).toBe(5)
   })
 
   it('dynamic mode with My Spot unknown reports noSpot and stays inert', () => {
@@ -1211,6 +1221,48 @@ describe('role-aware suggestions', () => {
     expect(iceBlast.unmetRequirement?.displayName).toBeTruthy()
     expect(iceBlast.isGeneralTopTier).toBe(false)
     expect(iceBlast.isSynergySuggestionForMySpot).toBe(false)
+  })
+
+  it('a tag: requirement is satisfied by the POOL holding a tagged ability (Rearm gate)', () => {
+    // ice_blast requires tag:mobility; blink (mobility) sits in the pool ->
+    // suggestible. Without any mobility source, gated with a tag note.
+    const run = (mobilityInPool: boolean) => {
+      const initial = processScanResults(makeInitialScanInput())
+      const state = initial.updatedState
+      const base = depsWithRole('off')
+      const deps: ScanProcessorDeps = {
+        ...base,
+        tags: {
+          ...mockTags,
+          getTags(name: string) {
+            if (name === 'blink' && !mobilityInPool) return new Set() as never
+            return mockTags.getTags(name)
+          },
+          getRequires: (name: string) =>
+            name === 'ice_blast' ? ['tag:mobility'] : undefined,
+        },
+      }
+      const input: ScanProcessorInput = {
+        rawResults: [] as ScanResult[],
+        isInitialScan: false,
+        state,
+        deps,
+        modelCoords: [makeCoord(0), makeCoord(1)],
+        heroesCoords: [makeCoord(0), makeCoord(1)],
+        heroesParams: { width: 358, height: 170 },
+        targetResolution: '1920x1080',
+        scaleFactor: 1.0,
+      }
+      return processScanResults(input).overlayPayload.scanData!.standard.find(
+        (s) => s.name === 'ice_blast',
+      )!
+    }
+
+    expect(run(true).unmetRequirement).toBeUndefined()
+    const gated = run(false)
+    expect(gated.unmetRequirement?.kind).toBe('tag')
+    expect(gated.unmetRequirement?.displayName).toBe('mobility')
+    expect(gated.isGeneralTopTier).toBe(false)
   })
 
   it('a model: requirement is satisfied by the picked model (Requiem-on-SF ruling)', () => {

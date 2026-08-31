@@ -408,19 +408,33 @@ export function processScanResults(
 
   // Dependency gate (requires): an ability with requirements is only ever
   // SUGGESTED once one is satisfied — a listed ability among MY drafted picks,
-  // or my picked model matching a 'model:<hero>' entry (its innate provides
-  // the mechanic, e.g. Requiem needs SF's souls). Stats stay fully visible;
-  // the tooltip explains. Unknown spot/model counts as unsatisfied.
+  // my picked model matching a 'model:<hero>' entry (its innate provides the
+  // mechanic, e.g. Requiem needs SF's souls), or for 'tag:<tag>' entries a
+  // tagged ability among my picks OR still in the unpicked pool (Rearm case:
+  // the enabler goes first, so pool presence keeps it suggestible). Stats
+  // stay fully visible; the tooltip explains. Unknown spot/model counts as
+  // unsatisfied.
+  const poolHasTag = (tag: string): boolean => {
+    for (const poolName of uniquePoolNames) {
+      if (deps.tags?.getTags(poolName)?.has(tag as AbilityTag)) return true
+    }
+    return false
+  }
   const unmetRequirementOf = (
     name: string,
-  ): { kind: 'ability' | 'model'; displayName: string } | undefined => {
+  ): { kind: 'ability' | 'model' | 'tag'; displayName: string } | undefined => {
     const reqs = deps.tags?.getRequires(name)
     if (reqs === undefined || reqs.length === 0) return undefined
-    const satisfied = reqs.some((req) =>
-      req.startsWith('model:')
-        ? myModel?.heroName === req.slice('model:'.length)
-        : myPickNames.has(req),
-    )
+    const satisfied = reqs.some((req) => {
+      if (req.startsWith('model:')) return myModel?.heroName === req.slice('model:'.length)
+      if (req.startsWith('tag:')) {
+        const tag = req.slice('tag:'.length)
+        return (
+          myPickTags.some((t) => t.has(tag as AbilityTag)) || poolHasTag(tag)
+        )
+      }
+      return myPickNames.has(req)
+    })
     if (satisfied) return undefined
     const first = reqs[0]
     if (first.startsWith('model:')) {
@@ -429,6 +443,9 @@ export function processScanResults(
         kind: 'model',
         displayName: deps.heroes.getByName(heroName)?.displayName ?? heroName,
       }
+    }
+    if (first.startsWith('tag:')) {
+      return { kind: 'tag', displayName: first.slice('tag:'.length) }
     }
     return {
       kind: 'ability',
@@ -868,7 +885,7 @@ interface RoleScoringInputs {
   /** Dependency gate: resolved unmet requirement (undefined = suggestible). */
   unmetRequirementOf: (
     abilityName: string,
-  ) => { kind: 'ability' | 'model'; displayName: string } | undefined
+  ) => { kind: 'ability' | 'model' | 'tag'; displayName: string } | undefined
   needScarcity: ReadonlyMap<string, number>
   myPickCount: number
   myModelPicked: boolean
@@ -927,6 +944,14 @@ function buildScoredEntities(
   // A drafted range-granting ability (Psi Blades, Take Aim) waives the
   // ranged_only inert filter for the rest of the draft.
   const picksGrantRanged = myPickTags.some((t) => t.has('grants_ranged'))
+
+  // Soft-CC suppression input: while a real stun remains in the pool, slows
+  // must not surface as disable coverage (Shadow Strike ruling).
+  const poolHasHardCc =
+    tags !== undefined &&
+    [...ultimates, ...standard].some(
+      (slot) => slot.name !== null && tags.getTags(slot.name)?.has('hard_cc'),
+    )
 
   // Forward-pairing profile of the PICKED model (Layer C): chassis
   // percentiles among ALL board models — the remaining-only percentiles
@@ -990,6 +1015,7 @@ function buildScoredEntities(
             candidateRoleMust: tags.getRoleMust(slot.name),
             myPickTags,
             needScarcity,
+            poolHasHardCc,
           }
         : undefined
     const role = computeRoleScore(

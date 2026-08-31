@@ -34,6 +34,7 @@ export const TAG_VOCABULARY = [
   'melee_only',
   'ranged_only',
   'grants_ranged',
+  'good_with_rearm',
   'mana_hungry',
   'channeled',
 ] as const
@@ -109,9 +110,11 @@ export interface AbilityTagsLookup {
   /** Curated never-recommend positions (roleAvoid); all five = never suggest
    * at all, role mode on or off (blatantly bad picks, e.g. Ransack). */
   getRoleAvoid(abilityName: string): ReadonlySet<RoleMustPosition> | undefined
-  /** Dependency gate: entries are ability internal names or 'model:<hero>'.
-   * The ability is only ever SUGGESTED when at least one entry is satisfied
-   * (Eclipse -> Lucent Beam; Requiem -> the SF model whose innate feeds it). */
+  /** Dependency gate: entries are ability internal names, 'model:<hero>', or
+   * 'tag:<tag>'. The ability is only ever SUGGESTED when at least one entry
+   * is satisfied (Eclipse -> Lucent Beam; Requiem -> the SF model whose
+   * innate feeds it; Rearm -> a good_with_rearm ability drafted or still in
+   * the pool — the enabler goes first, so pool presence counts). */
   getRequires(abilityName: string): readonly string[] | undefined
   /** Attack type of a hero internal name (hero_meta.json); undefined when unknown. */
   getHeroAttackType(heroName: string): HeroAttackType | undefined

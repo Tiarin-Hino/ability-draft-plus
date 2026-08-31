@@ -86,11 +86,15 @@ maintenance spec — the authoritative map of what IS, not a build plan.
   TAG_VOCABULARY (core/domain/ability-tags.ts) in lockstep with the script's VOCAB
 - Role weights in thresholds.ts carry their empirical rationale (expert-draft corpus +
   simulation) as comments — read them before retuning
-- Dependency gates: `requires: ["ability" | "model:hero"]` on a dataset entry —
-  hard-excluded from suggestions until the user drafts a listed ability or picks
-  the listed model (Eclipse→Lucent Beam, Requiem→SF's innate souls). Stats stay
-  visible; tooltip explains. Curated in tag_overrides.json, preserved by
-  import_site_export.py (the Tag Lab doesn't carry it yet)
+- Dependency gates: `requires: ["ability" | "model:hero" | "tag:tag"]` on a
+  dataset entry — hard-excluded from suggestions until the user drafts a listed
+  ability, picks the listed model (Eclipse→Lucent Beam, Requiem→SF's innate
+  souls), or for tag: entries has/still-sees a tagged ability in the pool
+  (Rearm→tag:good_with_rearm). Stats stay visible; tooltip explains. Curated in
+  tag_overrides.json, preserved by import_site_export.py (the Tag Lab doesn't
+  carry it yet). Model shift-greed is DISABLED (ROLE_MODEL_WEIGHT_SCALE=0,
+  Drow aura selection-effect); soft-CC half-credit only fires for candidates
+  when no real hard_cc remains in the pool
 - Curated must-picks: `roleMust: [positions]` on a dataset entry (curated in
   tag_overrides.json, NOT a tag — tags are mechanical facts, this is a verdict)
   guarantees the ability a top-tier slot when the user's role matches, plus a

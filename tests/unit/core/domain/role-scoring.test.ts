@@ -355,6 +355,31 @@ describe('computeRoleScore with tags (needs engine)', () => {
     expect(softCc.reasons.some((r) => r.startsWith('covers:hard_cc'))).toBe(false)
   })
 
+  it('soft-CC half-credit is suppressed while a real stun remains in the pool', () => {
+    const withStunsLeft = computeRoleScore(axes(-0.5), ctxPos5, {
+      candidateTags: tags('soft_cc'),
+      myPickTags: [],
+      poolHasHardCc: true,
+    })!
+    expect(withStunsLeft.reasons).not.toContain('partial:hard_cc')
+
+    const noStunsLeft = computeRoleScore(axes(-0.5), ctxPos5, {
+      candidateTags: tags('soft_cc'),
+      myPickTags: [],
+      poolHasHardCc: false,
+    })!
+    expect(noStunsLeft.reasons).toContain('partial:hard_cc')
+    expect(withStunsLeft.delta).toBeLessThan(noStunsLeft.delta)
+
+    // A real hard_cc candidate is unaffected by the pool state
+    const stun = computeRoleScore(axes(-0.5), ctxPos5, {
+      candidateTags: tags('hard_cc'),
+      myPickTags: [],
+      poolHasHardCc: true,
+    })!
+    expect(stun.reasons).toContain('covers:hard_cc')
+  })
+
   it('the covers chip names the matched alternative when it differs from the key', () => {
     // Shadow Realm case: a pure nuke covering the wave need must not claim
     // the waveclear tag — the chip carries the via suffix instead.

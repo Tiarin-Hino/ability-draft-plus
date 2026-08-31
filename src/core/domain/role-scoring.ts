@@ -198,6 +198,12 @@ export interface RoleTagInput {
   myPickTags: ReadonlyArray<ReadonlySet<AbilityTag>>
   /** Pool-scarcity multiplier per need key (clamped; absent key = 1). */
   needScarcity?: ReadonlyMap<string, number>
+  /** True while the unpicked pool still holds a real hard_cc ability. The
+   * soft-CC half-credit toward disable needs is then SUPPRESSED for
+   * candidates (user ruling 2026-09-01, Shadow Strike case): suggest a slow
+   * as your disable only when no actual stun is left to take. Coverage of
+   * the user's own picks is unaffected. */
+  poolHasHardCc?: boolean
 }
 
 /**
@@ -225,17 +231,23 @@ function needCredit(tags: ReadonlySet<AbilityTag>, need: RoleNeed): number {
 
 /** Like needCredit, but also names the winning alternative's tag when it is a
  * single tag DIFFERENT from the need key — so the reason chip can say
- * "covers: waveclear (via nuke)" instead of implying a tag the ability lacks
- * (Shadow Realm case, user report 2026-08-31). */
+ * "covers: nuke" instead of implying a tag the ability lacks (Shadow Realm
+ * case, user report 2026-08-31). CANDIDATE path only: the soft-CC half-credit
+ * substitution is suppressed while the pool still holds a real hard_cc. */
 function needCreditWithVia(
   tags: ReadonlySet<AbilityTag>,
   need: RoleNeed,
+  poolHasHardCc: boolean,
 ): { credit: number; via: AbilityTag | undefined } {
+  const candidateTagCredit = (required: AbilityTag): number => {
+    const credit = tagCredit(tags, required)
+    return credit === 0.5 && poolHasHardCc ? 0 : credit
+  }
   let best = 0
   let bestReq: AbilityTag[] | undefined
   for (const req of need.anyOf) {
     let credit = 1
-    for (const tag of req) credit = Math.min(credit, tagCredit(tags, tag))
+    for (const tag of req) credit = Math.min(credit, candidateTagCredit(tag))
     if (credit > best) {
       best = credit
       bestReq = req
@@ -267,7 +279,11 @@ function needsAdjustment(
   const reasons: string[] = []
   let duplicateKey: string | null = null
   for (const need of POSITION_NEEDS[position]) {
-    const { credit: candCredit, via } = needCreditWithVia(candidate, need)
+    const { credit: candCredit, via } = needCreditWithVia(
+      candidate,
+      need,
+      tagInput.poolHasHardCc === true,
+    )
     if (candCredit === 0) continue
     const coverage = tagInput.myPickTags.reduce(
       (sum, tags) => sum + needCredit(tags, need),

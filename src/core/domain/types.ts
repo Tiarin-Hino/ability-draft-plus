@@ -69,7 +69,7 @@ export interface ScoredEntity {
   inertOnModel?: boolean
   /** Dependency gate (requires): the unmet requirement, resolved for display —
    * excluded from top-tier until the user drafts/picks it. */
-  unmetRequirement?: { kind: 'ability' | 'model'; displayName: string }
+  unmetRequirement?: { kind: 'ability' | 'model' | 'tag'; displayName: string }
   /** Global pick timing says this ability is due before the draft wraps around. */
   contestedSoon?: boolean
 }
