@@ -3,6 +3,8 @@ import {
   resolveRoleContext,
   computeRoleScore,
   computeModelRoleScore,
+  computeAbilityPairing,
+  computeModelPairing,
   toRoleContextDisplay,
   POSITION_TEMPLATES,
   type RoleContext,
@@ -13,6 +15,7 @@ import type { ScanResult } from '@shared/types'
 import {
   ROLE_ADJUSTMENT_CAP,
   ROLE_GREED_WEIGHT,
+  PAIRING_ADJUSTMENT_CAP,
 } from '@shared/constants/thresholds'
 
 function pick(name: string, heroOrder: number, abilityOrder = 0): ScanResult {
@@ -393,6 +396,41 @@ describe('computeRoleScore with tags (needs engine)', () => {
     expect(save.bestPosition).toBe(5)
     expect(save.reasons).toContain('covers:save')
   })
+
+  it('curated roleMust boosts the matching position and flags the score', () => {
+    const must = new Set<DraftPosition>([5])
+    const plain = computeRoleScore(axes(-0.3), ctxPos5, {
+      candidateTags: tags(),
+      myPickTags: [],
+    })!
+    const curated = computeRoleScore(axes(-0.3), ctxPos5, {
+      candidateTags: tags(),
+      candidateRoleMust: must,
+      myPickTags: [],
+    })!
+
+    expect(curated.delta).toBeGreaterThan(plain.delta)
+    expect(curated.curated).toBe(true)
+    expect(curated.reasons).toContain('curated')
+    expect(plain.curated).toBeUndefined()
+  })
+
+  it('curated roleMust is inert when it does not intersect the effective set', () => {
+    const mustPos1 = new Set<DraftPosition>([1])
+    const plain = computeRoleScore(axes(-0.3), ctxPos5, {
+      candidateTags: tags(),
+      myPickTags: [],
+    })!
+    const offRole = computeRoleScore(axes(-0.3), ctxPos5, {
+      candidateTags: tags(),
+      candidateRoleMust: mustPos1,
+      myPickTags: [],
+    })!
+
+    expect(offRole.delta).toBe(plain.delta)
+    expect(offRole.curated).toBeUndefined()
+    expect(offRole.reasons).not.toContain('curated')
+  })
 })
 
 describe('need priorities and pool scarcity', () => {
@@ -502,6 +540,122 @@ describe('computeModelRoleScore', () => {
   it('missing stat data scores as neutral fit, not an error', () => {
     const score = computeModelRoleScore(ctx([1, 4]), undefined, undefined, undefined, 0)!
     expect(Number.isFinite(score.delta)).toBe(true)
+  })
+
+  it('chassis percentiles matter: BAT for pos 1, bulk for pos 3, speed for pos 5', () => {
+    const fastAttacker = computeModelRoleScore(
+      ctx([1]), undefined, pct({ attackQuality: 0.95 }), 'agi', 0)!
+    const slowAttacker = computeModelRoleScore(
+      ctx([1]), undefined, pct({ attackQuality: 0.05 }), 'agi', 0)!
+    expect(fastAttacker.delta).toBeGreaterThan(slowAttacker.delta)
+
+    const bulky = computeModelRoleScore(ctx([3]), undefined, pct({ bulk: 0.95 }), 'str', 0)!
+    const squishy = computeModelRoleScore(ctx([3]), undefined, pct({ bulk: 0.05 }), 'str', 0)!
+    expect(bulky.delta).toBeGreaterThan(squishy.delta)
+
+    const runner = computeModelRoleScore(ctx([5]), undefined, pct({ speed: 0.95 }), 'int', 0)!
+    const slowpoke = computeModelRoleScore(ctx([5]), undefined, pct({ speed: 0.05 }), 'int', 0)!
+    expect(runner.delta).toBeGreaterThan(slowpoke.delta)
+  })
+
+  it('absent chassis percentiles score as neutral (old hero_meta compatibility)', () => {
+    const withNeutral = computeModelRoleScore(
+      ctx([1]), undefined, pct({ attackQuality: 0.5, bulk: 0.5, speed: 0.5 }), 'agi', 0)!
+    const withoutChassis = computeModelRoleScore(ctx([1]), undefined, pct({}), 'agi', 0)!
+    expect(withoutChassis.delta).toBe(withNeutral.delta)
+  })
+
+  it('hero-tag accents: matching model tags lift the fitting position', () => {
+    const heroTags = new Set<import('@core/domain/ability-tags').HeroTag>([
+      'rc_talents',
+      'innate_offense',
+    ])
+    const plain = computeModelRoleScore(ctx([1]), undefined, pct({}), 'agi', 0)!
+    const tagged = computeModelRoleScore(ctx([1]), undefined, pct({}), 'agi', 0, heroTags)!
+    expect(tagged.delta).toBeGreaterThan(plain.delta)
+
+    // Pos-3 does not value rc tags — no accent there
+    const plain3 = computeModelRoleScore(ctx([3]), undefined, pct({}), 'str', 0)!
+    const tagged3 = computeModelRoleScore(ctx([3]), undefined, pct({}), 'str', 0, heroTags)!
+    expect(tagged3.delta).toBe(plain3.delta)
+  })
+
+  it('model roleMust: boost + curated flag when an effective position matches', () => {
+    const must = new Set<DraftPosition>([5])
+    const plain = computeModelRoleScore(ctx([5]), undefined, pct({}), 'int', 0)!
+    const curated = computeModelRoleScore(
+      ctx([5]), undefined, pct({}), 'int', 0, undefined, must)!
+    expect(curated.delta).toBeGreaterThan(plain.delta)
+    expect(curated.curated).toBe(true)
+    expect(curated.reasons).toContain('curated')
+
+    const offRole = computeModelRoleScore(
+      ctx([1]), undefined, pct({}), 'int', 0, undefined, must)!
+    expect(offRole.curated).toBeUndefined()
+  })
+})
+
+describe('ability x model pairing (Layer C)', () => {
+  const tags = (...t: string[]) =>
+    new Set(t) as ReadonlySet<import('@core/domain/ability-tags').AbilityTag>
+  const heroTags = (...t: string[]) =>
+    new Set(t) as ReadonlySet<import('@core/domain/ability-tags').HeroTag>
+  const profile = (
+    partial: Partial<import('@core/domain/role-scoring').PairingModelProfile>,
+  ): import('@core/domain/role-scoring').PairingModelProfile => ({
+    attackQuality: 0.5,
+    bulk: 0.5,
+    intPool: 0.5,
+    tags: heroTags(),
+    ...partial,
+  })
+  const pctFull = (partial: object) => ({
+    strGain: 0.5, agiGain: 0.5, intGain: 0.5, totalGain: 0.5, intPool: 0.5,
+    attackQuality: 0.5, bulk: 0.5, speed: 0.5,
+    ...partial,
+  })
+
+  it('forward: steroids follow the model attack cadence, mana-hungry the pool', () => {
+    expect(
+      computeAbilityPairing(tags('steroid'), profile({ attackQuality: 0.95 })),
+    ).toBeGreaterThan(0)
+    expect(
+      computeAbilityPairing(tags('steroid'), profile({ attackQuality: 0.05 })),
+    ).toBeLessThan(0)
+    expect(
+      computeAbilityPairing(tags('mana_hungry'), profile({ intPool: 0.1 })),
+    ).toBeLessThan(0)
+    // rc-tagged model adds the flat bump on top of neutral cadence
+    expect(
+      computeAbilityPairing(tags('steroid'), profile({ tags: heroTags('rc_talents') })),
+    ).toBeGreaterThan(computeAbilityPairing(tags('steroid'), profile({})))
+  })
+
+  it('forward: no-ops without a model or without candidate tags; capped', () => {
+    expect(computeAbilityPairing(tags('steroid'), undefined)).toBe(0)
+    expect(computeAbilityPairing(undefined, profile({}))).toBe(0)
+    const extreme = computeAbilityPairing(
+      tags('steroid', 'farm_tool', 'initiation', 'channeled', 'mana_hungry'),
+      profile({ attackQuality: 1, bulk: 1, intPool: 1, tags: heroTags('rc_talents', 'innate_tank') }),
+    )
+    expect(extreme).toBeLessThanOrEqual(PAIRING_ADJUSTMENT_CAP)
+  })
+
+  it('reverse: two drafted right-click pieces make attack cadence matter', () => {
+    const rcDraft = [tags('steroid'), tags('farm_tool')]
+    const fast = computeModelPairing(rcDraft, pctFull({ attackQuality: 0.95 }), undefined)
+    const slow = computeModelPairing(rcDraft, pctFull({ attackQuality: 0.05 }), undefined)
+    expect(fast).toBeGreaterThan(0)
+    expect(slow).toBeLessThan(0)
+    // One steroid is not a commitment yet
+    expect(
+      computeModelPairing([tags('steroid')], pctFull({ attackQuality: 0.95 }), undefined),
+    ).toBe(0)
+  })
+
+  it('reverse: no-ops with no picks or no percentiles', () => {
+    expect(computeModelPairing([], pctFull({}), undefined)).toBe(0)
+    expect(computeModelPairing([tags('steroid')], undefined, undefined)).toBe(0)
   })
 })
 

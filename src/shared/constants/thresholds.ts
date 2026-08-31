@@ -178,6 +178,33 @@ export const CONTESTED_SOON_WINDOW = 10
 // penalty on a core-shifted ability is inherently small, so the accents are
 // the main lever separating e.g. a pure steroid from a playmaker for pos 4.
 export const ROLE_TAG_ACCENT_WEIGHT = 0.05
+// Curated must-picks (roleMust in ability_tags.json): hand-picked abilities
+// whose value the stats systematically miss for a role (e.g. Glimpse for
+// supports). Presence in suggestions is GUARANTEED by top-tier.ts when the
+// role matches — this weight only lifts their rank among the suggestions, so
+// it sits well above the needs/accent weights but inside the role cap.
+export const ROLE_CURATED_WEIGHT = 0.15
+// Hero-MODEL tag accents (Layer B): small per-position bonuses from the
+// model's talent-profile/innate tags — same anti-double-counting philosophy
+// as ability tag accents (the attr/chassis percentiles stay primary).
+export const MODEL_TAG_ACCENT_WEIGHT = 0.03
+// Ability x model pairing (Layer C): each matching term contributes
+// weight * (2*percentile - 1), summed and clamped to its OWN cap so the
+// pairing layer stays auditable next to the role cap. Active only while a
+// role mode is on (preserves the role-off bit-identity invariant).
+export const PAIRING_WEIGHT = 0.04
+export const PAIRING_ADJUSTMENT_CAP = 0.1
+// Overrated marker (Rearm case, 2026-08-31): winrate 45.7% yet picked ~9th —
+// the 0.6 pick-order weight rewards popularity, not quality. An ability BOTH
+// below the winrate bar AND above the early-pick bar gets a flat damp + an
+// explanatory tooltip marker. Calibrated on live data: wr<0.48 & pick<=15
+// catches 21/513 abilities, all textbook traps (Finger of Death, Sleight of
+// Fist, Walrus Punch, Coup de Grace, Rearm); role-independent by design.
+// Future lever if pollution persists (documented, not built): discount
+// WEIGHT_PICK_ORDER itself while a role mode is active.
+export const OVERRATED_WINRATE_MAX = 0.48
+export const OVERRATED_PICK_ORDER_MAX = 15
+export const OVERRATED_DAMP = 0.12
 
 // Model
 // The class count is NOT a constant — it is defined by resources/model/class_names.json

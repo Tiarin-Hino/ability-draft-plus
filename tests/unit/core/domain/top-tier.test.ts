@@ -5,7 +5,7 @@ import type { ScoredEntity } from '@core/domain/types'
 function makeAbility(
   name: string,
   score: number,
-  opts: { isUltCoord?: boolean; isUltDb?: boolean } = {},
+  opts: { isUltCoord?: boolean; isUltDb?: boolean; roleCurated?: boolean } = {},
 ): ScoredEntity {
   return {
     entityType: 'ability',
@@ -16,10 +16,16 @@ function makeAbility(
     consolidatedScore: score,
     isUltimateFromCoordSource: opts.isUltCoord ?? false,
     isUltimateFromDb: opts.isUltDb ?? false,
+    roleCurated: opts.roleCurated,
   }
 }
 
-function makeHero(name: string, score: number, dbHeroId: number): ScoredEntity {
+function makeHero(
+  name: string,
+  score: number,
+  dbHeroId: number,
+  opts: { roleCurated?: boolean } = {},
+): ScoredEntity {
   return {
     entityType: 'hero',
     internalName: name,
@@ -29,6 +35,7 @@ function makeHero(name: string, score: number, dbHeroId: number): ScoredEntity {
     consolidatedScore: score,
     dbHeroId,
     heroOrder: 0,
+    roleCurated: opts.roleCurated,
   }
 }
 
@@ -154,6 +161,63 @@ describe('determineTopTierEntities', () => {
   it('returns empty for empty entities', () => {
     const result = determineTopTierEntities([], null, false, new Set())
     expect(result).toHaveLength(0)
+  })
+
+  it('curated role must-picks get a guaranteed slot even when stats rank them out', () => {
+    // 12 strong general picks would fill all 10 slots — the curated ability's
+    // 0.01 score must not matter, that is the entire point of the curation.
+    const entities = [
+      ...Array.from({ length: 12 }, (_, i) => makeAbility(`strong_${i}`, 0.9 - i * 0.01)),
+      makeAbility('glimpse', 0.01, { roleCurated: true }),
+    ]
+    const result = determineTopTierEntities(entities, null, false, new Set())
+    expect(result).toHaveLength(10)
+    const glimpse = result.find((e) => e.internalName === 'glimpse')!
+    expect(glimpse.isCuratedForRole).toBe(true)
+    expect(glimpse.isGeneralTopTier).toBe(true)
+    expect(glimpse.isSynergySuggestionForMySpot).toBe(false)
+  })
+
+  it('curated picks rank after synergy suggestions and never duplicate in general', () => {
+    const entities = [
+      makeAbility('syn', 0.5),
+      makeAbility('curated', 0.4, { roleCurated: true }),
+      makeAbility('general', 0.9),
+    ]
+    const result = determineTopTierEntities(entities, null, false, new Set(['syn']))
+    expect(result.map((e) => e.internalName)).toEqual(['syn', 'curated', 'general'])
+    expect(result.filter((e) => e.isCuratedForRole)).toHaveLength(1)
+  })
+
+  it('curated ultimates stay excluded when My Spot already has an ult', () => {
+    const entities = [
+      makeAbility('curated_ult', 0.9, { isUltDb: true, roleCurated: true }),
+      makeAbility('normal', 0.5),
+    ]
+    const result = determineTopTierEntities(entities, null, true, new Set())
+    expect(result.map((e) => e.internalName)).toEqual(['normal'])
+  })
+
+  it('a curated hero MODEL gets a guaranteed slot — unless a model is already picked', () => {
+    const entities = [
+      ...Array.from({ length: 12 }, (_, i) => makeAbility(`strong_${i}`, 0.9 - i * 0.01)),
+      makeHero('curated_model', 0.01, 7, { roleCurated: true }),
+    ]
+    const withoutModel = determineTopTierEntities(entities, null, false, new Set())
+    expect(
+      withoutModel.find((e) => e.internalName === 'curated_model')?.isCuratedForRole,
+    ).toBe(true)
+
+    // Model already picked: suggesting models is pointless, curated included
+    const withModel = determineTopTierEntities(entities, 3, false, new Set())
+    expect(withModel.find((e) => e.internalName === 'curated_model')).toBeUndefined()
+  })
+
+  it('without roleCurated flags behavior is unchanged (role mode off)', () => {
+    const entities = [makeAbility('a', 0.9), makeAbility('b', 0.8)]
+    const result = determineTopTierEntities(entities, null, false, new Set())
+    expect(result.every((e) => e.isCuratedForRole === undefined || e.isCuratedForRole === false)).toBe(true)
+    expect(result.map((e) => e.internalName)).toEqual(['a', 'b'])
   })
 
   it('synergy suggestions are not duplicated in general picks', () => {

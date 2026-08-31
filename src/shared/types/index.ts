@@ -157,15 +157,28 @@ export interface EnrichedScanSlot extends ScanResult {
   /** True when this slot is top-tier ONLY because of the linked profile's stats
    * (a global-only ranking would not recommend it). Drives the corner marker. */
   isPersonallyDriven?: boolean
+  /** Curated must-pick (roleMust in the tags dataset) holding a guaranteed
+   * suggestion slot for the user's active role. Drives the curated badge. */
+  isCuratedForRole?: boolean
   /** consolidatedScore minus the role-less score — how far the role layer moved
    * it (present only when a role mode is active and the layer contributed). */
   roleScoreDelta?: number
   /** The effective position that produced roleScoreDelta's best fit (1-5). */
   roleBestPosition?: number
-  /** Needs-engine reason chips ('covers:<need>' | 'duplicate:<need>'). */
+  /** Needs-engine reason chips ('covers:<need>' | 'duplicate:<need>' | 'curated'). */
   roleReasons?: string[]
+  /** Layer C pairing adjustment vs the picked model (role mode active only). */
+  pairingScoreDelta?: number
   /** Mechanically inert on the selected model (cleave on ranged) — never top-tier. */
   inertOnModel?: boolean
+  /** Dependency gate: unmet requirement (Eclipse without Lucent Beam) — never
+   * top-tier until satisfied; the tooltip names what is missing. */
+  unmetRequirement?: { kind: 'ability' | 'model'; displayName: string }
+  /** Curated never-recommend for the drafter's positions (all five = always)
+   * — hard-excluded from suggestions; the tooltip explains. */
+  roleAvoided?: boolean
+  /** Picked far earlier than its winrate justifies — damped, tooltip explains. */
+  overrated?: boolean
   /** Now-or-never: usually drafted by this point — unlikely to survive another round. */
   contestedSoon?: boolean
   highWinrateCombinations: SynergyPairDisplay[]
@@ -278,6 +291,10 @@ export interface HeroModelDisplay {
   roleScoreDelta?: number
   /** Effective position (1-5) that produced the best role fit. */
   roleBestPosition?: number
+  /** Layer C pairing adjustment vs MY drafted abilities (role mode only). */
+  pairingScoreDelta?: number
+  /** Curated must-pick model for the user's active role (hero roleMust). */
+  isCuratedForRole?: boolean
   identificationConfidence: number
   strongAbilitySynergies: HeroSynergyDisplay[]
   weakAbilitySynergies: HeroSynergyDisplay[]

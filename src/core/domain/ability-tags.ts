@@ -7,6 +7,12 @@
 // main-process loader. Tags power the build-needs engine and the reason chips —
 // role RANKING is primarily the shifts-derived greed axis (role-scoring.ts);
 // tags deliberately carry only small static weights to avoid double-counting.
+// Distinct from tags, an entry may carry `roleMust: [positions]` — a hand-
+// curated VERDICT (not a mechanical fact, so deliberately outside the tag
+// vocabulary): "recommend this for these positions even if stats disagree".
+// Reserved for abilities whose value the stats systematically miss (e.g.
+// Glimpse for supports); it guarantees a top-tier slot when the user's active
+// role matches (top-tier.ts) on top of a role-layer boost (role-scoring.ts).
 
 export const TAG_VOCABULARY = [
   'hard_cc',
@@ -27,6 +33,7 @@ export const TAG_VOCABULARY = [
   'passive_value',
   'melee_only',
   'ranged_only',
+  'grants_ranged',
   'mana_hungry',
   'channeled',
 ] as const
@@ -35,10 +42,30 @@ export type AbilityTag = (typeof TAG_VOCABULARY)[number]
 
 const VOCAB_SET: ReadonlySet<string> = new Set(TAG_VOCABULARY)
 
+// Hero-MODEL tag vocabulary (model-pairing Layer B) — the build script's
+// HERO_VOCAB must match. Talent-profile tags are auto-derived from GENERIC
+// talents only (ability-specific talents are dead on an AD model); innate_*
+// tags are judgment, curated via hero_tag_overrides.json / the Tag Lab.
+export const HERO_TAG_VOCABULARY = [
+  'rc_talents',
+  'caster_talents',
+  'tank_talents',
+  'utility_talents',
+  'innate_offense',
+  'innate_tank',
+  'innate_team',
+] as const
+
+export type HeroTag = (typeof HERO_TAG_VOCABULARY)[number]
+
+const HERO_VOCAB_SET: ReadonlySet<string> = new Set(HERO_TAG_VOCABULARY)
+
 export type HeroAttackType = 'Melee' | 'Ranged'
 export type HeroPrimaryAttr = 'str' | 'agi' | 'int' | 'all'
 
-/** Hero-model metadata (hero_meta.json): attributes for role-fit scoring. */
+/** Hero-model metadata (hero_meta.json): attributes for role-fit scoring plus
+ * chassis fields (model-pairing Layer A) — the body properties stat gains
+ * cannot see. All optional: missing data scores as a neutral percentile. */
 export interface HeroMeta {
   attackType?: HeroAttackType
   primaryAttr?: HeroPrimaryAttr
@@ -48,12 +75,40 @@ export interface HeroMeta {
   strGain?: number
   agiGain?: number
   intGain?: number
+  attackRange?: number
+  /** BAT (base attack time) — LOWER is better. */
+  attackRate?: number
+  projectileSpeed?: number
+  moveSpeed?: number
+  baseArmor?: number
+  baseHealth?: number
+  baseMana?: number
+  baseAttackMin?: number
+  baseAttackMax?: number
+  /** Hero-model tags (Layer B): talent profile + innate value. */
+  tags?: ReadonlySet<HeroTag>
+  /** Curated must-pick positions for the MODEL (mirrors ability roleMust). */
+  roleMust?: ReadonlySet<RoleMustPosition>
 }
+
+/** Draft position (1-5). Structurally identical to role-scoring's
+ * DraftPosition — declared here too so this module stays import-free of the
+ * scoring layer. */
+export type RoleMustPosition = 1 | 2 | 3 | 4 | 5
 
 /** Injected into the scan processor; absent dep = tags feature off (no-op). */
 export interface AbilityTagsLookup {
   /** Tags for an ability internal name; undefined when untagged/unknown. */
   getTags(abilityName: string): ReadonlySet<AbilityTag> | undefined
+  /** Curated must-pick positions for an ability; undefined when not curated. */
+  getRoleMust(abilityName: string): ReadonlySet<RoleMustPosition> | undefined
+  /** Curated never-recommend positions (roleAvoid); all five = never suggest
+   * at all, role mode on or off (blatantly bad picks, e.g. Ransack). */
+  getRoleAvoid(abilityName: string): ReadonlySet<RoleMustPosition> | undefined
+  /** Dependency gate: entries are ability internal names or 'model:<hero>'.
+   * The ability is only ever SUGGESTED when at least one entry is satisfied
+   * (Eclipse -> Lucent Beam; Requiem -> the SF model whose innate feeds it). */
+  getRequires(abilityName: string): readonly string[] | undefined
   /** Attack type of a hero internal name (hero_meta.json); undefined when unknown. */
   getHeroAttackType(heroName: string): HeroAttackType | undefined
   /** Full hero metadata (attributes/gains) for model role-fit; undefined when unknown. */
@@ -67,6 +122,9 @@ export interface AbilityTagsLookup {
  */
 export function parseAbilityTagsDataset(json: unknown): {
   tagsByAbility: Map<string, ReadonlySet<AbilityTag>>
+  roleMustByAbility: Map<string, ReadonlySet<RoleMustPosition>>
+  roleAvoidByAbility: Map<string, ReadonlySet<RoleMustPosition>>
+  requiresByAbility: Map<string, readonly string[]>
   droppedTags: string[]
 } | null {
   if (typeof json !== 'object' || json === null) return null
@@ -74,7 +132,20 @@ export function parseAbilityTagsDataset(json: unknown): {
   if (typeof abilities !== 'object' || abilities === null) return null
 
   const tagsByAbility = new Map<string, ReadonlySet<AbilityTag>>()
+  const roleMustByAbility = new Map<string, ReadonlySet<RoleMustPosition>>()
+  const roleAvoidByAbility = new Map<string, ReadonlySet<RoleMustPosition>>()
+  const requiresByAbility = new Map<string, readonly string[]>()
   const dropped = new Set<string>()
+  const parsePositions = (raw: unknown): Set<RoleMustPosition> | null => {
+    if (!Array.isArray(raw)) return null
+    const positions = new Set<RoleMustPosition>()
+    for (const pos of raw) {
+      if (typeof pos === 'number' && Number.isInteger(pos) && pos >= 1 && pos <= 5) {
+        positions.add(pos as RoleMustPosition)
+      }
+    }
+    return positions
+  }
   for (const [name, entry] of Object.entries(abilities)) {
     const rawTags = (entry as { tags?: unknown })?.tags
     if (!Array.isArray(rawTags)) continue
@@ -87,8 +158,33 @@ export function parseAbilityTagsDataset(json: unknown): {
       }
     }
     tagsByAbility.set(name, tags)
+
+    // Curated must-pick / never-recommend positions: invalid values are
+    // dropped silently (a newer dataset must never brick an older app),
+    // empty sets are omitted.
+    const must = parsePositions((entry as { roleMust?: unknown })?.roleMust)
+    if (must !== null && must.size > 0) roleMustByAbility.set(name, must)
+    const avoid = parsePositions((entry as { roleAvoid?: unknown })?.roleAvoid)
+    if (avoid !== null && avoid.size > 0) roleAvoidByAbility.set(name, avoid)
+
+    // Dependency gates: non-empty strings only, deduped; empty lists omitted.
+    const rawRequires = (entry as { requires?: unknown })?.requires
+    if (Array.isArray(rawRequires)) {
+      const reqs = [
+        ...new Set(
+          rawRequires.filter((r): r is string => typeof r === 'string' && r.length > 0),
+        ),
+      ]
+      if (reqs.length > 0) requiresByAbility.set(name, reqs)
+    }
   }
-  return { tagsByAbility, droppedTags: [...dropped] }
+  return {
+    tagsByAbility,
+    roleMustByAbility,
+    roleAvoidByAbility,
+    requiresByAbility,
+    droppedTags: [...dropped],
+  }
 }
 
 /** Parse + validate hero_meta.json. Missing/invalid stat fields become
@@ -119,24 +215,68 @@ export function parseHeroMeta(json: unknown): Map<string, HeroMeta> | null {
       strGain: num(e.strGain),
       agiGain: num(e.agiGain),
       intGain: num(e.intGain),
+      attackRange: num(e.attackRange),
+      attackRate: num(e.attackRate),
+      projectileSpeed: num(e.projectileSpeed),
+      moveSpeed: num(e.moveSpeed),
+      baseArmor: num(e.baseArmor),
+      baseHealth: num(e.baseHealth),
+      baseMana: num(e.baseMana),
+      baseAttackMin: num(e.baseAttackMin),
+      baseAttackMax: num(e.baseAttackMax),
+    }
+    // Hero tags: unknown values dropped silently (newer dataset, older app);
+    // roleMust validated to positions 1-5 like the ability variant.
+    if (Array.isArray(e.tags)) {
+      const heroTags = new Set<HeroTag>()
+      for (const t of e.tags) {
+        if (typeof t === 'string' && HERO_VOCAB_SET.has(t)) heroTags.add(t as HeroTag)
+      }
+      if (heroTags.size > 0) meta.tags = heroTags
+    }
+    if (Array.isArray(e.roleMust)) {
+      const positions = new Set<RoleMustPosition>()
+      for (const p of e.roleMust) {
+        if (typeof p === 'number' && Number.isInteger(p) && p >= 1 && p <= 5) {
+          positions.add(p as RoleMustPosition)
+        }
+      }
+      if (positions.size > 0) meta.roleMust = positions
     }
     result.set(name, meta)
   }
   return result
 }
 
+/** Context that can WAIVE the inert filter for a candidate. */
+export interface InertExceptions {
+  /** The candidate is native to the selected model's hero (Wukong's Command on
+   * the Monkey King model): the game designed them together — never inert. */
+  nativeToModel?: boolean
+  /** One of the user's DRAFTED abilities is tagged grants_ranged (Psi Blades,
+   * Take Aim): ranged_only candidates work on a melee model again. */
+  picksGrantRanged?: boolean
+}
+
 /**
  * True when an ability is mechanically inert or crippled on the given hero
  * model's attack type (cleave on a ranged model, projectile mechanics on a
  * melee one). Used as a HARD top-tier exclusion, not a score tweak.
+ * Exceptions (user ruling 2026-08-30, Wukong's Command case): the candidate's
+ * own native model is always exempt, and a drafted grants_ranged ability
+ * waives ranged_only on melee models (melee_only on ranged models has no
+ * symmetric waiver — nothing grants melee).
  */
 export function isInertOnModel(
   tags: ReadonlySet<AbilityTag> | undefined,
   attackType: HeroAttackType | undefined,
+  exceptions?: InertExceptions,
 ): boolean {
   if (tags === undefined || attackType === undefined) return false
-  return (
-    (attackType === 'Ranged' && tags.has('melee_only')) ||
-    (attackType === 'Melee' && tags.has('ranged_only'))
-  )
+  if (exceptions?.nativeToModel === true) return false
+  if (attackType === 'Ranged' && tags.has('melee_only')) return true
+  if (attackType === 'Melee' && tags.has('ranged_only')) {
+    return exceptions?.picksGrantRanged !== true
+  }
+  return false
 }

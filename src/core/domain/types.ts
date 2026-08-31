@@ -50,10 +50,26 @@ export interface ScoredEntity {
   roleScoreDelta?: number
   /** Effective position (1-5) that produced the best role fit. */
   roleBestPosition?: number
-  /** Needs-engine reason chips ('covers:<need>' | 'duplicate:<need>'). */
+  /** Needs-engine reason chips ('covers:<need>' | 'duplicate:<need>' | 'curated'). */
   roleReasons?: string[]
+  /** Curated must-pick (roleMust) matching an active effective position —
+   * top-tier.ts guarantees this entity a suggestion slot. An all-five
+   * roleMust sets this with role mode OFF too (universal must). */
+  roleCurated?: boolean
+  /** Curated never-recommend (roleAvoid) covering the active positions — or
+   * all five positions, role mode regardless. Hard-excluded from top-tier. */
+  roleAvoided?: boolean
+  /** Picked far earlier than its winrate justifies (community darling) —
+   * score damped by OVERRATED_DAMP, tooltip explains. */
+  overrated?: boolean
+  /** Layer C ability×model pairing adjustment included in consolidatedScore
+   * (own cap; role mode active only). */
+  pairingScoreDelta?: number
   /** Mechanically inert on the selected model's attack type — excluded from top-tier. */
   inertOnModel?: boolean
+  /** Dependency gate (requires): the unmet requirement, resolved for display —
+   * excluded from top-tier until the user drafts/picks it. */
+  unmetRequirement?: { kind: 'ability' | 'model'; displayName: string }
   /** Global pick timing says this ability is due before the draft wraps around. */
   contestedSoon?: boolean
 }
@@ -65,6 +81,9 @@ export interface TopTierEntity extends ScoredEntity {
   /** True when this entity made the general top-tier cut ONLY because personal
    * blending raised its score (a global-only ranking would exclude it). */
   isPersonallyDriven?: boolean
+  /** True when this entity holds a GUARANTEED slot as a curated must-pick for
+   * the user's active role (roleMust in the tags dataset). */
+  isCuratedForRole?: boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -118,6 +137,8 @@ export interface HeroLookup {
   getByAbilityName(
     abilityName: string,
   ): { heroId: number; heroName: string; heroDisplayName: string | null } | null
+  /** Display name of a hero by internal name (requires 'model:<hero>' notes). */
+  getByName(heroName: string): { heroId: number; displayName: string } | null
   getById(heroId: number): {
     heroId: number
     name: string

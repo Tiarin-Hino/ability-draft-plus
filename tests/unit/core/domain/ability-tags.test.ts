@@ -39,9 +39,57 @@ describe('parseAbilityTagsDataset', () => {
     expect(parseAbilityTagsDataset({})).toBeNull()
   })
 
-  it('vocabulary matches the build script contract (20 tags)', () => {
-    expect(TAG_VOCABULARY).toHaveLength(20)
-    expect(new Set(TAG_VOCABULARY).size).toBe(20)
+  it('parses requires dependency gates; junk dropped, empty omitted', () => {
+    const parsed = parseAbilityTagsDataset({
+      abilities: {
+        luna_eclipse: { tags: [], requires: ['luna_lucent_beam'] },
+        nevermore_requiem: { tags: [], requires: ['model:nevermore'] },
+        junk: { tags: [], requires: [42, '', 'ok_one', 'ok_one'] },
+        none: { tags: [] },
+        empty: { tags: [], requires: [] },
+      },
+    })!
+
+    expect(parsed.requiresByAbility.get('luna_eclipse')).toEqual(['luna_lucent_beam'])
+    expect(parsed.requiresByAbility.get('nevermore_requiem')).toEqual(['model:nevermore'])
+    expect(parsed.requiresByAbility.get('junk')).toEqual(['ok_one'])
+    expect(parsed.requiresByAbility.has('none')).toBe(false)
+    expect(parsed.requiresByAbility.has('empty')).toBe(false)
+  })
+
+  it('parses roleAvoid never-recommend positions like roleMust', () => {
+    const parsed = parseAbilityTagsDataset({
+      abilities: {
+        meepo_ransack: { tags: [], roleAvoid: [1, 2, 3, 4, 5] },
+        partial: { tags: [], roleAvoid: [4, 5, 9] },
+        none: { tags: [] },
+      },
+    })!
+
+    expect([...parsed.roleAvoidByAbility.get('meepo_ransack')!]).toEqual([1, 2, 3, 4, 5])
+    expect([...parsed.roleAvoidByAbility.get('partial')!]).toEqual([4, 5])
+    expect(parsed.roleAvoidByAbility.has('none')).toBe(false)
+  })
+
+  it('parses curated roleMust positions; invalid values dropped, empty omitted', () => {
+    const parsed = parseAbilityTagsDataset({
+      abilities: {
+        disruptor_glimpse: { tags: ['initiation', 'setup_cc'], roleMust: [4, 5] },
+        junk_positions: { tags: [], roleMust: [0, 6, 2.5, 'five', 3] },
+        all_junk: { tags: [], roleMust: [99] },
+        no_role_must: { tags: ['nuke'] },
+      },
+    })!
+
+    expect([...parsed.roleMustByAbility.get('disruptor_glimpse')!]).toEqual([4, 5])
+    expect([...parsed.roleMustByAbility.get('junk_positions')!]).toEqual([3])
+    expect(parsed.roleMustByAbility.has('all_junk')).toBe(false)
+    expect(parsed.roleMustByAbility.has('no_role_must')).toBe(false)
+  })
+
+  it('vocabulary matches the build script contract (21 tags)', () => {
+    expect(TAG_VOCABULARY).toHaveLength(21)
+    expect(new Set(TAG_VOCABULARY).size).toBe(21)
   })
 })
 
@@ -52,6 +100,8 @@ describe('parseHeroMeta', () => {
         attackType: 'Ranged', primaryAttr: 'int',
         baseStr: 18, baseAgi: 23, baseInt: 25,
         strGain: 2.2, agiGain: 2.3, intGain: 3.7,
+        attackRange: 670, attackRate: 1.6, moveSpeed: 300,
+        baseArmor: 1, baseHealth: 120, baseMana: 75,
       },
       sven: { attackType: 'Melee' },
       broken: { attackType: 42, strGain: 'lots' },
@@ -59,10 +109,26 @@ describe('parseHeroMeta', () => {
 
     expect(meta.get('lina')!.attackType).toBe('Ranged')
     expect(meta.get('lina')!.intGain).toBe(3.7)
+    expect(meta.get('lina')!.attackRange).toBe(670)
+    expect(meta.get('lina')!.attackRate).toBe(1.6)
+    expect(meta.get('lina')!.moveSpeed).toBe(300)
+    expect(meta.get('sven')!.attackRange).toBeUndefined()
     expect(meta.get('sven')!.attackType).toBe('Melee')
     expect(meta.get('sven')!.strGain).toBeUndefined()
     expect(meta.get('broken')!.attackType).toBeUndefined()
     expect(meta.get('broken')!.strGain).toBeUndefined()
+  })
+
+  it('parses hero tags (unknown dropped) and hero roleMust', () => {
+    const meta = parseHeroMeta({
+      nevermore: { attackType: 'Ranged', tags: ['innate_offense', 'not_a_tag'], roleMust: [2] },
+      sven: { attackType: 'Melee', tags: [], roleMust: [0, 9] },
+    })!
+
+    expect([...meta.get('nevermore')!.tags!]).toEqual(['innate_offense'])
+    expect([...meta.get('nevermore')!.roleMust!]).toEqual([2])
+    expect(meta.get('sven')!.tags).toBeUndefined()
+    expect(meta.get('sven')!.roleMust).toBeUndefined()
   })
 
   it('returns null for invalid input', () => {
@@ -84,5 +150,18 @@ describe('isInertOnModel', () => {
     expect(isInertOnModel(undefined, 'Ranged')).toBe(false)
     expect(isInertOnModel(tags('melee_only'), undefined)).toBe(false)
     expect(isInertOnModel(tags('nuke'), 'Ranged')).toBe(false)
+  })
+
+  it('the candidate is never inert on its own native model (Wukong on MK)', () => {
+    expect(isInertOnModel(tags('ranged_only'), 'Melee', { nativeToModel: true })).toBe(false)
+    expect(isInertOnModel(tags('melee_only'), 'Ranged', { nativeToModel: true })).toBe(false)
+    expect(isInertOnModel(tags('ranged_only'), 'Melee', { nativeToModel: false })).toBe(true)
+  })
+
+  it('a drafted grants_ranged pick waives ranged_only on melee, not melee_only on ranged', () => {
+    expect(isInertOnModel(tags('ranged_only'), 'Melee', { picksGrantRanged: true })).toBe(false)
+    expect(isInertOnModel(tags('ranged_only'), 'Melee', { picksGrantRanged: false })).toBe(true)
+    // nothing grants melee — the melee_only filter has no symmetric waiver
+    expect(isInertOnModel(tags('melee_only'), 'Ranged', { picksGrantRanged: true })).toBe(true)
   })
 })

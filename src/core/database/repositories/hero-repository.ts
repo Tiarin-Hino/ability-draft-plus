@@ -7,7 +7,7 @@ import type {
   AbilityShiftRow,
 } from './ability-repository'
 
-// @DEV-GUIDE: Hero CRUD repository. Provides getAll, getById, getByAbilityName (joins
+// @DEV-GUIDE: Hero CRUD repository. Provides getAll, getById, getByName, getByAbilityName (joins
 // Abilities table to find which hero owns a given ability), upsertHeroes (batch insert
 // from scraper with conflict handling), and deduplicateByDisplayName (cleans up seed vs
 // Windrun naming collisions like "ancient_apparition" vs "ancientapparition").
@@ -26,6 +26,7 @@ export interface HeroUpsertData {
 export interface HeroRepository {
   getAll(): Hero[]
   getById(heroId: number): Hero | null
+  getByName(heroName: string): { heroId: number; displayName: string } | null
   getByAbilityName(
     abilityName: string,
   ): { heroId: number; heroName: string; heroDisplayName: string | null } | null
@@ -73,6 +74,12 @@ export function createHeroRepository(db: SQLJsDatabase): HeroRepository {
         hsPickRate: row.hsPickRate,
         windrunId: row.windrunId,
       }
+    },
+
+    getByName(heroName: string) {
+      const row = db.select().from(heroes).where(eq(heroes.name, heroName)).get()
+      if (!row) return null
+      return { heroId: row.heroId, displayName: row.displayName ?? row.name }
     },
 
     getByAbilityName(abilityName: string) {

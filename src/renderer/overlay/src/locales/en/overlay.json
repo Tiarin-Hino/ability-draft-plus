@@ -70,6 +70,7 @@
     "unknownAbility": "Unknown Ability",
     "unknownHint": "The model could not identify this icon — consider using 'Report Failed Recognition'",
     "roleFit": "Role fit: pos {{position}}",
+    "pairingFit": "Model pairing",
     "roleNeeds": {
       "steroid": "attack steroid",
       "farm": "farming tool",
@@ -87,7 +88,13 @@
     },
     "roleCovers": "Covers your missing {{need}}",
     "roleDuplicate": "Already covered: {{need}}",
+    "roleCurated": "Curated pick for this role",
+    "curatedPick": "Role Pick — curated as a must-have for your role",
     "inertOnModel": "Does not work on your model (melee/ranged mismatch)",
+    "requiresAbility": "Only works with {{name}} — not suggested until you draft it",
+    "requiresModel": "Only works on the {{name}} model — not suggested",
+    "roleAvoided": "Curated skip for this spot — not suggested",
+    "overrated": "Picked early but wins only {{value}} — likely overrated",
     "contestedSoon": "Usually drafted by now — may not survive another round"
   },
   "role": {
