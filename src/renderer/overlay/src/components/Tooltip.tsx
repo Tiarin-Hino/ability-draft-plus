@@ -103,6 +103,30 @@ function RoleStatLine({
   )
 }
 
+// Layer C pairing line: how the picked model's chassis moved this ability (or
+// how the user's drafted abilities moved this model). Same anti-noise epsilon.
+function PairingStatLine({
+  scoreDelta,
+  t,
+}: {
+  scoreDelta?: number
+  t: (key: string, opts?: Record<string, string>) => string
+}): React.ReactElement | null {
+  if (scoreDelta == null) return null
+  if (Math.abs(scoreDelta) <= ROLE_SCORE_DELTA_EPSILON) return null
+
+  const up = scoreDelta > 0
+  return (
+    <div className="tooltip-stat tooltip-role">
+      {t('tooltip.pairingFit')}
+      <span className={up ? 'tooltip-role-up' : 'tooltip-role-down'}>
+        {' '}
+        {up ? '▲' : '▼'}
+      </span>
+    </div>
+  )
+}
+
 // Needs-engine reason chips ('covers:<need>' / 'duplicate:<need>' / 'curated')
 // — the explainability half of the tags feature: WHY the role layer moved this.
 function RoleReasonChips({
@@ -261,6 +285,7 @@ function AbilityTooltipContent({
         t={t}
       />
       <RoleReasonChips reasons={slot.roleReasons} t={t} />
+      <PairingStatLine scoreDelta={slot.pairingScoreDelta} t={t} />
       {slot.inertOnModel && (
         <div className="tooltip-stat tooltip-inert">{t('tooltip.inertOnModel')}</div>
       )}
@@ -316,7 +341,11 @@ function HeroTooltipContent({
   return (
     <>
       {model.isGeneralTopTier &&
-        (model.isPersonallyDriven ? (
+        (model.isCuratedForRole ? (
+          <div className="tooltip-badge tooltip-badge-curated">
+            &#x2726; {t('tooltip.curatedPick')}
+          </div>
+        ) : model.isPersonallyDriven ? (
           <div className="tooltip-badge tooltip-badge-personal">
             &#x2605; {t('tooltip.personalPick')}
           </div>
@@ -344,6 +373,7 @@ function HeroTooltipContent({
         position={model.roleBestPosition}
         t={t}
       />
+      <PairingStatLine scoreDelta={model.pairingScoreDelta} t={t} />
 
       <HeroSynergySection
         title={t('tooltip.strongAbilities')}

@@ -167,6 +167,8 @@ export interface EnrichedScanSlot extends ScanResult {
   roleBestPosition?: number
   /** Needs-engine reason chips ('covers:<need>' | 'duplicate:<need>' | 'curated'). */
   roleReasons?: string[]
+  /** Layer C pairing adjustment vs the picked model (role mode active only). */
+  pairingScoreDelta?: number
   /** Mechanically inert on the selected model (cleave on ranged) — never top-tier. */
   inertOnModel?: boolean
   /** Dependency gate: unmet requirement (Eclipse without Lucent Beam) — never
@@ -284,6 +286,10 @@ export interface HeroModelDisplay {
   roleScoreDelta?: number
   /** Effective position (1-5) that produced the best role fit. */
   roleBestPosition?: number
+  /** Layer C pairing adjustment vs MY drafted abilities (role mode only). */
+  pairingScoreDelta?: number
+  /** Curated must-pick model for the user's active role (hero roleMust). */
+  isCuratedForRole?: boolean
   identificationConfidence: number
   strongAbilitySynergies: HeroSynergyDisplay[]
   weakAbilitySynergies: HeroSynergyDisplay[]

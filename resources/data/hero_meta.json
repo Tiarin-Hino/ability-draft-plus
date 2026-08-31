@@ -16,7 +16,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 22,
-  "baseAttackMax": 32
+  "baseAttackMax": 32,
+  "tags": []
  },
  "abyssalunderlord": {
   "attackType": "Melee",
@@ -35,7 +36,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 37,
-  "baseAttackMax": 43
+  "baseAttackMax": 43,
+  "tags": [
+   "innate_team"
+  ]
  },
  "alchemist": {
   "attackType": "Melee",
@@ -54,7 +58,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 27,
-  "baseAttackMax": 33
+  "baseAttackMax": 33,
+  "tags": []
  },
  "ancientapparition": {
   "attackType": "Ranged",
@@ -73,7 +78,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 21,
-  "baseAttackMax": 31
+  "baseAttackMax": 31,
+  "tags": [
+   "innate_offense"
+  ]
  },
  "antimage": {
   "attackType": "Melee",
@@ -92,7 +100,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 29,
-  "baseAttackMax": 33
+  "baseAttackMax": 33,
+  "tags": []
  },
  "arc_warden": {
   "attackType": "Ranged",
@@ -111,7 +120,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 23,
-  "baseAttackMax": 29
+  "baseAttackMax": 29,
+  "tags": []
  },
  "axe": {
   "attackType": "Melee",
@@ -130,7 +140,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 31,
-  "baseAttackMax": 35
+  "baseAttackMax": 35,
+  "tags": [
+   "innate_tank"
+  ]
  },
  "bane": {
   "attackType": "Ranged",
@@ -149,7 +162,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 24,
-  "baseAttackMax": 30
+  "baseAttackMax": 30,
+  "tags": []
  },
  "batrider": {
   "attackType": "Ranged",
@@ -168,7 +182,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 12,
-  "baseAttackMax": 16
+  "baseAttackMax": 16,
+  "tags": [
+   "innate_offense"
+  ]
  },
  "beastmaster": {
   "attackType": "Melee",
@@ -187,7 +204,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 23,
-  "baseAttackMax": 27
+  "baseAttackMax": 27,
+  "tags": [
+   "tank_talents"
+  ]
  },
  "bloodseeker": {
   "attackType": "Melee",
@@ -206,7 +226,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 35,
-  "baseAttackMax": 41
+  "baseAttackMax": 41,
+  "tags": []
  },
  "bountyhunter": {
   "attackType": "Melee",
@@ -225,7 +246,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 33,
-  "baseAttackMax": 41
+  "baseAttackMax": 41,
+  "tags": []
  },
  "brewmaster": {
   "attackType": "Melee",
@@ -244,7 +266,11 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 26,
-  "baseAttackMax": 33
+  "baseAttackMax": 33,
+  "tags": [
+   "innate_tank",
+   "rc_talents"
+  ]
  },
  "bristleback": {
   "attackType": "Melee",
@@ -263,7 +289,12 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 31,
-  "baseAttackMax": 37
+  "baseAttackMax": 37,
+  "tags": [
+   "caster_talents",
+   "innate_tank",
+   "tank_talents"
+  ]
  },
  "broodmother": {
   "attackType": "Melee",
@@ -282,7 +313,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 27,
-  "baseAttackMax": 33
+  "baseAttackMax": 33,
+  "tags": []
  },
  "centaur": {
   "attackType": "Melee",
@@ -301,7 +333,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 36,
-  "baseAttackMax": 38
+  "baseAttackMax": 38,
+  "tags": [
+   "tank_talents"
+  ]
  },
  "chaosknight": {
   "attackType": "Melee",
@@ -320,7 +355,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 29,
-  "baseAttackMax": 49
+  "baseAttackMax": 49,
+  "tags": []
  },
  "chen": {
   "attackType": "Ranged",
@@ -339,7 +375,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 29,
-  "baseAttackMax": 39
+  "baseAttackMax": 39,
+  "tags": []
  },
  "clinkz": {
   "attackType": "Ranged",
@@ -358,7 +395,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 19,
-  "baseAttackMax": 25
+  "baseAttackMax": 25,
+  "tags": [
+   "innate_offense"
+  ]
  },
  "crystalmaiden": {
   "attackType": "Ranged",
@@ -377,7 +417,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 28,
-  "baseAttackMax": 34
+  "baseAttackMax": 34,
+  "tags": []
  },
  "darkseer": {
   "attackType": "Melee",
@@ -396,7 +437,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 31,
-  "baseAttackMax": 37
+  "baseAttackMax": 37,
+  "tags": []
  },
  "darkwillow": {
   "attackType": "Ranged",
@@ -415,7 +457,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 27,
-  "baseAttackMax": 35
+  "baseAttackMax": 35,
+  "tags": []
  },
  "dawnbreaker": {
   "attackType": "Melee",
@@ -434,7 +477,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 31,
-  "baseAttackMax": 35
+  "baseAttackMax": 35,
+  "tags": []
  },
  "dazzle": {
   "attackType": "Ranged",
@@ -453,7 +497,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 19,
-  "baseAttackMax": 25
+  "baseAttackMax": 25,
+  "tags": [
+   "innate_team"
+  ]
  },
  "deathprophet": {
   "attackType": "Ranged",
@@ -472,7 +519,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 22,
-  "baseAttackMax": 32
+  "baseAttackMax": 32,
+  "tags": []
  },
  "disruptor": {
   "attackType": "Ranged",
@@ -491,7 +539,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 27,
-  "baseAttackMax": 31
+  "baseAttackMax": 31,
+  "tags": []
  },
  "doombringer": {
   "attackType": "Melee",
@@ -510,7 +559,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 32,
-  "baseAttackMax": 42
+  "baseAttackMax": 42,
+  "tags": [
+   "innate_offense"
+  ]
  },
  "dragonknight": {
   "attackType": "Melee",
@@ -529,7 +581,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 34,
-  "baseAttackMax": 40
+  "baseAttackMax": 40,
+  "tags": [
+   "innate_tank"
+  ]
  },
  "drowranger": {
   "attackType": "Ranged",
@@ -548,7 +603,11 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 27,
-  "baseAttackMax": 34
+  "baseAttackMax": 34,
+  "tags": [
+   "innate_offense",
+   "innate_team"
+  ]
  },
  "earthshaker": {
   "attackType": "Melee",
@@ -567,7 +626,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 27,
-  "baseAttackMax": 37
+  "baseAttackMax": 37,
+  "tags": []
  },
  "earthspirit": {
   "attackType": "Melee",
@@ -586,7 +646,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 25,
-  "baseAttackMax": 29
+  "baseAttackMax": 29,
+  "tags": []
  },
  "eldertitan": {
   "attackType": "Melee",
@@ -605,7 +666,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 23,
-  "baseAttackMax": 33
+  "baseAttackMax": 33,
+  "tags": [
+   "rc_talents"
+  ]
  },
  "emberspirit": {
   "attackType": "Melee",
@@ -624,7 +688,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 33,
-  "baseAttackMax": 37
+  "baseAttackMax": 37,
+  "tags": []
  },
  "enchantress": {
   "attackType": "Ranged",
@@ -643,7 +708,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 21,
-  "baseAttackMax": 31
+  "baseAttackMax": 31,
+  "tags": []
  },
  "enigma": {
   "attackType": "Ranged",
@@ -662,7 +728,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 19,
-  "baseAttackMax": 25
+  "baseAttackMax": 25,
+  "tags": []
  },
  "facelessvoid": {
   "attackType": "Melee",
@@ -681,7 +748,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 34,
-  "baseAttackMax": 40
+  "baseAttackMax": 40,
+  "tags": [
+   "innate_team"
+  ]
  },
  "furion": {
   "attackType": "Ranged",
@@ -700,7 +770,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 20,
-  "baseAttackMax": 26
+  "baseAttackMax": 26,
+  "tags": []
  },
  "grimstroke": {
   "attackType": "Ranged",
@@ -719,7 +790,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 22,
-  "baseAttackMax": 26
+  "baseAttackMax": 26,
+  "tags": []
  },
  "gyrocopter": {
   "attackType": "Ranged",
@@ -738,7 +810,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 18,
-  "baseAttackMax": 24
+  "baseAttackMax": 24,
+  "tags": []
  },
  "hoodwink": {
   "attackType": "Ranged",
@@ -757,7 +830,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 22,
-  "baseAttackMax": 29
+  "baseAttackMax": 29,
+  "tags": []
  },
  "huskar": {
   "attackType": "Ranged",
@@ -776,7 +850,8 @@
   "baseHealth": 120,
   "baseMana": 0,
   "baseAttackMin": 21,
-  "baseAttackMax": 26
+  "baseAttackMax": 26,
+  "tags": []
  },
  "invoker": {
   "attackType": "Ranged",
@@ -795,7 +870,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 19,
-  "baseAttackMax": 25
+  "baseAttackMax": 25,
+  "tags": []
  },
  "jakiro": {
   "attackType": "Ranged",
@@ -814,7 +890,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 27,
-  "baseAttackMax": 35
+  "baseAttackMax": 35,
+  "tags": []
  },
  "juggernaut": {
   "attackType": "Melee",
@@ -833,7 +910,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 22,
-  "baseAttackMax": 24
+  "baseAttackMax": 24,
+  "tags": [
+   "innate_offense"
+  ]
  },
  "keeperofthelight": {
   "attackType": "Ranged",
@@ -852,7 +932,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 20,
-  "baseAttackMax": 27
+  "baseAttackMax": 27,
+  "tags": []
  },
  "kez": {
   "attackType": "Melee",
@@ -871,7 +952,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 23,
-  "baseAttackMax": 29
+  "baseAttackMax": 29,
+  "tags": []
  },
  "kunkka": {
   "attackType": "Melee",
@@ -890,7 +972,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 30,
-  "baseAttackMax": 36
+  "baseAttackMax": 36,
+  "tags": []
  },
  "largo": {
   "attackType": "Melee",
@@ -909,7 +992,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 39,
-  "baseAttackMax": 45
+  "baseAttackMax": 45,
+  "tags": [
+   "innate_team"
+  ]
  },
  "legioncommander": {
   "attackType": "Melee",
@@ -928,7 +1014,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 33,
-  "baseAttackMax": 37
+  "baseAttackMax": 37,
+  "tags": [
+   "innate_team"
+  ]
  },
  "leshrac": {
   "attackType": "Ranged",
@@ -947,7 +1036,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 27,
-  "baseAttackMax": 31
+  "baseAttackMax": 31,
+  "tags": [
+   "tank_talents"
+  ]
  },
  "lich": {
   "attackType": "Ranged",
@@ -966,7 +1058,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 24,
-  "baseAttackMax": 33
+  "baseAttackMax": 33,
+  "tags": []
  },
  "lifestealer": {
   "attackType": "Melee",
@@ -985,7 +1078,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 26,
-  "baseAttackMax": 32
+  "baseAttackMax": 32,
+  "tags": [
+   "innate_offense"
+  ]
  },
  "lina": {
   "attackType": "Ranged",
@@ -1004,7 +1100,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 21,
-  "baseAttackMax": 29
+  "baseAttackMax": 29,
+  "tags": [
+   "innate_offense"
+  ]
  },
  "lion": {
   "attackType": "Ranged",
@@ -1023,7 +1122,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 29,
-  "baseAttackMax": 35
+  "baseAttackMax": 35,
+  "tags": [
+   "caster_talents"
+  ]
  },
  "lonedruid": {
   "attackType": "Ranged",
@@ -1042,7 +1144,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 22,
-  "baseAttackMax": 26
+  "baseAttackMax": 26,
+  "tags": [
+   "rc_talents"
+  ]
  },
  "luna": {
   "attackType": "Ranged",
@@ -1061,7 +1166,11 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 26,
-  "baseAttackMax": 32
+  "baseAttackMax": 32,
+  "tags": [
+   "innate_offense",
+   "innate_team"
+  ]
  },
  "lycan": {
   "attackType": "Melee",
@@ -1080,7 +1189,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 24,
-  "baseAttackMax": 29
+  "baseAttackMax": 29,
+  "tags": []
  },
  "magnataur": {
   "attackType": "Melee",
@@ -1099,7 +1209,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 31,
-  "baseAttackMax": 39
+  "baseAttackMax": 39,
+  "tags": [
+   "innate_tank"
+  ]
  },
  "marci": {
   "attackType": "Melee",
@@ -1118,7 +1231,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 29,
-  "baseAttackMax": 33
+  "baseAttackMax": 33,
+  "tags": []
  },
  "mars": {
   "attackType": "Melee",
@@ -1137,7 +1251,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 26,
-  "baseAttackMax": 34
+  "baseAttackMax": 34,
+  "tags": [
+   "innate_tank"
+  ]
  },
  "medusa": {
   "attackType": "Ranged",
@@ -1156,7 +1273,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 26,
-  "baseAttackMax": 32
+  "baseAttackMax": 32,
+  "tags": [
+   "innate_tank"
+  ]
  },
  "meepo": {
   "attackType": "Melee",
@@ -1175,7 +1295,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 29,
-  "baseAttackMax": 35
+  "baseAttackMax": 35,
+  "tags": [
+   "tank_talents"
+  ]
  },
  "mirana": {
   "attackType": "Ranged",
@@ -1194,7 +1317,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 22,
-  "baseAttackMax": 28
+  "baseAttackMax": 28,
+  "tags": []
  },
  "monkey_king": {
   "attackType": "Melee",
@@ -1213,7 +1337,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 29,
-  "baseAttackMax": 33
+  "baseAttackMax": 33,
+  "tags": []
  },
  "morphling": {
   "attackType": "Ranged",
@@ -1232,7 +1357,11 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 12,
-  "baseAttackMax": 21
+  "baseAttackMax": 21,
+  "tags": [
+   "rc_talents",
+   "tank_talents"
+  ]
  },
  "muerta": {
   "attackType": "Ranged",
@@ -1251,7 +1380,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 24,
-  "baseAttackMax": 32
+  "baseAttackMax": 32,
+  "tags": []
  },
  "nagasiren": {
   "attackType": "Melee",
@@ -1270,7 +1400,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 23,
-  "baseAttackMax": 25
+  "baseAttackMax": 25,
+  "tags": [
+   "innate_tank"
+  ]
  },
  "necrolyte": {
   "attackType": "Ranged",
@@ -1289,7 +1422,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 26,
-  "baseAttackMax": 30
+  "baseAttackMax": 30,
+  "tags": []
  },
  "nevermore": {
   "attackType": "Ranged",
@@ -1308,7 +1442,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 16,
-  "baseAttackMax": 22
+  "baseAttackMax": 22,
+  "tags": [
+   "innate_offense"
+  ]
  },
  "nightstalker": {
   "attackType": "Melee",
@@ -1327,7 +1464,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 40,
-  "baseAttackMax": 44
+  "baseAttackMax": 44,
+  "tags": []
  },
  "nyxassassin": {
   "attackType": "Melee",
@@ -1346,7 +1484,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 26,
-  "baseAttackMax": 30
+  "baseAttackMax": 30,
+  "tags": [
+   "innate_offense"
+  ]
  },
  "obsidiandestroyer": {
   "attackType": "Ranged",
@@ -1365,7 +1506,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 19,
-  "baseAttackMax": 31
+  "baseAttackMax": 31,
+  "tags": [
+   "caster_talents"
+  ]
  },
  "ogremagi": {
   "attackType": "Melee",
@@ -1384,7 +1528,8 @@
   "baseHealth": 120,
   "baseMana": 120,
   "baseAttackMin": 45,
-  "baseAttackMax": 51
+  "baseAttackMax": 51,
+  "tags": []
  },
  "omniknight": {
   "attackType": "Melee",
@@ -1403,7 +1548,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 31,
-  "baseAttackMax": 41
+  "baseAttackMax": 41,
+  "tags": []
  },
  "oracle": {
   "attackType": "Ranged",
@@ -1422,7 +1568,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 13,
-  "baseAttackMax": 19
+  "baseAttackMax": 19,
+  "tags": []
  },
  "pangolier": {
   "attackType": "Melee",
@@ -1441,7 +1588,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 26,
-  "baseAttackMax": 32
+  "baseAttackMax": 32,
+  "tags": []
  },
  "phantomassassin": {
   "attackType": "Melee",
@@ -1460,7 +1608,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 35,
-  "baseAttackMax": 37
+  "baseAttackMax": 37,
+  "tags": [
+   "innate_tank"
+  ]
  },
  "phantomlancer": {
   "attackType": "Melee",
@@ -1479,7 +1630,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 26,
-  "baseAttackMax": 36
+  "baseAttackMax": 36,
+  "tags": []
  },
  "phoenix": {
   "attackType": "Ranged",
@@ -1498,7 +1650,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 21,
-  "baseAttackMax": 31
+  "baseAttackMax": 31,
+  "tags": []
  },
  "primal_beast": {
   "attackType": "Melee",
@@ -1517,7 +1670,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 36,
-  "baseAttackMax": 38
+  "baseAttackMax": 38,
+  "tags": []
  },
  "puck": {
   "attackType": "Ranged",
@@ -1536,7 +1690,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 22,
-  "baseAttackMax": 30
+  "baseAttackMax": 30,
+  "tags": []
  },
  "pudge": {
   "attackType": "Melee",
@@ -1555,7 +1710,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 45,
-  "baseAttackMax": 51
+  "baseAttackMax": 51,
+  "tags": [
+   "innate_tank"
+  ]
  },
  "pugna": {
   "attackType": "Ranged",
@@ -1574,7 +1732,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 21,
-  "baseAttackMax": 28
+  "baseAttackMax": 28,
+  "tags": []
  },
  "queenofpain": {
   "attackType": "Ranged",
@@ -1593,7 +1752,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 26,
-  "baseAttackMax": 32
+  "baseAttackMax": 32,
+  "tags": [
+   "innate_offense"
+  ]
  },
  "rattletrap": {
   "attackType": "Melee",
@@ -1612,7 +1774,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 24,
-  "baseAttackMax": 26
+  "baseAttackMax": 26,
+  "tags": [
+   "innate_offense"
+  ]
  },
  "razor": {
   "attackType": "Ranged",
@@ -1631,7 +1796,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 23,
-  "baseAttackMax": 25
+  "baseAttackMax": 25,
+  "tags": [
+   "tank_talents"
+  ]
  },
  "riki": {
   "attackType": "Melee",
@@ -1650,7 +1818,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 22,
-  "baseAttackMax": 26
+  "baseAttackMax": 26,
+  "tags": [
+   "innate_offense"
+  ]
  },
  "ringmaster": {
   "attackType": "Ranged",
@@ -1669,7 +1840,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 23,
-  "baseAttackMax": 33
+  "baseAttackMax": 33,
+  "tags": []
  },
  "rubick": {
   "attackType": "Ranged",
@@ -1688,7 +1860,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 25,
-  "baseAttackMax": 31
+  "baseAttackMax": 31,
+  "tags": []
  },
  "sandking": {
   "attackType": "Melee",
@@ -1707,7 +1880,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 19,
-  "baseAttackMax": 29
+  "baseAttackMax": 29,
+  "tags": [
+   "innate_offense"
+  ]
  },
  "shadowdemon": {
   "attackType": "Ranged",
@@ -1726,7 +1902,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 29,
-  "baseAttackMax": 33
+  "baseAttackMax": 33,
+  "tags": []
  },
  "shadowshaman": {
   "attackType": "Ranged",
@@ -1745,7 +1922,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 40,
-  "baseAttackMax": 47
+  "baseAttackMax": 47,
+  "tags": []
  },
  "shredder": {
   "attackType": "Melee",
@@ -1764,7 +1942,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 23,
-  "baseAttackMax": 27
+  "baseAttackMax": 27,
+  "tags": []
  },
  "silencer": {
   "attackType": "Ranged",
@@ -1783,7 +1962,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 18,
-  "baseAttackMax": 32
+  "baseAttackMax": 32,
+  "tags": []
  },
  "skeletonking": {
   "attackType": "Melee",
@@ -1802,7 +1982,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 38,
-  "baseAttackMax": 40
+  "baseAttackMax": 40,
+  "tags": []
  },
  "skywrathmage": {
   "attackType": "Ranged",
@@ -1821,7 +2002,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 16,
-  "baseAttackMax": 26
+  "baseAttackMax": 26,
+  "tags": []
  },
  "slardar": {
   "attackType": "Melee",
@@ -1840,7 +2022,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 30,
-  "baseAttackMax": 38
+  "baseAttackMax": 38,
+  "tags": []
  },
  "slark": {
   "attackType": "Melee",
@@ -1859,7 +2042,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 37,
-  "baseAttackMax": 43
+  "baseAttackMax": 43,
+  "tags": []
  },
  "snapfire": {
   "attackType": "Ranged",
@@ -1878,7 +2062,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 25,
-  "baseAttackMax": 31
+  "baseAttackMax": 31,
+  "tags": [
+   "innate_offense"
+  ]
  },
  "sniper": {
   "attackType": "Ranged",
@@ -1897,7 +2084,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 13,
-  "baseAttackMax": 19
+  "baseAttackMax": 19,
+  "tags": [
+   "innate_offense"
+  ]
  },
  "spectre": {
   "attackType": "Melee",
@@ -1916,7 +2106,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 23,
-  "baseAttackMax": 27
+  "baseAttackMax": 27,
+  "tags": [
+   "innate_offense"
+  ]
  },
  "spiritbreaker": {
   "attackType": "Melee",
@@ -1935,7 +2128,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 34,
-  "baseAttackMax": 44
+  "baseAttackMax": 44,
+  "tags": []
  },
  "stormspirit": {
   "attackType": "Ranged",
@@ -1954,7 +2148,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 24,
-  "baseAttackMax": 34
+  "baseAttackMax": 34,
+  "tags": [
+   "tank_talents"
+  ]
  },
  "sven": {
   "attackType": "Melee",
@@ -1973,7 +2170,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 37,
-  "baseAttackMax": 39
+  "baseAttackMax": 39,
+  "tags": [
+   "innate_offense"
+  ]
  },
  "techies": {
   "attackType": "Ranged",
@@ -1992,7 +2192,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 20,
-  "baseAttackMax": 22
+  "baseAttackMax": 22,
+  "tags": []
  },
  "templarassassin": {
   "attackType": "Ranged",
@@ -2011,7 +2212,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 28,
-  "baseAttackMax": 33
+  "baseAttackMax": 33,
+  "tags": []
  },
  "terrorblade": {
   "attackType": "Melee",
@@ -2030,7 +2232,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 26,
-  "baseAttackMax": 32
+  "baseAttackMax": 32,
+  "tags": []
  },
  "tidehunter": {
   "attackType": "Melee",
@@ -2049,7 +2252,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 25,
-  "baseAttackMax": 31
+  "baseAttackMax": 31,
+  "tags": []
  },
  "tinker": {
   "attackType": "Ranged",
@@ -2068,7 +2272,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 22,
-  "baseAttackMax": 28
+  "baseAttackMax": 28,
+  "tags": []
  },
  "tiny": {
   "attackType": "Melee",
@@ -2087,7 +2292,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 31,
-  "baseAttackMax": 37
+  "baseAttackMax": 37,
+  "tags": [
+   "innate_tank"
+  ]
  },
  "treant": {
   "attackType": "Melee",
@@ -2106,7 +2314,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 60,
-  "baseAttackMax": 68
+  "baseAttackMax": 68,
+  "tags": []
  },
  "trollwarlord": {
   "attackType": "Ranged",
@@ -2125,7 +2334,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 27,
-  "baseAttackMax": 35
+  "baseAttackMax": 35,
+  "tags": []
  },
  "tusk": {
   "attackType": "Melee",
@@ -2144,7 +2354,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 27,
-  "baseAttackMax": 31
+  "baseAttackMax": 31,
+  "tags": []
  },
  "undying": {
   "attackType": "Melee",
@@ -2163,7 +2374,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 33,
-  "baseAttackMax": 41
+  "baseAttackMax": 41,
+  "tags": []
  },
  "ursa": {
   "attackType": "Melee",
@@ -2182,7 +2394,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 24,
-  "baseAttackMax": 28
+  "baseAttackMax": 28,
+  "tags": [
+   "innate_offense"
+  ]
  },
  "vengefulspirit": {
   "attackType": "Ranged",
@@ -2201,7 +2416,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 28,
-  "baseAttackMax": 34
+  "baseAttackMax": 34,
+  "tags": []
  },
  "venomancer": {
   "attackType": "Ranged",
@@ -2220,7 +2436,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 18,
-  "baseAttackMax": 21
+  "baseAttackMax": 21,
+  "tags": [
+   "innate_offense"
+  ]
  },
  "viper": {
   "attackType": "Ranged",
@@ -2239,7 +2458,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 27,
-  "baseAttackMax": 29
+  "baseAttackMax": 29,
+  "tags": []
  },
  "visage": {
   "attackType": "Ranged",
@@ -2258,7 +2478,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 21,
-  "baseAttackMax": 31
+  "baseAttackMax": 31,
+  "tags": []
  },
  "voidspirit": {
   "attackType": "Melee",
@@ -2277,7 +2498,10 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 18,
-  "baseAttackMax": 22
+  "baseAttackMax": 22,
+  "tags": [
+   "innate_offense"
+  ]
  },
  "warlock": {
   "attackType": "Ranged",
@@ -2296,7 +2520,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 27,
-  "baseAttackMax": 37
+  "baseAttackMax": 37,
+  "tags": []
  },
  "weaver": {
   "attackType": "Ranged",
@@ -2315,7 +2540,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 37,
-  "baseAttackMax": 43
+  "baseAttackMax": 43,
+  "tags": []
  },
  "windrunner": {
   "attackType": "Ranged",
@@ -2334,7 +2560,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 24,
-  "baseAttackMax": 36
+  "baseAttackMax": 36,
+  "tags": []
  },
  "winterwyvern": {
   "attackType": "Ranged",
@@ -2353,7 +2580,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 16,
-  "baseAttackMax": 23
+  "baseAttackMax": 23,
+  "tags": []
  },
  "wisp": {
   "attackType": "Ranged",
@@ -2372,7 +2600,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 21,
-  "baseAttackMax": 27
+  "baseAttackMax": 27,
+  "tags": []
  },
  "witchdoctor": {
   "attackType": "Ranged",
@@ -2391,7 +2620,8 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 26,
-  "baseAttackMax": 36
+  "baseAttackMax": 36,
+  "tags": []
  },
  "zeus": {
   "attackType": "Ranged",
@@ -2410,6 +2640,9 @@
   "baseHealth": 120,
   "baseMana": 75,
   "baseAttackMin": 30,
-  "baseAttackMax": 40
+  "baseAttackMax": 40,
+  "tags": [
+   "innate_offense"
+  ]
  }
 }

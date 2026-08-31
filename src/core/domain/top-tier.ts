@@ -78,10 +78,14 @@ export function determineTopTierEntities(
   )
 
   // Step 3: Curated role must-picks get guaranteed slots (that guarantee is
-  // their entire mechanism — the stats already voted against them)
+  // their entire mechanism — the stats already voted against them). A curated
+  // hero MODEL is pointless once the user has picked a model — skip those.
   const curatedSuggestions: TopTierEntity[] = []
   entitiesToConsider = entitiesToConsider.filter((entity) => {
-    if (entity.roleCurated === true) {
+    if (
+      entity.roleCurated === true &&
+      !(entity.entityType === 'hero' && selectedModelId !== null)
+    ) {
       curatedSuggestions.push({
         ...entity,
         isSynergySuggestionForMySpot: false,

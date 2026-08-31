@@ -93,6 +93,12 @@ maintenance spec — the authoritative map of what IS, not a build plan.
   guarantees the ability a top-tier slot when the user's role matches, plus a
   ROLE_CURATED_WEIGHT boost. For abilities the stats systematically undervalue
   (e.g. Glimpse for supports); keep the list short and deliberate
+- Hero MODELS carry tags too (hero_meta.json `tags` + `roleMust`, 7-tag
+  HERO_TAG_VOCABULARY: talent profile + innate value; talent tags count GENERIC
+  talents only — ability-specific talents are dead on an AD model). They feed
+  per-position model accents, model must-picks, and the Layer C ability×model
+  pairing (computeAbilityPairing/computeModelPairing, own PAIRING cap,
+  role-gated). Curated in hero_tag_overrides.json + the Tag Lab Models view
 
 ## Business logic constants (do not change casually)
 - Scoring: `0.4 * winrate_normalized + 0.6 * inverted_pick_order_normalized`;

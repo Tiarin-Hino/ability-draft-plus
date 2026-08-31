@@ -105,6 +105,18 @@ describe('parseHeroMeta', () => {
     expect(meta.get('broken')!.strGain).toBeUndefined()
   })
 
+  it('parses hero tags (unknown dropped) and hero roleMust', () => {
+    const meta = parseHeroMeta({
+      nevermore: { attackType: 'Ranged', tags: ['innate_offense', 'not_a_tag'], roleMust: [2] },
+      sven: { attackType: 'Melee', tags: [], roleMust: [0, 9] },
+    })!
+
+    expect([...meta.get('nevermore')!.tags!]).toEqual(['innate_offense'])
+    expect([...meta.get('nevermore')!.roleMust!]).toEqual([2])
+    expect(meta.get('sven')!.tags).toBeUndefined()
+    expect(meta.get('sven')!.roleMust).toBeUndefined()
+  })
+
   it('returns null for invalid input', () => {
     expect(parseHeroMeta(null)).toBeNull()
   })

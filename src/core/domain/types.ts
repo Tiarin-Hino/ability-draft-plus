@@ -55,6 +55,9 @@ export interface ScoredEntity {
   /** Curated must-pick (roleMust) matching an active effective position —
    * top-tier.ts guarantees this entity a suggestion slot. */
   roleCurated?: boolean
+  /** Layer C ability×model pairing adjustment included in consolidatedScore
+   * (own cap; role mode active only). */
+  pairingScoreDelta?: number
   /** Mechanically inert on the selected model's attack type — excluded from top-tier. */
   inertOnModel?: boolean
   /** Dependency gate (requires): the unmet requirement, resolved for display —

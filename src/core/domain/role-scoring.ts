@@ -13,12 +13,15 @@ import {
   MANA_BUDGET_WEIGHT,
   ROLE_MODEL_WEIGHT_SCALE,
   MODEL_ATTR_FIT_WEIGHT,
+  MODEL_TAG_ACCENT_WEIGHT,
+  PAIRING_WEIGHT,
+  PAIRING_ADJUSTMENT_CAP,
   DYNAMIC_ROLE_MIN_TEAMMATES,
   DYNAMIC_ROLE_MIN_PICKS,
 } from '@shared/constants/thresholds'
 import type { ScanResult, AppSettings, RoleContextDisplay } from '@shared/types'
 import type { ShiftAxes } from './shift-axes'
-import type { AbilityTag } from './ability-tags'
+import type { AbilityTag, HeroTag } from './ability-tags'
 
 // @DEV-GUIDE: Role-aware scoring layer (Position Templates spec). Two modes on
 // one engine: the scoring side only ever sees an EFFECTIVE POSITION SET.
@@ -587,6 +590,28 @@ export interface ModelStatPercentiles {
   speed?: number
 }
 
+// Hero-MODEL tag accents per position (Layer B): which talent-profile/innate
+// tags a position values. Additive ±MODEL_TAG_ACCENT_WEIGHT per matching tag.
+const POSITION_HERO_TAG_ACCENTS: Readonly<Record<DraftPosition, HeroTag[]>> = {
+  1: ['rc_talents', 'innate_offense'],
+  2: ['rc_talents', 'caster_talents', 'innate_offense'],
+  3: ['tank_talents', 'innate_tank'],
+  4: ['utility_talents', 'caster_talents', 'innate_team'],
+  5: ['utility_talents', 'caster_talents', 'innate_team'],
+}
+
+function heroTagAccentAdjustment(
+  position: DraftPosition,
+  heroTags: ReadonlySet<HeroTag> | undefined,
+): number {
+  if (heroTags === undefined) return 0
+  let adj = 0
+  for (const tag of POSITION_HERO_TAG_ACCENTS[position]) {
+    if (heroTags.has(tag)) adj += MODEL_TAG_ACCENT_WEIGHT
+  }
+  return adj
+}
+
 /** Primary-attribute credit: exact match 1, universal half, else 0. */
 function attrCredit(
   primaryAttr: string | undefined,
@@ -636,8 +661,11 @@ export function modelAttrFit(
 /**
  * Role score for a hero MODEL: attribute fit (primary signal) + shift greed
  * fit (small secondary, ROLE_MODEL_WEIGHT_SCALE applied by the caller is
- * folded in here instead) + a flat core-urgency boost. Missing stat data
- * scores fit as neutral (0.5). Returns null when the layer is inactive.
+ * folded in here instead) + hero-tag accents (Layer B) + a flat core-urgency
+ * boost. A curated model roleMust matching an effective position adds
+ * ROLE_CURATED_WEIGHT and flags the score curated (top-tier then guarantees a
+ * slot, mirroring ability must-picks). Missing stat data scores fit as
+ * neutral (0.5). Returns null when the layer is inactive.
  */
 export function computeModelRoleScore(
   context: RoleContext | null,
@@ -645,29 +673,121 @@ export function computeModelRoleScore(
   pct: ModelStatPercentiles | undefined,
   primaryAttr: string | undefined,
   urgency: number,
+  heroTags?: ReadonlySet<HeroTag>,
+  heroRoleMust?: ReadonlySet<DraftPosition>,
 ): RoleScore | null {
   if (context === null || context.effectivePositions.length === 0) return null
 
   const greed = axes?.greed ?? 0
   let best = Number.NEGATIVE_INFINITY
   let bestPosition: DraftPosition = context.effectivePositions[0]
+  let bestReasons: string[] = []
   for (const pos of context.effectivePositions) {
     const fit = pct !== undefined ? modelAttrFit(pos, pct, primaryAttr) : 0.5
     const greedFit = 1 - Math.abs(greed - POSITION_TEMPLATES[pos].greedTarget)
+    const curatedHere = heroRoleMust?.has(pos) === true
     const score =
       MODEL_ATTR_FIT_WEIGHT * (2 * fit - 1) +
-      ROLE_GREED_WEIGHT * ROLE_MODEL_WEIGHT_SCALE * greedFit
+      ROLE_GREED_WEIGHT * ROLE_MODEL_WEIGHT_SCALE * greedFit +
+      heroTagAccentAdjustment(pos, heroTags) +
+      (curatedHere ? ROLE_CURATED_WEIGHT : 0)
     if (score > best) {
       best = score
       bestPosition = pos
+      bestReasons = curatedHere ? ['curated'] : []
     }
   }
+  const curated =
+    heroRoleMust !== undefined &&
+    context.effectivePositions.some((p) => heroRoleMust.has(p))
 
   const delta = Math.max(
     -ROLE_ADJUSTMENT_CAP,
     Math.min(ROLE_ADJUSTMENT_CAP, best + urgency),
   )
-  return { delta, bestPosition, reasons: [] }
+  return { delta, bestPosition, reasons: bestReasons, curated: curated || undefined }
+}
+
+// ---------------------------------------------------------------------------
+// Ability x model pairing (Layer C) — both directions, own cap, role-gated
+// ---------------------------------------------------------------------------
+
+/** Pairing view of a model: chassis percentiles + hero tags. */
+export interface PairingModelProfile {
+  /** Attack cadence percentile (negated BAT). */
+  attackQuality: number
+  /** Physical-EHP percentile of the base body. */
+  bulk: number
+  /** Mana-pool percentile. */
+  intPool: number
+  tags: ReadonlySet<HeroTag>
+}
+
+const clampPairing = (adj: number): number =>
+  Math.max(-PAIRING_ADJUSTMENT_CAP, Math.min(PAIRING_ADJUSTMENT_CAP, adj))
+
+/** Signed contribution of one percentile: weight · (2·pct − 1). */
+const signed = (pct: number): number => PAIRING_WEIGHT * (2 * pct - 1)
+
+/**
+ * FORWARD pairing: adjust a candidate ABILITY for the PICKED model.
+ * Steroids/farm tools follow the model's attack cadence (plus a flat bump on
+ * rc/offense-tagged models); initiation and channeling follow bulk (a paper
+ * model damps them, a tanky one boosts); mana-hungry actives follow the mana
+ * pool. Returns 0 when either side is missing.
+ */
+export function computeAbilityPairing(
+  candidateTags: ReadonlySet<AbilityTag> | undefined,
+  model: PairingModelProfile | undefined,
+): number {
+  if (candidateTags === undefined || model === undefined) return 0
+  let adj = 0
+  if (candidateTags.has('steroid') || candidateTags.has('farm_tool')) {
+    adj += signed(model.attackQuality)
+    if (model.tags.has('rc_talents') || model.tags.has('innate_offense')) {
+      adj += PAIRING_WEIGHT * 0.5
+    }
+  }
+  if (candidateTags.has('initiation') || candidateTags.has('channeled')) {
+    adj += signed(model.bulk)
+    if (model.tags.has('innate_tank')) adj += PAIRING_WEIGHT * 0.5
+  }
+  if (candidateTags.has('mana_hungry')) {
+    adj += signed(model.intPool)
+  }
+  return clampPairing(adj)
+}
+
+/**
+ * REVERSE pairing: adjust a candidate MODEL for MY drafted abilities — the
+ * direction model suggestions were missing entirely. Two drafted right-click
+ * pieces make attack cadence matter; a drafted commitment piece (teamfight
+ * ult / initiation) makes bulk matter; two mana-hungry actives make the mana
+ * pool matter. Returns 0 with no drafted picks or no percentiles.
+ */
+export function computeModelPairing(
+  myPickTags: ReadonlyArray<ReadonlySet<AbilityTag>>,
+  pct: ModelStatPercentiles | undefined,
+  heroTags: ReadonlySet<HeroTag> | undefined,
+): number {
+  if (pct === undefined || myPickTags.length === 0) return 0
+  const count = (...tags: AbilityTag[]): number =>
+    myPickTags.filter((t) => tags.some((tag) => t.has(tag))).length
+  let adj = 0
+  if (count('steroid', 'farm_tool') >= 2) {
+    adj += signed(pct.attackQuality ?? 0.5)
+    if (heroTags?.has('rc_talents') || heroTags?.has('innate_offense')) {
+      adj += PAIRING_WEIGHT * 0.5
+    }
+  }
+  if (count('teamfight_ult', 'initiation') >= 1) {
+    adj += signed(pct.bulk ?? 0.5)
+    if (heroTags?.has('innate_tank')) adj += PAIRING_WEIGHT * 0.5
+  }
+  if (count('mana_hungry') >= 2) {
+    adj += signed(pct.intPool)
+  }
+  return clampPairing(adj)
 }
 
 /** True when the effective set makes this a CORE drafter (positions 1-3). */

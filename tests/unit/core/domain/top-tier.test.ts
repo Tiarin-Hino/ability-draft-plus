@@ -20,7 +20,12 @@ function makeAbility(
   }
 }
 
-function makeHero(name: string, score: number, dbHeroId: number): ScoredEntity {
+function makeHero(
+  name: string,
+  score: number,
+  dbHeroId: number,
+  opts: { roleCurated?: boolean } = {},
+): ScoredEntity {
   return {
     entityType: 'hero',
     internalName: name,
@@ -30,6 +35,7 @@ function makeHero(name: string, score: number, dbHeroId: number): ScoredEntity {
     consolidatedScore: score,
     dbHeroId,
     heroOrder: 0,
+    roleCurated: opts.roleCurated,
   }
 }
 
@@ -190,6 +196,21 @@ describe('determineTopTierEntities', () => {
     ]
     const result = determineTopTierEntities(entities, null, true, new Set())
     expect(result.map((e) => e.internalName)).toEqual(['normal'])
+  })
+
+  it('a curated hero MODEL gets a guaranteed slot — unless a model is already picked', () => {
+    const entities = [
+      ...Array.from({ length: 12 }, (_, i) => makeAbility(`strong_${i}`, 0.9 - i * 0.01)),
+      makeHero('curated_model', 0.01, 7, { roleCurated: true }),
+    ]
+    const withoutModel = determineTopTierEntities(entities, null, false, new Set())
+    expect(
+      withoutModel.find((e) => e.internalName === 'curated_model')?.isCuratedForRole,
+    ).toBe(true)
+
+    // Model already picked: suggesting models is pointless, curated included
+    const withModel = determineTopTierEntities(entities, 3, false, new Set())
+    expect(withModel.find((e) => e.internalName === 'curated_model')).toBeUndefined()
   })
 
   it('without roleCurated flags behavior is unchanged (role mode off)', () => {

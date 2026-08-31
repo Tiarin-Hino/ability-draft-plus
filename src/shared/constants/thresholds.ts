@@ -184,6 +184,16 @@ export const ROLE_TAG_ACCENT_WEIGHT = 0.05
 // role matches — this weight only lifts their rank among the suggestions, so
 // it sits well above the needs/accent weights but inside the role cap.
 export const ROLE_CURATED_WEIGHT = 0.15
+// Hero-MODEL tag accents (Layer B): small per-position bonuses from the
+// model's talent-profile/innate tags — same anti-double-counting philosophy
+// as ability tag accents (the attr/chassis percentiles stay primary).
+export const MODEL_TAG_ACCENT_WEIGHT = 0.03
+// Ability x model pairing (Layer C): each matching term contributes
+// weight * (2*percentile - 1), summed and clamped to its OWN cap so the
+// pairing layer stays auditable next to the role cap. Active only while a
+// role mode is on (preserves the role-off bit-identity invariant).
+export const PAIRING_WEIGHT = 0.04
+export const PAIRING_ADJUSTMENT_CAP = 0.1
 
 // Model
 // The class count is NOT a constant — it is defined by resources/model/class_names.json

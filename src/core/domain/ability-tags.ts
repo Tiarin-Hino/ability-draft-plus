@@ -42,6 +42,24 @@ export type AbilityTag = (typeof TAG_VOCABULARY)[number]
 
 const VOCAB_SET: ReadonlySet<string> = new Set(TAG_VOCABULARY)
 
+// Hero-MODEL tag vocabulary (model-pairing Layer B) — the build script's
+// HERO_VOCAB must match. Talent-profile tags are auto-derived from GENERIC
+// talents only (ability-specific talents are dead on an AD model); innate_*
+// tags are judgment, curated via hero_tag_overrides.json / the Tag Lab.
+export const HERO_TAG_VOCABULARY = [
+  'rc_talents',
+  'caster_talents',
+  'tank_talents',
+  'utility_talents',
+  'innate_offense',
+  'innate_tank',
+  'innate_team',
+] as const
+
+export type HeroTag = (typeof HERO_TAG_VOCABULARY)[number]
+
+const HERO_VOCAB_SET: ReadonlySet<string> = new Set(HERO_TAG_VOCABULARY)
+
 export type HeroAttackType = 'Melee' | 'Ranged'
 export type HeroPrimaryAttr = 'str' | 'agi' | 'int' | 'all'
 
@@ -67,6 +85,10 @@ export interface HeroMeta {
   baseMana?: number
   baseAttackMin?: number
   baseAttackMax?: number
+  /** Hero-model tags (Layer B): talent profile + innate value. */
+  tags?: ReadonlySet<HeroTag>
+  /** Curated must-pick positions for the MODEL (mirrors ability roleMust). */
+  roleMust?: ReadonlySet<RoleMustPosition>
 }
 
 /** Draft position (1-5). Structurally identical to role-scoring's
@@ -186,6 +208,24 @@ export function parseHeroMeta(json: unknown): Map<string, HeroMeta> | null {
       baseMana: num(e.baseMana),
       baseAttackMin: num(e.baseAttackMin),
       baseAttackMax: num(e.baseAttackMax),
+    }
+    // Hero tags: unknown values dropped silently (newer dataset, older app);
+    // roleMust validated to positions 1-5 like the ability variant.
+    if (Array.isArray(e.tags)) {
+      const heroTags = new Set<HeroTag>()
+      for (const t of e.tags) {
+        if (typeof t === 'string' && HERO_VOCAB_SET.has(t)) heroTags.add(t as HeroTag)
+      }
+      if (heroTags.size > 0) meta.tags = heroTags
+    }
+    if (Array.isArray(e.roleMust)) {
+      const positions = new Set<RoleMustPosition>()
+      for (const p of e.roleMust) {
+        if (typeof p === 'number' && Number.isInteger(p) && p >= 1 && p <= 5) {
+          positions.add(p as RoleMustPosition)
+        }
+      }
+      if (positions.size > 0) meta.roleMust = positions
     }
     result.set(name, meta)
   }

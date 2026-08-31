@@ -23,6 +23,15 @@
   "mana_hungry",
   "channeled"
  ],
+ "heroVocab": [
+  "rc_talents",
+  "caster_talents",
+  "tank_talents",
+  "utility_talents",
+  "innate_offense",
+  "innate_tank",
+  "innate_team"
+ ],
  "attribution": "CC family sourced from Liquipedia (CC-BY-SA 3.0, liquipedia.net/dota2)",
  "abilities": {
   "abaddon_aphotic_shield": {

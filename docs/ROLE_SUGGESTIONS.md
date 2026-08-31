@@ -117,38 +117,39 @@ rationale as comments (greed taper, team balance, ult security, etc. come from
   the live pipeline. Solo-queue verification of matches via OpenDota
   `party_size` (cached verdicts in `draft_corpus/party_check.json`).
 
-## Model-pairing roadmap: Layers B and C (designed 2026-08-31, not built)
+## Model-pairing Layers B and C (built 2026-08-31)
 
-Layer A (chassis data above) is live. What the next two layers need:
+**Layer B — hero-model tags (talents + innates).** `hero_meta.json` entries
+carry `tags` (HERO_TAG_VOCABULARY, 7 tags: `rc_talents`/`caster_talents`/
+`tank_talents`/`utility_talents` + `innate_offense`/`innate_tank`/
+`innate_team`) and `roleMust` (curated must-pick MODEL positions — guaranteed
+suggestion slot via the same top-tier curated tier as abilities, skipped once
+a model is picked). Pipeline: talent tags are auto-derived from GENERIC
+talents only (ability-specific talents are dead on an AD model — measured
+mean is ~1.3 generic talents/hero, so auto-tagging is sparse by design;
+`hero_tags_pre_override.json` is the auto snapshot), innate tags are judgment
+seeded in `hero_tag_overrides.json` (~39 heroes). The Tag Lab's "Browse
+models" view runs the full community loop (`hero_modify` / `hero_role_must`
+proposals, voting, admin decision, export with `features: ["heroTags"]`;
+`import_site_export.py` diffs hero tags against the auto snapshot). In
+scoring: per-position hero-tag accents (`MODEL_TAG_ACCENT_WEIGHT`) inside
+`computeModelRoleScore`.
 
-**Layer B — curated model tags (talents + innates).** Data first: dotaconstants
-`hero_abilities.json` carries every hero's talent strings and marks the innate
-ability — neither is fetched today. Pipeline: extend `build_ability_tags.py`
-prepare to fetch it, then reuse the existing tagging machinery (mechanical
-parse → LLM judgment → overrides) to produce a SMALL hero-tag vocabulary in a
-new `hero_tags.json` (or a `tags` field inside hero_meta.json):
-`rc_talents`, `caster_talents`, `tank_talents`, `utility_talents` (talent-tree
-profile; semi-generatable) and `innate_offense` / `innate_tank` / `innate_team`
-(innate value; judgment). Consumption: small additive terms in `modelAttrFit`
-per position (rc→1-2, tank→3, caster/utility/team→2/4/5). Tag Lab later gets a
-Models tab on the same proposal loop — until then overrides are the curation
-surface and `import_site_export.py` must learn to preserve hero tags.
-
-**Layer C — ability×model pairing terms.** A new scoring term (own weight
-constants + its own cap, no-op when either input is missing) in two directions:
-- Forward (model picked → ability candidates): steroid/farm_tool boosted by the
-  model's attackQuality percentile; initiation/short-range actives boosted by
-  bulk and damped on low-bulk models; channeled boosted by bulk; mana_hungry
-  damped when the model's intPool percentile is low (extends the pick-side
-  mana budget); `innate_team` models (CM global mana aura) forgive mana_hungry.
-- Reverse (drafted abilities → model candidates): 2+ drafted steroids bump
-  rc-chassis models; drafted teamfight ults bump bulky models. Today model
-  suggestions know role fit but NOT what the user drafted — this closes that.
-Needs before building: pick weights from the expert corpus (re-run
-`analyze_draft_corpus.py` correlating drafted-tag profiles with chosen models),
-golden tests for the off-invariant, and a decision whether Layer C shares
-ROLE_ADJUSTMENT_CAP or gets its own (recommend own, ~0.1, to keep layers
-auditable).
+**Layer C — ability×model pairing (role-gated, own cap).** `PAIRING_WEIGHT` ·
+(2·pct − 1) terms clamped to `PAIRING_ADJUSTMENT_CAP`, active only while a
+role mode is on (preserves the role-off bit-identity invariant):
+- Forward (`computeAbilityPairing`, model picked → ability candidates):
+  steroid/farm_tool follow the model's attack cadence percentile (+flat bump
+  on rc/offense-tagged models); initiation/channeled follow bulk (+bump on
+  innate_tank); mana_hungry follows the mana pool. The picked model's
+  percentiles are computed among ALL board models (the remaining-only set
+  excludes it).
+- Reverse (`computeModelPairing`, drafted abilities → model candidates): 2+
+  right-click picks make cadence matter, a drafted teamfight ult/initiation
+  makes bulk matter, 2+ mana-hungry actives make the pool matter.
+Both surface as the "Model pairing" tooltip line (`pairingScoreDelta`).
+Weights are first-pass priors — re-run `analyze_draft_corpus.py` correlating
+drafted-tag profiles with chosen models before retuning.
 
 ## Known caveats
 

@@ -19,10 +19,13 @@ import {
   resolveRoleContext,
   computeRoleScore,
   computeModelRoleScore,
+  computeAbilityPairing,
+  computeModelPairing,
   isCoreRoleContext,
   modelAttrFit,
   allRoleNeeds,
   toRoleContextDisplay,
+  type PairingModelProfile,
   type RoleContext,
   type RoleTagInput,
   type ModelStatPercentiles,
@@ -631,6 +634,7 @@ export function processScanResults(
       myPickTags,
       myModelAttackType,
       myModelDbHeroId: state.mySelectedModelDbHeroId,
+      myModelHeroName: myModel?.heroName,
       ownerHeroIdOf: (name) => deps.heroes.getByAbilityName(name)?.heroId ?? null,
       unmetRequirementOf,
       needScarcity,
@@ -846,6 +850,8 @@ interface RoleScoringInputs {
   /** Selected model's DB hero id — a candidate NATIVE to that hero is exempt
    * from the inert filter (Wukong's Command on the Monkey King model). */
   myModelDbHeroId: number | null
+  /** Selected model's internal hero name (forward pairing input). */
+  myModelHeroName: string | undefined
   /** DB hero id owning an ability name (null when unknown). */
   ownerHeroIdOf: (abilityName: string) => number | null
   /** Dependency gate: resolved unmet requirement (undefined = suggestible). */
@@ -897,6 +903,7 @@ function buildScoredEntities(
     myPickTags,
     myModelAttackType,
     myModelDbHeroId,
+    myModelHeroName,
     ownerHeroIdOf,
     unmetRequirementOf,
     needScarcity,
@@ -908,6 +915,45 @@ function buildScoredEntities(
   // A drafted range-granting ability (Psi Blades, Take Aim) waives the
   // ranged_only inert filter for the rest of the draft.
   const picksGrantRanged = myPickTags.some((t) => t.has('grants_ranged'))
+
+  // Forward-pairing profile of the PICKED model (Layer C): chassis
+  // percentiles among ALL board models — the remaining-only percentiles
+  // further down exclude the picked one by design. Role-gated (the pairing
+  // layer is part of role-aware suggestions; role off stays bit-identical).
+  const forwardProfile: PairingModelProfile | undefined = (() => {
+    if (roleContext === null || myModelHeroName === undefined || tags === undefined) {
+      return undefined
+    }
+    const all = heroModels.filter((m) => m.dbHeroId !== null)
+    const metaOfAll = new Map(all.map((m) => [m.heroName, tags.getHeroMeta(m.heroName)]))
+    const rank = (f: (meta: HeroMeta) => number | undefined) =>
+      pctRanks(
+        all.map((m) => {
+          const meta = metaOfAll.get(m.heroName)
+          return { name: m.heroName, value: meta !== undefined ? f(meta) : undefined }
+        }),
+      )
+    const attackQuality = rank((m) =>
+      m.attackRate !== undefined ? -m.attackRate : undefined,
+    )
+    const bulk = rank((m) =>
+      m.baseHealth !== undefined && m.baseArmor !== undefined
+        ? m.baseHealth * (1 + 0.06 * m.baseArmor)
+        : undefined,
+    )
+    const intPool = rank((m) =>
+      m.baseInt !== undefined && m.intGain !== undefined
+        ? m.baseInt + 6 * m.intGain
+        : undefined,
+    )
+    return {
+      attackQuality: attackQuality.get(myModelHeroName) ?? 0.5,
+      bulk: bulk.get(myModelHeroName) ?? 0.5,
+      intPool: intPool.get(myModelHeroName) ?? 0.5,
+      tags: metaOfAll.get(myModelHeroName)?.tags ?? new Set(),
+    }
+  })()
+
   const entities: ScoredEntity[] = []
   const seen = new Set<string>()
 
@@ -943,9 +989,14 @@ function buildScoredEntities(
     const isUlt = details?.isUltimate === true || slot.is_ultimate
     const ultNudge = ultSecurityActive && isUlt && role !== null ? ULT_SECURITY_WEIGHT : 0
     const roleDelta = role !== null ? role.delta + ultNudge : undefined
+    // Forward pairing (Layer C): candidate vs the picked model's chassis/tags
+    const pairingDelta = computeAbilityPairing(candidateTags, forwardProfile)
     const consolidatedScore =
-      roleDelta !== undefined
-        ? Math.min(1, Math.max(0, scored.consolidatedScore + roleDelta))
+      roleDelta !== undefined || pairingDelta !== 0
+        ? Math.min(
+            1,
+            Math.max(0, scored.consolidatedScore + (roleDelta ?? 0) + pairingDelta),
+          )
         : scored.consolidatedScore
     // Now-or-never marker: this ability's global pick timing says it is due
     // before the draft comes back around
@@ -967,6 +1018,7 @@ function buildScoredEntities(
       roleBestPosition: role?.bestPosition,
       roleReasons: role !== null && role.reasons.length > 0 ? role.reasons : undefined,
       roleCurated: role?.curated,
+      pairingScoreDelta: pairingDelta !== 0 ? pairingDelta : undefined,
       inertOnModel:
         isInertOnModel(candidateTags, myModelAttackType, {
           nativeToModel:
@@ -1063,16 +1115,28 @@ function buildScoredEntities(
       model.pickRate,
       personalHeroStats.get(model.heroName),
     )
+    const meta = metaByName.get(model.heroName)
     const role = computeModelRoleScore(
       roleContext,
       heroAxesByName.get(model.heroName),
       pctOf(model.heroName),
-      metaByName.get(model.heroName)?.primaryAttr,
+      meta?.primaryAttr,
       urgency,
+      meta?.tags,
+      meta?.roleMust,
     )
+    // Reverse pairing (Layer C): the model vs MY drafted ability profile —
+    // role-gated like the forward direction.
+    const pairingDelta =
+      roleContext !== null
+        ? computeModelPairing(myPickTags, pctOf(model.heroName), meta?.tags)
+        : 0
     const consolidatedScore =
-      role !== null
-        ? Math.min(1, Math.max(0, scored.consolidatedScore + role.delta))
+      role !== null || pairingDelta !== 0
+        ? Math.min(
+            1,
+            Math.max(0, scored.consolidatedScore + (role?.delta ?? 0) + pairingDelta),
+          )
         : scored.consolidatedScore
     entities.push({
       entityType: 'hero',
@@ -1086,6 +1150,8 @@ function buildScoredEntities(
       personalScoreDelta: scored.personalScoreDelta,
       roleScoreDelta: role?.delta,
       roleBestPosition: role?.bestPosition,
+      roleCurated: role?.curated,
+      pairingScoreDelta: pairingDelta !== 0 ? pairingDelta : undefined,
       dbHeroId: model.dbHeroId,
       heroOrder: model.heroOrder,
     })
@@ -1175,6 +1241,7 @@ function enrichSlots(
       roleScoreDelta: scored?.roleScoreDelta,
       roleBestPosition: scored?.roleBestPosition,
       roleReasons: scored?.roleReasons,
+      pairingScoreDelta: scored?.pairingScoreDelta,
       inertOnModel: scored?.inertOnModel,
       unmetRequirement: scored?.unmetRequirement,
       contestedSoon: scored?.contestedSoon,
@@ -1248,8 +1315,10 @@ function enrichHeroModels(
       personalScoreDelta: scored?.personalScoreDelta,
       roleScoreDelta: scored?.roleScoreDelta,
       roleBestPosition: scored?.roleBestPosition,
+      pairingScoreDelta: scored?.pairingScoreDelta,
       isGeneralTopTier: topTier?.isGeneralTopTier ?? false,
       isPersonallyDriven: topTier?.isPersonallyDriven ?? false,
+      isCuratedForRole: topTier?.isCuratedForRole ?? false,
       identificationConfidence: model.identificationConfidence,
       strongAbilitySynergies: synergies?.strong ?? [],
       weakAbilitySynergies: synergies?.weak ?? [],
