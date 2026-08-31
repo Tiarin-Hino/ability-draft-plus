@@ -276,9 +276,17 @@ function needsAdjustment(
     if (coverage < 1) {
       const scarcity = tagInput.needScarcity?.get(need.key) ?? 1
       adj += ROLE_NEED_WEIGHT * need.priority * scarcity * candCredit
-      // Chip format: covers:<needKey>[:<viaTag>] — the via suffix names the
-      // alternative that actually matched when it differs from the key.
-      reasons.push(via !== undefined ? `covers:${need.key}:${via}` : `covers:${need.key}`)
+      // Chip formats (user rulings 2026-09-01):
+      //   covers:<key>           — direct match, chip names the need
+      //   covers:<key>:<viaTag>  — full credit via an alternative; the chip
+      //                            names the MATCHED tag ("covers: nuke")
+      //   partial:<key>          — half credit (soft CC toward hard disable);
+      //                            the chip must not claim full coverage
+      if (candCredit < 1) {
+        reasons.push(`partial:${need.key}`)
+      } else {
+        reasons.push(via !== undefined ? `covers:${need.key}:${via}` : `covers:${need.key}`)
+      }
     } else if (coverage >= 2 && duplicateKey === null) {
       duplicateKey = need.key
     }

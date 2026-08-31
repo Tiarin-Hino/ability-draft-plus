@@ -345,6 +345,16 @@ describe('computeRoleScore with tags (needs engine)', () => {
     expect(stunNuke.delta).toBeGreaterThan(0)
   })
 
+  it('half-credit coverage (soft CC toward hard disable) emits a partial chip', () => {
+    // Shadow Strike ruling: a soft_cc must not claim to cover hard disable
+    const softCc = computeRoleScore(axes(-0.5), ctxPos5, {
+      candidateTags: tags('soft_cc'),
+      myPickTags: [],
+    })!
+    expect(softCc.reasons).toContain('partial:hard_cc')
+    expect(softCc.reasons.some((r) => r.startsWith('covers:hard_cc'))).toBe(false)
+  })
+
   it('the covers chip names the matched alternative when it differs from the key', () => {
     // Shadow Realm case: a pure nuke covering the wave need must not claim
     // the waveclear tag — the chip carries the via suffix instead.
@@ -741,7 +751,7 @@ describe('soft_cc half-credit and mana budget', () => {
       myPickTags: [],
     })!
 
-    expect(soft.reasons).toContain('covers:hard_cc')
+    expect(soft.reasons).toContain('partial:hard_cc')
     expect(soft.delta).toBeGreaterThan(none.delta)
     expect(soft.delta).toBeLessThan(hard.delta)
   })

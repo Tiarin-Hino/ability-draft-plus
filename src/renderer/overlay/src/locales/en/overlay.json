@@ -92,7 +92,7 @@
       "save_ally": "ally save"
     },
     "roleCovers": "Covers your missing {{need}}",
-    "roleCoversVia": "Covers your missing {{need}} (via {{via}})",
+    "rolePartial": "Partially covers your missing {{need}}",
     "roleDuplicate": "Already covered: {{need}}",
     "roleCurated": "Curated pick for this role",
     "curatedPick": "Role Pick — curated as a must-have for your role",

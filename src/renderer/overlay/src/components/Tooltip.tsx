@@ -148,10 +148,10 @@ function RoleReasonChips({
             </span>
           )
         }
-        const need = t(`tooltip.roleNeeds.${key}`)
-        // The via suffix names the alternative that matched (nuke covering the
-        // wave need). Suppressed when its label adds nothing over the need's.
-        const viaLabel = via ? t(`tooltip.roleNeeds.${via}`) : undefined
+        // Full-credit alternative match: the chip names the MATCHED tag, not
+        // the need it satisfied ("Covers your missing nuke" — Shadow Realm
+        // ruling). Partial credit says so explicitly and keeps the need name.
+        const need = t(`tooltip.roleNeeds.${via ?? key}`)
         return (
           <span
             key={reason}
@@ -159,8 +159,8 @@ function RoleReasonChips({
           >
             {kind === 'duplicate'
               ? t('tooltip.roleDuplicate', { need })
-              : viaLabel !== undefined && viaLabel !== need
-                ? t('tooltip.roleCoversVia', { need, via: viaLabel })
+              : kind === 'partial'
+                ? t('tooltip.rolePartial', { need: t(`tooltip.roleNeeds.${key}`) })
                 : t('tooltip.roleCovers', { need })}
           </span>
         )
