@@ -84,15 +84,22 @@
       "hard_cc": "硬控制",
       "waveclear": "清线能力",
       "save": "救援队友",
-      "mana_budget": "魔法续航"
+      "mana_budget": "魔法续航",
+      "farm_tool": "发育能力",
+      "sustain_self": "自我续航",
+      "teamfight_ult": "团战型终极技能",
+      "passive_value": "高价值被动",
+      "save_ally": "救援队友"
     },
     "roleCovers": "补足你缺少的{{need}}",
+    "rolePartial": "部分补足你缺少的{{need}}",
     "roleDuplicate": "已有能力：{{need}}",
     "roleCurated": "为此位置精选",
     "curatedPick": "位置推荐——此位置必备的精选技能",
     "inertOnModel": "无法在你的模型上发挥作用（近战/远程不匹配）",
     "requiresAbility": "仅能与 {{name}} 配合——选到该技能前不会推荐",
     "requiresModel": "仅适用于 {{name}} 模型——不会推荐",
+    "requiresTag": "需要 {{name}} 类技能——尚未选取，技能池中也已没有",
     "roleAvoided": "此席位的精选避选项——不会推荐",
     "overrated": "通常较早被选，但胜率仅为 {{value}}——可能被高估",
     "contestedSoon": "通常此时已被选走——可能撑不过下一轮"
