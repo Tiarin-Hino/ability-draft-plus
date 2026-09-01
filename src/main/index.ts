@@ -29,6 +29,7 @@ import { createDraftStore } from './store/draft-store'
 import { createAppStore, createAppStoreHandlers } from './store/app-store'
 import { registerIpcHandlers } from './ipc'
 import { APP_ID } from '@shared/constants/defaults'
+import type { SupportedLanguage } from '@shared/constants/defaults'
 
 // @DEV-GUIDE: Electron main process entry point. Orchestrates the full application lifecycle.
 // Startup sequence: logging → error handlers → Sentry → database (sql.js in-memory) → backup →
@@ -179,7 +180,7 @@ app.whenReady().then(async () => {
   appStore.setState({
     themeMode: resolvedThemeMode,
     resolvedDarkMode: nativeTheme.shouldUseDarkColors,
-    language: (settings.language as 'en' | 'ru') ?? 'en',
+    language: (settings.language as SupportedLanguage) ?? 'en',
     overlayOpacity: settings.overlayOpacity,
     overlayAnchor: settings.overlayAnchor,
   })

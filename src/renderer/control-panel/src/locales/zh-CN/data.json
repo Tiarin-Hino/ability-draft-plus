@@ -1,0 +1,160 @@
+{
+  "mlPipeline": {
+    "title": "机器学习流水线（开发）",
+    "description": "重新训练闭环控制台：为模型缺口收集训练数据、将数据集上传到 S3，并触发云端重新训练工作流。",
+    "gatherStep": "1. 收集训练数据（{{count}} 个缺失技能）",
+    "gatherWarning": "收集脚本会反复关闭并重启 Dota 2，并控制鼠标和键盘约 40 分钟。脚本会在独立控制台窗口中打开——可在该窗口按 Ctrl+C 中止。",
+    "dryRunButton": "试运行",
+    "dryRunRunning": "正在试运行——如果槽位元数据需要抓取 Liquipedia，可能耗时数分钟（每个英雄页面 31 秒）…",
+    "gatherButton": "开始收集",
+    "gatherConfirm": "此操作会接管你的电脑（鼠标、键盘和 Dota 2 重启）约 40 分钟。是否继续？",
+    "dryRunDone": "试运行完成——请查看下方计划（注意 MISSING METADATA）。",
+    "gatherLaunched": "收集脚本已在独立控制台窗口中启动。",
+    "heroGatherTitle": "定向收集：指定英雄",
+    "heroGatherDescription": "重新收集所选英雄的全部技能——适用于技能名称不变但图标重做的情况。空余对局槽位会自动填入训练样本最少的英雄，并一并收集。",
+    "heroSearchPlaceholder": "添加英雄…",
+    "heroRemove": "移除 {{hero}}",
+    "heroPurgeLabel": "先清理现有图片（移至 _purged/，不会删除——旧图标会污染重做后的分类）",
+    "heroGatherButton": "开始定向收集",
+    "heroGatherPurgeConfirm": "收集前，所选英雄的现有数据集图片将被移至 _purged/。",
+    "modelsGatherTitle": "英雄模型方块：参考库",
+    "modelsGatherDescription": "在轮换的征召面板位置上，为每个已知英雄（包括新英雄）收集英雄模型方块图片，直到达到目标数量。裁剪图片会直接用于应用的模型方块识别库。支持断点续传——中断不会丢失进度。",
+    "modelsSetsLabel": "每个英雄的图片数",
+    "modelsGatherButton": "开始收集模型",
+    "diagnosticTitle": "识别诊断",
+    "diagnosticDescription": "运行完整机器人征召并轮换英雄名单，对照已知标准答案记录技能池、选取、模型方块和 OCR 识别结果。之后进行分析，生成展示失败内容及原因的 HTML 报告。",
+    "diagnosticKeepAppOpen": "整个运行期间请保持本应用运行、覆盖层已启用且实验性自动重新扫描已开启——应用需要记录分析器所需的扫描数据。",
+    "diagnosticIterationsLabel": "征召次数（0 = 完整英雄名单）",
+    "diagnosticPickTimeLabel": "选取计时（秒，0 = 游戏默认 60/7/5）",
+    "diagnosticRunButton": "开始诊断运行",
+    "diagnosticAnalyzeButton": "分析最近一次运行",
+    "diagnosticAnalyzed": "报告已生成并在浏览器中打开。",
+    "diagnosticConfirm": "此操作会反复重启 Dota 2 并运行完整机器人征召（每次约 6–10 分钟）。应用必须保持运行。是否继续？",
+    "uploadStep": "2. 将数据集上传到 S3（为新分类预先划分数据后）",
+    "uploadButton": "上传数据集（打开控制台）",
+    "uploadLaunched": "上传已在独立控制台窗口中启动——请记下输出的数据集版本。",
+    "retrainStep": "3. 触发云端重新训练工作流",
+    "versionPlaceholder": "数据集 vN",
+    "fineTuneLabel": "微调顶层模块",
+    "retrainButton": "触发重新训练",
+    "retrainDispatched": "已为数据集 v{{version}} 触发工作流——请查看 GitHub Actions 页面。门禁检查通过后，会自动创建包含新模型和指标的 PR。"
+  },
+  "abilities": {
+    "title": "技能",
+    "columns": {
+      "name": "技能",
+      "hero": "英雄",
+      "winrate": "胜率",
+      "hsWinrate": "高分段胜率",
+      "pickRate": "选取率",
+      "ultimate": "终极技能"
+    },
+    "filterPlaceholder": "筛选技能...",
+    "noResults": "未找到技能。"
+  },
+  "heroes": {
+    "title": "英雄",
+    "columns": {
+      "name": "英雄",
+      "winrate": "胜率",
+      "hsWinrate": "高分段胜率",
+      "pickRate": "选取率",
+      "hsPickRate": "高分段选取率"
+    },
+    "filterPlaceholder": "筛选英雄...",
+    "noResults": "未找到英雄。"
+  },
+  "scraping": {
+    "title": "数据",
+    "description": "从 Windrun.io 获取最新的技能征召统计数据。",
+    "updateButton": "更新 Windrun 数据",
+    "running": "正在更新...",
+    "lastUpdated": "上次更新：",
+    "never": "从未",
+    "liquipedia": {
+      "title": "Liquipedia 数据补充",
+      "description": "从 Liquipedia 获取技能顺序数据（Q/W/E/R）。请求频率限制为每 31 秒一次。",
+      "updateButton": "从 Liquipedia 补充数据",
+      "running": "正在补充...",
+      "warning": "由于 Liquipedia 的频率限制，处理全部英雄约需 67 分钟。",
+      "lastUpdated": "上次补充："
+    }
+  },
+  "mapper": {
+    "title": "分辨率映射器",
+    "devTitle": "分辨率映射器（开发）",
+    "description": "为自定义分辨率映射屏幕坐标。",
+    "capture": {
+      "title": "截取屏幕截图",
+      "description": "截取 Dota 2 技能征召界面的屏幕截图作为参考。",
+      "captureButton": "截取屏幕截图",
+      "capturing": "正在截取...",
+      "retake": "重新截取",
+      "next": "下一步",
+      "uploadButton": "上传图片"
+    },
+    "autoDetect": {
+      "title": "自动检测",
+      "description": "已检测到你的系统分辨率。",
+      "resolution": "检测到的分辨率",
+      "source": "布局来源",
+      "sourcePreset": "预设（内置）",
+      "sourceAutoScaled": "从 1080p 自动缩放",
+      "sourceCustom": "自定义（用户保存）",
+      "sourceNone": "没有可用布局",
+      "autoScaleWarningTitle": "自动缩放坐标",
+      "autoScaleWarningDetail": "此分辨率没有内置预设。坐标通过数学方式缩放，可能存在轻微偏差（约 5 像素）。为获得最佳精度，建议使用常见分辨率（1920x1080、2560x1440 等）。",
+      "useAutoScale": "使用自动缩放布局",
+      "calibrate": "校准（点击 4 次）",
+      "done": "布局已就绪，无需校准。",
+      "submitScreenshot": "提交屏幕截图",
+      "noLayoutHelp": "此分辨率没有可用布局。请提交屏幕截图，我们会添加支持。"
+    },
+    "report": {
+      "button": "报告映射失败",
+      "submitting": "正在提交...",
+      "success": "屏幕截图提交成功！我们会添加对此分辨率的支持。",
+      "error": "提交失败：{{error}}"
+    },
+    "anchor": {
+      "title": "四锚点校准",
+      "description": "点击 4 个参考点来校准你的分辨率。",
+      "instruction1": "第一个终极技能槽的左上角",
+      "instruction2": "第一个终极技能槽的右下角",
+      "instruction3": "英雄 0 头像的左上角",
+      "instruction4": "英雄 1 头像的左上角",
+      "progress": "{{current}} / {{total}} 个锚点",
+      "undo": "撤销",
+      "reset": "重置"
+    },
+    "verify": {
+      "title": "验证布局",
+      "description": "查看叠加在屏幕截图上的映射坐标。",
+      "legend": "图例",
+      "ultimates": "终极技能",
+      "standards": "普通技能",
+      "models": "英雄模型",
+      "heroes": "英雄头像",
+      "selected": "已选技能",
+      "accept": "接受",
+      "redo": "重新校准"
+    },
+    "save": {
+      "title": "保存布局",
+      "description": "保存此校准布局以供以后使用。",
+      "resolution": "分辨率",
+      "method": "方式",
+      "saveButton": "保存布局",
+      "saving": "正在保存...",
+      "success": "布局保存成功！",
+      "error": "保存布局失败。",
+      "back": "返回验证"
+    },
+    "common": {
+      "back": "返回",
+      "cancel": "取消",
+      "zoomTip": "滚轮缩放，Ctrl+拖动平移"
+    }
+  },
+  "noResults": "没有结果。"
+}

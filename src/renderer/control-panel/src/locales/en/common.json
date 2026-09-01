@@ -19,7 +19,8 @@
   "language": {
     "label": "Language",
     "en": "English",
-    "ru": "Russian"
+    "ru": "Russian",
+    "zhCN": "Simplified Chinese"
   },
   "status": {
     "ready": "Ready",

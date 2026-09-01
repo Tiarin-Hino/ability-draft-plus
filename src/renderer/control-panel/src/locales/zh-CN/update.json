@@ -1,0 +1,14 @@
+{
+  "title": "应用更新",
+  "checkButton": "检查更新",
+  "checking": "正在检查更新...",
+  "downloading": "正在下载更新...",
+  "downloadButton": "下载更新",
+  "available": "有可用更新 v{{version}}",
+  "readyToInstall": "更新 v{{version}} 已可安装",
+  "installButton": "重启并安装",
+  "retryButton": "重试",
+  "error": "更新错误：{{error}}",
+  "latestVersion": "当前已是最新版本。",
+  "networkError": "无法连接更新服务器，请检查网络连接。"
+}

@@ -1,0 +1,47 @@
+{
+  "title": "仪表盘",
+  "statusCards": {
+    "mlWorker": "机器学习工作进程",
+    "overlay": "覆盖层",
+    "database": "数据库",
+    "dataFreshness": "数据新鲜度",
+    "neverUpdated": "从未更新",
+    "mlGapsBadge": "{{count}} 个新增"
+  },
+  "resolutionSource": {
+    "preset": "预设坐标",
+    "custom": "已校准坐标",
+    "auto-scaled": "自动缩放坐标——可能存在轻微偏差；请通过映射器校准",
+    "none": "不支持的分辨率"
+  },
+  "firstRun": {
+    "title": "开始使用",
+    "step1": "从 Windrun.io 下载最新胜率与协同数据——没有这些数据，覆盖层将不会显示推荐。",
+    "updateButton": "更新 Windrun 数据",
+    "updating": "正在更新…",
+    "step2": "进入技能征召比赛队列前，点击下方的“启用覆盖层”。",
+    "step3": "进入征召界面后，按 Ctrl+Shift+S（或点击右上角覆盖层控件中的“初始扫描”）。"
+  },
+  "quickActions": {
+    "title": "快捷操作",
+    "activateOverlay": "启用覆盖层",
+    "activating": "正在启用...",
+    "overlayActive": "覆盖层已启用",
+    "activationError": "无法启用覆盖层。",
+    "retryMl": "重试机器学习模块",
+    "updateData": "更新数据",
+    "updatingData": "正在更新…",
+    "checkUpdates": "检查更新",
+    "checking": "正在检查…",
+    "upToDate": "当前已是最新版本。",
+    "updateFound": "发现可用更新 v{{version}}——请查看上方横幅。",
+    "exportGaps": "导出模型缺口（{{count}}）",
+    "exportGapsSuccess": "已将 {{count}} 个缺失技能导出到 {{path}}——请将其交给数据收集脚本。",
+    "exportGapsError": "导出失败：{{error}}"
+  },
+  "systemInfo": {
+    "title": "系统信息",
+    "version": "版本",
+    "display": "显示器"
+  }
+}

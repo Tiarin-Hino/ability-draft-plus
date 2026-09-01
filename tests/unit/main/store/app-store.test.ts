@@ -117,6 +117,11 @@ describe('createAppStoreHandlers', () => {
       handlers[APP_ACTIONS.LANGUAGE_SET]('en')
       expect(store.getState().language).toBe('en')
     })
+
+    it('sets language to zh-CN', () => {
+      handlers[APP_ACTIONS.LANGUAGE_SET]('zh-CN')
+      expect(store.getState().language).toBe('zh-CN')
+    })
   })
 
   describe('OVERLAY_SET_ACTIVE', () => {

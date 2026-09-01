@@ -77,6 +77,11 @@ describe('MetadataRepository', () => {
       expect(settings.opThreshold).toBe(0.20)
       expect(settings.language).toBe('en') // from previous test
     })
+
+    it('round-trips the Simplified Chinese locale', () => {
+      repo.setSettings({ language: 'zh-CN' })
+      expect(repo.getSettings().language).toBe('zh-CN')
+    })
   })
 
   describe('role settings', () => {

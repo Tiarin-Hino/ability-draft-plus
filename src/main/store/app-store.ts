@@ -7,7 +7,7 @@ import type { MlModelGaps } from '@core/ml/staleness-detector'
 // @DEV-GUIDE: AppStore is the @zubridge-synced Zustand store shared between main and renderers.
 // Shape defined in @shared/types/app-store.ts (AppStoreState). Covers:
 // - Theme (mode + resolved dark boolean)
-// - Language (en/ru)
+// - Language (en/ru/zh-CN)
 // - Overlay state (active flag, resolution, source)
 // - ML status (idle/initializing/scanning/ready/error, model gaps)
 // - Scraper/Liquipedia status and progress

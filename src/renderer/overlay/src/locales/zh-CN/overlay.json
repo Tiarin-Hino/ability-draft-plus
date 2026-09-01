@@ -1,0 +1,114 @@
+{
+  "initialScan": "初始扫描",
+  "controlsAria": "覆盖层控件",
+  "rescan": "重新扫描",
+  "reset": "重置",
+  "close": "关闭",
+  "reportFailed": "报告识别失败",
+  "scanConfirm": {
+    "message": "这将扫描当前屏幕中的技能图标。请确保 Dota 2 征召界面完全可见。提示：按 Ctrl+Shift+S 可跳过此对话框并立即扫描。",
+    "proceed": "继续",
+    "cancel": "取消",
+    "dontShow": "不再显示"
+  },
+  "reportConfirm": {
+    "message": "这将截取当前技能图标的快照，用于改进模型。是否提交？",
+    "submit": "提交",
+    "cancel": "取消"
+  },
+  "status": {
+    "scanning": "正在扫描...",
+    "error": "扫描失败：{{message}}",
+    "timeoutMessage": "扫描超时——请重试"
+  },
+  "snapshot": {
+    "saved": "快照已保存（已存储 {{count}} 个）——请通过“设置 → 反馈”发送",
+    "noScan": "没有可报告的扫描数据——请先运行扫描",
+    "error": "保存快照失败：{{error}}"
+  },
+  "opCombinations": {
+    "title": "强力组合",
+    "show": "显示强力组合",
+    "hide": "隐藏",
+    "tripletTooltip": "经常作为三技能组合选取（组合胜率 {{winrate}}）"
+  },
+  "trapCombinations": {
+    "title": "这是陷阱！",
+    "show": "显示陷阱",
+    "hide": "隐藏",
+    "tripletTooltip": "经常作为三技能组合选取（组合胜率 {{winrate}}）"
+  },
+  "scanSummary": "已识别 {{recognized}}/{{total}}",
+  "resolution": {
+    "autoScaledWarning": "此分辨率的坐标通过数学方式缩放，可能存在轻微偏差。请使用控制面板中的映射器进行校准。",
+    "source": {
+      "preset": "预设",
+      "custom": "已校准",
+      "auto-scaled": "自动缩放",
+      "none": "不支持"
+    }
+  },
+  "mySpot": "我的席位",
+  "changeMySpot": "更改",
+  "myModel": "我的模型",
+  "changeMyModel": "更改",
+  "tooltip": {
+    "winrate": "胜率：{{value}}",
+    "pickRate": "选取率：{{value}}",
+    "personalStats": "你的数据：{{games}} 场，胜率 {{value}}",
+    "strongSynergies": "强协同技能",
+    "heroSynergies": "英雄协同技能",
+    "weakSynergies": "弱协同技能",
+    "weakHeroSynergies": "英雄弱协同技能",
+    "topPick": "优先选择",
+    "synergyPick": "协同选择",
+    "topModel": "优先模型",
+    "personalPick": "个人推荐——根据你的数据推荐",
+    "yourModelPick": "你的模型选择",
+    "strongAbilities": "适合此英雄的强力技能",
+    "weakAbilities": "不适合此英雄的技能",
+    "unknownAbility": "未知技能",
+    "unknownHint": "模型无法识别此图标——建议使用“报告识别失败”",
+    "roleFit": "位置适配：{{position}} 号位",
+    "pairingFit": "模型搭配",
+    "roleNeeds": {
+      "steroid": "攻击强化",
+      "farm": "发育能力",
+      "survival": "生存能力",
+      "nuke": "爆发伤害",
+      "mobility": "机动能力",
+      "kill_ult": "击杀型终极技能",
+      "initiation": "先手能力",
+      "aoe_cc": "范围控制",
+      "durability": "承伤能力",
+      "hard_cc": "硬控制",
+      "waveclear": "清线能力",
+      "save": "救援队友",
+      "mana_budget": "魔法续航"
+    },
+    "roleCovers": "补足你缺少的{{need}}",
+    "roleDuplicate": "已有能力：{{need}}",
+    "roleCurated": "为此位置精选",
+    "curatedPick": "位置推荐——此位置必备的精选技能",
+    "inertOnModel": "无法在你的模型上发挥作用（近战/远程不匹配）",
+    "requiresAbility": "仅能与 {{name}} 配合——选到该技能前不会推荐",
+    "requiresModel": "仅适用于 {{name}} 模型——不会推荐",
+    "roleAvoided": "此席位的精选避选项——不会推荐",
+    "overrated": "通常较早被选，但胜率仅为 {{value}}——可能被高估",
+    "contestedSoon": "通常此时已被选走——可能撑不过下一轮"
+  },
+  "role": {
+    "aria": "分路推荐",
+    "label": "位置",
+    "off": "关闭",
+    "auto": "自动",
+    "offStatus": "分路推荐已关闭",
+    "scoringFor": "按 {{positions}} 号位评分",
+    "watching": "正在观察队伍趋势…",
+    "teamNeeds": "队伍需要 {{positions}} 号位",
+    "needSpot": "请选择“我的席位”以启用",
+    "appliesNextScan": "将在下次扫描时生效",
+    "needData": "请更新数据以启用",
+    "waitingSpot": "正在等待自动检测席位…"
+  }
+}

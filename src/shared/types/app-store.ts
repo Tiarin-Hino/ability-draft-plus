@@ -14,7 +14,7 @@ export interface AppStoreState {
   resolvedDarkMode: boolean
 
   // Language
-  language: 'en' | 'ru'
+  language: 'en' | 'ru' | 'zh-CN'
 
   // Overlay
   overlayActive: boolean

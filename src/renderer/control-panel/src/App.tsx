@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { ThemeProvider } from '@/providers/theme-provider'
 import { AppShell } from '@/components/layout/app-shell'
@@ -15,6 +16,8 @@ import { SettingsPage } from '@/pages/settings-page'
 import { MapperPage } from '@/pages/mapper-page'
 import { DevMapperPage } from '@/pages/dev-mapper-page'
 import type { PageId } from '@/hooks/use-navigation'
+import { useAppStore } from '@/hooks/use-app-store'
+import i18n from '@/i18n'
 
 // @DEV-GUIDE: Root component for the control panel renderer. Uses a simple useState<PageId>
 // routing system (no react-router). The `pages` object maps PageId strings to React components.
@@ -41,7 +44,14 @@ const pages: Record<PageId, React.ComponentType<PageProps>> = {
 
 function App(): React.ReactElement {
   const { activePage, setActivePage } = useNavigation()
+  const language = useAppStore((state) => state.language)
   const ActivePage = pages[activePage]
+
+  useEffect(() => {
+    if (language && language !== i18n.language) {
+      void i18n.changeLanguage(language)
+    }
+  }, [language])
 
   return (
     <TooltipProvider>

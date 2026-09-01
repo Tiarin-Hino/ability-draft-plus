@@ -84,6 +84,7 @@ export function AppearanceCard() {
             <SelectContent>
               <SelectItem value="en">{t('language.en')}</SelectItem>
               <SelectItem value="ru">{t('language.ru')}</SelectItem>
+              <SelectItem value="zh-CN">{t('language.zhCN')}</SelectItem>
             </SelectContent>
           </Select>
         </div>

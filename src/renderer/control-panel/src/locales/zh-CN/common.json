@@ -1,0 +1,48 @@
+{
+  "appTitle": "Dota 2 Ability Draft Plus",
+  "nav": {
+    "dashboard": "仪表盘",
+    "abilities": "技能",
+    "heroes": "英雄",
+    "scraping": "数据",
+    "streaming": "直播",
+    "settings": "设置",
+    "mapper": "映射器",
+    "devMapper": "开发映射器",
+    "sidebar": "主导航"
+  },
+  "theme": {
+    "system": "跟随系统",
+    "light": "浅色",
+    "dark": "深色"
+  },
+  "language": {
+    "label": "语言",
+    "en": "英语",
+    "ru": "俄语",
+    "zhCN": "简体中文"
+  },
+  "status": {
+    "ready": "就绪",
+    "idle": "空闲",
+    "active": "已启用",
+    "error": "错误",
+    "connected": "已连接",
+    "initializing": "正在初始化",
+    "scanning": "正在扫描",
+    "running": "运行中"
+  },
+  "actions": {
+    "save": "保存",
+    "cancel": "取消",
+    "confirm": "确认",
+    "close": "关闭",
+    "retry": "重试"
+  },
+  "support": {
+    "label": "支持作者",
+    "tooltip": "在 Ko-fi 上支持开发者",
+    "datdota": "支持 datdota",
+    "datdotaTooltip": "在 Ko-fi 上支持 datdota（Windrun 数据来源）"
+  }
+}

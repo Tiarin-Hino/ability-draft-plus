@@ -1,0 +1,53 @@
+{
+  "wordmark": "技能征召",
+  "waiting": "正在等待征召——请在 Ability Draft Plus 中扫描征召面板",
+  "demo": "演示",
+  "reservedZone": "为你的覆盖层预留",
+  "connection": {
+    "connecting": "正在连接…",
+    "connected": "直播中",
+    "disconnected": "正在重新连接…"
+  },
+  "pool": {
+    "ultimates": "终极技能",
+    "standard": "普通技能",
+    "modelPicked": "已选"
+  },
+  "panels": {
+    "topWinrate": "最高胜率",
+    "opCombos": "最强组合",
+    "trapCombos": "陷阱组合",
+    "topTier": "优先选择",
+    "latestPicks": "最近选择"
+  },
+  "avgPick": "通常在第 {{n}} 顺位左右被选",
+  "player": "玩家 {{num}}",
+  "noHero": "未选英雄",
+  "team": {
+    "radiant": "天辉",
+    "dire": "夜魇"
+  },
+  "unknownAbility": "未知",
+  "unknownHero": "未知英雄",
+  "score": {
+    "label": "征召评分",
+    "teamAverage": "队伍征召评分",
+    "confidence": {
+      "low": "低",
+      "medium": "中",
+      "high": "高"
+    }
+  },
+  "edit": {
+    "title": "编辑模式",
+    "hintMove": "拖动任意元素以移动",
+    "hintScale": "在元素上滚动鼠标滚轮以缩放（Alt = 精细调整）",
+    "hintReset": "双击元素以重置",
+    "copy": "复制 JSON",
+    "copied": "已复制！",
+    "resetAll": "全部重置",
+    "empty": "尚未调整——请拖动元素或在元素上滚动。",
+    "hintType": "更改会应用到同类型的所有元素",
+    "hintMirror": "两侧会镜像；技能池中的每个技能只与其镜像对应项配对"
+  }
+}
