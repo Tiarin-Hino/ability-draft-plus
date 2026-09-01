@@ -19,8 +19,8 @@
   "language": {
     "label": "Language",
     "en": "English",
-    "ru": "Russian",
-    "zhCN": "Simplified Chinese"
+    "ru": "Русский",
+    "zhCN": "简体中文"
   },
   "status": {
     "ready": "Ready",
