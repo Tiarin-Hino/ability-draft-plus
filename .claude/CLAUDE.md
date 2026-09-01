@@ -16,7 +16,10 @@ maintenance spec — the authoritative map of what IS, not a build plan.
   That file IS the channel inventory; there is no constants registry
 - **Testing:** Vitest unit suite (runs without Electron thanks to core purity) + one Playwright
   E2E smoke test executed in CI after build
-- **i18n:** i18next, EN + RU. Every user-visible string goes through locales — including
+- **i18n:** i18next; languages live in SUPPORTED_LANGUAGES/LANGUAGE_META (defaults.ts):
+  EN, RU, zh-CN, ES, pt-BR, UK, FIL, FI. The disk-driven parity test
+  (tests/unit/renderer/i18n-locales.test.ts) fails on any key/interpolation drift
+  from EN, for every language. Every user-visible string goes through locales — including
   strings originating in the main process (send i18n keys + params, translate in the renderer;
   see `FeedbackStatus` for the pattern)
 - **Release:** NSIS via electron-builder; publish is TAG-triggered (`v*`); electron-updater

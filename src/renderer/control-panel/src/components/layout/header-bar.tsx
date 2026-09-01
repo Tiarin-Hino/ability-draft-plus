@@ -10,7 +10,7 @@ import { Languages, Heart } from 'lucide-react'
 import { useAppStore } from '@/hooks/use-app-store'
 import { useAppDispatch } from '@/hooks/use-dispatch'
 import { APP_ACTIONS } from '@shared/types/app-store'
-import { SUPPORT_URL } from '@shared/constants/defaults'
+import { LANGUAGE_META, SUPPORT_URL, SUPPORTED_LANGUAGES } from '@shared/constants/defaults'
 import type { SupportedLanguage } from '@shared/constants/defaults'
 import type { PageId } from '@/hooks/use-navigation'
 
@@ -64,29 +64,20 @@ export function HeaderBar({ activePage }: HeaderBarProps) {
             <Button variant="ghost" size="sm" className="gap-2" aria-label={t('language.label')}>
               <Languages className="h-4 w-4" aria-hidden="true" />
               <span className="text-sm">
-                {language === 'en' ? 'EN' : language === 'ru' ? 'RU' : 'ZH'}
+                {LANGUAGE_META[language as SupportedLanguage]?.short ?? 'EN'}
               </span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              onClick={() => handleLanguageChange('en')}
-              className={language === 'en' ? 'bg-accent' : ''}
-            >
-              {t('language.en')} (EN)
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => handleLanguageChange('ru')}
-              className={language === 'ru' ? 'bg-accent' : ''}
-            >
-              {t('language.ru')} (RU)
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => handleLanguageChange('zh-CN')}
-              className={language === 'zh-CN' ? 'bg-accent' : ''}
-            >
-              {t('language.zhCN')} (ZH-CN)
-            </DropdownMenuItem>
+            {SUPPORTED_LANGUAGES.map((lang) => (
+              <DropdownMenuItem
+                key={lang}
+                onClick={() => handleLanguageChange(lang)}
+                className={language === lang ? 'bg-accent' : ''}
+              >
+                {LANGUAGE_META[lang].autonym} ({LANGUAGE_META[lang].short})
+              </DropdownMenuItem>
+            ))}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

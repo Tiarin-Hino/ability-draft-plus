@@ -1,0 +1,60 @@
+{
+  "title": "Streaming",
+  "server": {
+    "title": "Servidor do quadro de stream",
+    "description": "Serve um quadro de draft limpo e de alto contraste via HTTP local para uso como fonte de navegador no OBS.",
+    "status": {
+      "stopped": "Parado",
+      "running": "Executando",
+      "error": "Erro"
+    },
+    "start": "Iniciar servidor",
+    "stop": "Parar servidor",
+    "port": "Porta",
+    "portHint": "1024–65535. Mudar a porta exige reiniciar o servidor e atualizar sua cena no OBS.",
+    "url": "URL do quadro",
+    "picksUrl": "URL do Picks View",
+    "picksHint": "O Picks View mostra o herói e as habilidades draftadas de cada jogador como duas faixas compactas por time para sua cena in-game. Abra a URL em um navegador para ajustá-las e gerar os links de fonte OBS por time. Ele continua mostrando o draft finalizado durante toda a partida, mesmo depois de o overlay ser fechado.",
+    "copy": "Copiar",
+    "copied": "Copiado!",
+    "clients": "Clientes conectados: {{count}}",
+    "autostart": "Iniciar o servidor quando o app abrir",
+    "errorPortInUse": "Essa porta já está em uso — escolha outra porta e inicie novamente.",
+    "errorGeneric": "O servidor não conseguiu iniciar. Verifique os logs para mais detalhes.",
+    "errorInvalidPort": "Porta inválida. Use um número entre 1024 e 65535."
+  },
+  "gsi": {
+    "title": "Game State Integration do Dota 2",
+    "description": "Permite que o Dota envie nomes dos jogadores, fase do jogo e relógio ao quadro de stream. Requer um arquivo de config único na sua pasta do Dota e um reinício do Dota.",
+    "connected": "Conectado",
+    "disconnected": "Não conectado",
+    "detectedPath": "Instalação do Dota",
+    "notDetected": "Instalação do Dota não encontrada — selecione a pasta \"dota 2 beta\" manualmente.",
+    "cfgPresent": "Arquivo de config instalado",
+    "cfgMissing": "Arquivo de config ainda não instalado",
+    "writeCfg": "Instalar arquivo de config",
+    "browse": "Procurar…",
+    "pickFolderTitle": "Selecione a pasta \"dota 2 beta\"",
+    "writeSuccess": "Config gravado em {{path}}. Reinicie o Dota 2 para que tenha efeito.",
+    "errorDotaNotFound": "Não foi possível localizar a instalação do Dota 2. Use Procurar para selecionar a pasta \"dota 2 beta\".",
+    "errorWriteFailed": "Falha ao gravar o arquivo de config. Verifique os logs para mais detalhes.",
+    "portMismatch": "O config instalado aponta para a porta {{cfgPort}}, mas o servidor de stream usa a porta {{streamPort}} — o Dota não consegue alcançar o app. Reinstale o arquivo de config e reinicie o Dota 2.",
+    "portNote": "O config fixa a porta atual do servidor — reinstale-o depois de mudar a porta.",
+    "spectatorNote": "Os nomes dos 10 jogadores só ficam disponíveis ao assistir/castar. Jogando, o Dota informa apenas o seu próprio nome."
+  },
+  "icons": {
+    "title": "Ícones de habilidades",
+    "description": "O quadro usa os ícones oficiais das habilidades, baixados uma vez e armazenados localmente. Faça o prefetch agora para que o primeiro draft renderize instantaneamente mesmo sem acesso à internet.",
+    "prefetch": "Baixar todos os ícones",
+    "prefetching": "Baixando…",
+    "result": "Concluído: {{fetched}} baixados, {{alreadyCached}} já em cache, {{failed}} falharam.",
+    "error": "Falha no prefetch. Verifique os logs para mais detalhes."
+  },
+  "obs": {
+    "title": "Configuração do OBS",
+    "step1": "Inicie o servidor e copie a URL do quadro.",
+    "step2": "No OBS: Fontes → Adicionar → Navegador, cole a URL e defina o tamanho como 1920×1080.",
+    "step3": "O fundo é transparente por padrão. Acrescente ?bg=dark para um fundo sólido ou ?bg=chroma para chroma key.",
+    "note": "O quadro acompanha os escaneamentos do seu overlay: o pool aparece após um escaneamento (Ctrl+Shift+S) e os picks se atualizam após cada rescan (Ctrl+Shift+R)."
+  }
+}

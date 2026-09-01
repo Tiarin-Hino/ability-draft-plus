@@ -1,0 +1,121 @@
+{
+  "initialScan": "Escaneamento inicial",
+  "controlsAria": "Controles do overlay",
+  "rescan": "Rescan",
+  "reset": "Redefinir",
+  "close": "Fechar",
+  "reportFailed": "Reportar falha de reconhecimento",
+  "scanConfirm": {
+    "message": "Isso vai escanear a tela atual em busca de ícones de habilidades. Garanta que a tela de draft do Dota 2 esteja totalmente visível. Dica: Ctrl+Shift+S escaneia na hora, sem este diálogo.",
+    "proceed": "Prosseguir",
+    "cancel": "Cancelar",
+    "dontShow": "Não mostrar de novo"
+  },
+  "reportConfirm": {
+    "message": "Isso vai capturar um snapshot dos ícones de habilidades atuais para melhorar o modelo. Enviar?",
+    "submit": "Enviar",
+    "cancel": "Cancelar"
+  },
+  "status": {
+    "scanning": "Escaneando...",
+    "error": "Falha no escaneamento: {{message}}",
+    "timeoutMessage": "O escaneamento expirou — tente novamente"
+  },
+  "snapshot": {
+    "saved": "Snapshot salvo ({{count}} armazenados) — envie-o em Configurações → Feedback",
+    "noScan": "Sem dados de escaneamento para reportar — execute um escaneamento primeiro",
+    "error": "Falha ao salvar o snapshot: {{error}}"
+  },
+  "opCombinations": {
+    "title": "Combinações OP",
+    "show": "Mostrar OP",
+    "hide": "Ocultar",
+    "tripletTooltip": "Frequentemente draftadas como trio ({{winrate}} de WR juntas)"
+  },
+  "trapCombinations": {
+    "title": "É uma armadilha!",
+    "show": "Mostrar armadilhas",
+    "hide": "Ocultar",
+    "tripletTooltip": "Frequentemente draftadas como trio ({{winrate}} de WR juntas)"
+  },
+  "scanSummary": "{{recognized}}/{{total}} reconhecidas",
+  "resolution": {
+    "autoScaledWarning": "As coordenadas foram escaladas matematicamente para esta resolução e podem ficar um pouco fora. Use o Mapeador no painel de controle para calibrar.",
+    "source": {
+      "preset": "predefinido",
+      "custom": "calibrado",
+      "auto-scaled": "auto-escalado",
+      "none": "não suportado"
+    }
+  },
+  "mySpot": "Meu Lugar",
+  "changeMySpot": "Mudar",
+  "myModel": "Meu Modelo",
+  "changeMyModel": "Mudar",
+  "tooltip": {
+    "winrate": "Taxa de vitória: {{value}}",
+    "pickRate": "Taxa de pick: {{value}}",
+    "personalStats": "Você: {{value}} de WR em {{games}} partidas",
+    "strongSynergies": "Sinergias fortes",
+    "heroSynergies": "Sinergias de herói",
+    "weakSynergies": "Sinergias fracas",
+    "weakHeroSynergies": "Sinergias de herói fracas",
+    "topPick": "Top Pick",
+    "synergyPick": "Pick de sinergia",
+    "topModel": "Top Modelo",
+    "personalPick": "Pick pessoal — recomendado pelas suas estatísticas",
+    "yourModelPick": "Pick do seu modelo",
+    "strongAbilities": "Habilidades fortes para este herói",
+    "weakAbilities": "Habilidades fracas para este herói",
+    "unknownAbility": "Habilidade desconhecida",
+    "unknownHint": "O modelo não conseguiu identificar este ícone — considere usar 'Reportar falha de reconhecimento'",
+    "roleFit": "Encaixe de função: pos {{position}}",
+    "pairingFit": "Combinação com o modelo",
+    "roleNeeds": {
+      "steroid": "steroid de ataque",
+      "farm": "ferramenta de farm",
+      "survival": "sobrevivência",
+      "nuke": "nuke",
+      "mobility": "mobilidade",
+      "kill_ult": "ultimate de abate",
+      "initiation": "iniciação",
+      "aoe_cc": "controle em área",
+      "durability": "resistência",
+      "hard_cc": "disable pesado",
+      "waveclear": "limpeza de waves",
+      "save": "salvamento de aliado",
+      "mana_budget": "economia de mana",
+      "farm_tool": "ferramenta de farm",
+      "sustain_self": "sustain próprio",
+      "teamfight_ult": "ult de teamfight",
+      "passive_value": "passiva de valor",
+      "save_ally": "salvamento de aliado"
+    },
+    "roleCovers": "Cobre a falta de {{need}}",
+    "rolePartial": "Cobre parcialmente a falta de {{need}}",
+    "roleDuplicate": "Já coberto: {{need}}",
+    "roleCurated": "Pick curado para esta função",
+    "curatedPick": "Pick de função — curado como obrigatório para a sua função",
+    "inertOnModel": "Não funciona no seu modelo (incompatibilidade corpo a corpo/à distância)",
+    "requiresAbility": "Só funciona com {{name}} — não é sugerida até você draftá-la",
+    "requiresModel": "Só funciona no modelo {{name}} — não é sugerida",
+    "requiresTag": "Precisa de uma habilidade de {{name}} — nenhuma draftada nem restante no pool",
+    "roleAvoided": "Skip curado para esta posição — não é sugerida",
+    "overrated": "É pega cedo, mas só vence {{value}} — provavelmente superestimada",
+    "contestedSoon": "Normalmente já foi draftada a essa altura — pode não sobreviver a mais uma rodada"
+  },
+  "role": {
+    "aria": "Sugestões por função",
+    "label": "Função",
+    "off": "Desligado",
+    "auto": "Auto",
+    "offStatus": "Sugestões por função desligadas",
+    "scoringFor": "Pontuando para pos {{positions}}",
+    "watching": "Observando a tendência do time…",
+    "teamNeeds": "O time precisa de pos {{positions}}",
+    "needSpot": "Selecione Meu Lugar para ativar",
+    "appliesNextScan": "Vale a partir do próximo escaneamento",
+    "needData": "Execute uma atualização de dados para ativar",
+    "waitingSpot": "Aguardando a detecção automática do lugar…"
+  }
+}

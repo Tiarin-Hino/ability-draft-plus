@@ -1,0 +1,40 @@
+{
+  "waiting": "Wala pang na-record na draft — mag-scan ng draft sa Ability Draft Plus",
+  "unknownAbility": "Hindi kilalang ability",
+  "team": {
+    "radiant": "Radiant",
+    "dire": "Dire"
+  },
+  "player": "Player {{num}}",
+  "setup": {
+    "title": "PICKS VIEW SETUP",
+    "intro": "I-tune ang dalawang team strip bago ang laro, tapos idagdag ang mga na-generate na URL sa OBS bilang dalawang browser source. Nakalagay na sa mga URL ang bawat setting — walang kailangang i-save sa OBS.",
+    "preview": "Preview (demo draft)",
+    "background": "Background",
+    "bg": {
+      "transparent": "Transparent",
+      "chroma": "Chroma",
+      "dark": "Madilim"
+    },
+    "names": "Mga player name",
+    "frame": "Team frame",
+    "on": "On",
+    "off": "Off",
+    "alignRadiant": "Radiant strip",
+    "alignDire": "Dire strip",
+    "align": {
+      "left": "Naka-align sa kaliwa",
+      "right": "Naka-align sa kanan"
+    },
+    "spacing": "Spacing (px)",
+    "rowGap": "Pagitan ng mga row",
+    "slotGap": "Pagitan ng mga ability",
+    "heroGap": "Hero papunta sa abilities",
+    "ultGap": "Ultimate papunta sa abilities",
+    "reset": "Ibalik sa defaults",
+    "urls": "Mga OBS browser source URL",
+    "urlHint": "Idagdag ang bawat strip bilang sarili nitong browser source para hiwalay mo silang mapo-position. Nananatiling live ang mga strip habang nagda-draft at ipinapakita ang natapos na draft sa screen sa buong laro.",
+    "copy": "Kopyahin",
+    "copied": "Nakopya!"
+  }
+}

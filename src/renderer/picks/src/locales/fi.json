@@ -1,0 +1,40 @@
+{
+  "waiting": "Ei vielä tallennettua draftia — skannaa draft Ability Draft Plusissa",
+  "unknownAbility": "Tuntematon kyky",
+  "team": {
+    "radiant": "Radiant",
+    "dire": "Dire"
+  },
+  "player": "Pelaaja {{num}}",
+  "setup": {
+    "title": "PICKS-NÄKYMÄN ASETUKSET",
+    "intro": "Säädä tiiminauhat ennen peliä ja lisää sitten luodut URL-osoitteet OBS:ään kahtena selainlähteenä. Kaikki asetukset leipoutuvat URL-osoitteisiin — OBS:ään ei tarvitse tallentaa mitään.",
+    "preview": "Esikatselu (demodraft)",
+    "background": "Tausta",
+    "bg": {
+      "transparent": "Läpinäkyvä",
+      "chroma": "Chroma",
+      "dark": "Tumma"
+    },
+    "names": "Pelaajien nimet",
+    "frame": "Tiimin kehys",
+    "on": "Päällä",
+    "off": "Pois",
+    "alignRadiant": "Radiant-nauha",
+    "alignDire": "Dire-nauha",
+    "align": {
+      "left": "Tasattu vasemmalle",
+      "right": "Tasattu oikealle"
+    },
+    "spacing": "Välistys (px)",
+    "rowGap": "Rivien väli",
+    "slotGap": "Kykyjen väli",
+    "heroGap": "Sankarista kykyihin",
+    "ultGap": "Ultimaatista kykyihin",
+    "reset": "Palauta oletukset",
+    "urls": "OBS-selainlähteiden URL-osoitteet",
+    "urlHint": "Lisää kumpikin nauha omana selainlähteenään, jotta voit asemoida ne itsenäisesti. Nauhat pysyvät livenä draftin ajan ja pitävät valmiin draftin ruudulla koko pelin.",
+    "copy": "Kopioi",
+    "copied": "Kopioitu!"
+  }
+}

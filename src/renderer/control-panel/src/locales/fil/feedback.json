@@ -1,0 +1,11 @@
+{
+  "title": "Feedback at Diagnostics",
+  "description": "Kung mali ang pagkakakilala ng ML model sa mga ability, gamitin ang 'I-report ang Nabigong Recognition' sa overlay. Pwede mong ipadala ang mga snapshot sa developer para mapaganda ang model.",
+  "exportButton": "I-export ang Failed Samples",
+  "uploadButton": "Ipadala ang Failed Samples",
+  "feedbackButton": "Magbigay ng Feedback",
+  "exportPreparing": "Inihahanda ang archive...",
+  "exportExporting": "Ini-export ang archive...",
+  "uploadConfirmTitle": "Ipadala ang Failed Samples",
+  "uploadConfirmBody": "I-zi-zip nito ang lahat ng images sa failed-samples directory mo at ia-upload para sa analysis at pagpapaganda ng model. Ituloy?"
+}

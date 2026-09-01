@@ -1,0 +1,108 @@
+{
+  "title": "Asetukset",
+  "opThreshold": {
+    "title": "OP-yhdistelmien kynnys",
+    "label": "Synergiakynnys prosentteina:",
+    "helpText": "Yhdistelmät, joiden synergialisä ylittää tämän kynnyksen, merkitään OP:ksi.",
+    "saveButton": "Tallenna kynnys",
+    "savedMessage": "Kynnys tallennettu!"
+  },
+  "trapThreshold": {
+    "title": "Ansakynnys",
+    "label": "Voittoprosentin laskun kynnys prosentteina:",
+    "helpText": "Yhdistelmät, joiden voittoprosentti laskee tätä kynnystä enemmän, merkitään ansoiksi.",
+    "saveButton": "Tallenna kynnys",
+    "savedMessage": "Ansakynnys tallennettu!"
+  },
+  "thresholdCommon": {
+    "defaultLabel": "Oletus: {{value}} %",
+    "resetButton": "Palauta oletus"
+  },
+  "appearance": {
+    "title": "Ulkoasu",
+    "themeLabel": "Teema",
+    "languageLabel": "Kieli",
+    "overlayOpacityLabel": "Overlay-paneelien läpinäkyvyys",
+    "overlayAnchorLabel": "Overlay-paneelien sijainti",
+    "anchorLeft": "Vasen",
+    "anchorRight": "Oikea"
+  },
+  "backup": {
+    "title": "Tietokannan varmuuskopiointi",
+    "createButton": "Luo varmuuskopio",
+    "restoreButton": "Palauta",
+    "noBackups": "Varmuuskopioita ei löytynyt.",
+    "columns": {
+      "name": "Nimi",
+      "date": "Päivämäärä",
+      "size": "Koko"
+    },
+    "stats": "{{count}} varmuuskopiota, yhteensä {{size}}",
+    "createSuccess": "Varmuuskopio luotu.",
+    "createError": "Varmuuskopion luonti epäonnistui: {{error}}",
+    "restoreConfirm": "Haluatko varmasti palauttaa tästä varmuuskopiosta? Nykyiset tiedot ylikirjoitetaan.",
+    "restoreSuccess": "Varmuuskopio palautettu.",
+    "restoreError": "Varmuuskopion palautus epäonnistui: {{error}}"
+  },
+  "feedback": {
+    "title": "Palaute ja diagnostiikka",
+    "description": "Jos ML-malli tunnistaa kykyjä väärin, käytä overlayn 'Ilmoita tunnistusvirheestä' -toimintoa. Sen jälkeen voit lähettää tilannekuvat kehittäjälle mallin parantamiseksi.",
+    "exportButton": "Vie epäonnistuneet näytteet",
+    "uploadButton": "Lähetä epäonnistuneet näytteet",
+    "exportNone": "Ei vielä tilannekuvia vietäväksi — käytä ensin overlayn 'Ilmoita tunnistusvirheestä' -toimintoa.",
+    "exportSuccess": "Vietiin {{count}} tilannekuva(a) kohteeseen {{path}}",
+    "exportError": "Vienti epäonnistui: {{error}}",
+    "uploadNone": "Ei uusia tilannekuvia lähetettäväksi.",
+    "uploadSuccess": "Lähetettiin {{count}} tilannekuva(a). Kiitos!",
+    "uploadPartial": "Lähetettiin {{count}} / {{total}} tilannekuvaa; {{failed}} epäonnistui. Loput yritetään lähettää ensi kerralla.",
+    "uploadError": "Lähetys epäonnistui: {{error}}",
+    "apiNotConfigured": "Lähetyspalvelua ei ole määritetty tässä buildissa — käytä vientiä ja liitä tiedosto GitHub-issueen."
+  },
+  "personalStats": {
+    "title": "Personoidut suositukset",
+    "description": "Linkitä Windrun.io-profiilisi, niin omat kyky- ja sankarikohtaiset voittoprosenttisi sekoitetaan overlayn suosituksiin. Kyvyt, joilla olet historiallisesti voittanut, nousevat korkeammalle; tilastosi näkyvät myös kykyjen tooltipeissä.",
+    "inputPlaceholder": "Windrun-profiilin URL tai Steam ID",
+    "inputHint": "Liitä Windrun-profiilisi linkki (windrun.io/players/…), Steam ID64 tai Friend ID.",
+    "linkButton": "Linkitä profiili",
+    "linking": "Linkitetään…",
+    "refreshButton": "Päivitä tilastot",
+    "unlinkButton": "Poista linkitys",
+    "lastUpdated": "päivitetty {{date}}",
+    "refreshSuccess": "Päivitetty: {{abilities}} kykyä, {{heroes}} sankaria henkilökohtaisilla tilastoilla.",
+    "blendNote": "Henkilökohtaiset voittoprosentit sekoitetaan globaaleihin tilastoihin suhteessa siihen, montako peliä sinulla on kullakin kyvyllä — pienet otokset vain hienosäätävät pisteitä. Tilastot päivittyvät automaattisesti, kun overlay aktivoidaan (korkeintaan kerran tunnissa).",
+    "scrapeHint": "Paikallinen Windrun-datasi on kykyjen yhdistämistä vanhempi — aja 'Päivitä Windrun-data' Data-sivulla kerran aktivoidaksesi kykyjen personoinnin.",
+    "errorInvalidInput": "Syötteestä ei saatu luettua pelaajan ID:tä. Liitä windrun.io-profiilin linkki tai Steam ID.",
+    "errorProfileNotFound": "Windrun.io ei palauttanut profiilia tälle ID:lle. Tarkista linkki ja yhteytesi.",
+    "errorNotLinked": "Profiilia ei ole linkitetty.",
+    "errorFetchFailed": "Tilastojen haku Windrun.io:sta epäonnistui. Aiemmat tilastosi säilytetään — yritä myöhemmin uudelleen."
+  },
+  "autoTracking": {
+    "title": "Automaattinen draftin seuranta",
+    "description": "Automatisoi koko draftin kulun: poolin aloitusskannauksen, oman paikkasi ja sankarimallisi valinnan sekä kohdennetut uudelleenskannaukset jokaisen pickin jälkeen pelaajakohtaisella pick-seurannalla.",
+    "toggle": "Ota automaattinen draftin seuranta käyttöön",
+    "gsiNote": "Ominaisuus perustuu Dota 2:n sisäänrakennettuun Game State Integrationiin (GSI). Kun asetustiedosto on asennettu, pelisi lähettää draft-tietoja (pelivaihe, draft-kello, oma slottisi ja valitsemasi sankari) tälle sovellukselle. Yhteys on täysin paikallinen ja tiukasti yksisuuntainen — sovellus ei koskaan lähetä mitään peliin, eikä mikään poistu koneeltasi. GSI on Valven virallinen ominaisuus, jota lähetystyökalut käyttävät, eikä siitä tule ban-riskiä.",
+    "delayLabel": "Automaattisen aloitusskannauksen viive (sekuntia)",
+    "delayHint": "Kuinka kauan odotetaan draftin havaitsemisen jälkeen ennen poolin automaattista skannausta ({{min}}–{{max}} s). Nopeille koneille riittää 5 s; hitaammat voivat tarvita jopa 30 s, jotta draft-ruutu ehtii latautua kokonaan.",
+    "buttonsNote": "Kun tämä on päällä, overlayn manuaaliset Oma paikka- ja Oma malli -painikkeet piilotetaan — molemmat valinnat tapahtuvat automaattisesti pelidatasta.",
+    "setupTitle": "GSI-asennus",
+    "setupHint": "Kertaluonteinen: asenna alla oleva asetustiedosto Dota-kansioosi ja käynnistä Dota 2 uudelleen.",
+    "autoCloseToggle": "Sulje overlay, kun draft päättyy",
+    "autoCloseHint": "Overlay sulkee itsensä pelin alkaessa ja avautuu automaattisesti uudelleen, kun matsi päättyy tai uusi draft alkaa — ei manuaalista sulkemista matsien välissä."
+  },
+  "roleSuggestions": {
+    "title": "Roolitietoiset suositukset",
+    "description": "Säädä suosituksia sen position mukaan, jota aiot pelata, perustuen siihen, miten kukin kyky siirtää draftaajiaan kohti farmausta tai supporttausta (windrun.io:n tilastosiirtymät).",
+    "mode": {
+      "off": "Pois",
+      "fixed": "Omat positiot",
+      "dynamic": "Fillaa tiimille"
+    },
+    "hint": {
+      "off": "Suositukset pysyvät täsmälleen nykyisellään.",
+      "fixed": "Pisteytä suositukset alta valitsemillesi positioille — roolissaan pysyville ja party-stackeille, jotka sopivat lanet etukäteen. Tiimikaverit saavat silti suuntaa-antavat rooliarviot, mutta vain näytettäväksi.",
+      "dynamic": "Sovellus seuraa, mitä tiimikaverisi draftaavat, ja ehdottaa pickejä positiolle, jota kukaan ei ole rakentamassa (esimerkiksi: kolme ahnetta buildia tiimissäsi → support-pickejä). Se pysyy neutraalina, kunnes laudalla on tarpeeksi tiimikaverien pickejä."
+    },
+    "noPositionsWarning": "Valitse vähintään yksi positio — ilman valintaa suositukset pysyvät säätämättöminä.",
+    "positionsHint": "Suosituksia nostetaan, kun ne sopivat mihin tahansa valittuun positioon."
+  }
+}

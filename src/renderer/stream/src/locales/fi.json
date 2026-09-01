@@ -1,0 +1,53 @@
+{
+  "wordmark": "ABILITY DRAFT",
+  "waiting": "Odotetaan draftia — skannaa lauta Ability Draft Plusissa",
+  "demo": "DEMO",
+  "reservedZone": "Varattu overlayllesi",
+  "connection": {
+    "connecting": "Yhdistetään…",
+    "connected": "Live",
+    "disconnected": "Yhdistetään uudelleen…"
+  },
+  "pool": {
+    "ultimates": "Ultimaatit",
+    "standard": "Tavalliset kyvyt",
+    "modelPicked": "Draftattu"
+  },
+  "panels": {
+    "topWinrate": "Paras voittoprosentti",
+    "opCombos": "Vahvimmat combot",
+    "trapCombos": "Ansacombot",
+    "topTier": "Huippupickit",
+    "latestPicks": "Viimeisimmät pickit"
+  },
+  "avgPick": "Pickataan yleensä noin #{{n}}",
+  "player": "Pelaaja {{num}}",
+  "noHero": "Ei sankaria",
+  "team": {
+    "radiant": "Radiant",
+    "dire": "Dire"
+  },
+  "unknownAbility": "Tuntematon",
+  "unknownHero": "Tuntematon sankari",
+  "score": {
+    "label": "Draft-pisteet",
+    "teamAverage": "Tiimin draft-pisteet",
+    "confidence": {
+      "low": "matala",
+      "medium": "kesk.",
+      "high": "korkea"
+    }
+  },
+  "edit": {
+    "title": "MUOKKAUSTILA",
+    "hintMove": "Siirrä elementtiä vetämällä",
+    "hintScale": "Skaalaa hiiren rullalla elementin päällä (Alt = hienosäätö)",
+    "hintReset": "Nollaa elementti tuplaklikkaamalla",
+    "copy": "Kopioi JSON",
+    "copied": "Kopioitu!",
+    "resetAll": "Nollaa kaikki",
+    "empty": "Ei vielä säätöjä — vedä tai rullaa elementin päällä.",
+    "hintType": "Muutokset koskevat kaikkia saman tyypin elementtejä",
+    "hintMirror": "Puolet peilautuvat; jokainen poolin kyky parittuu vain peilikaksosensa kanssa"
+  }
+}

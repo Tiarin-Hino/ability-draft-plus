@@ -1,0 +1,14 @@
+{
+  "title": "Atualização do aplicativo",
+  "checkButton": "Verificar atualizações",
+  "checking": "Verificando atualizações...",
+  "downloading": "Baixando atualização...",
+  "downloadButton": "Baixar atualização",
+  "available": "Atualização v{{version}} disponível",
+  "readyToInstall": "Atualização v{{version}} pronta para instalar",
+  "installButton": "Reiniciar e instalar",
+  "retryButton": "Tentar novamente",
+  "error": "Erro na atualização: {{error}}",
+  "latestVersion": "Você está na versão mais recente.",
+  "networkError": "Não foi possível conectar ao servidor de atualização. Verifique sua conexão com a internet."
+}

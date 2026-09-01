@@ -1,0 +1,11 @@
+{
+  "title": "Palaute ja diagnostiikka",
+  "description": "Jos ML-malli tunnistaa kykyjä väärin, käytä overlayn 'Ilmoita tunnistusvirheestä' -toimintoa. Sen jälkeen voit lähettää tilannekuvat kehittäjälle mallin parantamiseksi.",
+  "exportButton": "Vie epäonnistuneet näytteet",
+  "uploadButton": "Lähetä epäonnistuneet näytteet",
+  "feedbackButton": "Jaa palautetta",
+  "exportPreparing": "Valmistellaan arkistoa...",
+  "exportExporting": "Viedään arkistoa...",
+  "uploadConfirmTitle": "Lähetä epäonnistuneet näytteet",
+  "uploadConfirmBody": "Tämä pakkaa kaikki failed-samples-kansiosi kuvat zip-tiedostoon ja lähettää ne mallin parannusanalyysiin. Jatketaanko?"
+}

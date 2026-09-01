@@ -1,0 +1,48 @@
+{
+  "appTitle": "Dota 2 Ability Draft Plus",
+  "nav": {
+    "dashboard": "Dashboard",
+    "abilities": "Mga Ability",
+    "heroes": "Mga Hero",
+    "scraping": "Data",
+    "streaming": "Streaming",
+    "settings": "Mga Setting",
+    "mapper": "Mapper",
+    "devMapper": "Dev Mapper",
+    "sidebar": "Pangunahing navigation"
+  },
+  "theme": {
+    "system": "Sistema",
+    "light": "Maliwanag",
+    "dark": "Madilim"
+  },
+  "language": {
+    "label": "Wika",
+    "en": "English",
+    "ru": "Русский",
+    "zhCN": "简体中文"
+  },
+  "status": {
+    "ready": "Ready",
+    "idle": "Nakatigil",
+    "active": "Aktibo",
+    "error": "Error",
+    "connected": "Konektado",
+    "initializing": "Nag-i-initialize",
+    "scanning": "Nag-i-scan",
+    "running": "Tumatakbo"
+  },
+  "actions": {
+    "save": "I-save",
+    "cancel": "Kanselahin",
+    "confirm": "Kumpirmahin",
+    "close": "Isara",
+    "retry": "Subukan ulit"
+  },
+  "support": {
+    "label": "Suportahan ako",
+    "tooltip": "Suportahan ang developer sa Ko-fi",
+    "datdota": "Suportahan ang datdota",
+    "datdotaTooltip": "Suportahan ang datdota (Windrun data) sa Ko-fi"
+  }
+}

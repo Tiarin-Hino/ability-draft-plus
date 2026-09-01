@@ -1,0 +1,11 @@
+{
+  "title": "Feedback e diagnóstico",
+  "description": "Se o modelo de ML identificar habilidades incorretamente, use 'Reportar falha de reconhecimento' no overlay. Depois você pode enviar os snapshots ao desenvolvedor para melhorar o modelo.",
+  "exportButton": "Exportar amostras com falha",
+  "uploadButton": "Enviar amostras com falha",
+  "feedbackButton": "Compartilhar feedback",
+  "exportPreparing": "Preparando arquivo...",
+  "exportExporting": "Exportando arquivo...",
+  "uploadConfirmTitle": "Enviar amostras com falha",
+  "uploadConfirmBody": "Isso vai compactar todas as imagens do seu diretório de amostras com falha e enviá-las para análise de melhoria do modelo. Continuar?"
+}

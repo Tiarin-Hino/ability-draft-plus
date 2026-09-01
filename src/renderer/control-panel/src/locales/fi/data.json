@@ -1,0 +1,160 @@
+{
+  "mlPipeline": {
+    "title": "ML-putki (dev)",
+    "description": "Uudelleenkoulutuksen ohjaamo: kerää koulutusdataa mallin puutteisiin, lataa datasetti S3:een, käynnistä pilvessä ajettava retrain-workflow.",
+    "gatherStep": "1. Kerää koulutusdataa ({{count}} puuttuvaa kykyä)",
+    "gatherWarning": "Keruuskripti sammuttaa ja käynnistää Dota 2:n toistuvasti ja ohjaa hiirtä ja näppäimistöä ~40 minuutin ajan. Se avautuu omaan konsoli-ikkunaansa — keskeytä painamalla siinä Ctrl+C.",
+    "dryRunButton": "Kuivaharjoitus",
+    "dryRunRunning": "Kuivaharjoitus käynnissä — voi kestää useita minuutteja, jos slottien metadata vaatii Liquipedia-haun (31 s per sankarisivu)…",
+    "gatherButton": "Aloita keruu",
+    "gatherConfirm": "Tämä ottaa koneesi haltuun (hiiri, näppäimistö, Dota 2:n uudelleenkäynnistykset) noin 40 minuutiksi. Jatketaanko?",
+    "dryRunDone": "Kuivaharjoitus valmis — tarkista suunnitelma alta (huomioi MISSING METADATA -merkinnät).",
+    "gatherLaunched": "Keruuskripti käynnistetty erillisessä konsoli-ikkunassa.",
+    "heroGatherTitle": "Kohdennettu keruu: tietyt sankarit",
+    "heroGatherDescription": "Kerää uudelleen valittujen sankarien KAIKKI kyvyt — ikoniuudistuksia varten, joissa kykyjen nimet pysyvät samoina. Vapaat aulapaikat täytetään automaattisesti vähiten koulutetuilla sankareilla, jotka kerätään samalla.",
+    "heroSearchPlaceholder": "Lisää sankari…",
+    "heroRemove": "Poista {{hero}}",
+    "heroPurgeLabel": "Siivoa olemassa olevat kuvat ensin (siirretään _purged/-kansioon, ei poisteta — vanhat ikonit saastuttaisivat uudistetut luokat)",
+    "heroGatherButton": "Aloita kohdennettu keruu",
+    "heroGatherPurgeConfirm": "Valittujen sankarien nykyiset datasettikuvat siirretään _purged/-kansioon ennen keruuta.",
+    "modelsGatherTitle": "Mallitiilet: referenssikirjasto",
+    "modelsGatherDescription": "Kerää draft-laudan sankari-MALLIEN tiilikuvia jokaisesta tunnetusta sankarista (myös uusista), kunnes kutakin on tavoitemäärä, laudan eri paikoista kierrättäen. Rajaukset menevät suoraan sovelluksen mallitiilien tunnistuskirjastoon. Jatkettavissa — keskeytys ei hukkaa mitään.",
+    "modelsSetsLabel": "Kuvia per sankari",
+    "modelsGatherButton": "Aloita mallien keruu",
+    "diagnosticTitle": "Tunnistusdiagnostiikka",
+    "diagnosticDescription": "Aja täysiä bottidrafteja sankarirosterin läpi ja tallenna poolin, pickien, mallitiilien ja OCR:n tunnistus tunnettua oikeaa vastausta vasten. Analysoi jälkikäteen ja saat HTML-raportin siitä, mikä epäonnistui ja miksi.",
+    "diagnosticKeepAppOpen": "Pidä tämä sovellus käynnissä overlay aktivoituna ja kokeellinen automaattinen uudelleenskannaus päällä koko ajon ajan — se tallentaa analysaattorin tarvitseman skannausdatan.",
+    "diagnosticIterationsLabel": "Draftit (0 = koko rosteri)",
+    "diagnosticPickTimeLabel": "Pick-ajastin (s, 0 = pelin oletus 60/7/5)",
+    "diagnosticRunButton": "Aloita diagnostiikka-ajo",
+    "diagnosticAnalyzeButton": "Analysoi viimeisin ajo",
+    "diagnosticAnalyzed": "Raportti luotu ja avattu selaimessa.",
+    "diagnosticConfirm": "Tämä käynnistää Dota 2:n toistuvasti uudelleen ja ajaa täysiä bottidrafteja (~6–10 minuuttia per draft). Sovelluksen on pysyttävä käynnissä. Jatketaanko?",
+    "uploadStep": "2. Lataa datasetti S3:een (uusien luokkien jakojen alustuksen jälkeen)",
+    "uploadButton": "Lataa datasetti (avaa konsolin)",
+    "uploadLaunched": "Lataus käynnistetty erillisessä konsoli-ikkunassa — merkitse muistiin sen tulostama datasetin versio.",
+    "retrainStep": "3. Käynnistä pilven retrain-workflow",
+    "versionPlaceholder": "Datasetti vN",
+    "fineTuneLabel": "Hienosäädä ylin lohko",
+    "retrainButton": "Käynnistä retrain",
+    "retrainDispatched": "Workflow käynnistetty datasetille v{{version}} — katso GitHub Actions -välilehti. PR uudella mallilla ja metriikoilla avautuu, kun portti läpäistään."
+  },
+  "abilities": {
+    "title": "Kyvyt",
+    "columns": {
+      "name": "Kyky",
+      "hero": "Sankari",
+      "winrate": "Voittoprosentti",
+      "hsWinrate": "HS-voittoprosentti",
+      "pickRate": "Pick rate",
+      "ultimate": "Ultimaatti"
+    },
+    "filterPlaceholder": "Suodata kykyjä...",
+    "noResults": "Kykyjä ei löytynyt."
+  },
+  "heroes": {
+    "title": "Sankarit",
+    "columns": {
+      "name": "Sankari",
+      "winrate": "Voittoprosentti",
+      "hsWinrate": "HS-voittoprosentti",
+      "pickRate": "Pick rate",
+      "hsPickRate": "HS pick rate"
+    },
+    "filterPlaceholder": "Suodata sankareita...",
+    "noResults": "Sankareita ei löytynyt."
+  },
+  "scraping": {
+    "title": "Data",
+    "description": "Hae uusimmat Ability Draft -tilastot Windrun.io:sta.",
+    "updateButton": "Päivitä Windrun-data",
+    "running": "Päivitetään...",
+    "lastUpdated": "Viimeksi päivitetty:",
+    "never": "Ei koskaan",
+    "liquipedia": {
+      "title": "Liquipedia-täydennys",
+      "description": "Hae kykyjen järjestystiedot (Q/W/E/R) Liquipediasta. Nopeusrajoitus: 1 pyyntö per 31 sekuntia.",
+      "updateButton": "Täydennä Liquipediasta",
+      "running": "Täydennetään...",
+      "warning": "Tämä kestää ~67 minuuttia kaikille sankareille Liquipedian nopeusrajoitusten takia.",
+      "lastUpdated": "Viimeksi täydennetty:"
+    }
+  },
+  "mapper": {
+    "title": "Resoluutiomapperi",
+    "devTitle": "Resoluutiomapperi (Dev)",
+    "description": "Kartoita näyttökoordinaatit mukautetuille resoluutioille.",
+    "capture": {
+      "title": "Ota kuvakaappaus",
+      "description": "Ota kuvakaappaus Dota 2:n Ability Draft -ruudusta referenssiksi.",
+      "captureButton": "Ota kuvakaappaus",
+      "capturing": "Kaapataan...",
+      "retake": "Ota uusi",
+      "next": "Seuraava",
+      "uploadButton": "Lataa kuva"
+    },
+    "autoDetect": {
+      "title": "Automaattinen tunnistus",
+      "description": "Järjestelmäsi resoluutio tunnistettiin.",
+      "resolution": "Tunnistettu resoluutio",
+      "source": "Asettelun lähde",
+      "sourcePreset": "Esiasetus (sisäänrakennettu)",
+      "sourceAutoScaled": "Skaalattu automaattisesti 1080p:stä",
+      "sourceCustom": "Mukautettu (käyttäjän tallentama)",
+      "sourceNone": "Asettelua ei saatavilla",
+      "autoScaleWarningTitle": "Automaattisesti skaalatut koordinaatit",
+      "autoScaleWarningDetail": "Tälle resoluutiolle ei ole sisäänrakennettua esiasetusta. Koordinaatit on skaalattu matemaattisesti ja voivat heittää hieman (~5 px). Parhaan tarkkuuden saat käyttämällä yleistä resoluutiota (1920x1080, 2560x1440 jne.).",
+      "useAutoScale": "Käytä autoskaalattua asettelua",
+      "calibrate": "Kalibroi (4 klikkausta)",
+      "done": "Asettelu on valmis. Kalibrointia ei tarvita.",
+      "submitScreenshot": "Lähetä kuvakaappaus",
+      "noLayoutHelp": "Tälle resoluutiolle ei ole asettelua. Lähetä kuvakaappauksesi, niin lisäämme tuen."
+    },
+    "report": {
+      "button": "Ilmoita epäonnistuneesta kartoituksesta",
+      "submitting": "Lähetetään...",
+      "success": "Kuvakaappaus lähetetty! Lisäämme tuen tälle resoluutiolle.",
+      "error": "Lähetys epäonnistui: {{error}}"
+    },
+    "anchor": {
+      "title": "4 ankkuripisteen kalibrointi",
+      "description": "Klikkaa 4 referenssipistettä resoluutiosi kalibroimiseksi.",
+      "instruction1": "Ensimmäisen ultimaattislotin vasen yläkulma",
+      "instruction2": "Ensimmäisen ultimaattislotin oikea alakulma",
+      "instruction3": "Sankarin 0 muotokuvan vasen yläkulma",
+      "instruction4": "Sankarin 1 muotokuvan vasen yläkulma",
+      "progress": "{{current}} / {{total}} ankkuria",
+      "undo": "Kumoa",
+      "reset": "Nollaa"
+    },
+    "verify": {
+      "title": "Tarkista asettelu",
+      "description": "Tarkista kartoitetut koordinaatit kuvakaappauksesi päällä.",
+      "legend": "Selite",
+      "ultimates": "Ultimaatit",
+      "standards": "Tavalliset kyvyt",
+      "models": "Sankarimallit",
+      "heroes": "Sankarien muotokuvat",
+      "selected": "Valitut kyvyt",
+      "accept": "Hyväksy",
+      "redo": "Kalibroi uudelleen"
+    },
+    "save": {
+      "title": "Tallenna asettelu",
+      "description": "Tallenna tämä kalibroitu asettelu myöhempää käyttöä varten.",
+      "resolution": "Resoluutio",
+      "method": "Menetelmä",
+      "saveButton": "Tallenna asettelu",
+      "saving": "Tallennetaan...",
+      "success": "Asettelu tallennettu!",
+      "error": "Asettelun tallennus epäonnistui.",
+      "back": "Takaisin tarkistukseen"
+    },
+    "common": {
+      "back": "Takaisin",
+      "cancel": "Peruuta",
+      "zoomTip": "Zoomaa rullaamalla, panoroi Ctrl+veto"
+    }
+  },
+  "noResults": "Ei tuloksia."
+}

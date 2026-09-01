@@ -1,0 +1,160 @@
+{
+  "mlPipeline": {
+    "title": "ML Pipeline (dev)",
+    "description": "Cockpit ng retraining loop: mag-gather ng training data para sa model gaps, i-upload ang dataset sa S3, i-dispatch ang cloud retrain workflow.",
+    "gatherStep": "1. Mag-gather ng training data ({{count}} kulang na abilities)",
+    "gatherWarning": "Paulit-ulit na pinapatay at rine-restart ng gather script ang Dota 2 at kinokontrol nito ang mouse at keyboard nang ~40 minuto. Bubukas ito sa sarili nitong console window — pindutin ang Ctrl+C doon para i-abort.",
+    "dryRunButton": "Dry Run",
+    "dryRunRunning": "Tumatakbo ang dry run — pwedeng abutin ng ilang minuto kung kailangan pa ng Liquipedia scrape ang slot metadata (31s bawat hero page)…",
+    "gatherButton": "Simulan ang Gathering",
+    "gatherConfirm": "Kukunin nito ang buong PC mo (mouse, keyboard, mga restart ng Dota 2) nang mga 40 minuto. Ituloy?",
+    "dryRunDone": "Tapos na ang dry run — i-review ang plano sa baba (bantayan ang MISSING METADATA).",
+    "gatherLaunched": "Na-launch ang gather script sa hiwalay na console window.",
+    "heroGatherTitle": "Targeted gather: mga piling hero",
+    "heroGatherDescription": "Kolektahin ulit ang LAHAT ng abilities ng mga napiling hero — para sa mga icon rework kung saan hindi nagbago ang mga pangalan ng ability. Ang mga bakanteng lobby slot ay auto-fill ng mga hero na may pinakakonting training, at makokolekta rin sila.",
+    "heroSearchPlaceholder": "Magdagdag ng hero…",
+    "heroRemove": "Tanggalin si {{hero}}",
+    "heroPurgeLabel": "I-purge muna ang mga existing na image (ililipat sa _purged/, hindi buburahin — malalason ng mga lumang icon ang mga na-rework na class)",
+    "heroGatherButton": "Simulan ang Targeted Gather",
+    "heroGatherPurgeConfirm": "Ang mga existing na dataset image ng mga napiling hero ay ililipat sa _purged/ bago mag-gather.",
+    "modelsGatherTitle": "Model tiles: reference library",
+    "modelsGatherDescription": "Kolektahin ang mga hero MODEL tile image ng draft board para sa bawat kilalang hero (pati mga bago) hanggang maabot ng bawat isa ang target na bilang, sa iba't ibang rotated board position. Diretso ang mga crop sa model-tile recognition library ng app. Resumable — walang mawawala kapag na-interrupt.",
+    "modelsSetsLabel": "Mga image bawat hero",
+    "modelsGatherButton": "Simulan ang Models Gather",
+    "diagnosticTitle": "Diagnostics ng recognition",
+    "diagnosticDescription": "Magpatakbo ng buong bot drafts na umiikot sa hero roster, nirerekord ang pool, pick, model-tile at OCR recognition laban sa kilalang ground truth. I-analyze pagkatapos para makakuha ng HTML report kung ano ang nag-fail at bakit.",
+    "diagnosticKeepAppOpen": "Panatilihing bukas ang app na ito nang naka-activate ang overlay at naka-enable ang experimental auto-rescan sa buong run — nirerekord nito ang scan data na kailangan ng analyzer.",
+    "diagnosticIterationsLabel": "Mga draft (0 = buong roster)",
+    "diagnosticPickTimeLabel": "Pick timer (s, 0 = game default 60/7/5)",
+    "diagnosticRunButton": "Simulan ang Diagnostic Run",
+    "diagnosticAnalyzeButton": "I-analyze ang Pinakabagong Run",
+    "diagnosticAnalyzed": "Na-generate ang report at binuksan sa browser mo.",
+    "diagnosticConfirm": "Paulit-ulit nitong ire-restart ang Dota 2 at magpapatakbo ng buong bot drafts (~6-10 minuto bawat isa). Kailangang manatiling bukas ang app. Ituloy?",
+    "uploadStep": "2. I-upload ang dataset sa S3 (pagkatapos i-seed ang splits para sa mga bagong class)",
+    "uploadButton": "I-upload ang Dataset (magbubukas ng console)",
+    "uploadLaunched": "Na-launch ang upload sa hiwalay na console window — tandaan ang dataset version na ipi-print nito.",
+    "retrainStep": "3. I-dispatch ang cloud retrain workflow",
+    "versionPlaceholder": "Dataset vN",
+    "fineTuneLabel": "I-fine-tune ang top block",
+    "retrainButton": "I-dispatch ang Retrain",
+    "retrainDispatched": "Na-dispatch ang workflow para sa dataset v{{version}} — tingnan ang GitHub Actions tab. Magbubukas ang PR na may bagong model at metrics kapag pumasa sa gate."
+  },
+  "abilities": {
+    "title": "Mga Ability",
+    "columns": {
+      "name": "Ability",
+      "hero": "Hero",
+      "winrate": "Win Rate",
+      "hsWinrate": "HS Win Rate",
+      "pickRate": "Pick Rate",
+      "ultimate": "Ultimate"
+    },
+    "filterPlaceholder": "I-filter ang mga ability...",
+    "noResults": "Walang nahanap na ability."
+  },
+  "heroes": {
+    "title": "Mga Hero",
+    "columns": {
+      "name": "Hero",
+      "winrate": "Win Rate",
+      "hsWinrate": "HS Win Rate",
+      "pickRate": "Pick Rate",
+      "hsPickRate": "HS Pick Rate"
+    },
+    "filterPlaceholder": "I-filter ang mga hero...",
+    "noResults": "Walang nahanap na hero."
+  },
+  "scraping": {
+    "title": "Data",
+    "description": "Kunin ang pinakabagong ability draft statistics mula sa Windrun.io.",
+    "updateButton": "I-update ang Windrun Data",
+    "running": "Nag-a-update...",
+    "lastUpdated": "Huling update:",
+    "never": "Hindi pa kailanman",
+    "liquipedia": {
+      "title": "Liquipedia Enrichment",
+      "description": "Kunin ang ability ordering data (Q/W/E/R) mula sa Liquipedia. Rate-limited sa 1 request bawat 31 segundo.",
+      "updateButton": "I-enrich mula sa Liquipedia",
+      "running": "Nag-e-enrich...",
+      "warning": "Aabutin ito ng ~67 minuto para sa lahat ng hero dahil sa rate limits ng Liquipedia.",
+      "lastUpdated": "Huling na-enrich:"
+    }
+  },
+  "mapper": {
+    "title": "Resolution Mapper",
+    "devTitle": "Resolution Mapper (Dev)",
+    "description": "I-map ang screen coordinates para sa mga custom resolution.",
+    "capture": {
+      "title": "Kumuha ng Screenshot",
+      "description": "Kumuha ng screenshot ng Ability Draft screen ng Dota 2 para gamiting reference.",
+      "captureButton": "Kumuha ng Screenshot",
+      "capturing": "Kumukuha...",
+      "retake": "Kunan ulit",
+      "next": "Susunod",
+      "uploadButton": "Mag-upload ng Image"
+    },
+    "autoDetect": {
+      "title": "Auto-Detection",
+      "description": "Na-detect ang resolution ng system mo.",
+      "resolution": "Na-detect na Resolution",
+      "source": "Source ng Layout",
+      "sourcePreset": "Preset (built-in)",
+      "sourceAutoScaled": "Auto-scaled mula sa 1080p",
+      "sourceCustom": "Custom (na-save ng user)",
+      "sourceNone": "Walang available na layout",
+      "autoScaleWarningTitle": "Auto-scaled na coordinates",
+      "autoScaleWarningDetail": "Walang built-in preset ang resolution na ito. Ang coordinates ay mathematically scaled at baka medyo mali (~5px). Para sa mas tumpak na resulta, subukan ang mas karaniwang resolution (1920x1080, 2560x1440, atbp.).",
+      "useAutoScale": "Gamitin ang Auto-Scaled na Layout",
+      "calibrate": "I-calibrate (4 na click)",
+      "done": "Handa na ang layout. Hindi na kailangan ng calibration.",
+      "submitScreenshot": "I-submit ang Screenshot",
+      "noLayoutHelp": "Walang available na layout para sa resolution na ito. I-submit ang screenshot mo at idaragdag namin ang support."
+    },
+    "report": {
+      "button": "I-report ang Nabigong Mapping",
+      "submitting": "Sini-submit...",
+      "success": "Matagumpay na na-submit ang screenshot! Idaragdag namin ang support para sa resolution na ito.",
+      "error": "Nabigong i-submit: {{error}}"
+    },
+    "anchor": {
+      "title": "4-Anchor Calibration",
+      "description": "Mag-click ng 4 na reference point para i-calibrate ang resolution mo.",
+      "instruction1": "Kaliwang itaas na sulok ng unang ultimate slot",
+      "instruction2": "Kanang ibaba na sulok ng unang ultimate slot",
+      "instruction3": "Kaliwang itaas na sulok ng portrait ng hero 0",
+      "instruction4": "Kaliwang itaas na sulok ng portrait ng hero 1",
+      "progress": "{{current}} / {{total}} na anchor",
+      "undo": "I-undo",
+      "reset": "I-reset"
+    },
+    "verify": {
+      "title": "I-verify ang Layout",
+      "description": "I-review ang mga na-map na coordinates na naka-overlay sa screenshot mo.",
+      "legend": "Legend",
+      "ultimates": "Mga Ultimate",
+      "standards": "Mga Standard Ability",
+      "models": "Mga Hero Model",
+      "heroes": "Mga Hero Portrait",
+      "selected": "Mga Napiling Ability",
+      "accept": "Tanggapin",
+      "redo": "Ulitin ang Calibration"
+    },
+    "save": {
+      "title": "I-save ang Layout",
+      "description": "I-save ang na-calibrate na layout na ito para magamit ulit.",
+      "resolution": "Resolution",
+      "method": "Method",
+      "saveButton": "I-save ang Layout",
+      "saving": "Sine-save...",
+      "success": "Matagumpay na na-save ang layout!",
+      "error": "Nabigong i-save ang layout.",
+      "back": "Balik sa Verify"
+    },
+    "common": {
+      "back": "Bumalik",
+      "cancel": "Kanselahin",
+      "zoomTip": "Mag-scroll para mag-zoom, Ctrl+drag para mag-pan"
+    }
+  },
+  "noResults": "Walang resulta."
+}

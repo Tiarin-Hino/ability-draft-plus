@@ -1,0 +1,14 @@
+{
+  "title": "Sovelluksen päivitys",
+  "checkButton": "Tarkista päivitykset",
+  "checking": "Tarkistetaan päivityksiä...",
+  "downloading": "Ladataan päivitystä...",
+  "downloadButton": "Lataa päivitys",
+  "available": "Päivitys v{{version}} on saatavilla",
+  "readyToInstall": "Päivitys v{{version}} on valmis asennettavaksi",
+  "installButton": "Käynnistä uudelleen ja asenna",
+  "retryButton": "Yritä uudelleen",
+  "error": "Päivitysvirhe: {{error}}",
+  "latestVersion": "Käytössäsi on uusin versio.",
+  "networkError": "Päivityspalvelimeen ei saatu yhteyttä. Tarkista nettiyhteytesi."
+}

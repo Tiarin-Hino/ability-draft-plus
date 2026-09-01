@@ -1,0 +1,121 @@
+{
+  "initialScan": "Aloitusskannaus",
+  "controlsAria": "Overlayn ohjaimet",
+  "rescan": "Skannaa uudelleen",
+  "reset": "Nollaa",
+  "close": "Sulje",
+  "reportFailed": "Ilmoita tunnistusvirheestä",
+  "scanConfirm": {
+    "message": "Nykyinen ruutu skannataan kykyikonien varalta. Varmista, että Dota 2:n draft-ruutu on kokonaan näkyvissä. Vinkki: Ctrl+Shift+S skannaa heti ilman tätä dialogia.",
+    "proceed": "Jatka",
+    "cancel": "Peruuta",
+    "dontShow": "Älä näytä uudelleen"
+  },
+  "reportConfirm": {
+    "message": "Nykyisistä kykyikoneista otetaan tilannekuva mallin parantamiseksi. Lähetetäänkö?",
+    "submit": "Lähetä",
+    "cancel": "Peruuta"
+  },
+  "status": {
+    "scanning": "Skannataan...",
+    "error": "Skannaus epäonnistui: {{message}}",
+    "timeoutMessage": "Skannaus aikakatkaistiin — yritä uudelleen"
+  },
+  "snapshot": {
+    "saved": "Tilannekuva tallennettu ({{count}} tallessa) — lähetä se kohdasta Asetukset → Palaute",
+    "noScan": "Ei skannausdataa ilmoitettavaksi — skannaa ensin",
+    "error": "Tilannekuvan tallennus epäonnistui: {{error}}"
+  },
+  "opCombinations": {
+    "title": "OP-yhdistelmät",
+    "show": "Näytä OP",
+    "hide": "Piilota",
+    "tripletTooltip": "Draftataan usein kolmikkona ({{winrate}} WR yhdessä)"
+  },
+  "trapCombinations": {
+    "title": "Se on ansa!",
+    "show": "Näytä ansat",
+    "hide": "Piilota",
+    "tripletTooltip": "Draftataan usein kolmikkona ({{winrate}} WR yhdessä)"
+  },
+  "scanSummary": "{{recognized}}/{{total}} tunnistettu",
+  "resolution": {
+    "autoScaledWarning": "Koordinaatit on skaalattu matemaattisesti tälle resoluutiolle ja voivat heittää hieman. Kalibroi hallintapaneelin Mapperilla.",
+    "source": {
+      "preset": "esiasetus",
+      "custom": "kalibroitu",
+      "auto-scaled": "autoskaalattu",
+      "none": "ei tuettu"
+    }
+  },
+  "mySpot": "Oma paikka",
+  "changeMySpot": "Vaihda",
+  "myModel": "Oma malli",
+  "changeMyModel": "Vaihda",
+  "tooltip": {
+    "winrate": "Voittoprosentti: {{value}}",
+    "pickRate": "Pick rate: {{value}}",
+    "personalStats": "Sinä: {{value}} WR {{games}} pelissä",
+    "strongSynergies": "Vahvat synergiat",
+    "heroSynergies": "Sankarisynergiat",
+    "weakSynergies": "Heikot synergiat",
+    "weakHeroSynergies": "Heikot sankarisynergiat",
+    "topPick": "Huippupick",
+    "synergyPick": "Synergiapick",
+    "topModel": "Huippumalli",
+    "personalPick": "Henkilökohtainen pick — suositeltu tilastojesi perusteella",
+    "yourModelPick": "Mallisi pick",
+    "strongAbilities": "Vahvat kyvyt tälle sankarille",
+    "weakAbilities": "Heikot kyvyt tälle sankarille",
+    "unknownAbility": "Tuntematon kyky",
+    "unknownHint": "Malli ei tunnistanut tätä ikonia — harkitse 'Ilmoita tunnistusvirheestä' -toimintoa",
+    "roleFit": "Roolisopivuus: pos {{position}}",
+    "pairingFit": "Malliparitus",
+    "roleNeeds": {
+      "steroid": "hyökkäyssteroidi",
+      "farm": "farmaustyökalu",
+      "survival": "selviytyvyys",
+      "nuke": "nuke",
+      "mobility": "liikkuvuus",
+      "kill_ult": "tappoultimaatti",
+      "initiation": "aloitus",
+      "aoe_cc": "AoE-kontrolli",
+      "durability": "kestävyys",
+      "hard_cc": "kova stun/disable",
+      "waveclear": "waveclear",
+      "save": "liittolaisen pelastus",
+      "mana_budget": "manabudjetti",
+      "farm_tool": "farmaustyökalu",
+      "sustain_self": "oma sustain",
+      "teamfight_ult": "teamfight-ultimaatti",
+      "passive_value": "arvokas passiivi",
+      "save_ally": "liittolaisen pelastus"
+    },
+    "roleCovers": "Kattaa puuttuvan tarpeesi: {{need}}",
+    "rolePartial": "Kattaa osittain puuttuvan tarpeesi: {{need}}",
+    "roleDuplicate": "Jo katettu: {{need}}",
+    "roleCurated": "Kuratoitu pick tälle roolille",
+    "curatedPick": "Roolipick — kuratoitu pakkohankinnaksi roolillesi",
+    "inertOnModel": "Ei toimi mallillasi (melee/ranged-ristiriita)",
+    "requiresAbility": "Toimii vain kyvyn {{name}} kanssa — ei suositella ennen kuin draftaat sen",
+    "requiresModel": "Toimii vain {{name}}-mallilla — ei suositella",
+    "requiresTag": "Tarvitsee {{name}}-kyvyn — yhtään ei draftattu eikä poolissa jäljellä",
+    "roleAvoided": "Kuratoitu ohitus tälle paikalle — ei suositella",
+    "overrated": "Pickataan aikaisin mutta voittaa vain {{value}} — luultavasti yliarvostettu",
+    "contestedSoon": "Yleensä draftattu jo tässä vaiheessa — ei ehkä selviä seuraavaan kierrokseen"
+  },
+  "role": {
+    "aria": "Roolisuositukset",
+    "label": "Rooli",
+    "off": "Pois",
+    "auto": "Auto",
+    "offStatus": "Roolisuositukset pois päältä",
+    "scoringFor": "Pisteytetään positiolle pos {{positions}}",
+    "watching": "Seurataan tiimin trendiä…",
+    "teamNeeds": "Tiimi tarvitsee pos {{positions}}",
+    "needSpot": "Valitse Oma paikka ottaaksesi käyttöön",
+    "appliesNextScan": "Tulee voimaan seuraavassa skannauksessa",
+    "needData": "Aja datapäivitys ottaaksesi käyttöön",
+    "waitingSpot": "Odotetaan paikan automaattista tunnistusta…"
+  }
+}

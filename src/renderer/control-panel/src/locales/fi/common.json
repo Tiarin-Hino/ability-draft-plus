@@ -1,0 +1,48 @@
+{
+  "appTitle": "Dota 2 Ability Draft Plus",
+  "nav": {
+    "dashboard": "Yleiskatsaus",
+    "abilities": "Kyvyt",
+    "heroes": "Sankarit",
+    "scraping": "Data",
+    "streaming": "Striimaus",
+    "settings": "Asetukset",
+    "mapper": "Mapper",
+    "devMapper": "Dev Mapper",
+    "sidebar": "Päänavigaatio"
+  },
+  "theme": {
+    "system": "Järjestelmä",
+    "light": "Vaalea",
+    "dark": "Tumma"
+  },
+  "language": {
+    "label": "Kieli",
+    "en": "English",
+    "ru": "Русский",
+    "zhCN": "简体中文"
+  },
+  "status": {
+    "ready": "Valmis",
+    "idle": "Odottaa",
+    "active": "Aktiivinen",
+    "error": "Virhe",
+    "connected": "Yhdistetty",
+    "initializing": "Alustetaan",
+    "scanning": "Skannataan",
+    "running": "Käynnissä"
+  },
+  "actions": {
+    "save": "Tallenna",
+    "cancel": "Peruuta",
+    "confirm": "Vahvista",
+    "close": "Sulje",
+    "retry": "Yritä uudelleen"
+  },
+  "support": {
+    "label": "Tue kehittäjää",
+    "tooltip": "Tue kehittäjää Ko-fissa",
+    "datdota": "Tue datdotaa",
+    "datdotaTooltip": "Tue datdotaa (Windrun-data) Ko-fissa"
+  }
+}
