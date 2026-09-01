@@ -173,3 +173,9 @@ and [docs/STREAMER_VIEW.md](docs/STREAMER_VIEW.md) for the OBS/streaming setup g
 ## Author
 
 Tiarin Hino
+
+## Contributors
+
+Thanks to the community members who make the app better:
+
+- [hahahaha123567](https://github.com/hahahaha123567) — Simplified Chinese (简体中文) localization

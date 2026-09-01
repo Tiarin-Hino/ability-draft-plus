@@ -18,6 +18,7 @@ import {
 import { useAppStore } from '@/hooks/use-app-store'
 import { useAppDispatch } from '@/hooks/use-dispatch'
 import { APP_ACTIONS } from '@shared/types/app-store'
+import type { SupportedLanguage } from '@shared/constants/defaults'
 
 const THEME_OPTIONS = [
   { value: 'light' as const, icon: Sun },
@@ -38,9 +39,10 @@ export function AppearanceCard() {
     dispatch(APP_ACTIONS.THEME_SET_MODE, mode)
   }
 
-  const handleLanguageChange = (lang: string) => {
+  const handleLanguageChange = (lang: SupportedLanguage) => {
     dispatch(APP_ACTIONS.LANGUAGE_SET, lang)
     i18n.changeLanguage(lang)
+    void window.electronApi.invoke('settings:set', { language: lang })
   }
 
   const handleOpacityChange = (vals: number[]) => {
@@ -77,7 +79,10 @@ export function AppearanceCard() {
 
         <div className="space-y-2">
           <label className="text-sm font-medium">{ts('appearance.languageLabel')}</label>
-          <Select value={language} onValueChange={handleLanguageChange}>
+          <Select
+            value={language}
+            onValueChange={(value) => handleLanguageChange(value as SupportedLanguage)}
+          >
             <SelectTrigger className="w-48">
               <SelectValue />
             </SelectTrigger>
