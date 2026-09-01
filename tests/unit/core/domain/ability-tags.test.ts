@@ -87,9 +87,9 @@ describe('parseAbilityTagsDataset', () => {
     expect(parsed.roleMustByAbility.has('no_role_must')).toBe(false)
   })
 
-  it('vocabulary matches the build script contract (21 tags)', () => {
-    expect(TAG_VOCABULARY).toHaveLength(21)
-    expect(new Set(TAG_VOCABULARY).size).toBe(21)
+  it('vocabulary matches the build script contract (22 tags)', () => {
+    expect(TAG_VOCABULARY).toHaveLength(22)
+    expect(new Set(TAG_VOCABULARY).size).toBe(22)
   })
 })
 
@@ -119,16 +119,19 @@ describe('parseHeroMeta', () => {
     expect(meta.get('broken')!.strGain).toBeUndefined()
   })
 
-  it('parses hero tags (unknown dropped) and hero roleMust', () => {
+  it('parses hero tags (unknown dropped) and hero roleMust/roleAvoid', () => {
     const meta = parseHeroMeta({
       nevermore: { attackType: 'Ranged', tags: ['innate_offense', 'not_a_tag'], roleMust: [2] },
+      drowranger: { attackType: 'Ranged', tags: ['innate_team'], roleAvoid: [4, 5, 7] },
       sven: { attackType: 'Melee', tags: [], roleMust: [0, 9] },
     })!
 
     expect([...meta.get('nevermore')!.tags!]).toEqual(['innate_offense'])
     expect([...meta.get('nevermore')!.roleMust!]).toEqual([2])
+    expect([...meta.get('drowranger')!.roleAvoid!]).toEqual([4, 5])
     expect(meta.get('sven')!.tags).toBeUndefined()
     expect(meta.get('sven')!.roleMust).toBeUndefined()
+    expect(meta.get('sven')!.roleAvoid).toBeUndefined()
   })
 
   it('returns null for invalid input', () => {

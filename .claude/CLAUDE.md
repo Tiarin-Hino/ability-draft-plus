@@ -32,6 +32,11 @@ maintenance spec — the authoritative map of what IS, not a build plan.
   The 1px width-shrink in window-manager is a REAL Windows fix — do not "clean it up"
 - The overlay never holds keyboard focus — in-window key handlers don't work; use
   `globalShortcut` (registered on overlay activation, unregistered on close)
+- Overlay auto-close (GSI, `overlayAutoCloseEnabled`, only with auto draft
+  tracking on): closes on the HERO_SELECTION→post-draft transition, reopens at
+  POST_GAME or a new-match draft. State machine is pure (core/gsi/
+  overlay-lifecycle.ts); the auto-close path suppresses the control-panel
+  restore/focus (stealing focus would alt-tab the player out of the game)
 - Overlay CSS: `contain: strict`, `will-change: transform`, NO `backdrop-filter: blur()`;
   `rgba()` backgrounds instead
 
@@ -86,18 +91,24 @@ maintenance spec — the authoritative map of what IS, not a build plan.
   TAG_VOCABULARY (core/domain/ability-tags.ts) in lockstep with the script's VOCAB
 - Role weights in thresholds.ts carry their empirical rationale (expert-draft corpus +
   simulation) as comments — read them before retuning
-- Dependency gates: `requires: ["ability" | "model:hero"]` on a dataset entry —
-  hard-excluded from suggestions until the user drafts a listed ability or picks
-  the listed model (Eclipse→Lucent Beam, Requiem→SF's innate souls). Stats stay
-  visible; tooltip explains. Curated in tag_overrides.json, preserved by
-  import_site_export.py (the Tag Lab doesn't carry it yet)
+- Dependency gates: `requires: ["ability" | "model:hero" | "tag:tag"]` on a
+  dataset entry — hard-excluded from suggestions until the user drafts a listed
+  ability, picks the listed model (Eclipse→Lucent Beam, Requiem→SF's innate
+  souls), or for tag: entries has/still-sees a tagged ability in the pool
+  (Rearm→tag:good_with_rearm). Stats stay visible; tooltip explains. Curated in
+  tag_overrides.json, preserved by import_site_export.py (the Tag Lab doesn't
+  carry it yet). Model shift-greed is DISABLED (ROLE_MODEL_WEIGHT_SCALE=0,
+  Drow aura selection-effect); soft-CC half-credit only fires for candidates
+  when no real hard_cc remains in the pool
 - Curated must-picks: `roleMust: [positions]` on a dataset entry (curated in
   tag_overrides.json, NOT a tag — tags are mechanical facts, this is a verdict)
   guarantees the ability a top-tier slot when the user's role matches, plus a
   ROLE_CURATED_WEIGHT boost. For abilities the stats systematically undervalue
   (e.g. Glimpse for supports); keep the list short and deliberate. The negative
   counterpart `roleAvoid: [positions]` excludes from suggestions (all five =
-  never suggested at all, e.g. Ransack)
+  never suggested at all, e.g. Ransack). Hero MODELS take roleAvoid too
+  (Drow/Luna [4,5]) — model avoids and the MODEL_RESERVATION damp both LIFT
+  once every teammate has picked a model (then it only denies enemies)
 - Hero MODELS carry tags too (hero_meta.json `tags` + `roleMust`, 7-tag
   HERO_TAG_VOCABULARY: talent profile + innate value; talent tags count GENERIC
   talents only — ability-specific talents are dead on an AD model). They feed

@@ -30,11 +30,13 @@ const DELAY_MAX_S = 60
 export function AutoTrackingCard() {
   const { t } = useTranslation('settings')
   const [enabled, setEnabled] = useState(false)
+  const [autoClose, setAutoClose] = useState(true)
   const [delayInput, setDelayInput] = useState(String(AUTO_INITIAL_SCAN_DELAY_S))
 
   useEffect(() => {
     window.electronApi.invoke('settings:get').then((settings) => {
       setEnabled(settings.experimentalAutoDraftTracking)
+      setAutoClose(settings.overlayAutoCloseEnabled)
       setDelayInput(String(settings.autoInitialScanDelayS))
     })
   }, [])
@@ -44,6 +46,11 @@ export function AutoTrackingCard() {
     window.electronApi.invoke('settings:set', {
       experimentalAutoDraftTracking: checked,
     })
+  }
+
+  const handleAutoCloseToggle = (checked: boolean) => {
+    setAutoClose(checked)
+    window.electronApi.invoke('settings:set', { overlayAutoCloseEnabled: checked })
   }
 
   const handleDelayBlur = () => {
@@ -96,6 +103,22 @@ export function AutoTrackingCard() {
             <p className="text-xs text-muted-foreground">
               {t('autoTracking.buttonsNote')}
             </p>
+
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="overlay-auto-close"
+                  checked={autoClose}
+                  onCheckedChange={handleAutoCloseToggle}
+                />
+                <Label htmlFor="overlay-auto-close">
+                  {t('autoTracking.autoCloseToggle')}
+                </Label>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {t('autoTracking.autoCloseHint')}
+              </p>
+            </div>
 
             <div className="space-y-2 border-t pt-4">
               <p className="text-sm font-medium">{t('autoTracking.setupTitle')}</p>

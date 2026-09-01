@@ -46,6 +46,7 @@ export function createMetadataRepository(db: SQLJsDatabase): MetadataRepository 
       const streamPort = get('stream_port')
       const streamAutostart = get('stream_autostart')
       const autoDraftTracking = get('experimental_auto_draft_tracking')
+      const overlayAutoClose = get('overlay_auto_close')
       const autoInitialScanDelayS = get('auto_initial_scan_delay_s')
       const roleMode = get('role_mode')
       const roleFixedPositions = get('role_fixed_positions')
@@ -84,6 +85,10 @@ export function createMetadataRepository(db: SQLJsDatabase): MetadataRepository 
           autoDraftTracking !== null
             ? autoDraftTracking === 'true'
             : DEFAULT_SETTINGS.experimentalAutoDraftTracking,
+        overlayAutoCloseEnabled:
+          overlayAutoClose !== null
+            ? overlayAutoClose === 'true'
+            : DEFAULT_SETTINGS.overlayAutoCloseEnabled,
         autoInitialScanDelayS:
           autoInitialScanDelayS !== null
             ? parseInt(autoInitialScanDelayS, 10)
@@ -133,6 +138,9 @@ export function createMetadataRepository(db: SQLJsDatabase): MetadataRepository 
           'experimental_auto_draft_tracking',
           String(settings.experimentalAutoDraftTracking),
         )
+      }
+      if (settings.overlayAutoCloseEnabled !== undefined) {
+        set('overlay_auto_close', String(settings.overlayAutoCloseEnabled))
       }
       if (settings.autoInitialScanDelayS !== undefined) {
         set('auto_initial_scan_delay_s', String(settings.autoInitialScanDelayS))

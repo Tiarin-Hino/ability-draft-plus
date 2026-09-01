@@ -120,10 +120,13 @@ export const ROLE_SHIFT_ACCENT_WEIGHT = 0.03
 // measured (won-lost gap grows with skill: +0.044 league → +0.057 top slice).
 export const ROLE_TEAM_BALANCE_WEIGHT = 0.05
 export const ROLE_ADJUSTMENT_CAP = 0.25
-// Hero MODELS get role-scored from their own shift entries, scaled down: model
-// shifts are ~20-50x weaker than ability shifts (the build determines farm
-// priority, not the model), so within-hero percentiles overstate their weight.
-export const ROLE_MODEL_WEIGHT_SCALE = 0.5
+// Hero MODELS' shift-greed term is DISABLED (2026-09-01, Drow-for-pos-1 case):
+// the model greed axis is poisoned by selection effects — supports pick
+// Drow/Luna for the aura, driving their model greed to the 1st-2nd
+// percentile, which then wrongly tanks their pos-1 fit. Attribute fit,
+// chassis percentiles, hero tags and verdicts carry the model-role signal on
+// cleaner data. Set back to 0.5 to revert to the shift-greed blend.
+export const ROLE_MODEL_WEIGHT_SCALE = 0
 // Below this |delta| the overlay renders no role badge (anti-noise, mirrors
 // PERSONAL_SCORE_DELTA_EPSILON).
 export const ROLE_SCORE_DELTA_EPSILON = 0.005
@@ -205,6 +208,14 @@ export const PAIRING_ADJUSTMENT_CAP = 0.1
 export const OVERRATED_WINRATE_MAX = 0.48
 export const OVERRATED_PICK_ORDER_MAX = 15
 export const OVERRATED_DAMP = 0.12
+// Model reservation (Drow-for-pos-5 case, 2026-08-31): while core teammates
+// still need models, a body whose attr fit for positions 1-3 beats its 4-5
+// fit by more than the gap is damped for a support drafter — don't steal the
+// premier core chassis. The curated hero roleAvoid handles the flagship
+// cases; this is the curation-free generalization. Both LIFT once every
+// teammate has a model (then taking it only denies the enemy team).
+export const MODEL_RESERVATION_FIT_GAP = 0.15
+export const MODEL_RESERVATION_DAMP = 0.08
 
 // Model
 // The class count is NOT a constant — it is defined by resources/model/class_names.json

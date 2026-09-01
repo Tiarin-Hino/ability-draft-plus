@@ -16,6 +16,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   streamPort: DEFAULT_STREAM_PORT,
   streamAutostart: false,
   experimentalAutoDraftTracking: false,
+  overlayAutoCloseEnabled: true,
   autoInitialScanDelayS: AUTO_INITIAL_SCAN_DELAY_S,
   roleMode: 'off',
   roleFixedPositions: [],

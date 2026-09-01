@@ -611,6 +611,10 @@
   "tags": [
    "innate_offense",
    "innate_team"
+  ],
+  "roleAvoid": [
+   4,
+   5
   ]
  },
  "earthshaker": {
@@ -1180,6 +1184,10 @@
   "tags": [
    "innate_offense",
    "innate_team"
+  ],
+  "roleAvoid": [
+   4,
+   5
   ]
  },
  "lycan": {

@@ -66,14 +66,30 @@ Key mechanics in `core/domain/role-scoring.ts`:
   waives `ranged_only` on melee models for the rest of the draft. No symmetric
   melee waiver — nothing grants melee.
 - **Dependency gates** (`requires: [entries]` on a dataset entry, curated in
-  tag_overrides.json): entries are ability internal names or `model:<hero>`.
-  The ability is HARD-excluded from suggestions until one entry is satisfied —
-  a listed ability among the USER'S drafted picks, or the picked model matching
-  a `model:` entry (its innate provides the mechanic; innates stay with the
-  model in AD since 7.36). Stats stay fully visible; the tooltip names the
-  missing piece. Unknown spot/model counts as unsatisfied (conservative).
-  Seeds: Eclipse -> Lucent Beam, Requiem -> the SF model (souls). The Tag Lab
-  does not carry `requires` yet — `import_site_export.py` preserves it.
+  tag_overrides.json): entries are ability internal names, `model:<hero>`, or
+  `tag:<tag>`. The ability is HARD-excluded from suggestions until one entry
+  is satisfied — a listed ability among the USER'S drafted picks, the picked
+  model matching a `model:` entry (its innate provides the mechanic; innates
+  stay with the model in AD since 7.36), or for `tag:` entries a tagged
+  ability among my picks OR still in the unpicked pool (Rearm case: the
+  enabler goes ~9th, long before partners, so pool presence keeps it
+  suggestible). Stats stay fully visible; the tooltip names the missing
+  piece. Unknown spot/model counts as unsatisfied (conservative). Seeds:
+  Eclipse -> Lucent Beam, Requiem -> the SF model (souls), Rearm ->
+  `tag:good_with_rearm` (Torrent seeded; curate more in the Tag Lab). The
+  Tag Lab does not carry `requires` yet — `import_site_export.py` preserves
+  it.
+- **Soft-CC candidate suppression** (Shadow Strike ruling 2026-09-01): the
+  soft_cc half-credit toward disable needs applies to CANDIDATES only while
+  the pool holds NO real hard_cc — suggest a slow as your disable only when
+  no actual stun is left. Coverage counting of the user's own picks keeps the
+  original half-credit semantics.
+- **Model shift-greed term disabled** (Drow-for-pos-1 ruling 2026-09-01):
+  `ROLE_MODEL_WEIGHT_SCALE = 0`. The model greed axis is poisoned by
+  selection effects (supports pick Drow/Luna for the aura → their model greed
+  reads 1st-2nd percentile, tanking pos-1 fit). Attribute fit + chassis +
+  hero tags + verdicts carry the model-role signal now; set the constant back
+  to 0.5 to revert.
 - **Model chassis (Layer A)**: hero_meta.json also ships body properties from
   dotaconstants (attack range/BAT/projectile, move speed, base armor/HP/mana/
   damage). Three derived percentiles feed `modelAttrFit`: attackQuality
@@ -96,6 +112,22 @@ Key mechanics in `core/domain/role-scoring.ts`:
   explains; stats stay visible. Tag Lab: the position toggles are tri-state
   (neutral → must → avoid), submitting `role_avoid` proposals with the same
   replace semantics, mandatory rationale, and newest-accepted-wins.
+- **Hero-model roleAvoid + teammates-modeled lift** (Drow/Luna case): hero
+  entries carry `roleAvoid` too (seeded Drow/Luna [4,5] — a premier core body
+  should not be stolen from your cores; note their model greed axes sit at
+  the 1st-2nd percentile because supports DO pick them for the aura, which is
+  exactly the play the lift permits). The avoid — and the reservation damp
+  below — LIFT once every teammate has picked a model: taking the body then
+  only denies the enemy team. Unknown My Spot = no lift (conservative).
+- **Model reservation** (curation-free generalization): a support drafter
+  (effective positions all 4-5) is damped `MODEL_RESERVATION_DAMP` on bodies
+  whose best pos-1-3 attr fit beats their best pos-4-5 fit by more than
+  `MODEL_RESERVATION_FIT_GAP`, while core teammates still need models. Folded
+  into the displayed role delta.
+- **Reason-chip via suffix** (`covers:<need>:<viaTag>`): when a need is
+  covered by an ALTERNATIVE tag rather than its namesake (nuke covering the
+  pos-4/5 wave need — Shadow Realm case), the chip says "covers: waveclear
+  (via nuke)". The renderer collapses the suffix when the labels coincide.
 - **Role-off invariant, amended**: `roleMode: 'off'` remains bit-identical to
   the role-less path EXCEPT for role-independent verdicts and facts: an
   all-five roleMust is guaranteed a slot, an all-five roleAvoid is excluded,

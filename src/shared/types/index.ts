@@ -83,6 +83,10 @@ export interface AppSettings {
   /** GSI-driven automatic draft tracking (auto initial scan, auto spot/model,
    * turn-driven rescans + pick attribution). Default off. */
   experimentalAutoDraftTracking: boolean
+  /** With auto draft tracking on: close the overlay when GSI reports the
+   * draft is over, and reopen it at match end or when a new draft starts.
+   * Default on (only ever acts while experimentalAutoDraftTracking is on). */
+  overlayAutoCloseEnabled: boolean
   /** Seconds to wait after the draft clock is identified before the automatic
    * initial scan (slower PCs need the draft screen fully rendered). */
   autoInitialScanDelayS: number
@@ -173,7 +177,7 @@ export interface EnrichedScanSlot extends ScanResult {
   inertOnModel?: boolean
   /** Dependency gate: unmet requirement (Eclipse without Lucent Beam) — never
    * top-tier until satisfied; the tooltip names what is missing. */
-  unmetRequirement?: { kind: 'ability' | 'model'; displayName: string }
+  unmetRequirement?: { kind: 'ability' | 'model' | 'tag'; displayName: string }
   /** Curated never-recommend for the drafter's positions (all five = always)
    * — hard-excluded from suggestions; the tooltip explains. */
   roleAvoided?: boolean
@@ -295,6 +299,9 @@ export interface HeroModelDisplay {
   pairingScoreDelta?: number
   /** Curated must-pick model for the user's active role (hero roleMust). */
   isCuratedForRole?: boolean
+  /** Curated never-recommend model for the drafter's positions (lifted once
+   * every teammate has a model) — excluded from suggestions. */
+  roleAvoided?: boolean
   identificationConfidence: number
   strongAbilitySynergies: HeroSynergyDisplay[]
   weakAbilitySynergies: HeroSynergyDisplay[]

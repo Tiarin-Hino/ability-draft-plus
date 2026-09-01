@@ -20,6 +20,7 @@
   "melee_only",
   "ranged_only",
   "grants_ranged",
+  "good_with_rearm",
   "mana_hungry",
   "channeled"
  ],
@@ -822,6 +823,9 @@
     "passive_value",
     "ranged_only",
     "steroid"
+   ],
+   "roleAvoid": [
+    3
    ]
   },
   "drow_ranger_multishot": {
@@ -1407,6 +1411,7 @@
   "kunkka_torrent": {
    "tags": [
     "aoe",
+    "good_with_rearm",
     "hard_cc",
     "setup_cc",
     "soft_cc"
@@ -3220,6 +3225,9 @@
    "tags": [
     "channeled",
     "mana_hungry"
+   ],
+   "requires": [
+    "tag:good_with_rearm"
    ]
   },
   "tiny_avalanche": {

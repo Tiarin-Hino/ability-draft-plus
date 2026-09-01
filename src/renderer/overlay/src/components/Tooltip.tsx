@@ -140,7 +140,7 @@ function RoleReasonChips({
   return (
     <div className="tooltip-role-chips">
       {reasons.map((reason) => {
-        const [kind, key] = reason.split(':')
+        const [kind, key, via] = reason.split(':')
         if (kind === 'curated') {
           return (
             <span key={reason} className="tooltip-role-chip tooltip-role-chip-curated">
@@ -148,7 +148,10 @@ function RoleReasonChips({
             </span>
           )
         }
-        const need = t(`tooltip.roleNeeds.${key}`)
+        // Full-credit alternative match: the chip names the MATCHED tag, not
+        // the need it satisfied ("Covers your missing nuke" — Shadow Realm
+        // ruling). Partial credit says so explicitly and keeps the need name.
+        const need = t(`tooltip.roleNeeds.${via ?? key}`)
         return (
           <span
             key={reason}
@@ -156,7 +159,9 @@ function RoleReasonChips({
           >
             {kind === 'duplicate'
               ? t('tooltip.roleDuplicate', { need })
-              : t('tooltip.roleCovers', { need })}
+              : kind === 'partial'
+                ? t('tooltip.rolePartial', { need: t(`tooltip.roleNeeds.${key}`) })
+                : t('tooltip.roleCovers', { need })}
           </span>
         )
       })}
@@ -294,7 +299,9 @@ function AbilityTooltipContent({
           {t(
             slot.unmetRequirement.kind === 'model'
               ? 'tooltip.requiresModel'
-              : 'tooltip.requiresAbility',
+              : slot.unmetRequirement.kind === 'tag'
+                ? 'tooltip.requiresTag'
+                : 'tooltip.requiresAbility',
             { name: slot.unmetRequirement.displayName },
           )}
         </div>
@@ -382,6 +389,9 @@ function HeroTooltipContent({
         t={t}
       />
       <PairingStatLine scoreDelta={model.pairingScoreDelta} t={t} />
+      {model.roleAvoided && (
+        <div className="tooltip-stat tooltip-inert">{t('tooltip.roleAvoided')}</div>
+      )}
 
       <HeroSynergySection
         title={t('tooltip.strongAbilities')}

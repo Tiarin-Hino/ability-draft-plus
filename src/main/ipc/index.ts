@@ -32,6 +32,10 @@ import type { FeedbackService } from '../services/feedback-service'
 import type { ScanTriggerService } from '../services/scan-trigger-service'
 import type { SlotMappingService } from '../services/slot-mapping-service'
 import { startDevControlServer } from '../services/dev-control-service'
+import {
+  initialOverlayLifecycleState,
+  nextOverlayLifecycle,
+} from '@core/gsi/overlay-lifecycle'
 import type { LayoutSource } from '@shared/types'
 
 // @DEV-GUIDE: Central IPC handler registration. All renderer↔main communication goes through
@@ -112,6 +116,10 @@ export function registerIpcHandlers(
 
   // Overlay domain
   let pendingOverlayData: import('@shared/types').OverlayDataPayload | null = null
+  // Set just before an AUTO-close (GSI draft-end): the overlay 'closed' handler
+  // must NOT restore/focus the control panel then — the game is starting, and
+  // stealing focus would alt-tab the player out of Dota.
+  let suppressPanelRestoreOnce = false
 
   // Renderer calls this on mount to get initial data (avoids did-finish-load race)
   ipcMain.handle('overlay:getInitialData', () => pendingOverlayData)
@@ -222,10 +230,14 @@ export function registerIpcHandlers(
       slotMappingService.onSessionReset()
       pendingOverlayData = null
 
-      const cp = windowManager.getControlPanelWindow()
-      if (cp && !cp.isDestroyed()) {
-        cp.restore()
-        cp.focus()
+      if (suppressPanelRestoreOnce) {
+        suppressPanelRestoreOnce = false
+      } else {
+        const cp = windowManager.getControlPanelWindow()
+        if (cp && !cp.isDestroyed()) {
+          cp.restore()
+          cp.focus()
+        }
       }
     })
 
@@ -234,6 +246,45 @@ export function registerIpcHandlers(
   }
 
   ipcMain.handle('overlay:activate', () => activateOverlay())
+
+  // Overlay auto-close (GSI): with auto draft tracking on, close the overlay
+  // when the draft ends and reopen at match end or when a new draft starts.
+  // The state machine lives in core (overlay-lifecycle.ts) and is fed every
+  // snapshot so transitions stay accurate even while the feature is off.
+  let overlayLifecycle = initialOverlayLifecycleState()
+  streamService.onGsiSnapshot((snapshot) => {
+    const settings = dbService.metadata.getSettings()
+    const enabled =
+      settings.overlayAutoCloseEnabled === true &&
+      settings.experimentalAutoDraftTracking === true
+    const { action, state } = nextOverlayLifecycle(
+      overlayLifecycle,
+      snapshot,
+      appStore.getState().overlayActive,
+      enabled,
+    )
+    overlayLifecycle = state
+    if (action === 'close') {
+      logger.info('Overlay auto-close: draft ended', { matchId: snapshot.matchId })
+      suppressPanelRestoreOnce = true
+      windowTracker.stopTracking()
+      windowManager.closeOverlay()
+      appStore.setState({
+        overlayActive: false,
+        activeResolution: null,
+        activeResolutionSource: null,
+      })
+    } else if (action === 'open') {
+      logger.info('Overlay auto-open: match ended or new draft', {
+        gamePhase: snapshot.gamePhase,
+        matchId: snapshot.matchId,
+      })
+      const result = activateOverlay()
+      if (!result.success) {
+        logger.warn('Overlay auto-open failed', { error: result.error })
+      }
+    }
+  })
 
   // Dev-only loopback control for the diagnostic harness (no-op in packaged builds)
   let scanCount = 0
