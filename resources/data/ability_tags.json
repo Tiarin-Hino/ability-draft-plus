@@ -86,6 +86,7 @@
   "abyssal_underlord_pit_of_malice": {
    "tags": [
     "aoe",
+    "good_with_rearm",
     "setup_cc",
     "soft_cc"
    ],
@@ -738,6 +739,7 @@
   "disruptor_kinetic_field": {
    "tags": [
     "aoe",
+    "good_with_rearm",
     "setup_cc",
     "soft_cc"
    ]
@@ -998,6 +1000,7 @@
   "enigma_demonic_conversion": {
    "tags": [
     "farm_tool",
+    "good_with_rearm",
     "summon"
    ]
   },
@@ -1187,6 +1190,7 @@
   "invoker_chaos_meteor_ad": {
    "tags": [
     "aoe",
+    "good_with_rearm",
     "mana_hungry",
     "nuke",
     "waveclear"
@@ -1238,6 +1242,7 @@
   "invoker_sun_strike_ad": {
    "tags": [
     "aoe",
+    "good_with_rearm",
     "mana_hungry",
     "nuke"
    ]
@@ -1245,6 +1250,7 @@
   "invoker_tornado_ad": {
    "tags": [
     "aoe",
+    "good_with_rearm",
     "hard_cc",
     "initiation",
     "nuke"
@@ -1499,6 +1505,7 @@
   "leshrac_split_earth": {
    "tags": [
     "aoe",
+    "good_with_rearm",
     "hard_cc",
     "setup_cc"
    ]
@@ -1616,6 +1623,7 @@
   },
   "lion_voodoo": {
    "tags": [
+    "good_with_rearm",
     "hard_cc",
     "initiation",
     "mana_hungry"
@@ -1859,6 +1867,7 @@
   },
   "mirana_arrow": {
    "tags": [
+    "good_with_rearm",
     "hard_cc",
     "initiation",
     "nuke",
@@ -1952,6 +1961,7 @@
   "muerta_the_calling": {
    "tags": [
     "aoe",
+    "good_with_rearm",
     "mana_hungry",
     "soft_cc"
    ]
@@ -2106,6 +2116,7 @@
   },
   "obsidian_destroyer_astral_imprisonment": {
    "tags": [
+    "good_with_rearm",
     "hard_cc",
     "initiation",
     "mana_hungry",
@@ -2432,6 +2443,7 @@
   "pugna_nether_ward": {
    "tags": [
     "aoe",
+    "good_with_rearm",
     "soft_cc"
    ]
   },
@@ -2704,6 +2716,7 @@
   },
   "shadow_shaman_voodoo": {
    "tags": [
+    "good_with_rearm",
     "hard_cc",
     "initiation",
     "mana_hungry"
@@ -3174,6 +3187,7 @@
   },
   "tidehunter_gush": {
    "tags": [
+    "good_with_rearm",
     "nuke",
     "soft_cc"
    ]
@@ -3392,6 +3406,7 @@
   "undying_tombstone": {
    "tags": [
     "aoe",
+    "good_with_rearm",
     "mana_hungry",
     "summon",
     "teamfight_ult"
@@ -3535,6 +3550,7 @@
   "void_spirit_aether_remnant": {
    "tags": [
     "aoe",
+    "good_with_rearm",
     "nuke",
     "setup_cc",
     "soft_cc"
@@ -3572,6 +3588,7 @@
   "warlock_fatal_bonds": {
    "tags": [
     "aoe",
+    "good_with_rearm",
     "mana_hungry"
    ]
   },
