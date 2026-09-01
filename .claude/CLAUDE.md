@@ -32,6 +32,11 @@ maintenance spec — the authoritative map of what IS, not a build plan.
   The 1px width-shrink in window-manager is a REAL Windows fix — do not "clean it up"
 - The overlay never holds keyboard focus — in-window key handlers don't work; use
   `globalShortcut` (registered on overlay activation, unregistered on close)
+- Overlay auto-close (GSI, `overlayAutoCloseEnabled`, only with auto draft
+  tracking on): closes on the HERO_SELECTION→post-draft transition, reopens at
+  POST_GAME or a new-match draft. State machine is pure (core/gsi/
+  overlay-lifecycle.ts); the auto-close path suppresses the control-panel
+  restore/focus (stealing focus would alt-tab the player out of the game)
 - Overlay CSS: `contain: strict`, `will-change: transform`, NO `backdrop-filter: blur()`;
   `rgba()` backgrounds instead
 

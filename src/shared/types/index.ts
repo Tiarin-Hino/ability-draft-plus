@@ -83,6 +83,10 @@ export interface AppSettings {
   /** GSI-driven automatic draft tracking (auto initial scan, auto spot/model,
    * turn-driven rescans + pick attribution). Default off. */
   experimentalAutoDraftTracking: boolean
+  /** With auto draft tracking on: close the overlay when GSI reports the
+   * draft is over, and reopen it at match end or when a new draft starts.
+   * Default on (only ever acts while experimentalAutoDraftTracking is on). */
+  overlayAutoCloseEnabled: boolean
   /** Seconds to wait after the draft clock is identified before the automatic
    * initial scan (slower PCs need the draft screen fully rendered). */
   autoInitialScanDelayS: number

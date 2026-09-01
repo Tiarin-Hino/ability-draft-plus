@@ -85,7 +85,9 @@
     "delayHint": "How long to wait after the draft is detected before scanning the pool automatically ({{min}}–{{max}}s). Fast PCs are fine with 5s; slower machines may need up to 30s for the draft screen to fully render.",
     "buttonsNote": "While enabled, the manual My Spot and My Model overlay buttons are hidden — both selections happen automatically from game data.",
     "setupTitle": "GSI setup",
-    "setupHint": "One-time: install the config file below into your Dota folder, then restart Dota 2."
+    "setupHint": "One-time: install the config file below into your Dota folder, then restart Dota 2.",
+    "autoCloseToggle": "Close overlay when the draft ends",
+    "autoCloseHint": "The overlay closes itself when the game starts, then reopens automatically when the match ends or a new draft begins — no manual close between matches."
   },
   "roleSuggestions": {
     "title": "Role-Aware Suggestions",
