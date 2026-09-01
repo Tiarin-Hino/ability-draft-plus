@@ -1,0 +1,60 @@
+{
+  "title": "直播",
+  "server": {
+    "title": "直播面板服务器",
+    "description": "通过本地 HTTP 提供清晰、高对比度的征召面板，可用作 OBS 浏览器源。",
+    "status": {
+      "stopped": "已停止",
+      "running": "运行中",
+      "error": "错误"
+    },
+    "start": "启动服务器",
+    "stop": "停止服务器",
+    "port": "端口",
+    "portHint": "范围为 1024–65535。更改端口后需要重启服务器，并更新 OBS 场景。",
+    "url": "面板网址",
+    "picksUrl": "选取视图网址",
+    "picksHint": "选取视图会用两条紧凑的队伍条带展示每位玩家的英雄和已选技能，适合游戏内直播场景。请在浏览器中打开网址进行调整，并生成两队各自的 OBS 源链接。即使覆盖层关闭，完成的征召也会在整局游戏期间持续显示。",
+    "copy": "复制",
+    "copied": "已复制！",
+    "clients": "已连接客户端：{{count}}",
+    "autostart": "应用启动时自动启动服务器",
+    "errorPortInUse": "该端口已被占用——请选择其他端口后重新启动。",
+    "errorGeneric": "服务器启动失败。请查看日志了解详情。",
+    "errorInvalidPort": "端口无效。请输入 1024 到 65535 之间的数字。"
+  },
+  "gsi": {
+    "title": "Dota 2 游戏状态集成",
+    "description": "允许 Dota 将玩家名称、游戏阶段和计时器发送到直播面板。需要将配置文件安装到 Dota 文件夹一次，并重启 Dota。",
+    "connected": "已连接",
+    "disconnected": "未连接",
+    "detectedPath": "Dota 安装位置",
+    "notDetected": "未找到 Dota 安装位置——请手动选择“dota 2 beta”文件夹。",
+    "cfgPresent": "配置文件已安装",
+    "cfgMissing": "尚未安装配置文件",
+    "writeCfg": "安装配置文件",
+    "browse": "浏览…",
+    "pickFolderTitle": "选择“dota 2 beta”文件夹",
+    "writeSuccess": "配置已写入 {{path}}。请重启 Dota 2 使其生效。",
+    "errorDotaNotFound": "无法找到 Dota 2 安装位置。请使用“浏览”选择“dota 2 beta”文件夹。",
+    "errorWriteFailed": "写入配置文件失败。请查看日志了解详情。",
+    "portMismatch": "已安装的配置指向端口 {{cfgPort}}，但直播服务器使用端口 {{streamPort}}——Dota 无法连接应用。请重新安装配置文件并重启 Dota 2。",
+    "portNote": "配置文件会固定使用当前服务器端口——更改端口后请重新安装。",
+    "spectatorNote": "只有观战或解说时才能获得全部 10 名玩家的名称。亲自游玩时，Dota 只会报告你自己的名称。"
+  },
+  "icons": {
+    "title": "技能图标",
+    "description": "面板使用官方技能图标，首次下载后会缓存在本地。现在预取全部图标，可确保第一次征召即使没有网络也能立即渲染。",
+    "prefetch": "预取全部图标",
+    "prefetching": "正在下载…",
+    "result": "完成：下载 {{fetched}} 个，已有缓存 {{alreadyCached}} 个，失败 {{failed}} 个。",
+    "error": "预取失败。请查看日志了解详情。"
+  },
+  "obs": {
+    "title": "OBS 设置",
+    "step1": "启动服务器并复制面板网址。",
+    "step2": "在 OBS 中：来源 → 添加 → 浏览器，粘贴网址，将大小设为 1920×1080。",
+    "step3": "默认背景透明。追加 ?bg=dark 可使用纯色背景，追加 ?bg=chroma 可使用绿幕。",
+    "note": "面板会跟随覆盖层扫描：扫描后（Ctrl+Shift+S）显示技能池，每次重新扫描后（Ctrl+Shift+R）更新选取。"
+  }
+}

@@ -101,7 +101,7 @@ src/
 │   │       ├── components/         UI components (app-shell, sidebar, settings cards, data tables)
 │   │       ├── pages/              7 pages (dashboard, abilities, heroes, scraping, settings, mapper, dev-mapper)
 │   │       ├── hooks/              useAppStore, useDispatch, useSettings, useIpcQuery
-│   │       └── i18n/               i18next setup, 6 namespaces × 2 languages (EN/RU)
+│   │       └── i18n/               i18next setup, 7 namespaces × 3 languages (EN/RU/zh-CN)
 │   └── overlay/            Game overlay window (transparent, click-through)
 │       └── src/
 │           ├── App.tsx             Root component, overlay composition

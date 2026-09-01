@@ -39,7 +39,7 @@ AI-powered overlay for Dota 2's Ability Draft mode. Scans the draft board using 
 
 ### Quality of Life
 - **Dark mode** -- follows your system theme, or set manually to light/dark
-- **English & Russian** -- full interface localization
+- **English, Russian & Simplified Chinese** -- full interface localization
 - **Auto-updater** -- in-app notifications when a new version is available
 - **Database backups** -- automatic backups on startup, manual backup/restore from Settings
 - **Windowed mode** -- automatic game window tracking for non-fullscreen setups

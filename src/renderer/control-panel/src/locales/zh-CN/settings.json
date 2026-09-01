@@ -1,0 +1,106 @@
+{
+  "title": "设置",
+  "opThreshold": {
+    "title": "强力组合阈值",
+    "label": "协同增幅阈值：",
+    "helpText": "协同增幅高于此阈值的组合会被标记为强力组合。",
+    "saveButton": "保存阈值",
+    "savedMessage": "阈值已保存！"
+  },
+  "trapThreshold": {
+    "title": "陷阱阈值",
+    "label": "胜率降幅阈值：",
+    "helpText": "胜率下降超过此阈值的组合会被标记为陷阱。",
+    "saveButton": "保存阈值",
+    "savedMessage": "陷阱阈值已保存！"
+  },
+  "thresholdCommon": {
+    "defaultLabel": "默认值：{{value}}%",
+    "resetButton": "恢复默认值"
+  },
+  "appearance": {
+    "title": "外观",
+    "themeLabel": "主题",
+    "languageLabel": "语言",
+    "overlayOpacityLabel": "覆盖层面板不透明度",
+    "overlayAnchorLabel": "覆盖层面板位置",
+    "anchorLeft": "左侧",
+    "anchorRight": "右侧"
+  },
+  "backup": {
+    "title": "数据库备份",
+    "createButton": "创建备份",
+    "restoreButton": "恢复",
+    "noBackups": "未找到备份。",
+    "columns": {
+      "name": "名称",
+      "date": "日期",
+      "size": "大小"
+    },
+    "stats": "{{count}} 个备份，共 {{size}}",
+    "createSuccess": "备份创建成功。",
+    "createError": "创建备份失败：{{error}}",
+    "restoreConfirm": "确定要从此备份恢复吗？当前数据将被覆盖。",
+    "restoreSuccess": "备份恢复成功。",
+    "restoreError": "恢复备份失败：{{error}}"
+  },
+  "feedback": {
+    "title": "反馈与诊断",
+    "description": "如果机器学习模型错误识别了技能，请使用覆盖层中的“报告识别失败”。之后可将快照发送给开发者，用于改进模型。",
+    "exportButton": "导出失败样本",
+    "uploadButton": "发送失败样本",
+    "exportNone": "暂无可导出的快照——请先使用覆盖层中的“报告识别失败”。",
+    "exportSuccess": "已将 {{count}} 个快照导出到 {{path}}",
+    "exportError": "导出失败：{{error}}",
+    "uploadNone": "没有新的快照可上传。",
+    "uploadSuccess": "已上传 {{count}} 个快照。感谢支持！",
+    "uploadPartial": "已上传 {{total}} 个快照中的 {{count}} 个；{{failed}} 个失败。下次将重试其余快照。",
+    "uploadError": "上传失败：{{error}}",
+    "apiNotConfigured": "此版本未配置上传服务——请使用导出功能，并将文件附加到 GitHub Issue。"
+  },
+  "personalStats": {
+    "title": "个性化推荐",
+    "description": "关联你的 Windrun.io 个人资料，将你的技能和英雄胜率融入覆盖层推荐。你过去胜率较高的技能会获得更高排名；个人数据也会显示在技能提示中。",
+    "inputPlaceholder": "Windrun 个人资料网址或 Steam ID",
+    "inputHint": "粘贴 Windrun 个人资料链接（windrun.io/players/…）、Steam ID64 或好友 ID。",
+    "linkButton": "关联个人资料",
+    "linking": "正在关联…",
+    "refreshButton": "刷新数据",
+    "unlinkButton": "取消关联",
+    "lastUpdated": "更新于 {{date}}",
+    "refreshSuccess": "已刷新：{{abilities}} 个技能、{{heroes}} 个英雄有个人数据。",
+    "blendNote": "个人胜率会根据你使用各技能的场次数量与全局数据加权融合——小样本只会轻微调整评分。启用覆盖层时会自动刷新数据（每小时最多一次）。",
+    "scrapeHint": "你的本地 Windrun 数据早于技能匹配功能——请在数据页面运行一次“更新 Windrun 数据”，以启用技能个性化。",
+    "errorInvalidInput": "无法从输入内容中读取玩家 ID。请粘贴 windrun.io 个人资料链接或 Steam ID。",
+    "errorProfileNotFound": "Windrun.io 未返回该 ID 对应的个人资料。请检查链接和网络连接。",
+    "errorNotLinked": "尚未关联个人资料。",
+    "errorFetchFailed": "从 Windrun.io 获取数据失败。已保留之前的数据——请稍后重试。"
+  },
+  "autoTracking": {
+    "title": "自动征召跟踪",
+    "description": "自动完成整个征召流程：初始技能池扫描、你的席位和英雄模型选择，以及每次选取后的定向重新扫描和逐玩家选取跟踪。",
+    "toggle": "启用自动征召跟踪",
+    "gsiNote": "此功能依赖 Dota 2 内置的游戏状态集成（GSI）。安装配置文件后，游戏会将征召信息（游戏阶段、征召计时器、你的席位和已选英雄）发送给本应用。连接仅限本机且严格单向——应用不会向游戏发送任何内容，也不会将数据传出你的电脑。GSI 是 Valve 的官方功能，广泛用于直播工具，不会带来封禁风险。",
+    "delayLabel": "自动初始扫描延迟（秒）",
+    "delayHint": "检测到征召后，等待多久再自动扫描技能池（{{min}}–{{max}} 秒）。性能较好的电脑使用 5 秒即可；较慢的电脑可能需要最多 30 秒，确保征召界面完全渲染。",
+    "buttonsNote": "启用后，覆盖层中的“我的席位”和“我的模型”手动按钮会被隐藏——两项选择都将依据游戏数据自动完成。",
+    "setupTitle": "GSI 设置",
+    "setupHint": "仅需一次：将下方配置文件安装到 Dota 文件夹，然后重启 Dota 2。"
+  },
+  "roleSuggestions": {
+    "title": "分路感知推荐",
+    "description": "根据每个技能对选取者发育或辅助倾向的影响（windrun.io 数据变化），针对你想要游玩的位置调整推荐。",
+    "mode": {
+      "off": "关闭",
+      "fixed": "我的位置",
+      "dynamic": "补全队伍位置"
+    },
+    "hint": {
+      "off": "推荐结果保持原样。",
+      "fixed": "根据你在下方选择的位置调整推荐评分——适合专精固定位置的玩家，或提前商定分路的组队玩家。队友仍会显示大致位置估计，但不影响推荐。",
+      "dynamic": "应用会观察队友的选取，并针对无人构筑的位置推荐技能（例如：队伍中已有三套偏发育构筑 → 推荐辅助技能）。在队友选取信息足够前保持中立。"
+    },
+    "noPositionsWarning": "请至少选择一个位置——未选择时，推荐不会进行调整。",
+    "positionsHint": "符合任一所选位置的推荐会获得加成。"
+  }
+}

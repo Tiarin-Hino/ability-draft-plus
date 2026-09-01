@@ -11,6 +11,7 @@ import { useAppStore } from '@/hooks/use-app-store'
 import { useAppDispatch } from '@/hooks/use-dispatch'
 import { APP_ACTIONS } from '@shared/types/app-store'
 import { SUPPORT_URL } from '@shared/constants/defaults'
+import type { SupportedLanguage } from '@shared/constants/defaults'
 import type { PageId } from '@/hooks/use-navigation'
 
 const pageTitleKeys: Record<PageId, { ns: string; key: string }> = {
@@ -36,7 +37,7 @@ export function HeaderBar({ activePage }: HeaderBarProps) {
   const titleEntry = pageTitleKeys[activePage]
   const pageTitle = t(`${titleEntry.key}`, { ns: titleEntry.ns })
 
-  const handleLanguageChange = (lang: 'en' | 'ru') => {
+  const handleLanguageChange = (lang: SupportedLanguage) => {
     dispatch(APP_ACTIONS.LANGUAGE_SET, lang)
     i18n.changeLanguage(lang)
     window.electronApi.invoke('settings:set', { language: lang })
@@ -62,7 +63,9 @@ export function HeaderBar({ activePage }: HeaderBarProps) {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="gap-2" aria-label={t('language.label')}>
               <Languages className="h-4 w-4" aria-hidden="true" />
-              <span className="text-sm">{language === 'en' ? 'EN' : 'RU'}</span>
+              <span className="text-sm">
+                {language === 'en' ? 'EN' : language === 'ru' ? 'RU' : 'ZH'}
+              </span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -77,6 +80,12 @@ export function HeaderBar({ activePage }: HeaderBarProps) {
               className={language === 'ru' ? 'bg-accent' : ''}
             >
               {t('language.ru')} (RU)
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => handleLanguageChange('zh-CN')}
+              className={language === 'zh-CN' ? 'bg-accent' : ''}
+            >
+              {t('language.zhCN')} (ZH-CN)
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

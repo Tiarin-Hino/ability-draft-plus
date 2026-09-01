@@ -1,0 +1,11 @@
+{
+  "title": "反馈与诊断",
+  "description": "如果机器学习模型错误识别了技能，请使用覆盖层中的“报告识别失败”。之后可将快照发送给开发者，用于改进模型。",
+  "exportButton": "导出失败样本",
+  "uploadButton": "发送失败样本",
+  "feedbackButton": "分享反馈",
+  "exportPreparing": "正在准备压缩包...",
+  "exportExporting": "正在导出压缩包...",
+  "uploadConfirmTitle": "发送失败样本",
+  "uploadConfirmBody": "这会将失败样本目录中的所有图片打包并上传，用于模型改进分析。是否继续？"
+}

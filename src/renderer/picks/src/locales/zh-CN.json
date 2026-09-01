@@ -1,0 +1,40 @@
+{
+  "waiting": "尚未记录征召——请在 Ability Draft Plus 中扫描一次征召",
+  "unknownAbility": "未知技能",
+  "team": {
+    "radiant": "天辉",
+    "dire": "夜魇"
+  },
+  "player": "玩家 {{num}}",
+  "setup": {
+    "title": "选取视图设置",
+    "intro": "赛前调整两条队伍条带，然后将生成的网址作为两个浏览器源添加到 OBS。所有设置都会写入网址——无需在 OBS 中另行保存。",
+    "preview": "预览（演示征召）",
+    "background": "背景",
+    "bg": {
+      "transparent": "透明",
+      "chroma": "绿幕",
+      "dark": "深色"
+    },
+    "names": "玩家名称",
+    "frame": "队伍边框",
+    "on": "开启",
+    "off": "关闭",
+    "alignRadiant": "天辉条带",
+    "alignDire": "夜魇条带",
+    "align": {
+      "left": "左对齐",
+      "right": "右对齐"
+    },
+    "spacing": "间距（像素）",
+    "rowGap": "行间距",
+    "slotGap": "技能间距",
+    "heroGap": "英雄与技能间距",
+    "ultGap": "终极技能与普通技能间距",
+    "reset": "恢复默认值",
+    "urls": "OBS 浏览器源网址",
+    "urlHint": "将每条队伍条带分别添加为一个浏览器源，以便独立定位。条带会在征召期间实时更新，并在整局游戏中保留完成的征召。",
+    "copy": "复制",
+    "copied": "已复制！"
+  }
+}
