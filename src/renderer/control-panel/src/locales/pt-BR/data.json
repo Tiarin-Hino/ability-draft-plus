@@ -1,0 +1,160 @@
+{
+  "mlPipeline": {
+    "title": "Pipeline de ML (dev)",
+    "description": "Cockpit do ciclo de retreinamento: colete dados de treino para as lacunas do modelo, envie o dataset para o S3 e dispare o workflow de retreinamento na nuvem.",
+    "gatherStep": "1. Coletar dados de treino ({{count}} habilidades ausentes)",
+    "gatherWarning": "O script de coleta fecha e reinicia o Dota 2 repetidamente e controla o mouse e o teclado por ~40 minutos. Ele abre em uma janela de console própria — pressione Ctrl+C nela para abortar.",
+    "dryRunButton": "Simulação",
+    "dryRunRunning": "Simulação em andamento — pode levar vários minutos se os metadados de slot precisarem de um scrape da Liquipedia (31s por página de herói)…",
+    "gatherButton": "Iniciar coleta",
+    "gatherConfirm": "Isso vai tomar conta do seu PC (mouse, teclado, reinícios do Dota 2) por cerca de 40 minutos. Continuar?",
+    "dryRunDone": "Simulação concluída — revise o plano abaixo (fique de olho em MISSING METADATA).",
+    "gatherLaunched": "Script de coleta iniciado em uma janela de console separada.",
+    "heroGatherTitle": "Coleta direcionada: heróis específicos",
+    "heroGatherDescription": "Recoleta TODAS as habilidades dos heróis selecionados — para reworks de ícones em que os nomes das habilidades não mudam. Os slots livres do lobby são preenchidos automaticamente com os heróis menos treinados, que também são coletados.",
+    "heroSearchPlaceholder": "Adicionar herói…",
+    "heroRemove": "Remover {{hero}}",
+    "heroPurgeLabel": "Expurgar imagens existentes primeiro (movidas para _purged/, não excluídas — ícones antigos envenenariam as classes retrabalhadas)",
+    "heroGatherButton": "Iniciar coleta direcionada",
+    "heroGatherPurgeConfirm": "As imagens existentes do dataset dos heróis selecionados serão movidas para _purged/ antes da coleta.",
+    "modelsGatherTitle": "Tiles de modelo: biblioteca de referência",
+    "modelsGatherDescription": "Coleta imagens dos tiles de MODELO de herói do quadro de draft para todos os heróis conhecidos (incluindo os novos) até cada um atingir a quantidade alvo, alternando as posições do quadro. Os recortes alimentam diretamente a biblioteca de reconhecimento de tiles de modelo do app. Retomável — interromper não perde nada.",
+    "modelsSetsLabel": "Imagens por herói",
+    "modelsGatherButton": "Iniciar coleta de modelos",
+    "diagnosticTitle": "Diagnóstico de reconhecimento",
+    "diagnosticDescription": "Executa drafts completos com bots percorrendo o elenco de heróis, registrando o reconhecimento de pool, picks, tiles de modelo e OCR contra um gabarito conhecido. Analise depois para obter um relatório HTML do que falhou e por quê.",
+    "diagnosticKeepAppOpen": "Mantenha este app aberto com o overlay ativado e o rescan automático experimental habilitado durante toda a execução — ele registra os dados de escaneamento de que o analisador precisa.",
+    "diagnosticIterationsLabel": "Drafts (0 = elenco completo)",
+    "diagnosticPickTimeLabel": "Timer de pick (s, 0 = padrão do jogo 60/7/5)",
+    "diagnosticRunButton": "Iniciar diagnóstico",
+    "diagnosticAnalyzeButton": "Analisar última execução",
+    "diagnosticAnalyzed": "Relatório gerado e aberto no seu navegador.",
+    "diagnosticConfirm": "Isso vai reiniciar o Dota 2 repetidamente e executar drafts completos com bots (~6-10 minutos cada). O app precisa continuar aberto. Continuar?",
+    "uploadStep": "2. Enviar o dataset para o S3 (depois de semear os splits das novas classes)",
+    "uploadButton": "Enviar dataset (abre um console)",
+    "uploadLaunched": "Envio iniciado em uma janela de console separada — anote a versão do dataset que ele imprimir.",
+    "retrainStep": "3. Disparar o workflow de retreinamento na nuvem",
+    "versionPlaceholder": "Dataset vN",
+    "fineTuneLabel": "Fazer fine-tune do bloco superior",
+    "retrainButton": "Disparar retreinamento",
+    "retrainDispatched": "Workflow disparado para o dataset v{{version}} — confira a aba GitHub Actions. Um PR com o novo modelo e as métricas será aberto quando o gate passar."
+  },
+  "abilities": {
+    "title": "Habilidades",
+    "columns": {
+      "name": "Habilidade",
+      "hero": "Herói",
+      "winrate": "Taxa de vitória",
+      "hsWinrate": "Taxa de vitória HS",
+      "pickRate": "Taxa de pick",
+      "ultimate": "Ultimate"
+    },
+    "filterPlaceholder": "Filtrar habilidades...",
+    "noResults": "Nenhuma habilidade encontrada."
+  },
+  "heroes": {
+    "title": "Heróis",
+    "columns": {
+      "name": "Herói",
+      "winrate": "Taxa de vitória",
+      "hsWinrate": "Taxa de vitória HS",
+      "pickRate": "Taxa de pick",
+      "hsPickRate": "Taxa de pick HS"
+    },
+    "filterPlaceholder": "Filtrar heróis...",
+    "noResults": "Nenhum herói encontrado."
+  },
+  "scraping": {
+    "title": "Dados",
+    "description": "Busque as estatísticas mais recentes de Ability Draft no Windrun.io.",
+    "updateButton": "Atualizar dados do Windrun",
+    "running": "Atualizando...",
+    "lastUpdated": "Última atualização:",
+    "never": "Nunca",
+    "liquipedia": {
+      "title": "Enriquecimento via Liquipedia",
+      "description": "Busca os dados de ordem das habilidades (Q/W/E/R) na Liquipedia. Limitado a 1 requisição a cada 31 segundos.",
+      "updateButton": "Enriquecer pela Liquipedia",
+      "running": "Enriquecendo...",
+      "warning": "Isso leva ~67 minutos para todos os heróis por causa dos limites de requisição da Liquipedia.",
+      "lastUpdated": "Último enriquecimento:"
+    }
+  },
+  "mapper": {
+    "title": "Mapeador de resolução",
+    "devTitle": "Mapeador de resolução (Dev)",
+    "description": "Mapeie as coordenadas de tela para resoluções personalizadas.",
+    "capture": {
+      "title": "Capturar screenshot",
+      "description": "Tire um screenshot da tela de Ability Draft do Dota 2 para usar como referência.",
+      "captureButton": "Capturar screenshot",
+      "capturing": "Capturando...",
+      "retake": "Capturar de novo",
+      "next": "Avançar",
+      "uploadButton": "Enviar imagem"
+    },
+    "autoDetect": {
+      "title": "Detecção automática",
+      "description": "A resolução do seu sistema foi detectada.",
+      "resolution": "Resolução detectada",
+      "source": "Origem do layout",
+      "sourcePreset": "Predefinido (embutido)",
+      "sourceAutoScaled": "Escalado automaticamente a partir de 1080p",
+      "sourceCustom": "Personalizado (salvo pelo usuário)",
+      "sourceNone": "Nenhum layout disponível",
+      "autoScaleWarningTitle": "Coordenadas escaladas automaticamente",
+      "autoScaleWarningDetail": "Esta resolução não tem um preset embutido. As coordenadas são escaladas matematicamente e podem ficar um pouco fora (~5px). Para maior precisão, considere usar uma resolução comum (1920x1080, 2560x1440 etc.).",
+      "useAutoScale": "Usar layout escalado automaticamente",
+      "calibrate": "Calibrar (4 cliques)",
+      "done": "Layout pronto. Nenhuma calibração necessária.",
+      "submitScreenshot": "Enviar screenshot",
+      "noLayoutHelp": "Nenhum layout disponível para esta resolução. Envie seu screenshot e adicionaremos o suporte."
+    },
+    "report": {
+      "button": "Reportar mapeamento com falha",
+      "submitting": "Enviando...",
+      "success": "Screenshot enviado com sucesso! Vamos adicionar suporte para esta resolução.",
+      "error": "Falha no envio: {{error}}"
+    },
+    "anchor": {
+      "title": "Calibração de 4 âncoras",
+      "description": "Clique em 4 pontos de referência para calibrar sua resolução.",
+      "instruction1": "Canto superior esquerdo do primeiro slot de ultimate",
+      "instruction2": "Canto inferior direito do primeiro slot de ultimate",
+      "instruction3": "Canto superior esquerdo do retrato do herói 0",
+      "instruction4": "Canto superior esquerdo do retrato do herói 1",
+      "progress": "{{current}} / {{total}} âncoras",
+      "undo": "Desfazer",
+      "reset": "Redefinir"
+    },
+    "verify": {
+      "title": "Verificar layout",
+      "description": "Revise as coordenadas mapeadas sobrepostas ao seu screenshot.",
+      "legend": "Legenda",
+      "ultimates": "Ultimates",
+      "standards": "Habilidades comuns",
+      "models": "Modelos de herói",
+      "heroes": "Retratos de herói",
+      "selected": "Habilidades escolhidas",
+      "accept": "Aceitar",
+      "redo": "Refazer calibração"
+    },
+    "save": {
+      "title": "Salvar layout",
+      "description": "Salve este layout calibrado para uso futuro.",
+      "resolution": "Resolução",
+      "method": "Método",
+      "saveButton": "Salvar layout",
+      "saving": "Salvando...",
+      "success": "Layout salvo com sucesso!",
+      "error": "Falha ao salvar o layout.",
+      "back": "Voltar à verificação"
+    },
+    "common": {
+      "back": "Voltar",
+      "cancel": "Cancelar",
+      "zoomTip": "Role para dar zoom, Ctrl+arrastar para mover"
+    }
+  },
+  "noResults": "Nenhum resultado."
+}

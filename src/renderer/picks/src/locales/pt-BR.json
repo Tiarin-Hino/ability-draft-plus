@@ -1,0 +1,40 @@
+{
+  "waiting": "Nenhum draft registrado ainda — escaneie um draft no Ability Draft Plus",
+  "unknownAbility": "Habilidade desconhecida",
+  "team": {
+    "radiant": "Iluminados",
+    "dire": "Temidos"
+  },
+  "player": "Jogador {{num}}",
+  "setup": {
+    "title": "CONFIGURAÇÃO DO PICKS VIEW",
+    "intro": "Ajuste as duas faixas de time antes da partida e adicione as URLs geradas no OBS como duas fontes de navegador. Cada configuração fica embutida nas URLs — nada precisa ser salvo no OBS.",
+    "preview": "Prévia (draft de demonstração)",
+    "background": "Fundo",
+    "bg": {
+      "transparent": "Transparente",
+      "chroma": "Chroma",
+      "dark": "Escuro"
+    },
+    "names": "Nomes dos jogadores",
+    "frame": "Moldura do time",
+    "on": "Ligado",
+    "off": "Desligado",
+    "alignRadiant": "Faixa dos Iluminados",
+    "alignDire": "Faixa dos Temidos",
+    "align": {
+      "left": "Alinhada à esquerda",
+      "right": "Alinhada à direita"
+    },
+    "spacing": "Espaçamento (px)",
+    "rowGap": "Entre linhas",
+    "slotGap": "Entre habilidades",
+    "heroGap": "Herói às habilidades",
+    "ultGap": "Ultimate às habilidades",
+    "reset": "Restaurar padrões",
+    "urls": "URLs de fonte de navegador do OBS",
+    "urlHint": "Adicione cada faixa como sua própria fonte de navegador para posicioná-las de forma independente. As faixas ficam ao vivo durante o draft e mantêm o draft finalizado na tela durante toda a partida.",
+    "copy": "Copiar",
+    "copied": "Copiado!"
+  }
+}

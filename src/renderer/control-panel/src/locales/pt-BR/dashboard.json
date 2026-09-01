@@ -1,0 +1,47 @@
+{
+  "title": "Painel",
+  "statusCards": {
+    "mlWorker": "Worker de ML",
+    "overlay": "Overlay",
+    "database": "Banco de dados",
+    "dataFreshness": "Atualização dos dados",
+    "neverUpdated": "Nunca atualizado",
+    "mlGapsBadge": "{{count}} novas"
+  },
+  "resolutionSource": {
+    "preset": "Coordenadas predefinidas",
+    "custom": "Coordenadas calibradas",
+    "auto-scaled": "Coordenadas escaladas automaticamente — podem ficar um pouco fora; calibre pelo Mapeador",
+    "none": "Resolução não suportada"
+  },
+  "firstRun": {
+    "title": "Primeiros passos",
+    "step1": "Baixe os dados mais recentes de taxa de vitória e sinergia do Windrun.io — sem eles o overlay não mostra recomendações.",
+    "updateButton": "Atualizar dados do Windrun",
+    "updating": "Atualizando…",
+    "step2": "Clique em 'Ativar overlay' abaixo antes de entrar na fila de uma partida de Ability Draft.",
+    "step3": "Na tela de draft, pressione Ctrl+Shift+S (ou clique em 'Escaneamento inicial' nos controles do overlay no canto superior direito)."
+  },
+  "quickActions": {
+    "title": "Ações rápidas",
+    "activateOverlay": "Ativar overlay",
+    "activating": "Ativando...",
+    "overlayActive": "Overlay ativo",
+    "activationError": "Falha ao ativar o overlay.",
+    "retryMl": "Repetir ML",
+    "updateData": "Atualizar dados",
+    "updatingData": "Atualizando…",
+    "checkUpdates": "Verificar atualizações",
+    "checking": "Verificando…",
+    "upToDate": "Você está na versão mais recente.",
+    "updateFound": "Atualização v{{version}} disponível — veja o banner acima.",
+    "exportGaps": "Exportar lacunas do modelo ({{count}})",
+    "exportGapsSuccess": "{{count}} habilidades ausentes exportadas para {{path}} — passe isso para o script de coleta de dados.",
+    "exportGapsError": "Falha na exportação: {{error}}"
+  },
+  "systemInfo": {
+    "title": "Informações do sistema",
+    "version": "Versão",
+    "display": "Monitor"
+  }
+}

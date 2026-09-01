@@ -1,0 +1,108 @@
+{
+  "title": "Mga Setting",
+  "opThreshold": {
+    "title": "Threshold ng OP Combinations",
+    "label": "Porsyento ng synergy threshold:",
+    "helpText": "Ang mga combination na may synergy increase na lampas sa threshold na ito ay mamarkahang OP.",
+    "saveButton": "I-save ang Threshold",
+    "savedMessage": "Na-save ang threshold!"
+  },
+  "trapThreshold": {
+    "title": "Threshold ng Trap",
+    "label": "Porsyento ng winrate decrease threshold:",
+    "helpText": "Ang mga combination na bumababa ang winrate nang lampas sa threshold na ito ay mamarkahang trap.",
+    "saveButton": "I-save ang Threshold",
+    "savedMessage": "Na-save ang trap threshold!"
+  },
+  "thresholdCommon": {
+    "defaultLabel": "Default: {{value}}%",
+    "resetButton": "Ibalik sa default"
+  },
+  "appearance": {
+    "title": "Itsura",
+    "themeLabel": "Theme",
+    "languageLabel": "Wika",
+    "overlayOpacityLabel": "Opacity ng mga overlay panel",
+    "overlayAnchorLabel": "Posisyon ng mga overlay panel",
+    "anchorLeft": "Kaliwa",
+    "anchorRight": "Kanan"
+  },
+  "backup": {
+    "title": "Backup ng Database",
+    "createButton": "Gumawa ng Backup",
+    "restoreButton": "I-restore",
+    "noBackups": "Walang nahanap na backup.",
+    "columns": {
+      "name": "Pangalan",
+      "date": "Petsa",
+      "size": "Laki"
+    },
+    "stats": "{{count}} backup, {{size}} kabuuan",
+    "createSuccess": "Matagumpay na nagawa ang backup.",
+    "createError": "Nabigong gumawa ng backup: {{error}}",
+    "restoreConfirm": "Sigurado ka bang i-restore mula sa backup na ito? Mao-overwrite ang kasalukuyang data.",
+    "restoreSuccess": "Matagumpay na na-restore ang backup.",
+    "restoreError": "Nabigong i-restore ang backup: {{error}}"
+  },
+  "feedback": {
+    "title": "Feedback at Diagnostics",
+    "description": "Kung mali ang pagkakakilala ng ML model sa mga ability, gamitin ang 'I-report ang Nabigong Recognition' sa overlay. Pwede mong ipadala ang mga snapshot sa developer para mapaganda ang model.",
+    "exportButton": "I-export ang Failed Samples",
+    "uploadButton": "Ipadala ang Failed Samples",
+    "exportNone": "Wala pang snapshot na mai-e-export — gamitin muna ang 'I-report ang Nabigong Recognition' sa overlay.",
+    "exportSuccess": "Na-export ang {{count}} snapshot sa {{path}}",
+    "exportError": "Nabigo ang export: {{error}}",
+    "uploadNone": "Walang bagong snapshot na mai-a-upload.",
+    "uploadSuccess": "Na-upload ang {{count}} snapshot. Salamat!",
+    "uploadPartial": "Na-upload ang {{count}} sa {{total}} snapshot; {{failed}} ang nabigo. Ire-retry ang natitira sa susunod.",
+    "uploadError": "Nabigo ang upload: {{error}}",
+    "apiNotConfigured": "Hindi naka-configure ang upload service sa build na ito — gamitin ang Export at i-attach ang file sa isang GitHub issue."
+  },
+  "personalStats": {
+    "title": "Mga personalized na suggestion",
+    "description": "I-link ang Windrun.io profile mo para maisama ang personal mong ability at hero winrates sa mga suggestion ng overlay. Mas tataas ang ranking ng mga ability na madalas mong panalunin; makikita rin ang stats mo sa mga ability tooltip.",
+    "inputPlaceholder": "Windrun profile URL o Steam ID",
+    "inputHint": "I-paste ang link ng Windrun profile mo (windrun.io/players/…), ang Steam ID64 mo, o ang Friend ID mo.",
+    "linkButton": "I-link ang profile",
+    "linking": "Nili-link…",
+    "refreshButton": "I-refresh ang stats",
+    "unlinkButton": "I-unlink",
+    "lastUpdated": "na-update {{date}}",
+    "refreshSuccess": "Na-refresh: {{abilities}} abilities, {{heroes}} heroes na may personal stats.",
+    "blendNote": "Ang personal winrates ay hinahalo sa global stats ayon sa dami ng games mo sa bawat ability — kaunting laro lang, kaunting epekto lang sa score. Awtomatikong nagre-refresh ang stats kapag na-activate ang overlay (hanggang isang beses bawat oras).",
+    "scrapeHint": "Mas luma ang lokal mong Windrun data kaysa sa ability matching — patakbuhin ang 'I-update ang Windrun Data' sa Data page nang isang beses para ma-activate ang ability personalization.",
+    "errorInvalidInput": "Walang mabasang player ID mula sa input na iyan. Mag-paste ng windrun.io profile link o Steam ID.",
+    "errorProfileNotFound": "Walang ibinalik na profile ang Windrun.io para sa ID na iyan. I-check ang link at ang koneksyon mo.",
+    "errorNotLinked": "Walang naka-link na profile.",
+    "errorFetchFailed": "Nabigong kunin ang stats mula sa Windrun.io. Nananatili ang dati mong stats — subukan ulit mamaya."
+  },
+  "autoTracking": {
+    "title": "Automatic na draft tracking",
+    "description": "Ino-automate ang buong daloy ng draft: ang initial pool scan, ang spot mo at pagpili ng hero model, at mga targeted rescan pagkatapos ng bawat pick na may per-player pick tracking.",
+    "toggle": "I-enable ang automatic na draft tracking",
+    "gsiNote": "Umaasa ang feature na ito sa built-in Game State Integration (GSI) ng Dota 2. Kapag naka-install ang config file, ipinapadala ng laro mo ang draft information (game phase, draft clock, slot mo at napiling hero) sa app na ito. Local-only at strictly one-way ang koneksyon — walang ipinapadala ang app sa laro at walang lumalabas sa PC mo. Opisyal na feature ng Valve ang GSI na ginagamit ng mga broadcast tool at walang panganib ng ban.",
+    "delayLabel": "Delay ng auto initial scan (segundo)",
+    "delayHint": "Gaano katagal maghihintay pagkatapos ma-detect ang draft bago awtomatikong i-scan ang pool ({{min}}–{{max}}s). Ayos na ang 5s sa mabibilis na PC; baka kailanganin ng mas mabagal na machine ang hanggang 30s para ganap na mag-render ang draft screen.",
+    "buttonsNote": "Habang naka-enable, nakatago ang manual na My Spot at My Model na overlay buttons — awtomatikong nangyayari ang parehong selection mula sa game data.",
+    "setupTitle": "GSI setup",
+    "setupHint": "Isang beses lang: i-install ang config file sa baba sa Dota folder mo, tapos i-restart ang Dota 2.",
+    "autoCloseToggle": "Isara ang overlay kapag natapos ang draft",
+    "autoCloseHint": "Awtomatikong nagsasara ang overlay kapag nagsimula na ang laro, tapos awtomatikong bumabalik kapag natapos ang match o may bagong draft — hindi mo na kailangang manual na magsara sa pagitan ng mga match."
+  },
+  "roleSuggestions": {
+    "title": "Role-Aware na Suggestions",
+    "description": "Ina-adjust ang mga suggestion para sa position na balak mong laruin, base sa kung paano itinutulak ng bawat ability ang mga pumipili nito papunta sa farming o supporting (windrun.io stat shifts).",
+    "mode": {
+      "off": "Off",
+      "fixed": "Mga position ko",
+      "dynamic": "Fill para sa team"
+    },
+    "hint": {
+      "off": "Mananatiling ganap na pareho ang mga suggestion tulad ngayon.",
+      "fixed": "Ini-score ang mga suggestion para sa (mga) position na pipiliin mo sa baba — para sa mga role loyalist at party stack na nag-uusap na ng lanes. Makakakuha pa rin ang mga teammate ng approximate role estimates para sa display lang.",
+      "dynamic": "Binabantayan ng app kung ano ang dina-draft ng mga teammate mo at nagmumungkahi ng picks para sa position na walang gumagawa (halimbawa: tatlong greedy build sa team mo → support picks). Nananatili itong neutral hangga't hindi pa sapat ang mga teammate pick sa board."
+    },
+    "noPositionsWarning": "Pumili ng kahit isang position — kung walang napili, hindi maa-adjust ang mga suggestion.",
+    "positionsHint": "Bino-boost ang mga suggestion kapag bagay sila sa alinmang napiling position."
+  }
+}

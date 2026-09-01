@@ -1,0 +1,60 @@
+{
+  "title": "Streaming",
+  "server": {
+    "title": "Stream board server",
+    "description": "Nagseserbisyo ng malinis at high-contrast na draft board sa local HTTP para gamitin bilang OBS browser source.",
+    "status": {
+      "stopped": "Nakatigil",
+      "running": "Tumatakbo",
+      "error": "Error"
+    },
+    "start": "I-start ang server",
+    "stop": "I-stop ang server",
+    "port": "Port",
+    "portHint": "1024–65535. Kapag pinalitan ang port, kailangang i-restart ang server at i-update ang OBS scene mo.",
+    "url": "Board URL",
+    "picksUrl": "Picks View URL",
+    "picksHint": "Ipinapakita ng Picks View ang hero at mga na-draft na ability ng bawat player bilang dalawang compact na team strip para sa in-game scene mo. Buksan ang URL sa browser para i-tune ang mga ito at i-generate ang per-team OBS source links. Patuloy nitong ipinapakita ang natapos na draft sa buong laro, kahit sarado na ang overlay.",
+    "copy": "Kopyahin",
+    "copied": "Nakopya!",
+    "clients": "Mga konektadong client: {{count}}",
+    "autostart": "I-start ang server kapag binuksan ang app",
+    "errorPortInUse": "Ginagamit na ang port na iyan — pumili ng ibang port at i-start ulit.",
+    "errorGeneric": "Nabigong mag-start ang server. Tingnan ang logs para sa detalye.",
+    "errorInvalidPort": "Invalid na port. Gumamit ng number sa pagitan ng 1024 at 65535."
+  },
+  "gsi": {
+    "title": "Dota 2 Game State Integration",
+    "description": "Pinapayagan ang Dota na magpadala ng player names, game phase, at clock sa stream board. Kailangan ng isang beses na config file sa Dota folder mo at pag-restart ng Dota.",
+    "connected": "Konektado",
+    "disconnected": "Hindi konektado",
+    "detectedPath": "Dota installation",
+    "notDetected": "Hindi nahanap ang Dota installation — piliin nang manual ang \"dota 2 beta\" folder.",
+    "cfgPresent": "Naka-install ang config file",
+    "cfgMissing": "Hindi pa naka-install ang config file",
+    "writeCfg": "I-install ang config file",
+    "browse": "Mag-browse…",
+    "pickFolderTitle": "Piliin ang \"dota 2 beta\" folder",
+    "writeSuccess": "Naisulat ang config sa {{path}}. I-restart ang Dota 2 para umepekto.",
+    "errorDotaNotFound": "Hindi mahanap ang Dota 2 installation. Gamitin ang Mag-browse para piliin ang \"dota 2 beta\" folder.",
+    "errorWriteFailed": "Nabigong isulat ang config file. Tingnan ang logs para sa detalye.",
+    "portMismatch": "Ang naka-install na config ay nakaturo sa port {{cfgPort}}, pero port {{streamPort}} ang gamit ng stream server — hindi maabot ng Dota ang app. I-install ulit ang config file at i-restart ang Dota 2.",
+    "portNote": "Naka-pin sa config ang kasalukuyang server port — i-install ito ulit pagkatapos palitan ang port.",
+    "spectatorNote": "Available lang ang lahat ng 10 player name habang nagse-spectate/nagka-cast. Kapag naglalaro, sarili mong pangalan lang ang ini-report ng Dota."
+  },
+  "icons": {
+    "title": "Mga ability icon",
+    "description": "Gumagamit ang board ng mga opisyal na ability icon, isang beses dina-download at kina-cache nang lokal. I-prefetch na sila ngayon para agad mag-render ang unang draft kahit walang internet.",
+    "prefetch": "I-prefetch ang lahat ng icon",
+    "prefetching": "Nagda-download…",
+    "result": "Tapos: {{fetched}} na-download, {{alreadyCached}} naka-cache na, {{failed}} nabigo.",
+    "error": "Nabigo ang prefetch. Tingnan ang logs para sa detalye."
+  },
+  "obs": {
+    "title": "OBS setup",
+    "step1": "I-start ang server at kopyahin ang board URL.",
+    "step2": "Sa OBS: Sources → Add → Browser, i-paste ang URL, i-set ang size sa 1920×1080.",
+    "step3": "Transparent ang background bilang default. Idagdag ang ?bg=dark para sa solid na background o ?bg=chroma para sa green screen.",
+    "note": "Sumusunod ang board sa mga overlay scan mo: lumalabas ang pool pagkatapos ng scan (Ctrl+Shift+S) at nag-a-update ang picks pagkatapos ng bawat rescan (Ctrl+Shift+R)."
+  }
+}

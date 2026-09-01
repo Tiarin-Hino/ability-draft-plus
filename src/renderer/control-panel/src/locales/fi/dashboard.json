@@ -1,0 +1,47 @@
+{
+  "title": "Yleiskatsaus",
+  "statusCards": {
+    "mlWorker": "ML-worker",
+    "overlay": "Overlay",
+    "database": "Tietokanta",
+    "dataFreshness": "Datan tuoreus",
+    "neverUpdated": "Ei koskaan päivitetty",
+    "mlGapsBadge": "{{count}} uutta"
+  },
+  "resolutionSource": {
+    "preset": "Esiasetetut koordinaatit",
+    "custom": "Kalibroidut koordinaatit",
+    "auto-scaled": "Automaattisesti skaalatut koordinaatit — voivat heittää hieman; kalibroi Mapperilla",
+    "none": "Resoluutiota ei tueta"
+  },
+  "firstRun": {
+    "title": "Aloitus",
+    "step1": "Lataa uusin voittoprosentti- ja synergiadata Windrun.io:sta — ilman sitä overlay ei näytä suosituksia.",
+    "updateButton": "Päivitä Windrun-data",
+    "updating": "Päivitetään…",
+    "step2": "Klikkaa 'Aktivoi overlay' alta ennen kuin jonotat Ability Draft -matsiin.",
+    "step3": "Paina draft-ruudussa Ctrl+Shift+S (tai klikkaa 'Aloitusskannaus' overlayn oikean yläkulman painikkeista)."
+  },
+  "quickActions": {
+    "title": "Pikatoiminnot",
+    "activateOverlay": "Aktivoi overlay",
+    "activating": "Aktivoidaan...",
+    "overlayActive": "Overlay aktiivinen",
+    "activationError": "Overlayn aktivointi epäonnistui.",
+    "retryMl": "Yritä ML uudelleen",
+    "updateData": "Päivitä data",
+    "updatingData": "Päivitetään…",
+    "checkUpdates": "Tarkista päivitykset",
+    "checking": "Tarkistetaan…",
+    "upToDate": "Käytössäsi on uusin versio.",
+    "updateFound": "Päivitys v{{version}} saatavilla — katso yllä oleva banneri.",
+    "exportGaps": "Vie mallin puutteet ({{count}})",
+    "exportGapsSuccess": "Vietiin {{count}} puuttuvaa kykyä tiedostoon {{path}} — syötä tämä datankeruuskriptille.",
+    "exportGapsError": "Vienti epäonnistui: {{error}}"
+  },
+  "systemInfo": {
+    "title": "Järjestelmätiedot",
+    "version": "Versio",
+    "display": "Näyttö"
+  }
+}

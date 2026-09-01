@@ -1,0 +1,108 @@
+{
+  "title": "Ajustes",
+  "opThreshold": {
+    "title": "Umbral de combinaciones OP",
+    "label": "Porcentaje del umbral de sinergia:",
+    "helpText": "Las combinaciones cuyo aumento de sinergia supere este umbral se marcarán como OP.",
+    "saveButton": "Guardar umbral",
+    "savedMessage": "¡Umbral guardado!"
+  },
+  "trapThreshold": {
+    "title": "Umbral de trampas",
+    "label": "Porcentaje del umbral de caída de tasa de victoria:",
+    "helpText": "Las combinaciones cuya tasa de victoria cae más que este umbral se marcan como trampas.",
+    "saveButton": "Guardar umbral",
+    "savedMessage": "¡Umbral de trampas guardado!"
+  },
+  "thresholdCommon": {
+    "defaultLabel": "Por defecto: {{value}}%",
+    "resetButton": "Restablecer valor por defecto"
+  },
+  "appearance": {
+    "title": "Apariencia",
+    "themeLabel": "Tema",
+    "languageLabel": "Idioma",
+    "overlayOpacityLabel": "Opacidad de los paneles del overlay",
+    "overlayAnchorLabel": "Posición de los paneles del overlay",
+    "anchorLeft": "Izquierda",
+    "anchorRight": "Derecha"
+  },
+  "backup": {
+    "title": "Copia de seguridad de la base de datos",
+    "createButton": "Crear copia",
+    "restoreButton": "Restaurar",
+    "noBackups": "No se encontraron copias de seguridad.",
+    "columns": {
+      "name": "Nombre",
+      "date": "Fecha",
+      "size": "Tamaño"
+    },
+    "stats": "{{count}} copias, {{size}} en total",
+    "createSuccess": "Copia de seguridad creada correctamente.",
+    "createError": "No se pudo crear la copia: {{error}}",
+    "restoreConfirm": "¿Seguro que quieres restaurar desde esta copia? Los datos actuales se sobrescribirán.",
+    "restoreSuccess": "Copia de seguridad restaurada correctamente.",
+    "restoreError": "No se pudo restaurar la copia: {{error}}"
+  },
+  "feedback": {
+    "title": "Feedback y diagnóstico",
+    "description": "Si el modelo de ML identifica mal las habilidades, usa 'Reportar reconocimiento fallido' en el overlay. Luego puedes enviar los snapshots al desarrollador para mejorar el modelo.",
+    "exportButton": "Exportar muestras fallidas",
+    "uploadButton": "Enviar muestras fallidas",
+    "exportNone": "Aún no hay snapshots para exportar — usa primero 'Reportar reconocimiento fallido' en el overlay.",
+    "exportSuccess": "Se exportaron {{count}} snapshot(s) a {{path}}",
+    "exportError": "Falló la exportación: {{error}}",
+    "uploadNone": "No hay snapshots nuevos para subir.",
+    "uploadSuccess": "Se subieron {{count}} snapshot(s). ¡Gracias!",
+    "uploadPartial": "Se subieron {{count}} de {{total}} snapshot(s); {{failed}} fallaron. El resto se reintentará la próxima vez.",
+    "uploadError": "Falló la subida: {{error}}",
+    "apiNotConfigured": "El servicio de subida no está configurado en esta build — usa Exportar y adjunta el archivo a un issue de GitHub."
+  },
+  "personalStats": {
+    "title": "Sugerencias personalizadas",
+    "description": "Vincula tu perfil de Windrun.io para mezclar tus tasas de victoria personales de habilidades y héroes en las sugerencias del overlay. Las habilidades con las que históricamente ganas suben en el ranking; tus estadísticas también aparecen en los tooltips de habilidades.",
+    "inputPlaceholder": "URL de perfil de Windrun o Steam ID",
+    "inputHint": "Pega el enlace de tu perfil de Windrun (windrun.io/players/…), tu Steam ID64 o tu Friend ID.",
+    "linkButton": "Vincular perfil",
+    "linking": "Vinculando…",
+    "refreshButton": "Actualizar estadísticas",
+    "unlinkButton": "Desvincular",
+    "lastUpdated": "actualizado {{date}}",
+    "refreshSuccess": "Actualizado: {{abilities}} habilidades, {{heroes}} héroes con estadísticas personales.",
+    "blendNote": "Las tasas de victoria personales se mezclan con las globales en proporción a cuántas partidas tienes con cada habilidad — las muestras pequeñas solo ajustan levemente la puntuación. Las estadísticas se actualizan automáticamente al activar el overlay (como máximo una vez por hora).",
+    "scrapeHint": "Tus datos locales de Windrun son anteriores al emparejamiento de habilidades — ejecuta una vez 'Actualizar datos de Windrun' en la página de Datos para activar la personalización de habilidades.",
+    "errorInvalidInput": "No se pudo leer un ID de jugador de esa entrada. Pega un enlace de perfil de windrun.io o un Steam ID.",
+    "errorProfileNotFound": "Windrun.io no devolvió ningún perfil para ese ID. Revisa el enlace y tu conexión.",
+    "errorNotLinked": "No hay ningún perfil vinculado.",
+    "errorFetchFailed": "Falló la descarga de estadísticas desde Windrun.io. Se conservan tus estadísticas anteriores — inténtalo de nuevo más tarde."
+  },
+  "autoTracking": {
+    "title": "Seguimiento automático del draft",
+    "description": "Automatiza todo el flujo del draft: el escaneo inicial del pool, la selección de tu puesto y tu modelo de héroe, y reescaneos dirigidos tras cada pick con seguimiento de picks por jugador.",
+    "toggle": "Habilitar seguimiento automático del draft",
+    "gsiNote": "Esta función usa la Game State Integration (GSI) integrada de Dota 2. Con el archivo de configuración instalado, tu juego envía información del draft (fase de la partida, reloj del draft, tu slot y el héroe elegido) a esta app. La conexión es solo local y estrictamente unidireccional — la app nunca envía nada al juego y nada sale de tu PC. GSI es una función oficial de Valve usada por herramientas de retransmisión y no conlleva riesgo de baneo.",
+    "delayLabel": "Retraso del escaneo inicial automático (segundos)",
+    "delayHint": "Cuánto esperar tras detectar el draft antes de escanear el pool automáticamente ({{min}}–{{max}} s). A los PC rápidos les basta con 5 s; los equipos más lentos pueden necesitar hasta 30 s para que la pantalla de draft se renderice del todo.",
+    "buttonsNote": "Mientras está habilitado, los botones manuales Mi puesto y Mi modelo del overlay se ocultan — ambas selecciones ocurren automáticamente a partir de los datos del juego.",
+    "setupTitle": "Configuración de GSI",
+    "setupHint": "Solo una vez: instala el archivo de configuración de abajo en tu carpeta de Dota y reinicia Dota 2.",
+    "autoCloseToggle": "Cerrar el overlay cuando termine el draft",
+    "autoCloseHint": "El overlay se cierra solo cuando empieza la partida y se reabre automáticamente cuando la partida termina o comienza un nuevo draft — sin cierres manuales entre partidas."
+  },
+  "roleSuggestions": {
+    "title": "Sugerencias según rol",
+    "description": "Ajusta las sugerencias a la posición que pienses jugar, según cuánto empuja cada habilidad a quienes la draftean hacia farmear o supportear (desvíos estadísticos de windrun.io).",
+    "mode": {
+      "off": "Desactivado",
+      "fixed": "Mis posiciones",
+      "dynamic": "Fill para el equipo"
+    },
+    "hint": {
+      "off": "Las sugerencias se quedan exactamente como están hoy.",
+      "fixed": "Puntúa las sugerencias para la(s) posición(es) que elijas abajo — para quienes juegan siempre el mismo rol y stacks que acuerdan las líneas de antemano. Los compañeros igual reciben estimaciones aproximadas de rol, solo para mostrar.",
+      "dynamic": "La app observa lo que draftean tus compañeros y sugiere picks para la posición que nadie está armando (por ejemplo: tres builds greedy en tu equipo → picks de support). Se mantiene neutral hasta que haya suficientes picks de compañeros en el tablero."
+    },
+    "noPositionsWarning": "Selecciona al menos una posición — sin ninguna seleccionada, las sugerencias quedan sin ajustar.",
+    "positionsHint": "Las sugerencias reciben un impulso cuando encajan en cualquiera de las posiciones seleccionadas."
+  }
+}

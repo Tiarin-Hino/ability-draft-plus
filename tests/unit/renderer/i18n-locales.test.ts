@@ -1,27 +1,34 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-import enCommon from '../../../src/renderer/control-panel/src/locales/en/common.json'
-import zhCNCommon from '../../../src/renderer/control-panel/src/locales/zh-CN/common.json'
-import enDashboard from '../../../src/renderer/control-panel/src/locales/en/dashboard.json'
-import zhCNDashboard from '../../../src/renderer/control-panel/src/locales/zh-CN/dashboard.json'
-import enData from '../../../src/renderer/control-panel/src/locales/en/data.json'
-import zhCNData from '../../../src/renderer/control-panel/src/locales/zh-CN/data.json'
-import enFeedback from '../../../src/renderer/control-panel/src/locales/en/feedback.json'
-import zhCNFeedback from '../../../src/renderer/control-panel/src/locales/zh-CN/feedback.json'
-import enSettings from '../../../src/renderer/control-panel/src/locales/en/settings.json'
-import zhCNSettings from '../../../src/renderer/control-panel/src/locales/zh-CN/settings.json'
-import enStreaming from '../../../src/renderer/control-panel/src/locales/en/streaming.json'
-import zhCNStreaming from '../../../src/renderer/control-panel/src/locales/zh-CN/streaming.json'
-import enUpdate from '../../../src/renderer/control-panel/src/locales/en/update.json'
-import zhCNUpdate from '../../../src/renderer/control-panel/src/locales/zh-CN/update.json'
-import enOverlay from '../../../src/renderer/overlay/src/locales/en/overlay.json'
-import zhCNOverlay from '../../../src/renderer/overlay/src/locales/zh-CN/overlay.json'
-import enStream from '../../../src/renderer/stream/src/locales/en.json'
-import zhCNStream from '../../../src/renderer/stream/src/locales/zh-CN.json'
-import enPicks from '../../../src/renderer/picks/src/locales/en.json'
-import zhCNPicks from '../../../src/renderer/picks/src/locales/zh-CN.json'
+import { SUPPORTED_LANGUAGES } from '../../../src/shared/constants/defaults'
+
+// Every non-English locale must mirror the English key structure and
+// interpolation tokens exactly, for every renderer namespace. Reads the JSON
+// from disk so adding a language to SUPPORTED_LANGUAGES automatically extends
+// coverage - a missing file fails loudly here rather than at runtime.
 
 type LocaleTree = Record<string, unknown>
+
+const RENDERER_ROOT = join(__dirname, '../../../src/renderer')
+
+/** name -> path builder for one language code. */
+const NAMESPACES: Array<[name: string, pathFor: (lang: string) => string]> = [
+  ...['common', 'dashboard', 'data', 'feedback', 'settings', 'streaming', 'update'].map(
+    (ns): [string, (lang: string) => string] => [
+      `control-panel/${ns}`,
+      (lang) => join(RENDERER_ROOT, 'control-panel/src/locales', lang, `${ns}.json`),
+    ],
+  ),
+  ['overlay', (lang) => join(RENDERER_ROOT, 'overlay/src/locales', lang, 'overlay.json')],
+  ['stream', (lang) => join(RENDERER_ROOT, 'stream/src/locales', `${lang}.json`)],
+  ['picks', (lang) => join(RENDERER_ROOT, 'picks/src/locales', `${lang}.json`)],
+]
+
+function loadLocale(path: string): LocaleTree {
+  return JSON.parse(readFileSync(path, 'utf8')) as LocaleTree
+}
 
 function flattenLocale(
   value: LocaleTree,
@@ -43,28 +50,26 @@ function interpolationTokens(value: string): string[] {
   return Array.from(value.matchAll(/{{\s*([^},\s]+)[^}]*}}/g), (match) => match[1]).sort()
 }
 
-const localePairs: Array<[name: string, english: LocaleTree, chinese: LocaleTree]> = [
-  ['control-panel/common', enCommon, zhCNCommon],
-  ['control-panel/dashboard', enDashboard, zhCNDashboard],
-  ['control-panel/data', enData, zhCNData],
-  ['control-panel/feedback', enFeedback, zhCNFeedback],
-  ['control-panel/settings', enSettings, zhCNSettings],
-  ['control-panel/streaming', enStreaming, zhCNStreaming],
-  ['control-panel/update', enUpdate, zhCNUpdate],
-  ['overlay', enOverlay, zhCNOverlay],
-  ['stream', enStream, zhCNStream],
-  ['picks', enPicks, zhCNPicks],
-]
+const translatedLanguages = SUPPORTED_LANGUAGES.filter((lang) => lang !== 'en')
 
-describe('Simplified Chinese locale resources', () => {
-  it.each(localePairs)('%s matches the English key and interpolation contract', (_, en, zhCN) => {
-    const english = flattenLocale(en)
-    const chinese = flattenLocale(zhCN)
+const cases = translatedLanguages.flatMap((lang) =>
+  NAMESPACES.map(([name, pathFor]): [string, string, string, string] => [
+    lang,
+    name,
+    pathFor('en'),
+    pathFor(lang),
+  ]),
+)
 
-    expect(Object.keys(chinese).sort()).toEqual(Object.keys(english).sort())
+describe('locale resources match the English contract', () => {
+  it.each(cases)('%s %s matches English keys and interpolation', (_lang, _name, enPath, path) => {
+    const english = flattenLocale(loadLocale(enPath))
+    const translated = flattenLocale(loadLocale(path))
+
+    expect(Object.keys(translated).sort()).toEqual(Object.keys(english).sort())
     for (const key of Object.keys(english)) {
-      expect(chinese[key].trim(), `${key} should not be empty`).not.toBe('')
-      expect(interpolationTokens(chinese[key]), `${key} interpolation tokens`).toEqual(
+      expect(translated[key].trim(), `${key} should not be empty`).not.toBe('')
+      expect(interpolationTokens(translated[key]), `${key} interpolation tokens`).toEqual(
         interpolationTokens(english[key]),
       )
     }

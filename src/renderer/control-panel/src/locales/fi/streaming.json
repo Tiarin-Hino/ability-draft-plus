@@ -1,0 +1,60 @@
+{
+  "title": "Striimaus",
+  "server": {
+    "title": "Striimilaudan palvelin",
+    "description": "Tarjoilee siistin, korkeakontrastisen draft-laudan paikallisen HTTP:n yli OBS:n selainlähteeksi.",
+    "status": {
+      "stopped": "Pysäytetty",
+      "running": "Käynnissä",
+      "error": "Virhe"
+    },
+    "start": "Käynnistä palvelin",
+    "stop": "Pysäytä palvelin",
+    "port": "Portti",
+    "portHint": "1024–65535. Portin vaihto vaatii palvelimen uudelleenkäynnistyksen ja OBS-scenen päivityksen.",
+    "url": "Laudan URL",
+    "picksUrl": "Picks-näkymän URL",
+    "picksHint": "Picks-näkymä näyttää jokaisen pelaajan sankarin ja draftatut kyvyt kahtena kompaktina tiiminauhana pelinsisäistä sceneäsi varten. Avaa URL selaimessa säätääksesi niitä ja luodaksesi tiimikohtaiset OBS-lähdelinkit. Näkymä näyttää valmiin draftin koko pelin ajan, myös overlayn sulkemisen jälkeen.",
+    "copy": "Kopioi",
+    "copied": "Kopioitu!",
+    "clients": "Yhdistettyjä asiakkaita: {{count}}",
+    "autostart": "Käynnistä palvelin sovelluksen käynnistyessä",
+    "errorPortInUse": "Portti on jo käytössä — valitse toinen portti ja käynnistä uudelleen.",
+    "errorGeneric": "Palvelimen käynnistys epäonnistui. Katso lisätiedot lokeista.",
+    "errorInvalidPort": "Virheellinen portti. Käytä numeroa väliltä 1024–65535."
+  },
+  "gsi": {
+    "title": "Dota 2 Game State Integration",
+    "description": "Antaa Dotan lähettää pelaajien nimet, pelivaiheen ja kellon striimilaudalle. Vaatii kertaluonteisen asetustiedoston Dota-kansioosi ja Dotan uudelleenkäynnistyksen.",
+    "connected": "Yhdistetty",
+    "disconnected": "Ei yhteyttä",
+    "detectedPath": "Dota-asennus",
+    "notDetected": "Dota-asennusta ei löytynyt — valitse \"dota 2 beta\" -kansio manuaalisesti.",
+    "cfgPresent": "Asetustiedosto asennettu",
+    "cfgMissing": "Asetustiedostoa ei ole vielä asennettu",
+    "writeCfg": "Asenna asetustiedosto",
+    "browse": "Selaa…",
+    "pickFolderTitle": "Valitse \"dota 2 beta\" -kansio",
+    "writeSuccess": "Asetustiedosto kirjoitettu kohteeseen {{path}}. Käynnistä Dota 2 uudelleen, jotta se tulee voimaan.",
+    "errorDotaNotFound": "Dota 2 -asennusta ei löytynyt. Valitse \"dota 2 beta\" -kansio Selaa-painikkeella.",
+    "errorWriteFailed": "Asetustiedoston kirjoitus epäonnistui. Katso lisätiedot lokeista.",
+    "portMismatch": "Asennettu asetustiedosto osoittaa porttiin {{cfgPort}}, mutta striimipalvelin käyttää porttia {{streamPort}} — Dota ei tavoita sovellusta. Asenna asetustiedosto uudelleen ja käynnistä Dota 2 uudelleen.",
+    "portNote": "Asetustiedosto kiinnittää nykyisen palvelinportin — asenna se uudelleen portin vaihdon jälkeen.",
+    "spectatorNote": "Kaikkien 10 pelaajan nimet ovat saatavilla vain katsottaessa/castatessa. Pelatessa Dota ilmoittaa vain oman nimesi."
+  },
+  "icons": {
+    "title": "Kykyikonit",
+    "description": "Lauta käyttää virallisia kykyikoneita, jotka ladataan kerran ja tallennetaan paikalliseen välimuistiin. Esilataa ne nyt, niin ensimmäinen draft renderöityy heti myös ilman nettiyhteyttä.",
+    "prefetch": "Esilataa kaikki ikonit",
+    "prefetching": "Ladataan…",
+    "result": "Valmis: {{fetched}} ladattu, {{alreadyCached}} jo välimuistissa, {{failed}} epäonnistui.",
+    "error": "Esilataus epäonnistui. Katso lisätiedot lokeista."
+  },
+  "obs": {
+    "title": "OBS-asennus",
+    "step1": "Käynnistä palvelin ja kopioi laudan URL.",
+    "step2": "OBS:ssä: Sources → Add → Browser, liitä URL, aseta kooksi 1920×1080.",
+    "step3": "Tausta on oletuksena läpinäkyvä. Lisää ?bg=dark yhtenäistä taustaa varten tai ?bg=chroma green screeniä varten.",
+    "note": "Lauta seuraa overlay-skannauksiasi: pooli ilmestyy skannauksen jälkeen (Ctrl+Shift+S) ja pickit päivittyvät jokaisen uudelleenskannauksen jälkeen (Ctrl+Shift+R)."
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "title": "Dashboard",
+  "statusCards": {
+    "mlWorker": "ML Worker",
+    "overlay": "Overlay",
+    "database": "Database",
+    "dataFreshness": "Freshness ng Data",
+    "neverUpdated": "Hindi pa na-update",
+    "mlGapsBadge": "{{count}} bago"
+  },
+  "resolutionSource": {
+    "preset": "Preset na coordinates",
+    "custom": "Na-calibrate na coordinates",
+    "auto-scaled": "Auto-scaled na coordinates — baka medyo mali; i-calibrate gamit ang Mapper",
+    "none": "Hindi supported ang resolution"
+  },
+  "firstRun": {
+    "title": "Pagsisimula",
+    "step1": "I-download muna ang pinakabagong winrate at synergy data mula sa Windrun.io — walang ipapakitang recommendation ang overlay kung wala nito.",
+    "updateButton": "I-update ang Windrun Data",
+    "updating": "Nag-a-update…",
+    "step2": "I-click ang 'I-activate ang Overlay' sa baba bago ka mag-queue ng Ability Draft match.",
+    "step3": "Sa draft screen, pindutin ang Ctrl+Shift+S (o i-click ang 'Initial Scan' sa overlay controls sa kanang itaas)."
+  },
+  "quickActions": {
+    "title": "Mga Quick Action",
+    "activateOverlay": "I-activate ang Overlay",
+    "activating": "Ina-activate...",
+    "overlayActive": "Aktibo ang Overlay",
+    "activationError": "Hindi na-activate ang overlay.",
+    "retryMl": "I-retry ang ML",
+    "updateData": "I-update ang Data",
+    "updatingData": "Nag-a-update…",
+    "checkUpdates": "I-check ang Updates",
+    "checking": "Chine-check…",
+    "upToDate": "Nasa pinakabagong version ka na.",
+    "updateFound": "May update na v{{version}} — tingnan ang banner sa taas.",
+    "exportGaps": "I-export ang Model Gaps ({{count}})",
+    "exportGapsSuccess": "Na-export ang {{count}} kulang na abilities sa {{path}} — ipasa ito sa data-gather script.",
+    "exportGapsError": "Nabigo ang export: {{error}}"
+  },
+  "systemInfo": {
+    "title": "System Info",
+    "version": "Version",
+    "display": "Display"
+  }
+}

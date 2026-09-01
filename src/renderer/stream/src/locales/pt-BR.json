@@ -1,0 +1,53 @@
+{
+  "wordmark": "ABILITY DRAFT",
+  "waiting": "Aguardando o draft — escaneie o quadro no Ability Draft Plus",
+  "demo": "DEMO",
+  "reservedZone": "Reservado para o seu overlay",
+  "connection": {
+    "connecting": "Conectando…",
+    "connected": "Ao vivo",
+    "disconnected": "Reconectando…"
+  },
+  "pool": {
+    "ultimates": "Habilidades ultimate",
+    "standard": "Habilidades comuns",
+    "modelPicked": "Draftado"
+  },
+  "panels": {
+    "topWinrate": "Maior taxa de vitória",
+    "opCombos": "Combos mais fortes",
+    "trapCombos": "Combos armadilha",
+    "topTier": "Top Picks",
+    "latestPicks": "Últimos picks"
+  },
+  "avgPick": "Normalmente escolhida por volta do nº {{n}}",
+  "player": "Jogador {{num}}",
+  "noHero": "Sem herói",
+  "team": {
+    "radiant": "Iluminados",
+    "dire": "Temidos"
+  },
+  "unknownAbility": "Desconhecida",
+  "unknownHero": "Herói desconhecido",
+  "score": {
+    "label": "Nota do draft",
+    "teamAverage": "Nota de draft do time",
+    "confidence": {
+      "low": "baixa",
+      "medium": "média",
+      "high": "alta"
+    }
+  },
+  "edit": {
+    "title": "MODO DE EDIÇÃO",
+    "hintMove": "Arraste qualquer elemento para movê-lo",
+    "hintScale": "Roda do mouse sobre um elemento para escalar (Alt = fino)",
+    "hintReset": "Clique duplo em um elemento para redefini-lo",
+    "copy": "Copiar JSON",
+    "copied": "Copiado!",
+    "resetAll": "Redefinir tudo",
+    "empty": "Nenhum ajuste ainda — arraste ou role sobre um elemento.",
+    "hintType": "As mudanças se aplicam a todos os elementos de um tipo",
+    "hintMirror": "Os lados se espelham; cada habilidade do pool pareia só com sua gêmea espelhada"
+  }
+}

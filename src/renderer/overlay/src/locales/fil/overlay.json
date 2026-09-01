@@ -1,0 +1,121 @@
+{
+  "initialScan": "Initial Scan",
+  "controlsAria": "Mga kontrol ng overlay",
+  "rescan": "Rescan",
+  "reset": "I-reset",
+  "close": "Isara",
+  "reportFailed": "I-report ang Nabigong Recognition",
+  "scanConfirm": {
+    "message": "I-i-scan nito ang kasalukuyang screen para sa mga ability icon. Siguraduhing buong nakikita ang Dota 2 draft screen. Tip: agad nag-i-scan ang Ctrl+Shift+S nang walang dialog na ito.",
+    "proceed": "Ituloy",
+    "cancel": "Kanselahin",
+    "dontShow": "Huwag Nang Ipakita Ulit"
+  },
+  "reportConfirm": {
+    "message": "Kukuha ito ng snapshot ng kasalukuyang mga ability icon para mapaganda ang model. I-submit?",
+    "submit": "I-submit",
+    "cancel": "Kanselahin"
+  },
+  "status": {
+    "scanning": "Nag-i-scan...",
+    "error": "Nabigo ang scan: {{message}}",
+    "timeoutMessage": "Nag-timeout ang scan — pakisubukan ulit"
+  },
+  "snapshot": {
+    "saved": "Na-save ang snapshot ({{count}} naka-store) — ipadala ito sa Settings → Feedback",
+    "noScan": "Walang scan data na mai-re-report — mag-scan muna",
+    "error": "Nabigong i-save ang snapshot: {{error}}"
+  },
+  "opCombinations": {
+    "title": "OP Combinations",
+    "show": "Ipakita ang OP",
+    "hide": "Itago",
+    "tripletTooltip": "Madalas dina-draft bilang triplet ({{winrate}} WR magkakasama)"
+  },
+  "trapCombinations": {
+    "title": "It's a Trap!",
+    "show": "Ipakita ang Traps",
+    "hide": "Itago",
+    "tripletTooltip": "Madalas dina-draft bilang triplet ({{winrate}} WR magkakasama)"
+  },
+  "scanSummary": "{{recognized}}/{{total}} na-recognize",
+  "resolution": {
+    "autoScaledWarning": "Ang coordinates ay mathematically scaled para sa resolution na ito at baka medyo mali. Gamitin ang Mapper sa Control Panel para mag-calibrate.",
+    "source": {
+      "preset": "preset",
+      "custom": "na-calibrate",
+      "auto-scaled": "auto-scaled",
+      "none": "hindi supported"
+    }
+  },
+  "mySpot": "My Spot",
+  "changeMySpot": "Palitan",
+  "myModel": "My Model",
+  "changeMyModel": "Palitan",
+  "tooltip": {
+    "winrate": "Winrate: {{value}}",
+    "pickRate": "Pick Rate: {{value}}",
+    "personalStats": "Ikaw: {{value}} WR sa {{games}} games",
+    "strongSynergies": "Malalakas na Synergy",
+    "heroSynergies": "Mga Hero Synergy",
+    "weakSynergies": "Mahihinang Synergy",
+    "weakHeroSynergies": "Mahihinang Hero Synergy",
+    "topPick": "Top Pick",
+    "synergyPick": "Synergy Pick",
+    "topModel": "Top Model",
+    "personalPick": "Personal Pick — rekomendado base sa stats mo",
+    "yourModelPick": "Pick para sa Model Mo",
+    "strongAbilities": "Malalakas na Ability para sa Hero na Ito",
+    "weakAbilities": "Mahihinang Ability para sa Hero na Ito",
+    "unknownAbility": "Hindi Kilalang Ability",
+    "unknownHint": "Hindi nakilala ng model ang icon na ito — subukang gamitin ang 'I-report ang Nabigong Recognition'",
+    "roleFit": "Bagay sa role: pos {{position}}",
+    "pairingFit": "Model pairing",
+    "roleNeeds": {
+      "steroid": "attack steroid",
+      "farm": "farming tool",
+      "survival": "survivability",
+      "nuke": "nuke",
+      "mobility": "mobility",
+      "kill_ult": "kill ultimate",
+      "initiation": "initiation",
+      "aoe_cc": "AoE control",
+      "durability": "durability",
+      "hard_cc": "hard disable",
+      "waveclear": "waveclear",
+      "save": "ally save",
+      "mana_budget": "mana budget",
+      "farm_tool": "farming tool",
+      "sustain_self": "self sustain",
+      "teamfight_ult": "teamfight ult",
+      "passive_value": "value passive",
+      "save_ally": "ally save"
+    },
+    "roleCovers": "Sinasagot ang kulang mong {{need}}",
+    "rolePartial": "Bahagyang sinasagot ang kulang mong {{need}}",
+    "roleDuplicate": "May sumasagot na: {{need}}",
+    "roleCurated": "Curated pick para sa role na ito",
+    "curatedPick": "Role Pick — curated bilang must-have para sa role mo",
+    "inertOnModel": "Hindi gumagana sa model mo (melee/ranged mismatch)",
+    "requiresAbility": "Gumagana lang kasama ang {{name}} — hindi imumungkahi hangga't hindi mo ito na-draft",
+    "requiresModel": "Gumagana lang sa {{name}} model — hindi imumungkahi",
+    "requiresTag": "Kailangan ng {{name}} na ability — walang na-draft o natitira sa pool",
+    "roleAvoided": "Curated na iwasan para sa spot na ito — hindi imumungkahi",
+    "overrated": "Maagang pinipili pero {{value}} lang ang panalo — malamang overrated",
+    "contestedSoon": "Karaniwang kuha na sa puntong ito — baka hindi na umabot sa susunod na round"
+  },
+  "role": {
+    "aria": "Mga role suggestion",
+    "label": "Role",
+    "off": "Off",
+    "auto": "Auto",
+    "offStatus": "Naka-off ang role suggestions",
+    "scoringFor": "Nag-i-score para sa pos {{positions}}",
+    "watching": "Binabantayan ang trend ng team…",
+    "teamNeeds": "Kailangan ng team ang pos {{positions}}",
+    "needSpot": "Piliin ang My Spot para ma-enable",
+    "appliesNextScan": "Mag-a-apply sa susunod na scan",
+    "needData": "Mag-run ng data update para ma-enable",
+    "waitingSpot": "Hinihintay ang automatic na spot detection…"
+  }
+}

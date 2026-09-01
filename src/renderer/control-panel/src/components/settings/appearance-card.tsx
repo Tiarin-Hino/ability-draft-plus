@@ -18,6 +18,7 @@ import {
 import { useAppStore } from '@/hooks/use-app-store'
 import { useAppDispatch } from '@/hooks/use-dispatch'
 import { APP_ACTIONS } from '@shared/types/app-store'
+import { LANGUAGE_META, SUPPORTED_LANGUAGES } from '@shared/constants/defaults'
 import type { SupportedLanguage } from '@shared/constants/defaults'
 
 const THEME_OPTIONS = [
@@ -87,9 +88,11 @@ export function AppearanceCard() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="en">{t('language.en')}</SelectItem>
-              <SelectItem value="ru">{t('language.ru')}</SelectItem>
-              <SelectItem value="zh-CN">{t('language.zhCN')}</SelectItem>
+              {SUPPORTED_LANGUAGES.map((lang) => (
+                <SelectItem key={lang} value={lang}>
+                  {LANGUAGE_META[lang].autonym}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>

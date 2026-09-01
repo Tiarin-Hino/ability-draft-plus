@@ -1,0 +1,14 @@
+{
+  "title": "Update ng Application",
+  "checkButton": "I-check ang Updates",
+  "checking": "Chine-check ang updates...",
+  "downloading": "Dina-download ang update...",
+  "downloadButton": "I-download ang Update",
+  "available": "Available na ang update v{{version}}",
+  "readyToInstall": "Handa nang i-install ang update v{{version}}",
+  "installButton": "I-restart at I-install",
+  "retryButton": "Subukan ulit",
+  "error": "Error sa update: {{error}}",
+  "latestVersion": "Nasa pinakabagong version ka na.",
+  "networkError": "Hindi makakonekta sa update server. Paki-check ang internet connection mo."
+}

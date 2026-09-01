@@ -1,0 +1,40 @@
+{
+  "waiting": "Aún no hay draft registrado — escanea un draft en Ability Draft Plus",
+  "unknownAbility": "Habilidad desconocida",
+  "team": {
+    "radiant": "Radiant",
+    "dire": "Dire"
+  },
+  "player": "Jugador {{num}}",
+  "setup": {
+    "title": "CONFIGURACIÓN DE LA VISTA DE PICKS",
+    "intro": "Ajusta las dos franjas de equipo antes de la partida y luego añade las URL generadas a OBS como dos fuentes de navegador. Cada ajuste va incrustado en las URL — no hace falta guardar nada en OBS.",
+    "preview": "Vista previa (draft de demostración)",
+    "background": "Fondo",
+    "bg": {
+      "transparent": "Transparente",
+      "chroma": "Chroma",
+      "dark": "Oscuro"
+    },
+    "names": "Nombres de jugadores",
+    "frame": "Marco de equipo",
+    "on": "Activado",
+    "off": "Desactivado",
+    "alignRadiant": "Franja de Radiant",
+    "alignDire": "Franja de Dire",
+    "align": {
+      "left": "Alineada a la izquierda",
+      "right": "Alineada a la derecha"
+    },
+    "spacing": "Espaciado (px)",
+    "rowGap": "Entre filas",
+    "slotGap": "Entre habilidades",
+    "heroGap": "Del héroe a las habilidades",
+    "ultGap": "De la ultimate a las habilidades",
+    "reset": "Restablecer valores por defecto",
+    "urls": "URL de fuentes de navegador para OBS",
+    "urlHint": "Añade cada franja como su propia fuente de navegador para poder posicionarlas de forma independiente. Las franjas se mantienen en vivo durante el draft y conservan el draft terminado en pantalla durante toda la partida.",
+    "copy": "Copiar",
+    "copied": "¡Copiado!"
+  }
+}

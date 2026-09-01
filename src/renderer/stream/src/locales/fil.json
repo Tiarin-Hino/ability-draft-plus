@@ -1,0 +1,53 @@
+{
+  "wordmark": "ABILITY DRAFT",
+  "waiting": "Hinihintay ang draft — i-scan ang board sa Ability Draft Plus",
+  "demo": "DEMO",
+  "reservedZone": "Nakareserba para sa overlay mo",
+  "connection": {
+    "connecting": "Kumokonekta…",
+    "connected": "Live",
+    "disconnected": "Muling kumokonekta…"
+  },
+  "pool": {
+    "ultimates": "Mga Ultimate Ability",
+    "standard": "Mga Standard Ability",
+    "modelPicked": "Na-draft na"
+  },
+  "panels": {
+    "topWinrate": "Top Winrate",
+    "opCombos": "Pinakamalakas na Combos",
+    "trapCombos": "Trap Combos",
+    "topTier": "Top Picks",
+    "latestPicks": "Pinakabagong Picks"
+  },
+  "avgPick": "Karaniwang pinipili bandang #{{n}}",
+  "player": "Player {{num}}",
+  "noHero": "Walang Hero",
+  "team": {
+    "radiant": "Radiant",
+    "dire": "Dire"
+  },
+  "unknownAbility": "Hindi kilala",
+  "unknownHero": "Hindi kilalang hero",
+  "score": {
+    "label": "Draft score",
+    "teamAverage": "Draft score ng team",
+    "confidence": {
+      "low": "mababa",
+      "medium": "katamtaman",
+      "high": "mataas"
+    }
+  },
+  "edit": {
+    "title": "EDIT MODE",
+    "hintMove": "I-drag ang kahit anong element para igalaw ito",
+    "hintScale": "Mouse wheel sa ibabaw ng element para i-scale (Alt = pino)",
+    "hintReset": "I-double-click ang element para i-reset ito",
+    "copy": "Kopyahin ang JSON",
+    "copied": "Nakopya!",
+    "resetAll": "I-reset lahat",
+    "empty": "Wala pang adjustment — mag-drag o mag-scroll sa ibabaw ng isang element.",
+    "hintType": "Nag-a-apply ang mga pagbabago sa bawat element ng isang type",
+    "hintMirror": "Naka-mirror ang magkabilang side; bawat pool ability ay kapareha lang ng mirror twin nito"
+  }
+}

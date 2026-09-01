@@ -1,0 +1,60 @@
+{
+  "title": "Streaming",
+  "server": {
+    "title": "Servidor del tablero de stream",
+    "description": "Sirve un tablero de draft limpio y de alto contraste por HTTP local para usarlo como fuente de navegador en OBS.",
+    "status": {
+      "stopped": "Detenido",
+      "running": "En ejecución",
+      "error": "Error"
+    },
+    "start": "Iniciar servidor",
+    "stop": "Detener servidor",
+    "port": "Puerto",
+    "portHint": "1024–65535. Cambiar el puerto requiere reiniciar el servidor y actualizar tu escena de OBS.",
+    "url": "URL del tablero",
+    "picksUrl": "URL de la vista de picks",
+    "picksHint": "La vista de picks muestra el héroe y las habilidades drafteadas de cada jugador como dos franjas de equipo compactas para tu escena in-game. Abre la URL en un navegador para ajustarlas y generar los enlaces de fuente de OBS por equipo. Sigue mostrando el draft terminado durante toda la partida, incluso con el overlay cerrado.",
+    "copy": "Copiar",
+    "copied": "¡Copiado!",
+    "clients": "Clientes conectados: {{count}}",
+    "autostart": "Iniciar el servidor al abrir la app",
+    "errorPortInUse": "Ese puerto ya está en uso — elige otro puerto e inicia de nuevo.",
+    "errorGeneric": "El servidor no pudo iniciarse. Revisa los logs para más detalles.",
+    "errorInvalidPort": "Puerto inválido. Usa un número entre 1024 y 65535."
+  },
+  "gsi": {
+    "title": "Game State Integration de Dota 2",
+    "description": "Permite que Dota envíe los nombres de los jugadores, la fase de la partida y el reloj al tablero de stream. Requiere instalar una vez un archivo de configuración en tu carpeta de Dota y reiniciar Dota.",
+    "connected": "Conectado",
+    "disconnected": "No conectado",
+    "detectedPath": "Instalación de Dota",
+    "notDetected": "No se encontró la instalación de Dota — elige manualmente la carpeta \"dota 2 beta\".",
+    "cfgPresent": "Archivo de configuración instalado",
+    "cfgMissing": "Archivo de configuración aún no instalado",
+    "writeCfg": "Instalar archivo de configuración",
+    "browse": "Examinar…",
+    "pickFolderTitle": "Selecciona la carpeta \"dota 2 beta\"",
+    "writeSuccess": "Configuración escrita en {{path}}. Reinicia Dota 2 para que surta efecto.",
+    "errorDotaNotFound": "No se pudo localizar la instalación de Dota 2. Usa Examinar para elegir la carpeta \"dota 2 beta\".",
+    "errorWriteFailed": "No se pudo escribir el archivo de configuración. Revisa los logs para más detalles.",
+    "portMismatch": "La configuración instalada apunta al puerto {{cfgPort}}, pero el servidor de stream usa el puerto {{streamPort}} — Dota no puede comunicarse con la app. Reinstala el archivo de configuración y reinicia Dota 2.",
+    "portNote": "La configuración fija el puerto actual del servidor — reinstálala después de cambiar el puerto.",
+    "spectatorNote": "Los nombres de los 10 jugadores solo están disponibles al espectar/castear. Jugando, Dota solo reporta tu propio nombre."
+  },
+  "icons": {
+    "title": "Íconos de habilidades",
+    "description": "El tablero usa los íconos oficiales de habilidades, descargados una vez y cacheados localmente. Descárgalos ahora para que el primer draft se renderice al instante incluso sin conexión a internet.",
+    "prefetch": "Precargar todos los íconos",
+    "prefetching": "Descargando…",
+    "result": "Listo: {{fetched}} descargados, {{alreadyCached}} ya en caché, {{failed}} fallidos.",
+    "error": "Falló la precarga. Revisa los logs para más detalles."
+  },
+  "obs": {
+    "title": "Configuración de OBS",
+    "step1": "Inicia el servidor y copia la URL del tablero.",
+    "step2": "En OBS: Fuentes → Añadir → Navegador, pega la URL y establece el tamaño en 1920×1080.",
+    "step3": "El fondo es transparente por defecto. Añade ?bg=dark para un fondo sólido o ?bg=chroma para pantalla verde.",
+    "note": "El tablero sigue tus escaneos del overlay: el pool aparece tras un escaneo (Ctrl+Shift+S) y los picks se actualizan tras cada reescaneo (Ctrl+Shift+R)."
+  }
+}
