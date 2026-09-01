@@ -1,0 +1,438 @@
+<!--
+  Simplified Chinese translation of https://tiarinhino.com/how-suggestions-work.html
+  (the role-aware suggestions explainer). FOR COMMUNITY REVIEW ONLY — after
+  approval this block is pasted into the site page as the data-lang-only="zh-CN"
+  article and this file is removed from the repo.
+
+  Review notes:
+  - Terminology follows the in-app zh-CN localization (覆盖层 / 征召 / 技能池 /
+    号位 / 胜率 / 选取率 / 硬控制 / 清线 / 我的席位 / 我的模型).
+  - "greed axis" is rendered 贪度轴, "needs" 需求, curated verdicts 人工裁定.
+  - Ability names stay in English (the game client and the overlay show them
+    in English on the draft board).
+  - SVG <text> elements are diagram labels — please check wording, not layout.
+-->
+<div class="article" data-lang-only="zh-CN" hidden>
+    <header class="hero">
+        <p class="eyebrow">Ability Draft Plus · 幕后原理</p>
+        <h1>应用如何决定<span class="grad">你该征召什么</span></h1>
+        <p class="lede">
+            开启位置推荐后，覆盖层就不再给所有人推荐同样的十个技能。这个页面讲清楚实际发生的事：<strong>哪些来自数据，哪些由社区人工维护，两者又如何结合。</strong>
+            通俗版本可以一路读下去；数学细节都收在折叠块里。
+        </p>
+    </header>
+
+    <figure>
+        <svg
+            viewBox="0 0 720 150"
+            role="img"
+            aria-label="流水线：扫描到的技能池依次经过四个评分层和一组硬性关卡，最后高亮十个最佳推荐。"
+        >
+            <defs>
+                <marker id="arr-zh" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+                    <path d="M0 0 L8 4 L0 8 z" fill="currentColor"></path>
+                </marker>
+            </defs>
+            <g font-family="ui-monospace, Consolas, monospace" font-size="12" fill="currentColor">
+                <rect x="8" y="48" width="92" height="54" rx="9" fill="none" stroke="currentColor" opacity="0.85"></rect>
+                <text x="54" y="71" text-anchor="middle">扫描的</text>
+                <text x="54" y="87" text-anchor="middle">技能池</text>
+
+                <rect x="136" y="48" width="100" height="54" rx="9" fill="none" stroke="currentColor" opacity="0.85"></rect>
+                <text x="186" y="71" text-anchor="middle">全局</text>
+                <text x="186" y="87" text-anchor="middle">统计</text>
+
+                <rect x="272" y="48" width="100" height="54" rx="9" fill="none" stroke="currentColor" opacity="0.85"></rect>
+                <text x="322" y="71" text-anchor="middle">你的</text>
+                <text x="322" y="87" text-anchor="middle">历史</text>
+
+                <rect x="408" y="48" width="100" height="54" rx="9" fill="none" class="stroke-brand"></rect>
+                <text x="458" y="71" text-anchor="middle" class="fill-brand">位置</text>
+                <text x="458" y="87" text-anchor="middle" class="fill-brand">层</text>
+
+                <rect x="544" y="48" width="76" height="54" rx="9" fill="none" class="stroke-avoid"></rect>
+                <text x="582" y="71" text-anchor="middle" class="fill-avoid">硬性</text>
+                <text x="582" y="87" text-anchor="middle" class="fill-avoid">关卡</text>
+
+                <rect x="648" y="48" width="64" height="54" rx="9" fill="none" class="stroke-axis"></rect>
+                <text x="680" y="71" text-anchor="middle" class="fill-axis">前十</text>
+                <text x="680" y="87" text-anchor="middle" class="fill-axis">推荐</text>
+
+                <line x1="100" y1="75" x2="130" y2="75" stroke="currentColor" marker-end="url(#arr-zh)"></line>
+                <line x1="236" y1="75" x2="266" y2="75" stroke="currentColor" marker-end="url(#arr-zh)"></line>
+                <line x1="372" y1="75" x2="402" y2="75" stroke="currentColor" marker-end="url(#arr-zh)"></line>
+                <line x1="508" y1="75" x2="538" y2="75" stroke="currentColor" marker-end="url(#arr-zh)"></line>
+                <line x1="620" y1="75" x2="642" y2="75" stroke="currentColor" marker-end="url(#arr-zh)"></line>
+
+                <text x="186" y="34" text-anchor="middle" opacity="0.6" font-size="11">胜率 + 选取顺序</text>
+                <text x="322" y="34" text-anchor="middle" opacity="0.6" font-size="11">关联的个人档案</text>
+                <text x="458" y="34" text-anchor="middle" opacity="0.6" font-size="11">贪度 · 需求 · 裁定</text>
+                <text x="186" y="124" text-anchor="middle" opacity="0.6" font-size="11">所有人可见</text>
+                <text x="458" y="124" text-anchor="middle" opacity="0.6" font-size="11">仅在设定位置时生效</text>
+                <text x="582" y="124" text-anchor="middle" opacity="0.6" font-size="11">彻底</text>
+                <text x="582" y="138" text-anchor="middle" opacity="0.6" font-size="11">排除</text>
+            </g>
+        </svg>
+        <figcaption>
+            每次扫描时，每个技能和每个英雄模型都走同一条流水线。评分层调整分数；末端的关卡可以把候选者整个丢出去。关闭位置推荐时，紫色那层什么也不做。
+        </figcaption>
+    </figure>
+
+    <!-- ── 01 ── -->
+    <section>
+        <div class="kicker">
+            <span class="n">01</span><span class="layer">地基</span>
+        </div>
+        <h2>一切从统计评分开始</h2>
+        <p>
+            在位置进场之前，每个技能都会先从数千场真实技能征召对局中得到一个分数。两个输入：<strong>它赢得多不多</strong>，以及<strong>大家抢得早不早</strong>。赢得多、开局几手就被抢光——高分。挂到第 40 手还没人要——低分。
+        </p>
+        <p>
+            问题在于，选取顺序衡量的是人气，而征召的人终究是人。有些技能被秒抢，然后照样输掉比赛。Rearm 平均第九手就被拿走，胜率却只有
+            <strong>45.7%</strong>。当一个技能被抢的时机远早于胜率能够支撑的程度，应用会压低它的分数并明说：
+        </p>
+        <div class="tooltip-demo">
+            <div class="t-title">Rearm</div>
+            <div class="t-row">胜率：45.7%</div>
+            <div class="t-row">选取率：8.8</div>
+            <div class="t-row t-warn">通常较早被选，但胜率仅为 45.7%——可能被高估</div>
+        </div>
+        <details class="hood">
+            <summary>深入原理</summary>
+            <div class="inner">
+                <p>
+                    基础分 = <code>0.4 × 胜率 + 0.6 × 反转的选取顺序</code>（顺序在 1–50
+                    区间归一化）。「高估」惩罚在胜率 &lt; 48% <em>且</em>平均选取 ≤ 15
+                    时触发——按真实数据校准，命中 513 个技能中的 21
+                    个，基本就是著名陷阱技能点名册。它固定扣 0.12，无论位置模式开关都生效。若关联了
+                    Windrun 档案，你的个人胜率会先混入输入数据（小样本会向全局数字收缩，五场好运带不走一个分数）。
+                </p>
+            </div>
+        </details>
+    </section>
+
+    <!-- ── 02 ── -->
+    <section>
+        <div class="kicker">
+            <span class="n">02</span><span class="layer">贪度轴</span>
+        </div>
+        <h2>发育优先级是测出来的，不是猜出来的</h2>
+        <p>
+            位置感知背后的核心问题：<strong>这是发育型技能，还是辅助型技能？</strong>没有人坐在键盘前拍板。对每个技能，Windrun
+            追踪选它的人的数据如何<em>偏移</em>——拿了它的人最终比平均更富，还是更穷？这个测量就是<strong>贪度轴</strong>。
+        </p>
+        <p>
+            每个号位在轴上都有一个「锚点」，从高手征召中学得。靠近你号位锚点的推荐获得加成；离得远的丢分：
+        </p>
+
+        <figure>
+            <svg
+                viewBox="0 0 720 190"
+                role="img"
+                aria-label="贪度轴从偏辅助的负一到偏核心的正一，标出五个号位锚点，以及三个真实技能的实测位置。"
+            >
+                <g font-family="ui-monospace, Consolas, monospace" font-size="12" fill="currentColor">
+                    <line x1="40" y1="95" x2="680" y2="95" class="stroke-axis" stroke-width="2"></line>
+                    <text x="40" y="130" text-anchor="middle" class="fill-axis">−1</text>
+                    <text x="360" y="130" text-anchor="middle" class="fill-axis">0</text>
+                    <text x="680" y="130" text-anchor="middle" class="fill-axis">+1</text>
+                    <text x="40" y="150" text-anchor="start" opacity="0.65" font-size="11">选取者发育更少 → 辅助玩法</text>
+                    <text x="680" y="150" text-anchor="end" opacity="0.65" font-size="11">选取者发育更多 → 核心玩法</text>
+
+                    <g class="fill-brand">
+                        <circle cx="168" cy="95" r="5"></circle><text x="168" y="78" text-anchor="middle">5号位</text>
+                        <circle cx="248" cy="95" r="5"></circle><text x="248" y="78" text-anchor="middle">4号位</text>
+                        <circle cx="392" cy="95" r="5"></circle><text x="392" y="78" text-anchor="middle">3号位</text>
+                        <circle cx="488" cy="95" r="5"></circle><text x="488" y="78" text-anchor="middle">2号位</text>
+                        <circle cx="584" cy="95" r="5"></circle><text x="584" y="78" text-anchor="middle">1号位</text>
+                    </g>
+
+                    <g opacity="0.95">
+                        <line x1="178" y1="95" x2="178" y2="112" stroke="currentColor" opacity="0.5"></line>
+                        <text x="178" y="175" text-anchor="middle" font-size="11">Shadow Strike</text>
+                        <line x1="498" y1="95" x2="498" y2="112" stroke="currentColor" opacity="0.5"></line>
+                        <text x="498" y="175" text-anchor="middle" font-size="11">Primal Roar</text>
+                        <line x1="642" y1="95" x2="642" y2="112" stroke="currentColor" opacity="0.5"></line>
+                        <text x="642" y="175" text-anchor="middle" font-size="11">Chem Rage</text>
+                        <circle cx="178" cy="95" r="3.5" fill="currentColor"></circle>
+                        <circle cx="498" cy="95" r="3.5" fill="currentColor"></circle>
+                        <circle cx="642" cy="95" r="3.5" fill="currentColor"></circle>
+                    </g>
+                    <text x="360" y="24" text-anchor="middle" opacity="0.7" font-size="11">来自真实征召的测量——每个技能在当前技能池内排序</text>
+                </g>
+            </svg>
+            <figcaption>
+                真实测量：选 Shadow Strike 的人发育得像辅助（−0.57），选 Chemical Rage
+                的人像大核（+0.88），而 Primal Roar 几乎正好落在中单锚点上（+0.43）。这些位置没有一个出自谁的主观意见。
+            </figcaption>
+        </figure>
+
+        <details class="hood">
+            <summary>深入原理</summary>
+            <div class="inner">
+                <p>
+                    原始偏移列的单位没有文档，所以应用只用它们的<em>顺序</em>——每条轴都换算成当前技能池内的百分位排名，再拉伸到
+                    [−1, +1]。金钱与经验偏移共同构成贪度轴。号位锚点：1号位 = +0.7，2号位 =
+                    +0.4，3号位 = +0.1，4号位 = −0.35，5号位 =
+                    −0.6。贪度加成随你的征召推进而衰减（每手权重 1.0 → 0.85 → 0.6 →
+                    0.4）——高手先抢发育引擎，之后再补功能性，所以后面的选择更多按你的组合还缺什么来评。次级轴（2号位的击杀收割、4号位的游走开团、5号位的治疗）在其上叠加小幅加成。
+                </p>
+            </div>
+        </details>
+    </section>
+
+    <!-- ── 03 ── -->
+    <section>
+        <div class="kicker">
+            <span class="n">03</span><span class="layer">标签与需求</span>
+        </div>
+        <h2>标签描述技能<em>做什么</em>——需求判断你还缺什么</h2>
+        <p>
+            每个技能带有若干来自固定词表的<strong>功能标签</strong>——<span class="tag">hard_cc</span>
+            <span class="tag">waveclear</span>
+            <span class="tag">steroid</span>
+            <span class="tag">save_ally</span>
+            等等。标签是机制事实：这是眩晕，这能清线。它们由社区在<a href="/ability-tags.html">标签实验室</a>中维护。有了标签，应用才能把你的整套阵容当成整体来推理，而不是一个个孤立打分。
+        </p>
+        <p>
+            每个号位都有一张简短的清单，列着这个位置的真实征召想要什么。随着你选人，应用追踪你的组合已经覆盖了什么。能补上缺口的候选者获得加成，工具提示会点名那个缺口：
+        </p>
+
+        <div class="table-scroll">
+            <table class="needs">
+                <tr><th>号位</th><th>第一优先</th><th>第二</th><th>第三</th></tr>
+                <tr><td><span class="pos">1 · 核心</span></td><td>攻击强化</td><td>发育手段 <small>或清线</small></td><td>机动 <small>或自我续航</small></td></tr>
+                <tr><td><span class="pos">2 · 中单</span></td><td>爆发伤害</td><td>团战大招 <small>或硬控</small></td><td>机动</td></tr>
+                <tr><td><span class="pos">3 · 劣单</span></td><td>范围控制</td><td>先手开团</td><td>承伤</td></tr>
+                <tr><td><span class="pos">4 · 软辅</span></td><td>硬控</td><td>清线 <small>或爆发</small></td><td>机动</td></tr>
+                <tr><td><span class="pos">5 · 硬辅</span></td><td>硬控</td><td>清线 <small>或爆发</small></td><td>救援队友</td></tr>
+            </table>
+        </div>
+        <p class="mutedline">
+            优先级只遵循一条规则：定义这个位置、且商店买不到的排最前；能用装备补的排最后。
+        </p>
+
+        <div class="tooltip-demo">
+            <div class="t-badge">✦ 位置推荐</div>
+            <div class="t-title">Torrent</div>
+            <div class="t-row">胜率：52.1% &nbsp;·&nbsp; 选取率：18.4</div>
+            <div class="t-row t-role">位置适配：5 号位 <span class="up">▲</span></div>
+            <div class="chips">
+                <span class="chip">补足你缺少的硬控制</span>
+            </div>
+        </div>
+
+        <details class="hood">
+            <summary>深入原理</summary>
+            <div class="inner">
+                <p>
+                    需求加成随<em>池内稀缺度</em>缩放——池里只剩两个眩晕时，控制加成几乎翻倍；十二个攻击强化则会稀释发育加成。覆盖是分数化的：减速或沉默对你自己的组合算半个硬控，但只有当池中不再有真正的眩晕时，它才会被<em>推荐</em>为你的控制。堆叠过量同样受罚——第三个单体眩晕，或同一蓝量上的第三个耗蓝主动技能，都会丢分。提示条永远如实描述匹配：一个爆发技能满足了清线需求，就写「补足你缺少的爆发伤害」，半分覆盖则写「部分补足」。
+                </p>
+            </div>
+        </details>
+    </section>
+
+    <!-- ── 04 ── -->
+    <section>
+        <div class="kicker">
+            <span class="n">04</span><span class="layer">裁定与关卡</span>
+        </div>
+        <h2>社区在哪里推翻数字</h2>
+        <p>
+            统计会漏掉很多东西。有些技能对某个位置悄悄地强，有些是著名陷阱，还有少数没有搭档就真的不工作。数据集为这些情况维护人工<strong>裁定与关卡</strong>——在标签实验室里提案并投票，工具提示中总有解释：
+        </p>
+
+        <div class="cards">
+            <div class="card">
+                <h4><span class="dot dot-must"></span>必选</h4>
+                <p>
+                    在其对应号位上永远占据一个推荐位，哪怕原始数字不同意。<em>辅助位的
+                    Glimpse</em> 是创始成员——它的价值体现在配合击杀里，而不是总体统计里。
+                </p>
+                <p><span class="tag must">must: 4·5号位</span></p>
+            </div>
+            <div class="card">
+                <h4><span class="dot dot-avoid"></span>永不推荐</h4>
+                <p>
+                    在其对应号位（或所有号位）上不再推荐。<em>Ransack</em>
+                    永远不会被推荐，就这样。统计数据仍然可见；仅推荐被撤下。
+                </p>
+                <p><span class="tag avoid">永不推荐</span></p>
+            </div>
+            <div class="card">
+                <h4><span class="dot dot-avoid"></span>依赖关卡</h4>
+                <p>
+                    有些技能没有搭档等于报废。<em>Eclipse</em> 离开 Lucent Beam
+                    什么都不是。<em>Requiem</em> 需要 Shadow Fiend
+                    的身体，因为它吞噬的灵魂是他的先天能力。<em>Rearm</em> 只有当值得
+                    Rearm 的技能已被选走或仍在池中时才会出现。
+                </p>
+            </div>
+            <div class="card">
+                <h4><span class="dot dot-warn"></span>身体检查</h4>
+                <p>
+                    极少数技能在错误的攻击类型上完全浪费——Marksmanship
+                    在近战身体上毫无作用。这类技能会按你选的模型过滤，并留有合理的例外：技能在自己本体英雄上总能生效，选到
+                    Psi Blades 或 Take Aim 这类「变远程」技能也会重新解锁它们。
+                </p>
+            </div>
+        </div>
+
+        <details class="hood">
+            <summary>深入原理</summary>
+            <div class="inner">
+                <p>
+                    裁定刻意<em>不是</em>标签——标签是技能做什么的事实；裁定是谁需要它的判断。两者走同一条社区流程：在标签实验室提案（必选和永不推荐必须附书面理由——它们推翻统计，就必须自证），投票，被接受的修改随下一次应用更新发布。覆盖全部五个号位的裁定即使关闭位置推荐也生效，因为「永远别拿
+                    Ransack」不是位置观点。
+                </p>
+            </div>
+        </details>
+    </section>
+
+    <!-- ── 05 ── -->
+    <section>
+        <div class="kicker">
+            <span class="n">05</span><span class="layer">英雄模型</span>
+        </div>
+        <h2>身体也是征召的一部分</h2>
+        <p>
+            在技能征召里，英雄模型只是一具身体：基础属性、攻速、天赋和一个先天能力。应用按你的位置评估身体真正带来的东西：
+        </p>
+        <ul>
+            <li>
+                <strong>属性适配</strong>——核心看敏捷成长和攻击节奏，劣单看纯粹的坦度，辅助看蓝量和移速。永远与面板上实际剩下的模型比较，而不是对着某张全局梯度表。
+            </li>
+            <li>
+                <strong>能活过征召的天赋</strong>——大多数天赋强化英雄自己的技能，而那些技能你不会有。只有通用天赋（+攻速、+生命、+技能增强……）才算数，而且比你想的少：平均每个英雄约
+                1.3 个。
+            </li>
+            <li>
+                <strong>先天能力</strong>——Shadow Fiend 的灵魂配任何技能组都有用，Medusa
+                的魔法护盾同理。Luna 和 Drow 带来团队光环。全部像其他数据一样打标签、由社区维护。
+            </li>
+            <li>
+                <strong>双向搭配</strong>——选了攻速快的身体？攻击强化技能获得推力。先征召了两个右键输出技能？攻速快的身体会在你的模型列表里上浮。
+            </li>
+        </ul>
+        <h3>「别偷 Drow」规则</h3>
+        <p>
+            顶级核心身体被标记为 <span class="tag avoid">avoid: 4·5号位</span>
+            ——如果你是辅助却拿走 Drow
+            模型，你的核心就拿不到了。一旦每个队友都锁定了模型，限制就解除：这时拿走 Drow
+            只是不让敌方拿到，而这是一桩完全正当的「罪行」。同样的逻辑会自动作用于任何明显更适合核心而非辅助的身体。
+        </p>
+
+        <details class="hood">
+            <summary>深入原理</summary>
+            <div class="inner">
+                <p>
+                    对数据爱好者的诚实说明：应用曾像对待技能一样为模型混入贪度轴，后来我们砍掉了它。它的信号被选择效应污染——辅助<em>为了光环</em>去选
+                    Drow 和
+                    Luna，把这些模型的实测「贪度」拖到最低百分位，进而错误地压低了它们的核心评分。模型的位置适配现在完全基于属性、机体数值（攻击间隔、有效生命、速度）、天赋与先天标签，以及人工裁定。
+                </p>
+            </div>
+        </details>
+    </section>
+
+    <!-- ── 06 ── -->
+    <section>
+        <div class="kicker">
+            <span class="n">06</span><span class="layer">自动模式</span>
+        </div>
+        <h2>或者，让应用替你读队伍</h2>
+        <p>
+            不想声明位置？设为<strong>自动</strong>，应用会转而解读你的队伍。每个队友的选择在同一条贪度轴上累积成一条发育轨迹——有人在囤顺劈和攻击强化，无论他宣布与否，都是在打核心。应用把轨迹与号位匹配，然后为剩下的位置推荐：
+        </p>
+
+        <figure>
+            <svg
+                viewBox="0 0 720 240"
+                role="img"
+                aria-label="四名队友已征召的贪度条按序匹配到五个号位；唯一无人认领的 4 号位被高亮为推荐给你的位置。"
+            >
+                <defs>
+                    <marker id="arr2-zh" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+                        <path d="M0 0 L8 4 L0 8 z" fill="currentColor"></path>
+                    </marker>
+                </defs>
+                <g font-family="ui-monospace, Consolas, monospace" font-size="12" fill="currentColor">
+                    <text x="10" y="22" opacity="0.7" font-size="11">队友，按已征召贪度排序</text>
+                    <g class="fill-axis">
+                        <rect x="70" y="40" width="200" height="14" rx="4" opacity="0.9"></rect>
+                        <rect x="70" y="70" width="150" height="14" rx="4" opacity="0.75"></rect>
+                        <rect x="70" y="100" width="96" height="14" rx="4" opacity="0.6"></rect>
+                        <rect x="70" y="130" width="40" height="14" rx="4" opacity="0.5"></rect>
+                    </g>
+                    <text x="10" y="52" fill="currentColor">队友 1</text>
+                    <text x="10" y="82" fill="currentColor">队友 2</text>
+                    <text x="10" y="112" fill="currentColor">队友 3</text>
+                    <text x="10" y="142" fill="currentColor">队友 4</text>
+                    <text x="470" y="22" opacity="0.7" font-size="11">号位</text>
+                    <g>
+                        <rect x="470" y="38" width="90" height="24" rx="6" fill="none" stroke="currentColor" opacity="0.8"></rect><text x="515" y="54" text-anchor="middle">1号位</text>
+                        <rect x="470" y="70" width="90" height="24" rx="6" fill="none" stroke="currentColor" opacity="0.8"></rect><text x="515" y="86" text-anchor="middle">2号位</text>
+                        <rect x="470" y="102" width="90" height="24" rx="6" fill="none" stroke="currentColor" opacity="0.8"></rect><text x="515" y="118" text-anchor="middle">3号位</text>
+                        <rect x="470" y="134" width="90" height="24" rx="6" class="vacant"></rect><text x="515" y="150" text-anchor="middle" class="fill-brand">4号位</text>
+                        <rect x="470" y="166" width="90" height="24" rx="6" fill="none" stroke="currentColor" opacity="0.8"></rect><text x="515" y="182" text-anchor="middle">5号位</text>
+                    </g>
+                    <g stroke="currentColor" opacity="0.65">
+                        <line x1="272" y1="47" x2="466" y2="50" marker-end="url(#arr2-zh)"></line>
+                        <line x1="222" y1="77" x2="466" y2="82" marker-end="url(#arr2-zh)"></line>
+                        <line x1="168" y1="107" x2="466" y2="114" marker-end="url(#arr2-zh)"></line>
+                        <line x1="112" y1="137" x2="466" y2="178" marker-end="url(#arr2-zh)"></line>
+                    </g>
+                    <text x="515" y="218" text-anchor="middle" class="fill-brand" font-size="11">无人认领 → 推荐给你</text>
+                </g>
+            </svg>
+            <figcaption>
+                最贪的组合认领最贪的空位，依次向下。没有任何轨迹认领的号位——这里是 4
+                号位——就归你。估计只会随征召推进而收窄；它们永远不会推翻你手动设定的位置。
+            </figcaption>
+        </figure>
+
+        <details class="hood">
+            <summary>深入原理</summary>
+            <div class="inner">
+                <p>
+                    匹配是把各组合（按平均已征召贪度排序）保序分配到号位锚点上——在一维轴上可证明最优，无需重型机器。数据充分性关卡让「自动」在至少两名队友各有两个已识别选择之前保持沉默；在此之前轨迹只是噪声，评分保持中性。另有一个独立的队伍平衡项在两种模式下都运行：在过度偏发育的队伍里，贪婪候选者小幅丢分，辅助型候选者获益。
+                </p>
+            </div>
+        </details>
+    </section>
+
+    <!-- ── 07 ── -->
+    <section>
+        <div class="kicker">
+            <span class="n">07</span><span class="layer">契约</span>
+        </div>
+        <h2>护栏：这一切如何保持诚实</h2>
+        <ul>
+            <li>
+                <strong>位置层有上限。</strong>贪度、需求和搭配的全部数学加在一起，也只能把分数挪动有限的幅度。位置适配重排技能池；它无法把烂技能变成好技能。
+            </li>
+            <li>
+                <strong>关了就是关了。</strong>关闭位置推荐，你就回到纯统计引擎。唯一保留的是与位置无关的事实：身体检查、依赖关卡、高估标记，以及「任何位置都不推荐」的裁定。
+            </li>
+            <li>
+                <strong>一切皆可解释。</strong>本页的每个加成、惩罚、关卡和裁定都会出现在覆盖层的工具提示里——位置适配箭头、「补足你缺少的……」提示、「需要
+                Lucent Beam」、「可能被高估」。只要应用动了分数，它就告诉你为什么。
+            </li>
+            <li>
+                <strong>一切皆可质疑。</strong>标签和裁定都在<a href="/ability-tags.html">标签实验室</a>里。觉得某个标签不对？提出修正，让投票说话。
+            </li>
+        </ul>
+    </section>
+
+    <div class="cta">
+        <h2>帮忙调校这个大脑</h2>
+        <p>
+            标签词表、必选与永不推荐、模型标签——全部由社区维护。在<a href="/ability-tags.html"><strong>标签实验室</strong></a>里浏览每个技能和英雄身体，提出修改，为他人的提案投票。被接受的修改随下一次应用更新发布。
+        </p>
+    </div>
+
+    <p class="credits">
+        征召统计与技能偏移数据来自
+        <a href="https://windrun.io">Windrun.io</a>。号位锚点、需求优先级与各层权重基于约 3,000
+        场高手技能征召对局与录像模拟调校。控制类技能的分类部分来源于 Liquipedia（CC-BY-SA）。
+    </p>
+</div>
