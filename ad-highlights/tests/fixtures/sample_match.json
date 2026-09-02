@@ -1,0 +1,492 @@
+{
+ "match_id": 8533514845,
+ "game_mode": 18,
+ "version": 21,
+ "duration": 2400,
+ "start_time": 1756600000,
+ "radiant_win": true,
+ "replay_url": "http://replay123.valve.net/570/8533514845_123456789.dem.bz2",
+ "players": [
+  {
+   "player_slot": 0,
+   "hero_id": 25,
+   "personaname": "ComboEnjoyer",
+   "isRadiant": true,
+   "ability_upgrades_arr": [
+    5028,
+    5080,
+    5320,
+    5064,
+    6000
+   ],
+   "ability_uses": {
+    "sven_storm_bolt": 30,
+    "crystal_maiden_freezing_field": 6,
+    "dark_seer_vacuum": 12,
+    "lion_finger_of_death": 9
+   },
+   "kills_log": [
+    {
+     "time": 1210,
+     "key": "npc_dota_hero_kunkka"
+    },
+    {
+     "time": 1216,
+     "key": "npc_dota_hero_tidehunter"
+    },
+    {
+     "time": 1222,
+     "key": "npc_dota_hero_dark_seer"
+    },
+    {
+     "time": 1900,
+     "key": "npc_dota_hero_kunkka"
+    }
+   ]
+  },
+  {
+   "player_slot": 1,
+   "hero_id": 18,
+   "personaname": "",
+   "isRadiant": true,
+   "ability_upgrades_arr": [
+    5060,
+    5033,
+    5001,
+    5155,
+    6000
+   ],
+   "ability_uses": {
+    "lion_impale": 20,
+    "sven_gods_strength": 5,
+    "tidehunter_ravage": 4
+   },
+   "kills_log": [
+    {
+     "time": 1214,
+     "key": "npc_dota_hero_kunkka"
+    }
+   ]
+  },
+  {
+   "player_slot": 2,
+   "hero_id": 23,
+   "personaname": "Solo",
+   "isRadiant": true,
+   "ability_upgrades_arr": [
+    5106,
+    5093,
+    5061,
+    5108,
+    6000
+   ],
+   "ability_uses": {
+    "kunkka_torrent": 25,
+    "juggernaut_blade_fury": 15
+   },
+   "kills_log": [
+    {
+     "time": 700,
+     "key": "npc_dota_hero_kunkka"
+    },
+    {
+     "time": 705,
+     "key": "npc_dota_hero_tidehunter"
+    }
+   ]
+  },
+  {
+   "player_slot": 3,
+   "hero_id": 55,
+   "personaname": "P4",
+   "isRadiant": true,
+   "ability_upgrades_arr": [
+    5320,
+    5323,
+    6000
+   ],
+   "ability_uses": {
+    "dark_seer_vacuum": 10
+   },
+   "kills_log": []
+  },
+  {
+   "player_slot": 4,
+   "hero_id": 29,
+   "personaname": "P5",
+   "isRadiant": true,
+   "ability_upgrades_arr": [
+    5155,
+    6000
+   ],
+   "ability_uses": {
+    "tidehunter_ravage": 3
+   },
+   "kills_log": []
+  },
+  {
+   "player_slot": 128,
+   "hero_id": 23,
+   "personaname": "D1",
+   "isRadiant": false,
+   "ability_upgrades_arr": [
+    5106,
+    6000
+   ],
+   "ability_uses": {
+    "kunkka_torrent": 20
+   },
+   "kills_log": [
+    {
+     "time": 1230,
+     "key": "npc_dota_hero_lion"
+    }
+   ]
+  },
+  {
+   "player_slot": 129,
+   "hero_id": 29,
+   "personaname": "D2",
+   "isRadiant": false,
+   "ability_upgrades_arr": [
+    5155,
+    6000
+   ],
+   "ability_uses": {},
+   "kills_log": []
+  },
+  {
+   "player_slot": 130,
+   "hero_id": 55,
+   "personaname": "D3",
+   "isRadiant": false,
+   "ability_upgrades_arr": [
+    5323,
+    6000
+   ],
+   "ability_uses": {},
+   "kills_log": []
+  },
+  {
+   "player_slot": 131,
+   "hero_id": 18,
+   "personaname": "D4",
+   "isRadiant": false,
+   "ability_upgrades_arr": [
+    5028,
+    6000
+   ],
+   "ability_uses": {},
+   "kills_log": []
+  },
+  {
+   "player_slot": 132,
+   "hero_id": 25,
+   "personaname": "D5",
+   "isRadiant": false,
+   "ability_upgrades_arr": [
+    5064,
+    6000
+   ],
+   "ability_uses": {},
+   "kills_log": []
+  }
+ ],
+ "teamfights": [
+  {
+   "start": 1195,
+   "end": 1240,
+   "last_death": 1230,
+   "deaths": 4,
+   "players": [
+    {
+     "ability_uses": {
+      "sven_storm_bolt": 2,
+      "crystal_maiden_freezing_field": 1,
+      "dark_seer_vacuum": 1
+     },
+     "killed": {
+      "npc_dota_hero_kunkka": 1,
+      "npc_dota_hero_tidehunter": 1,
+      "npc_dota_hero_dark_seer": 1
+     },
+     "deaths": 1,
+     "damage": 4200,
+     "healing": 0,
+     "gold_delta": 0,
+     "xp_delta": 0,
+     "buybacks": 0,
+     "deaths_pos": {}
+    },
+    {
+     "ability_uses": {
+      "lion_impale": 1,
+      "sven_gods_strength": 1
+     },
+     "killed": {
+      "npc_dota_hero_kunkka": 1
+     },
+     "deaths": 0,
+     "damage": 1800,
+     "healing": 0,
+     "gold_delta": 0,
+     "xp_delta": 0,
+     "buybacks": 0,
+     "deaths_pos": {}
+    },
+    {
+     "ability_uses": {
+      "kunkka_torrent": 1
+     },
+     "killed": {},
+     "deaths": 0,
+     "damage": 900,
+     "healing": 0,
+     "gold_delta": 0,
+     "xp_delta": 0,
+     "buybacks": 0,
+     "deaths_pos": {}
+    },
+    {
+     "ability_uses": {},
+     "killed": {},
+     "deaths": 0,
+     "damage": 100,
+     "healing": 0,
+     "gold_delta": 0,
+     "xp_delta": 0,
+     "buybacks": 0,
+     "deaths_pos": {}
+    },
+    {
+     "ability_uses": {},
+     "killed": {},
+     "deaths": 0,
+     "damage": 0,
+     "healing": 0,
+     "gold_delta": 0,
+     "xp_delta": 0,
+     "buybacks": 0,
+     "deaths_pos": {}
+    },
+    {
+     "ability_uses": {
+      "kunkka_torrent": 1
+     },
+     "killed": {
+      "npc_dota_hero_lion": 1
+     },
+     "deaths": 1,
+     "damage": 1500,
+     "healing": 0,
+     "gold_delta": 0,
+     "xp_delta": 0,
+     "buybacks": 0,
+     "deaths_pos": {}
+    },
+    {
+     "ability_uses": {},
+     "killed": {},
+     "deaths": 1,
+     "damage": 200,
+     "healing": 0,
+     "gold_delta": 0,
+     "xp_delta": 0,
+     "buybacks": 0,
+     "deaths_pos": {}
+    },
+    {
+     "ability_uses": {},
+     "killed": {},
+     "deaths": 1,
+     "damage": 50,
+     "healing": 0,
+     "gold_delta": 0,
+     "xp_delta": 0,
+     "buybacks": 0,
+     "deaths_pos": {}
+    },
+    {
+     "ability_uses": {},
+     "killed": {},
+     "deaths": 0,
+     "damage": 0,
+     "healing": 0,
+     "gold_delta": 0,
+     "xp_delta": 0,
+     "buybacks": 0,
+     "deaths_pos": {}
+    },
+    {
+     "ability_uses": {},
+     "killed": {},
+     "deaths": 0,
+     "damage": 0,
+     "healing": 0,
+     "gold_delta": 0,
+     "xp_delta": 0,
+     "buybacks": 0,
+     "deaths_pos": {}
+    }
+   ]
+  },
+  {
+   "start": 1880,
+   "end": 1910,
+   "last_death": 1900,
+   "deaths": 1,
+   "players": [
+    {
+     "ability_uses": {
+      "lion_finger_of_death": 1
+     },
+     "killed": {
+      "npc_dota_hero_kunkka": 1
+     },
+     "deaths": 0,
+     "damage": 1200,
+     "healing": 0,
+     "gold_delta": 0,
+     "xp_delta": 0,
+     "buybacks": 0,
+     "deaths_pos": {}
+    },
+    {
+     "ability_uses": {},
+     "killed": {},
+     "deaths": 0,
+     "damage": 0,
+     "healing": 0,
+     "gold_delta": 0,
+     "xp_delta": 0,
+     "buybacks": 0,
+     "deaths_pos": {}
+    },
+    {
+     "ability_uses": {},
+     "killed": {},
+     "deaths": 0,
+     "damage": 0,
+     "healing": 0,
+     "gold_delta": 0,
+     "xp_delta": 0,
+     "buybacks": 0,
+     "deaths_pos": {}
+    },
+    {
+     "ability_uses": {},
+     "killed": {},
+     "deaths": 0,
+     "damage": 0,
+     "healing": 0,
+     "gold_delta": 0,
+     "xp_delta": 0,
+     "buybacks": 0,
+     "deaths_pos": {}
+    },
+    {
+     "ability_uses": {},
+     "killed": {},
+     "deaths": 0,
+     "damage": 0,
+     "healing": 0,
+     "gold_delta": 0,
+     "xp_delta": 0,
+     "buybacks": 0,
+     "deaths_pos": {}
+    },
+    {
+     "ability_uses": {},
+     "killed": {},
+     "deaths": 0,
+     "damage": 0,
+     "healing": 0,
+     "gold_delta": 0,
+     "xp_delta": 0,
+     "buybacks": 0,
+     "deaths_pos": {}
+    },
+    {
+     "ability_uses": {},
+     "killed": {},
+     "deaths": 0,
+     "damage": 0,
+     "healing": 0,
+     "gold_delta": 0,
+     "xp_delta": 0,
+     "buybacks": 0,
+     "deaths_pos": {}
+    },
+    {
+     "ability_uses": {},
+     "killed": {},
+     "deaths": 0,
+     "damage": 0,
+     "healing": 0,
+     "gold_delta": 0,
+     "xp_delta": 0,
+     "buybacks": 0,
+     "deaths_pos": {}
+    },
+    {
+     "ability_uses": {},
+     "killed": {},
+     "deaths": 0,
+     "damage": 0,
+     "healing": 0,
+     "gold_delta": 0,
+     "xp_delta": 0,
+     "buybacks": 0,
+     "deaths_pos": {}
+    },
+    {
+     "ability_uses": {},
+     "killed": {},
+     "deaths": 0,
+     "damage": 0,
+     "healing": 0,
+     "gold_delta": 0,
+     "xp_delta": 0,
+     "buybacks": 0,
+     "deaths_pos": {}
+    }
+   ]
+  }
+ ],
+ "_fixture_constants": {
+  "ability_ids": {
+   "5060": "lion_impale",
+   "5064": "lion_finger_of_death",
+   "5061": "lion_voodoo",
+   "5080": "crystal_maiden_freezing_field",
+   "5028": "sven_storm_bolt",
+   "5033": "sven_gods_strength",
+   "5106": "kunkka_torrent",
+   "5108": "kunkka_ghostship",
+   "5320": "dark_seer_vacuum",
+   "5323": "dark_seer_wall_of_replica",
+   "5001": "antimage_mana_break",
+   "5155": "tidehunter_ravage",
+   "5093": "juggernaut_blade_fury",
+   "5152": "enigma_black_hole",
+   "6000": "special_bonus_hp_200"
+  },
+  "heroes": {
+   "25": {
+    "localized_name": "Lion"
+   },
+   "18": {
+    "localized_name": "Sven"
+   },
+   "23": {
+    "localized_name": "Kunkka"
+   },
+   "55": {
+    "localized_name": "Dark Seer"
+   },
+   "29": {
+    "localized_name": "Tidehunter"
+   }
+  }
+ }
+}

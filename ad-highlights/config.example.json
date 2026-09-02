@@ -1,0 +1,20 @@
+{
+  "sources": ["windrun", "manual"],
+  "windrun_recommended_urls": [
+    "https://api.windrun.io/api/v2/recommended-replays",
+    "https://api.windrun.io/api/v2/replays/recommended",
+    "https://api.windrun.io/api/v2/matches/recommended",
+    "https://windrun.io/recommended-replays",
+    "https://windrun.io/replays"
+  ],
+  "windrun_client_tag": "",
+  "opendota_api_key": "",
+  "max_new_matches_per_run": 12,
+  "parse_wait_minutes": 20,
+  "top_moments": 25,
+  "max_moments_per_match": 4,
+  "min_score": 6.0,
+  "focus_abilities": [],
+  "download_replays": false,
+  "dota_replays_dir": "C:/Program Files (x86)/Steam/steamapps/common/dota 2 beta/game/dota/replays"
+}

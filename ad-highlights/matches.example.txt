@@ -1,0 +1,4 @@
+# Copy to matches.txt. One match id or URL per line; `#` starts a comment.
+# Lines are re-read every run; already-reported matches are skipped via state/seen.json.
+8533514845
+https://windrun.io/matches/8197826129

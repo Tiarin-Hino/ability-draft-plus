@@ -1,0 +1,8 @@
+config.json
+matches.txt
+out/
+cache/
+state/
+logs/
+__pycache__/
+*.pyc
