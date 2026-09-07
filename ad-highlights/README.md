@@ -111,3 +111,16 @@ it pipes the report through `claude -p` once per run and writes `out/latest-dige
 Stage two - automatic recording: launch Dota on the replay, jump to the tick, lock the camera on
 the hero, record with OBS via its websocket. Deliberately left out until the shortlist proves it
 picks moments you actually use.
+
+## promo/ - bouncing watermark overlay
+
+`promo/make_bounce.py` renders a DVD-screensaver style "Ability Draft Plus" lockup bouncing around a
+1080x1920 transparent canvas, as a seamless loop (GIF + PNG sequence, plus WebM-with-alpha when an
+ffmpeg with libvpx is on PATH or passed via `--ffmpeg`). Drop it on the timeline above the gameplay at
+~30% opacity. `promo/lockup.html` is the artwork (app icon + wordmark); re-render `lockup.png` from it
+with headless Chromium if you change the text:
+
+```
+chrome --headless=new --hide-scrollbars --default-background-color=00000000 --window-size=1080,1920 --screenshot=lockup_raw.png lockup.html
+python make_bounce.py            # then crop lockup_raw.png to content, or let the script's --lockup point at it
+```

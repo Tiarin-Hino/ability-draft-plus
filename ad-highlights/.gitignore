@@ -6,3 +6,5 @@ state/
 logs/
 __pycache__/
 *.pyc
+promo/out/
+promo/lockup_raw.png

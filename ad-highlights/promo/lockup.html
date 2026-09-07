@@ -1,0 +1,41 @@
+<!doctype html>
+<!-- Ability Draft Plus wordmark lockup, rendered by make_bounce.mjs onto a transparent canvas.
+     The icon is the app's build/icon.svg inlined; colours follow its gradient (purple/teal/gold/green). -->
+<html><head><meta charset="utf-8">
+<style>
+  html, body { margin:0; background:transparent; }
+  #stage { position:relative; width:1080px; height:1920px; overflow:hidden; background:transparent; }
+  #lockup {
+    position:absolute; left:0; top:0; display:flex; align-items:center; gap:22px;
+    padding:14px 26px 14px 16px; border-radius:28px;
+    background:rgba(12,9,18,0.55); box-shadow:0 0 0 2px rgba(255,255,255,0.10) inset;
+    font-family:"Liberation Sans","DejaVu Sans",Arial,Helvetica,sans-serif; color:#fff;
+    will-change:transform;
+  }
+  #lockup svg { width:118px; height:118px; flex:none; filter:drop-shadow(0 2px 6px rgba(0,0,0,.6)); }
+  .text { display:flex; flex-direction:column; line-height:1; text-shadow:0 2px 8px rgba(0,0,0,.75); }
+  .t1 { font-size:46px; font-weight:700; letter-spacing:2px; white-space:nowrap; }
+  .t2 { font-size:46px; font-weight:700; letter-spacing:2px; white-space:nowrap; margin-top:4px; }
+  .t2 b { color:var(--accent,#74dfa6); }
+  .url { font-size:26px; font-weight:700; letter-spacing:1px; margin-top:10px; opacity:.92; color:var(--accent,#74dfa6); }
+</style></head>
+<body><div id="stage"><div id="lockup">
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="frame" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#a97fe0"/><stop offset="0.55" stop-color="#219180"/><stop offset="1" stop-color="#d9a514"/>
+    </linearGradient>
+    <linearGradient id="plus" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#74dfa6"/><stop offset="1" stop-color="#37a568"/>
+    </linearGradient>
+  </defs>
+  <rect x="5" y="5" width="54" height="54" rx="14" fill="#211a2a"/>
+  <rect x="5" y="5" width="54" height="54" rx="14" fill="none" stroke="url(#frame)" stroke-width="4.5"/>
+  <path d="M32 18.5 v27 M18.5 32 h27" stroke="url(#plus)" stroke-width="9.5" stroke-linecap="round"/>
+</svg>
+<div class="text">
+  <div class="t1">ABILITY DRAFT</div>
+  <div class="t2">PLUS <b>· FREE OVERLAY</b></div>
+  <div class="url">tiarinhino.com</div>
+</div>
+</div></div></body></html>
