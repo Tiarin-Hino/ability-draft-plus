@@ -59,7 +59,9 @@
   "baseMana": 75,
   "baseAttackMin": 27,
   "baseAttackMax": 33,
-  "tags": []
+  "tags": [
+   "innate_team"
+  ]
  },
  "ancientapparition": {
   "attackType": "Ranged",
@@ -1002,6 +1004,7 @@
   "baseAttackMin": 39,
   "baseAttackMax": 45,
   "tags": [
+   "innate_tank",
    "innate_team"
   ]
  },
@@ -1466,6 +1469,10 @@
   ],
   "roleMust": [
    1
+  ],
+  "roleAvoid": [
+   4,
+   5
   ]
  },
  "nightstalker": {

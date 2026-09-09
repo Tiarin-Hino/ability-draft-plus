@@ -102,7 +102,12 @@
     "requiresTag": "需要 {{name}} 类技能——尚未选取，技能池中也已没有",
     "roleAvoided": "此席位的精选避选项——不会推荐",
     "overrated": "通常较早被选，但胜率仅为 {{value}}——可能被高估",
-    "contestedSoon": "通常此时已被选走——可能撑不过下一轮"
+    "contestedSoon": "通常此时已被选走——可能撑不过下一轮",
+    "shardStack": "强力魔晶升级——一个魔晶同时强化 {{names}}",
+    "scepterStack": "强力神杖升级——一个神杖同时强化 {{names}}",
+    "goodShard": "强力阿哈利姆魔晶升级",
+    "goodScepter": "强力阿哈利姆神杖升级",
+    "pointSinkConflict": "与 {{names}} 争夺技能点——其中一个会长期等级不足"
   },
   "role": {
     "aria": "分路推荐",

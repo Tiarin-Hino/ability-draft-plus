@@ -102,7 +102,12 @@
     "requiresTag": "Necesita una habilidad de tipo {{name}} — ninguna drafteada ni disponible en el pool",
     "roleAvoided": "Descarte curado para este puesto — no se sugiere",
     "overrated": "Se elige temprano pero solo gana {{value}} — probablemente sobrevalorada",
-    "contestedSoon": "Normalmente ya estaría drafteada — puede no sobrevivir otra ronda"
+    "contestedSoon": "Normalmente ya estaría drafteada — puede no sobrevivir otra ronda",
+    "shardStack": "Gran mejora de Shard — un solo Shard también potencia {{names}}",
+    "scepterStack": "Gran mejora de Scepter — un solo Scepter también potencia {{names}}",
+    "goodShard": "Gran mejora con Aghanim's Shard",
+    "goodScepter": "Gran mejora con Aghanim's Scepter",
+    "pointSinkConflict": "Compite por puntos de habilidad con {{names}} — una de las dos quedará sin subir"
   },
   "role": {
     "aria": "Sugerencias según rol",

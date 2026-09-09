@@ -25,7 +25,9 @@
     "overlayOpacityLabel": "Прозрачность панелей оверлея",
     "overlayAnchorLabel": "Расположение панелей оверлея",
     "anchorLeft": "Слева",
-    "anchorRight": "Справа"
+    "anchorRight": "Справа",
+    "aghsMarkersLabel": "Всегда отмечать способности с сильным Aghanim's Shard / Scepter",
+    "aghsMarkersHint": "Угловые метки на каждой невыбранной способности с сильным апгрейдом от Shard или Scepter (синий ромб — Shard, фиолетовая точка — Scepter). Применяется при следующем сканировании."
   },
   "backup": {
     "title": "Резервное копирование",

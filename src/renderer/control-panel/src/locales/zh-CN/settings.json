@@ -25,7 +25,9 @@
     "overlayOpacityLabel": "覆盖层面板不透明度",
     "overlayAnchorLabel": "覆盖层面板位置",
     "anchorLeft": "左侧",
-    "anchorRight": "右侧"
+    "anchorRight": "右侧",
+    "aghsMarkersLabel": "始终标记拥有强力魔晶/神杖升级的技能",
+    "aghsMarkersHint": "为每个未被选走且拥有强力魔晶或神杖升级的技能加上角标（蓝色菱形 = 魔晶，紫色圆点 = 神杖）。下次扫描时生效。"
   },
   "backup": {
     "title": "数据库备份",

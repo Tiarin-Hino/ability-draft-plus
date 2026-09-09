@@ -25,7 +25,9 @@
     "overlayOpacityLabel": "Opacidade dos painéis do overlay",
     "overlayAnchorLabel": "Posição dos painéis do overlay",
     "anchorLeft": "Esquerda",
-    "anchorRight": "Direita"
+    "anchorRight": "Direita",
+    "aghsMarkersLabel": "Sempre marcar habilidades com ótimo upgrade de Aghanim's Shard / Scepter",
+    "aghsMarkersHint": "Marcadores no canto de cada habilidade não escolhida com um ótimo upgrade de Shard ou Scepter (losango azul = Shard, ponto violeta = Scepter). Vale a partir do próximo escaneamento."
   },
   "backup": {
     "title": "Backup do banco de dados",

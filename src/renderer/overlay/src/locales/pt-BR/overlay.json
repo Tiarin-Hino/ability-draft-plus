@@ -102,7 +102,12 @@
     "requiresTag": "Precisa de uma habilidade de {{name}} — nenhuma draftada nem restante no pool",
     "roleAvoided": "Skip curado para esta posição — não é sugerida",
     "overrated": "É pega cedo, mas só vence {{value}} — provavelmente superestimada",
-    "contestedSoon": "Normalmente já foi draftada a essa altura — pode não sobreviver a mais uma rodada"
+    "contestedSoon": "Normalmente já foi draftada a essa altura — pode não sobreviver a mais uma rodada",
+    "shardStack": "Ótimo upgrade de Shard — um único Shard também fortalece {{names}}",
+    "scepterStack": "Ótimo upgrade de Scepter — um único Scepter também fortalece {{names}}",
+    "goodShard": "Ótimo upgrade com Aghanim's Shard",
+    "goodScepter": "Ótimo upgrade com Aghanim's Scepter",
+    "pointSinkConflict": "Compete por pontos de habilidade com {{names}} — uma das duas fica sem nível"
   },
   "role": {
     "aria": "Sugestões por função",

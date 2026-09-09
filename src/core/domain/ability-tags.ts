@@ -7,6 +7,10 @@
 // main-process loader. Tags power the build-needs engine and the reason chips —
 // role RANKING is primarily the shifts-derived greed axis (role-scoring.ts);
 // tags deliberately carry only small static weights to avoid double-counting.
+// Round-4 tags (good_shard / good_aghanims / skill_point_sink) are NOT needs-
+// engine inputs: they drive role-INDEPENDENT own-pick verdicts in
+// scan-processor (Aghanim's stacking boost, skill-point-sink damp) and the
+// opt-in overlay markers — they apply with role mode off too.
 // Distinct from tags, an entry may carry `roleMust: [positions]` — a hand-
 // curated VERDICT (not a mechanical fact, so deliberately outside the tag
 // vocabulary): "recommend this for these positions even if stats disagree".
@@ -37,6 +41,10 @@ export const TAG_VOCABULARY = [
   'good_with_rearm',
   'mana_hungry',
   'channeled',
+  // Round 4 (Tag Lab): item-upgrade quality + skill-point competition
+  'good_shard',
+  'good_aghanims',
+  'skill_point_sink',
 ] as const
 
 export type AbilityTag = (typeof TAG_VOCABULARY)[number]

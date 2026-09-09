@@ -60,6 +60,8 @@ import {
   OVERRATED_WINRATE_MAX,
   OVERRATED_PICK_ORDER_MAX,
   OVERRATED_DAMP,
+  AGHS_STACK_BOOST,
+  POINT_SINK_DAMP,
   MODEL_RESERVATION_FIT_GAP,
   MODEL_RESERVATION_DAMP,
   ULT_SUPPLY_SLACK,
@@ -84,7 +86,10 @@ import {
 // 9. My Spot synergistic partners (abilities synergizing with user's picked abilities)
 // 10. Score all entities (consolidated score = 0.4 * winrate + 0.6 * pickOrder;
 //     with a linked Windrun profile the inputs are personal-blended — scoring.ts;
-//     with a role mode active, abilities get the capped role delta on top — role-scoring.ts)
+//     with a role mode active, abilities get the capped role delta on top — role-scoring.ts;
+//     role-INDEPENDENT own-pick verdicts ride outside the cap: Aghanim's stacking
+//     boost (good_shard/good_aghanims shared with my picks) and the
+//     skill-point-sink damp (a second skill_point_sink) — tag round 4)
 // 11. Check if My Spot already picked an ultimate
 // 12. Determine top-tier entities (max 10, synergy suggestions prioritized)
 // 13. Enrich scan slots with all computed data for overlay display
@@ -395,6 +400,21 @@ export function processScanResults(
           .map((s) => s.name!)
       : [],
   )
+  // Round-4 tag verdicts (role-independent, OWN picks only — a teammate's
+  // Shard does nothing for you): display names of my drafted picks carrying a
+  // tag. Empty without the tags dep or an unknown My Spot (conservative).
+  const myPicksTagged = (tag: AbilityTag): string[] =>
+    deps.tags === undefined
+      ? []
+      : [...myPickNames]
+          .filter((n) => deps.tags!.getTags(n)?.has(tag) === true)
+          .map((n) => abilityDetailsMap.get(n)?.displayName ?? n)
+  const myShardPicks = myPicksTagged('good_shard')
+  const myScepterPicks = myPicksTagged('good_aghanims')
+  const myPointSinkPicks = myPicksTagged('skill_point_sink')
+  // Always-on Shard/Scepter markers are a user setting resolved HERE (the
+  // overlay has no settings access) — payload-gated, applies on the next scan.
+  const aghsMarkersEnabled = settings.aghsMarkersEnabled === true
   const myModel =
     state.mySelectedModelDbHeroId !== null
       ? state.identifiedHeroModelsCache.find(
@@ -666,6 +686,10 @@ export function processScanResults(
       myModelPicked: state.mySelectedModelDbHeroId !== null,
       ultSecurityActive,
       namedPickCount,
+      myShardPicks,
+      myScepterPicks,
+      myPointSinkPicks,
+      aghsMarkersEnabled,
     },
   )
 
@@ -893,6 +917,13 @@ interface RoleScoringInputs {
   ultSecurityActive: boolean
   /** Named picks on the whole board (drives the contested-soon marker). */
   namedPickCount: number
+  /** Display names of MY drafted picks tagged good_shard / good_aghanims /
+   * skill_point_sink — the round-4 role-independent verdict inputs. */
+  myShardPicks: string[]
+  myScepterPicks: string[]
+  myPointSinkPicks: string[]
+  /** Setting: always mark strong Shard/Scepter pool abilities (display only). */
+  aghsMarkersEnabled: boolean
 }
 
 /** Percentile ranks [0,1] with average-rank ties; undefined values -> 0.5. */
@@ -940,6 +971,10 @@ function buildScoredEntities(
     myModelPicked,
     ultSecurityActive,
     namedPickCount,
+    myShardPicks,
+    myScepterPicks,
+    myPointSinkPicks,
+    aghsMarkersEnabled,
   } = role
   // A drafted range-granting ability (Psi Blades, Take Aim) waives the
   // ranged_only inert filter for the rest of the draft.
@@ -1038,13 +1073,37 @@ function buildScoredEntities(
       details.winrate < OVERRATED_WINRATE_MAX &&
       details.pickRate <= OVERRATED_PICK_ORDER_MAX
     const overratedDamp = overrated ? OVERRATED_DAMP : 0
+    // Round-4 own-pick verdicts (role mode or not): one Shard / Scepter
+    // purchase powering two abilities is worth a flat boost per family; a
+    // second skill-point sink is damped hard (one of them stays under-
+    // levelled). Own picks only — never teammates'.
+    const hasTag = (tag: AbilityTag): boolean => candidateTags?.has(tag) === true
+    const shardStackWith =
+      hasTag('good_shard') && myShardPicks.length > 0 ? myShardPicks : undefined
+    const scepterStackWith =
+      hasTag('good_aghanims') && myScepterPicks.length > 0 ? myScepterPicks : undefined
+    const aghsBoost =
+      (shardStackWith !== undefined ? AGHS_STACK_BOOST : 0) +
+      (scepterStackWith !== undefined ? AGHS_STACK_BOOST : 0)
+    const pointSinkConflictWith =
+      hasTag('skill_point_sink') && myPointSinkPicks.length > 0 ? myPointSinkPicks : undefined
+    const pointSinkDamp = pointSinkConflictWith !== undefined ? POINT_SINK_DAMP : 0
     const consolidatedScore =
-      roleDelta !== undefined || pairingDelta !== 0 || overratedDamp !== 0
+      roleDelta !== undefined ||
+      pairingDelta !== 0 ||
+      overratedDamp !== 0 ||
+      aghsBoost !== 0 ||
+      pointSinkDamp !== 0
         ? Math.min(
             1,
             Math.max(
               0,
-              scored.consolidatedScore + (roleDelta ?? 0) + pairingDelta - overratedDamp,
+              scored.consolidatedScore +
+                (roleDelta ?? 0) +
+                pairingDelta -
+                overratedDamp +
+                aghsBoost -
+                pointSinkDamp,
             ),
           )
         : scored.consolidatedScore
@@ -1082,6 +1141,11 @@ function buildScoredEntities(
       roleCurated: role?.curated || universalMust || undefined,
       roleAvoided: roleAvoided || undefined,
       overrated: overrated || undefined,
+      shardStackWith,
+      scepterStackWith,
+      pointSinkConflictWith,
+      goodShard: (aghsMarkersEnabled && hasTag('good_shard')) || undefined,
+      goodScepter: (aghsMarkersEnabled && hasTag('good_aghanims')) || undefined,
       pairingScoreDelta: pairingDelta !== 0 ? pairingDelta : undefined,
       inertOnModel:
         isInertOnModel(candidateTags, myModelAttackType, {
@@ -1363,6 +1427,11 @@ function enrichSlots(
       roleAvoided: scored?.roleAvoided,
       overrated: scored?.overrated,
       contestedSoon: scored?.contestedSoon,
+      shardStackWith: scored?.shardStackWith,
+      scepterStackWith: scored?.scepterStackWith,
+      pointSinkConflictWith: scored?.pointSinkConflictWith,
+      goodShard: scored?.goodShard,
+      goodScepter: scored?.goodScepter,
       isGeneralTopTier: topTier?.isGeneralTopTier ?? false,
       isSynergySuggestionForMySpot:
         topTier?.isSynergySuggestionForMySpot ?? false,

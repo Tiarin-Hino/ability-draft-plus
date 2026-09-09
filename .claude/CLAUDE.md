@@ -87,7 +87,12 @@ maintenance spec — the authoritative map of what IS, not a build plan.
   shift data is BIT-IDENTICAL to the role-less path — golden tests enforce it —
   EXCEPT role-independent verdicts/facts: all-five roleMust (guaranteed slot),
   all-five roleAvoid (excluded), the overrated damp (wr<0.48 & pick<=15 →
-  −OVERRATED_DAMP + tooltip), and the inert/requires filters apply role mode or not
+  −OVERRATED_DAMP + tooltip), the round-4 own-pick verdicts (Aghanim's
+  stacking: +AGHS_STACK_BOOST per family once MY picks share a good_shard /
+  good_aghanims tag; a second skill_point_sink → −POINT_SINK_DAMP; never
+  teammates' picks), and the inert/requires filters apply role mode or not.
+  The opt-in `aghsMarkersEnabled` setting only adds always-on overlay markers,
+  resolved in scan-processor (payload-gated)
 - `resources/data/ability_tags.json` + `hero_meta.json` are GENERATED (community Tag
   Lab on tiarinhino.com + ../ad_data_gather_script/build_ability_tags.py; the durable
   source of truth is that repo's tag_overrides.json) — never hand-edit, and keep

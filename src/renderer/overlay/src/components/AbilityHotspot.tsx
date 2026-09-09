@@ -58,6 +58,15 @@ export function AbilityHotspot({
       {/* Corner marker: this slot is recommended because of the linked
           profile's personal stats (composes with any shimmer border) */}
       {slot.isPersonallyDriven && <span className="personal-marker" />}
+      {/* Always-on Aghanim's markers (aghsMarkersEnabled setting, payload-
+          gated in scan-processor): strong Shard = blue diamond bottom-left,
+          strong Scepter = violet dot bottom-right. Pool slots only. */}
+      {!isSelectedAbility && slot.goodShard && (
+        <span className="aghs-marker aghs-marker-shard" />
+      )}
+      {!isSelectedAbility && slot.goodScepter && (
+        <span className="aghs-marker aghs-marker-scepter" />
+      )}
     </div>
   )
 }

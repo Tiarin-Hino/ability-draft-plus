@@ -314,6 +314,31 @@ function AbilityTooltipContent({
           {t('tooltip.overrated', { value: formatWinrate(slot.winrate) })}
         </div>
       )}
+      {/* Round-4 tag verdicts: Aghanim's stacking (own picks) beats the
+          generic always-on marker note; the point-sink conflict is a warning */}
+      {slot.shardStackWith ? (
+        <div className="tooltip-stat tooltip-aghs">
+          {t('tooltip.shardStack', { names: slot.shardStackWith.join(', ') })}
+        </div>
+      ) : (
+        slot.goodShard && (
+          <div className="tooltip-stat tooltip-aghs">{t('tooltip.goodShard')}</div>
+        )
+      )}
+      {slot.scepterStackWith ? (
+        <div className="tooltip-stat tooltip-aghs">
+          {t('tooltip.scepterStack', { names: slot.scepterStackWith.join(', ') })}
+        </div>
+      ) : (
+        slot.goodScepter && (
+          <div className="tooltip-stat tooltip-aghs">{t('tooltip.goodScepter')}</div>
+        )
+      )}
+      {slot.pointSinkConflictWith && (
+        <div className="tooltip-stat tooltip-inert">
+          {t('tooltip.pointSinkConflict', { names: slot.pointSinkConflictWith.join(', ') })}
+        </div>
+      )}
       {slot.contestedSoon &&
         (slot.isGeneralTopTier || slot.isSynergySuggestionForMySpot) && (
           <div className="tooltip-stat tooltip-contested">
