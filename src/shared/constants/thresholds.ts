@@ -208,6 +208,24 @@ export const PAIRING_ADJUSTMENT_CAP = 0.1
 export const OVERRATED_WINRATE_MAX = 0.48
 export const OVERRATED_PICK_ORDER_MAX = 15
 export const OVERRATED_DAMP = 0.12
+// Aghanim's stacking (tag round 4, 2026-09): once the drafter OWNS a good_shard
+// (or good_aghanims) ability, every pool ability with the same tag gets a flat
+// boost — one Shard / one Scepter purchase now upgrades two abilities. A real
+// but mid-game economic edge, not a draft-defining need: sized at
+// ROLE_DUPLICATE_WEIGHT (0.06), below ROLE_NEED_WEIGHT (0.08) and at half of
+// OVERRATED_DAMP so a trap with a good shard stays net-damped. Applied once per
+// family (shard + scepter can both fire), own picks only (a teammate's Shard
+// does nothing for you), role-independent — rides outside the role cap.
+export const AGHS_STACK_BOOST = 0.06
+// Skill-point-sink conflict (tag round 4): a skill_point_sink ability must be
+// maxed early. Owning one already means a second sink leaves one of the two
+// under-levelled for most of the game — the mechanical cousin of a dead slot,
+// so the damp is bigger than OVERRATED_DAMP (a statistical suspicion) and than
+// ROLE_CURATED_WEIGHT (0.15, so a curated boost cannot cancel it), yet finite:
+// a 0.9 sink still edges a 0.65 non-sink. Own picks only, role-independent.
+// Future counterpart (roadmap): a `value_point` tag for level-1-value abilities
+// that can wait — a natural partner for a sink, not a conflict.
+export const POINT_SINK_DAMP = 0.2
 // Model reservation (Drow-for-pos-5 case, 2026-08-31): while core teammates
 // still need models, a body whose attr fit for positions 1-3 beats its 4-5
 // fit by more than the gap is damped for a support drafter — don't steal the

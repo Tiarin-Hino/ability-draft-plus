@@ -22,7 +22,10 @@
   "grants_ranged",
   "good_with_rearm",
   "mana_hungry",
-  "channeled"
+  "channeled",
+  "good_shard",
+  "good_aghanims",
+  "skill_point_sink"
  ],
  "heroVocab": [
   "rc_talents",
@@ -44,6 +47,7 @@
   },
   "abaddon_borrowed_time": {
    "tags": [
+    "good_aghanims",
     "passive_value",
     "sustain_self",
     "teamfight_ult"
@@ -70,7 +74,6 @@
   "abyssal_underlord_dark_portal": {
    "tags": [
     "initiation",
-    "mana_hungry",
     "mobility"
    ]
   },
@@ -125,7 +128,8 @@
   },
   "ancient_apparition_chilling_touch": {
    "tags": [
-    "soft_cc"
+    "soft_cc",
+    "steroid"
    ]
   },
   "ancient_apparition_cold_feet": {
@@ -209,6 +213,7 @@
   "axe_berserkers_call": {
    "tags": [
     "aoe",
+    "good_shard",
     "hard_cc",
     "initiation"
    ]
@@ -303,6 +308,7 @@
   "beastmaster_summon_razorback": {
    "tags": [
     "farm_tool",
+    "skill_point_sink",
     "soft_cc",
     "summon"
    ]
@@ -345,6 +351,7 @@
   "bounty_hunter_jinada": {
    "tags": [
     "passive_value",
+    "skill_point_sink",
     "steroid"
    ]
   },
@@ -352,6 +359,7 @@
    "tags": [
     "aoe",
     "nuke",
+    "skill_point_sink",
     "soft_cc"
    ]
   },
@@ -428,6 +436,7 @@
   },
   "broodmother_insatiable_hunger": {
    "tags": [
+    "good_shard",
     "steroid",
     "sustain_self"
    ]
@@ -494,6 +503,7 @@
   "chaos_knight_phantasm": {
    "tags": [
     "farm_tool",
+    "good_aghanims",
     "mana_hungry"
    ]
   },
@@ -519,6 +529,7 @@
   "chen_holy_persuasion": {
    "tags": [
     "mana_hungry",
+    "skill_point_sink",
     "summon"
    ]
   },
@@ -583,7 +594,8 @@
   "dark_seer_ion_shell": {
    "tags": [
     "aoe",
-    "farm_tool"
+    "farm_tool",
+    "skill_point_sink"
    ]
   },
   "dark_seer_surge": {
@@ -669,6 +681,7 @@
    "tags": [
     "aoe",
     "channeled",
+    "good_aghanims",
     "hard_cc",
     "mana_hungry",
     "mobility",
@@ -704,6 +717,7 @@
    "tags": [
     "aoe",
     "nuke",
+    "skill_point_sink",
     "waveclear"
    ]
   },
@@ -763,7 +777,8 @@
    "tags": [
     "farm_tool",
     "passive_value",
-    "steroid"
+    "steroid",
+    "team_aura"
    ]
   },
   "doom_bringer_doom": {
@@ -804,6 +819,8 @@
    "tags": [
     "aoe",
     "farm_tool",
+    "good_aghanims",
+    "grants_ranged",
     "soft_cc",
     "steroid"
    ]
@@ -886,7 +903,6 @@
   "earthshaker_echo_slam": {
    "tags": [
     "aoe",
-    "mana_hungry",
     "nuke",
     "teamfight_ult"
    ]
@@ -930,6 +946,7 @@
   "elder_titan_natural_order": {
    "tags": [
     "aoe",
+    "good_shard",
     "passive_value"
    ]
   },
@@ -1001,6 +1018,7 @@
    "tags": [
     "farm_tool",
     "good_with_rearm",
+    "skill_point_sink",
     "summon"
    ]
   },
@@ -1047,6 +1065,7 @@
   "furion_force_of_nature": {
    "tags": [
     "farm_tool",
+    "skill_point_sink",
     "summon"
    ]
   },
@@ -1111,6 +1130,10 @@
    "tags": [
     "farm_tool",
     "steroid"
+   ],
+   "roleMust": [
+    1,
+    2
    ]
   },
   "gyrocopter_homing_missile": {
@@ -1122,7 +1145,9 @@
    ]
   },
   "gyrocopter_rocket_barrage": {
-   "tags": []
+   "tags": [
+    "skill_point_sink"
+   ]
   },
   "hoodwink_acorn_shot": {
    "tags": [
@@ -1154,6 +1179,7 @@
   },
   "huskar_berserkers_blood": {
    "tags": [
+    "good_shard",
     "passive_value",
     "steroid",
     "sustain_self"
@@ -1221,6 +1247,7 @@
   "invoker_forge_spirit_ad": {
    "tags": [
     "farm_tool",
+    "skill_point_sink",
     "summon"
    ]
   },
@@ -1339,6 +1366,7 @@
     "channeled",
     "mana_hungry",
     "nuke",
+    "skill_point_sink",
     "waveclear"
    ]
   },
@@ -1457,6 +1485,7 @@
   },
   "legion_commander_duel": {
    "tags": [
+    "good_aghanims",
     "hard_cc",
     "initiation",
     "steroid"
@@ -1477,6 +1506,7 @@
   },
   "legion_commander_press_the_attack": {
    "tags": [
+    "good_aghanims",
     "save_ally",
     "sustain_self"
    ]
@@ -1523,6 +1553,7 @@
    "tags": [
     "aoe",
     "nuke",
+    "skill_point_sink",
     "soft_cc",
     "waveclear"
    ]
@@ -1597,8 +1628,10 @@
   },
   "lion_finger_of_death": {
    "tags": [
+    "aoe",
     "mana_hungry",
-    "nuke"
+    "nuke",
+    "steroid"
    ]
   },
   "lion_impale": {
@@ -1671,6 +1704,7 @@
   "luna_lucent_beam": {
    "tags": [
     "nuke",
+    "skill_point_sink",
     "soft_cc"
    ]
   },
@@ -1678,6 +1712,7 @@
    "tags": [
     "aoe",
     "farm_tool",
+    "good_shard",
     "sustain_self"
    ]
   },
@@ -1689,6 +1724,10 @@
    ],
    "roleMust": [
     1
+   ],
+   "roleAvoid": [
+    4,
+    5
    ]
   },
   "lycan_feral_impulse": {
@@ -1713,6 +1752,7 @@
   },
   "lycan_summon_wolves": {
    "tags": [
+    "skill_point_sink",
     "summon"
    ]
   },
@@ -1738,6 +1778,7 @@
    "tags": [
     "aoe",
     "nuke",
+    "skill_point_sink",
     "soft_cc",
     "waveclear"
    ]
@@ -1785,6 +1826,7 @@
   "mars_arena_of_blood": {
    "tags": [
     "aoe",
+    "good_aghanims",
     "initiation",
     "mana_hungry",
     "setup_cc",
@@ -1832,6 +1874,7 @@
   },
   "medusa_split_shot": {
    "tags": [
+    "aoe",
     "farm_tool",
     "steroid"
    ]
@@ -1883,6 +1926,7 @@
   },
   "mirana_leap": {
    "tags": [
+    "good_shard",
     "mobility",
     "steroid"
    ]
@@ -1912,9 +1956,9 @@
   },
   "monkey_king_tree_dance": {
    "tags": [
-    "hard_cc",
     "initiation",
-    "mobility"
+    "mobility",
+    "soft_cc"
    ]
   },
   "monkey_king_wukongs_command": {
@@ -1954,6 +1998,7 @@
   },
   "muerta_pierce_the_veil": {
    "tags": [
+    "good_shard",
     "mana_hungry",
     "steroid"
    ]
@@ -1973,7 +2018,8 @@
   },
   "naga_siren_mirror_image": {
    "tags": [
-    "farm_tool"
+    "farm_tool",
+    "steroid"
    ]
   },
   "naga_siren_rip_tide": {
@@ -2013,7 +2059,12 @@
   "necrolyte_heartstopper_aura": {
    "tags": [
     "aoe",
+    "good_aghanims",
     "passive_value"
+   ],
+   "roleAvoid": [
+    4,
+    5
    ]
   },
   "necrolyte_reapers_scythe": {
@@ -2051,6 +2102,7 @@
     "aoe",
     "farm_tool",
     "nuke",
+    "skill_point_sink",
     "waveclear"
    ]
   },
@@ -2299,6 +2351,7 @@
    "tags": [
     "aoe",
     "farm_tool",
+    "skill_point_sink",
     "soft_cc",
     "waveclear"
    ]
@@ -2557,6 +2610,7 @@
   "riki_smoke_screen": {
    "tags": [
     "aoe",
+    "good_shard",
     "soft_cc"
    ]
   },
@@ -2645,7 +2699,8 @@
   "sandking_sand_storm": {
    "tags": [
     "aoe",
-    "farm_tool"
+    "farm_tool",
+    "waveclear"
    ]
   },
   "sandking_scorpion_strike": {
@@ -2684,6 +2739,7 @@
    "tags": [
     "aoe",
     "nuke",
+    "skill_point_sink",
     "waveclear"
    ]
   },
@@ -2767,6 +2823,7 @@
   },
   "silencer_glaives_of_wisdom": {
    "tags": [
+    "good_shard",
     "steroid"
    ]
   },
@@ -2929,7 +2986,6 @@
   },
   "sniper_assassinate": {
    "tags": [
-    "hard_cc",
     "mana_hungry",
     "nuke"
    ]
@@ -2959,6 +3015,7 @@
   "spectre_dispersion": {
    "tags": [
     "aoe",
+    "good_shard",
     "passive_value",
     "sustain_self"
    ],
@@ -2969,6 +3026,7 @@
   "spectre_haunt": {
    "tags": [
     "aoe",
+    "good_aghanims",
     "initiation",
     "mana_hungry"
    ]
@@ -3048,6 +3106,7 @@
     "aoe",
     "farm_tool",
     "nuke",
+    "skill_point_sink",
     "waveclear"
    ]
   },
@@ -3070,6 +3129,7 @@
   "sven_storm_bolt": {
    "tags": [
     "aoe",
+    "good_aghanims",
     "hard_cc",
     "initiation",
     "nuke"
@@ -3105,6 +3165,7 @@
     "aoe",
     "nuke",
     "setup_cc",
+    "skill_point_sink",
     "soft_cc",
     "waveclear"
    ]
@@ -3144,6 +3205,7 @@
   },
   "templar_assassin_refraction": {
    "tags": [
+    "good_shard",
     "steroid",
     "sustain_self"
    ]
@@ -3156,6 +3218,7 @@
   },
   "terrorblade_metamorphosis": {
    "tags": [
+    "grants_ranged",
     "steroid"
    ],
    "roleMust": [
@@ -3307,6 +3370,7 @@
   "treant_overgrowth": {
    "tags": [
     "aoe",
+    "good_aghanims",
     "mana_hungry",
     "soft_cc",
     "teamfight_ult"
@@ -3407,7 +3471,6 @@
    "tags": [
     "aoe",
     "good_with_rearm",
-    "mana_hungry",
     "summon",
     "teamfight_ult"
    ],
@@ -3433,6 +3496,10 @@
    "tags": [
     "passive_value",
     "steroid"
+   ],
+   "roleAvoid": [
+    4,
+    5
    ]
   },
   "ursa_overpower": {
@@ -3498,6 +3565,7 @@
   "viper_corrosive_skin": {
    "tags": [
     "aoe",
+    "good_aghanims",
     "passive_value",
     "soft_cc"
    ]
@@ -3512,6 +3580,7 @@
   },
   "viper_poison_attack": {
    "tags": [
+    "good_shard",
     "soft_cc",
     "steroid"
    ]
@@ -3626,6 +3695,7 @@
   "weaver_shukuchi": {
    "tags": [
     "aoe",
+    "good_shard",
     "mobility",
     "waveclear"
    ],
@@ -3659,6 +3729,7 @@
     "aoe",
     "channeled",
     "nuke",
+    "skill_point_sink",
     "soft_cc",
     "waveclear"
    ]
@@ -3676,6 +3747,8 @@
   },
   "winter_wyvern_arctic_burn": {
    "tags": [
+    "good_aghanims",
+    "grants_ranged",
     "mobility",
     "soft_cc",
     "steroid"
@@ -3733,6 +3806,7 @@
   },
   "wisp_tether": {
    "tags": [
+    "good_shard",
     "mobility",
     "save_ally"
    ]

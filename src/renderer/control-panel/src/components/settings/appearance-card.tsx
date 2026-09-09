@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Sun, Moon, Monitor, PanelRight, PanelLeft } from 'lucide-react'
 import {
@@ -7,7 +8,9 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
+import { Switch } from '@/components/ui/switch'
 import {
   Select,
   SelectContent,
@@ -35,6 +38,20 @@ export function AppearanceCard() {
   const overlayOpacity = useAppStore((s) => s.overlayOpacity)
   const overlayAnchor = useAppStore((s) => s.overlayAnchor)
   const dispatch = useAppDispatch()
+  // DB-only setting (not in the app store): resolved by the scan processor on
+  // the next scan, so it needs no live push to the overlay.
+  const [aghsMarkers, setAghsMarkers] = useState(false)
+
+  useEffect(() => {
+    window.electronApi.invoke('settings:get').then((settings) => {
+      setAghsMarkers(settings.aghsMarkersEnabled)
+    })
+  }, [])
+
+  const handleAghsMarkersToggle = (checked: boolean) => {
+    setAghsMarkers(checked)
+    void window.electronApi.invoke('settings:set', { aghsMarkersEnabled: checked })
+  }
 
   const handleThemeChange = (mode: 'light' | 'dark' | 'system') => {
     dispatch(APP_ACTIONS.THEME_SET_MODE, mode)
@@ -133,6 +150,18 @@ export function AppearanceCard() {
               {ts('appearance.anchorRight')}
             </Button>
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Switch
+              id="aghs-markers"
+              checked={aghsMarkers}
+              onCheckedChange={handleAghsMarkersToggle}
+            />
+            <Label htmlFor="aghs-markers">{ts('appearance.aghsMarkersLabel')}</Label>
+          </div>
+          <p className="text-xs text-muted-foreground">{ts('appearance.aghsMarkersHint')}</p>
         </div>
       </CardContent>
     </Card>

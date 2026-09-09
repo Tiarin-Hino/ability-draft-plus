@@ -25,7 +25,9 @@
     "overlayOpacityLabel": "Opacity ng mga overlay panel",
     "overlayAnchorLabel": "Posisyon ng mga overlay panel",
     "anchorLeft": "Kaliwa",
-    "anchorRight": "Kanan"
+    "anchorRight": "Kanan",
+    "aghsMarkersLabel": "Palaging markahan ang mga ability na malakas ang Aghanim's Shard / Scepter upgrade",
+    "aghsMarkersHint": "Marker sa sulok ng bawat hindi pa napipiling ability na may malakas na Shard o Scepter upgrade (asul na diamante = Shard, lilang tuldok = Scepter). Magiging epektibo sa susunod na scan."
   },
   "backup": {
     "title": "Backup ng Database",

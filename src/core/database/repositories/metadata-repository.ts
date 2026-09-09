@@ -50,6 +50,7 @@ export function createMetadataRepository(db: SQLJsDatabase): MetadataRepository 
       const autoInitialScanDelayS = get('auto_initial_scan_delay_s')
       const roleMode = get('role_mode')
       const roleFixedPositions = get('role_fixed_positions')
+      const aghsMarkersEnabled = get('aghs_markers_enabled')
 
       return {
         opThreshold:
@@ -105,6 +106,10 @@ export function createMetadataRepository(db: SQLJsDatabase): MetadataRepository 
                 .map((v) => parseInt(v, 10))
                 .filter((v) => Number.isInteger(v) && v >= 1 && v <= 5)
             : DEFAULT_SETTINGS.roleFixedPositions,
+        aghsMarkersEnabled:
+          aghsMarkersEnabled !== null
+            ? aghsMarkersEnabled === 'true'
+            : DEFAULT_SETTINGS.aghsMarkersEnabled,
       }
     },
 
@@ -150,6 +155,9 @@ export function createMetadataRepository(db: SQLJsDatabase): MetadataRepository 
       }
       if (settings.roleFixedPositions !== undefined) {
         set('role_fixed_positions', settings.roleFixedPositions.join(','))
+      }
+      if (settings.aghsMarkersEnabled !== undefined) {
+        set('aghs_markers_enabled', String(settings.aghsMarkersEnabled))
       }
     },
 

@@ -25,7 +25,9 @@
     "overlayOpacityLabel": "Opacidad de los paneles del overlay",
     "overlayAnchorLabel": "Posición de los paneles del overlay",
     "anchorLeft": "Izquierda",
-    "anchorRight": "Derecha"
+    "anchorRight": "Derecha",
+    "aghsMarkersLabel": "Marcar siempre las habilidades con gran mejora de Aghanim's Shard / Scepter",
+    "aghsMarkersHint": "Marcadores en la esquina de cada habilidad sin elegir con una gran mejora de Shard o Scepter (rombo azul = Shard, punto violeta = Scepter). Se aplica en el próximo escaneo."
   },
   "backup": {
     "title": "Copia de seguridad de la base de datos",

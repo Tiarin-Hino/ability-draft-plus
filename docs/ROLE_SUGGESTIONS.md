@@ -9,7 +9,7 @@ play. Built 2026-08-28/30; design spec + research trail in the session artifacts
 | Source | What | Where it lands |
 |---|---|---|
 | Windrun `GET /ability-shifts` (undocumented; provider-approved 2026-08-28) | Per-ability AND per-hero-model (negative ids) average deviation of drafters' kills/deaths/KA/gpm/xpm/dmg/healing. Units undocumented — treated as ORDERING ONLY. | 7 nullable shift columns on `Abilities` and `Heroes`, applied by `windrun_id` during phase-1 scrape (non-fatal on failure, never wipes) |
-| `resources/data/ability_tags.json` | 513 abilities × 20-tag closed vocabulary (community-curated via the website Tag Lab) | Loaded once at startup (`ability-tags-service`); absent/invalid = tags feature off |
+| `resources/data/ability_tags.json` | 513 abilities × 25-tag closed vocabulary (community-curated via the website Tag Lab) | Loaded once at startup (`ability-tags-service`); absent/invalid = tags feature off |
 | `resources/data/hero_meta.json` | Hero attack type, primary attribute, base stats + gains (dotaconstants) | Same loader; drives model fit + inert filter |
 
 Both JSON files are GENERATED — never hand-edit. Pipeline:
@@ -105,6 +105,24 @@ Key mechanics in `core/domain/role-scoring.ts`:
   persists (documented, deliberately not built yet): discount
   `WEIGHT_PICK_ORDER` itself while a role mode is active, so role-aware
   drafters trust winrate over herd behavior.
+- **Aghanim's stacking boost** (`good_shard` / `good_aghanims` tags, round 4):
+  once the drafter OWNS a good-Shard ability, every unpicked pool ability with
+  `good_shard` gets a flat `AGHS_STACK_BOOST` (0.06) — one Shard purchase now
+  upgrades two abilities; same per family for Scepter (both can fire on one
+  candidate). Own picks only (a teammate's Shard does nothing for you),
+  role-independent, outside the role cap; tooltip names the pick it stacks
+  with. Separately, the opt-in **Appearance › "Always mark strong Aghanim's
+  Shard / Scepter abilities"** setting (`aghsMarkersEnabled`, default off)
+  marks EVERY tagged pool slot with a corner marker (blue diamond = Shard,
+  violet dot = Scepter) + tooltip note. The flag is resolved in the scan
+  processor (payload-gated: the overlay has no settings access) and applies
+  on the next scan; markers hide in capture mode.
+- **Skill-point-sink conflict** (`skill_point_sink` tag, round 4): a sink must
+  be maxed early. Once the drafter owns one, every other pool sink is damped
+  `POINT_SINK_DAMP` (0.2 — bigger than the overrated damp and than the
+  curated boost, so nothing cancels it, yet finite) with a tooltip naming the
+  conflicting pick. Own picks only, role-independent. Roadmap counterpart: a
+  `value_point` tag (good at level 1, can wait) as the natural partner.
 - **Curated never-recommend** (`roleAvoid: [positions]`): the negative
   counterpart of roleMust. Excluded from suggestions when the drafter's
   effective positions are ALL inside the avoid set — or unconditionally when
@@ -131,8 +149,9 @@ Key mechanics in `core/domain/role-scoring.ts`:
 - **Role-off invariant, amended**: `roleMode: 'off'` remains bit-identical to
   the role-less path EXCEPT for role-independent verdicts and facts: an
   all-five roleMust is guaranteed a slot, an all-five roleAvoid is excluded,
-  the overrated damp applies, and the inert/requires filters apply — all by
-  design (they are not role opinions).
+  the overrated damp applies, the Aghanim's stacking boost and the
+  skill-point-sink damp apply (own-pick facts), and the inert/requires
+  filters apply — all by design (they are not role opinions).
 - **Curated must-picks** (`roleMust: [positions]` on a dataset entry): a
   hand-curated VERDICT — "recommend for these positions even if stats
   disagree" — deliberately OUTSIDE the tag vocabulary (tags are mechanical
@@ -159,7 +178,8 @@ rationale as comments (greed taper, team balance, ult security, etc. come from
   Fill for team). Overlay: quick panel (click position = fixed, Auto = dynamic;
   status line reflects the LAST PROCESSED scan — role changes apply on the next
   scan, same contract as My Spot). Tooltips: role-fit line + reason chips +
-  inert/contested notes. EN + RU throughout.
+  inert/contested notes + Aghanim's stacking / point-sink lines. Appearance
+  card: the always-on Shard/Scepter markers toggle. All app languages.
 
 ## Research & validation tooling (../ad_data_gather_script)
 
@@ -215,4 +235,5 @@ drafted-tag profiles with chosen models before retuning.
   does not model (measured: solo-queue agreement is markedly higher).
 - v2 roadmap (memory: role-aware-suggestions-research): team/pool-scope needs,
   combo tags, quality-weighted need coverage, `dot`/`dispel`/`spell_steroid`
-  tags, mana-per-minute refinement, corpus-mined pair lifts.
+  tags, a `value_point` tag (level-1 value, can wait — partner to
+  `skill_point_sink`), mana-per-minute refinement, corpus-mined pair lifts.

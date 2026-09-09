@@ -102,7 +102,12 @@
     "requiresTag": "Tarvitsee {{name}}-kyvyn — yhtään ei draftattu eikä poolissa jäljellä",
     "roleAvoided": "Kuratoitu ohitus tälle paikalle — ei suositella",
     "overrated": "Pickataan aikaisin mutta voittaa vain {{value}} — luultavasti yliarvostettu",
-    "contestedSoon": "Yleensä draftattu jo tässä vaiheessa — ei ehkä selviä seuraavaan kierrokseen"
+    "contestedSoon": "Yleensä draftattu jo tässä vaiheessa — ei ehkä selviä seuraavaan kierrokseen",
+    "shardStack": "Vahva Shard-päivitys — yksi Shard vahvistaa myös {{names}}",
+    "scepterStack": "Vahva Scepter-päivitys — yksi Scepter vahvistaa myös {{names}}",
+    "goodShard": "Vahva Aghanim's Shard -päivitys",
+    "goodScepter": "Vahva Aghanim's Scepter -päivitys",
+    "pointSinkConflict": "Kilpailee taitopisteistä {{names}} kanssa — toinen jää alitasoiseksi"
   },
   "role": {
     "aria": "Roolisuositukset",

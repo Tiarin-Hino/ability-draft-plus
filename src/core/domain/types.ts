@@ -72,6 +72,19 @@ export interface ScoredEntity {
   unmetRequirement?: { kind: 'ability' | 'model' | 'tag'; displayName: string }
   /** Global pick timing says this ability is due before the draft wraps around. */
   contestedSoon?: boolean
+  /** Aghanim's stacking: display names of MY drafted good_shard picks — present
+   * means the AGHS_STACK_BOOST was applied (one Shard now powers both). */
+  shardStackWith?: string[]
+  /** Same for good_aghanims (Scepter). */
+  scepterStackWith?: string[]
+  /** Skill-point-sink conflict: my drafted skill_point_sink picks — present
+   * means POINT_SINK_DAMP was applied (one of the two stays under-levelled). */
+  pointSinkConflictWith?: string[]
+  /** Display-only facts, set ONLY when the aghsMarkersEnabled setting is on
+   * (the overlay has no settings access — payload-gated): strong Shard /
+   * Scepter upgrade → corner marker + tooltip note. */
+  goodShard?: boolean
+  goodScepter?: boolean
 }
 
 /** Entity with top-tier selection flags applied. */

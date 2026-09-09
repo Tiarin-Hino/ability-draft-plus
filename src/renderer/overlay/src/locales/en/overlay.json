@@ -102,7 +102,12 @@
     "requiresTag": "Needs a {{name}} ability — none drafted or left in the pool",
     "roleAvoided": "Curated skip for this spot — not suggested",
     "overrated": "Picked early but wins only {{value}} — likely overrated",
-    "contestedSoon": "Usually drafted by now — may not survive another round"
+    "contestedSoon": "Usually drafted by now — may not survive another round",
+    "shardStack": "Strong Shard upgrade — one Shard also powers {{names}}",
+    "scepterStack": "Strong Scepter upgrade — one Scepter also powers {{names}}",
+    "goodShard": "Strong Aghanim's Shard upgrade",
+    "goodScepter": "Strong Aghanim's Scepter upgrade",
+    "pointSinkConflict": "Competes for skill points with {{names}} — one of them stays under-levelled"
   },
   "role": {
     "aria": "Role suggestions",

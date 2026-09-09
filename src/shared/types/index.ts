@@ -96,6 +96,11 @@ export interface AppSettings {
   roleMode: 'off' | 'fixed' | 'dynamic'
   /** Fixed-mode position multi-select (values 1-5). Ignored unless roleMode==='fixed'. */
   roleFixedPositions: number[]
+  /** Overlay: mark EVERY unpicked ability with a strong Aghanim's Shard /
+   * Scepter upgrade (good_shard / good_aghanims tags) with a corner marker +
+   * tooltip note. The stacking boost for your own picks is independent of
+   * this — it only controls the always-on markers. Applies on the next scan. */
+  aghsMarkersEnabled: boolean
 }
 
 export interface SlotCoordinate {
@@ -185,6 +190,18 @@ export interface EnrichedScanSlot extends ScanResult {
   overrated?: boolean
   /** Now-or-never: usually drafted by this point — unlikely to survive another round. */
   contestedSoon?: boolean
+  /** Aghanim's stacking: display names of the user's drafted good_shard picks
+   * this candidate shares a Shard purchase with (boost applied, tooltip explains). */
+  shardStackWith?: string[]
+  /** Same for good_aghanims (Scepter). */
+  scepterStackWith?: string[]
+  /** Skill-point-sink conflict: the user's drafted skill_point_sink picks this
+   * candidate would compete with (damped, tooltip explains). */
+  pointSinkConflictWith?: string[]
+  /** Strong Shard / Scepter upgrade markers — only present when the
+   * aghsMarkersEnabled setting is on (payload-gated; pool slots only). */
+  goodShard?: boolean
+  goodScepter?: boolean
   highWinrateCombinations: SynergyPairDisplay[]
   lowWinrateCombinations: SynergyPairDisplay[]
   strongHeroSynergies: HeroSynergyDisplay[]

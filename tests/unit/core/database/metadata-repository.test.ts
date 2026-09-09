@@ -48,6 +48,19 @@ describe('MetadataRepository', () => {
       freshDb.close()
     })
 
+    it('defaults aghsMarkersEnabled to off and round-trips it', async () => {
+      const freshDb = await createTestDb()
+      const freshRepo = createMetadataRepository(freshDb.db)
+
+      expect(freshRepo.getSettings().aghsMarkersEnabled).toBe(false)
+      freshRepo.setSettings({ aghsMarkersEnabled: true })
+      expect(freshRepo.getSettings().aghsMarkersEnabled).toBe(true)
+      freshRepo.setSettings({ aghsMarkersEnabled: false })
+      expect(freshRepo.getSettings().aghsMarkersEnabled).toBe(false)
+
+      freshDb.close()
+    })
+
     it('returns stored settings when available', () => {
       repo.setSettings({
         opThreshold: 0.15,

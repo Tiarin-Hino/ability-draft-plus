@@ -4,6 +4,7 @@ import type { ScanProcessorInput } from '@core/domain/scan-processor'
 import type { ScanResult, AbilityDetail, SlotCoordinate } from '@shared/types'
 import type { InitialScanResults } from '@shared/types/ml'
 import type { DraftSessionState, ScanProcessorDeps } from '@core/domain/types'
+import { AGHS_STACK_BOOST, POINT_SINK_DAMP } from '@shared/constants/thresholds'
 import type {
   SynergyPartner,
   AbilitySynergyPair,
@@ -1464,6 +1465,157 @@ describe('role-aware suggestions', () => {
     const before = run([]).find((m) => m.heroName === 'antimage')!
     const after = run([0, 2, 3, 4]).find((m) => m.heroName === 'antimage')!
     expect(before.roleScoreDelta!).toBeLessThan(after.roleScoreDelta!)
+  })
+
+  describe('item-upgrade and skill-point tags (round 4)', () => {
+    // Own fixture — mockTags feeds the role suite and must stay untouched.
+    const aghsTags: NonNullable<ScanProcessorDeps['tags']> = {
+      ...mockTags,
+      getTags(name: string) {
+        const table: Record<string, string[]> = {
+          fireball: ['good_shard', 'skill_point_sink'],
+          ice_blast: ['good_shard', 'good_aghanims'],
+          firestorm: ['skill_point_sink'],
+          blink: ['good_aghanims'],
+        }
+        const tags = table[name]
+        return tags
+          ? (new Set(tags) as ReturnType<NonNullable<ScanProcessorDeps['tags']>['getTags']>)
+          : undefined
+      },
+    }
+
+    /** Initial scan, My Spot = row 0, then a rescan registering `picks`
+     * (name, row) as drafted abilities. roleMode undefined = setting absent. */
+    function runWithPicks(
+      picks: Array<[string, number]>,
+      opts: { roleMode?: string; aghsMarkersEnabled?: boolean } = {},
+    ) {
+      const initial = processScanResults(makeInitialScanInput())
+      const state = initial.updatedState
+      state.mySelectedSpotDbId = 1
+      state.mySelectedSpotHeroOrder = 0
+      const base = opts.roleMode === undefined ? mockDeps : depsWithRole(opts.roleMode)
+      const deps: ScanProcessorDeps = {
+        ...base,
+        tags: aghsTags,
+        settings: {
+          getSettings() {
+            return {
+              ...base.settings.getSettings(),
+              ...(opts.aghsMarkersEnabled !== undefined
+                ? { aghsMarkersEnabled: opts.aghsMarkersEnabled }
+                : {}),
+            }
+          },
+        },
+      }
+      const input: ScanProcessorInput = {
+        rawResults: picks.map(([name, row], i) => makeScanResult(name, row, i + 1, false)),
+        isInitialScan: false,
+        state,
+        deps,
+        modelCoords: [makeCoord(0), makeCoord(1)],
+        heroesCoords: [makeCoord(0), makeCoord(1)],
+        heroesParams: { width: 358, height: 170 },
+        targetResolution: '1920x1080',
+        scaleFactor: 1.0,
+      }
+      return processScanResults(input).overlayPayload
+    }
+    const slot = (payload: ReturnType<typeof runWithPicks>, name: string) =>
+      payload.scanData!.standard.find((s) => s.name === name)!
+
+    it('boosts pool good_shard abilities only once MY pick shares the Shard', () => {
+      const none = runWithPicks([], { roleMode: 'off' })
+      const own = runWithPicks([['fireball', 0]], { roleMode: 'off' })
+      const teammate = runWithPicks([['fireball', 1]], { roleMode: 'off' })
+
+      expect(slot(own, 'ice_blast').shardStackWith).toEqual(['Fireball'])
+      expect(slot(own, 'ice_blast').consolidatedScore).toBeCloseTo(
+        slot(none, 'ice_blast').consolidatedScore + AGHS_STACK_BOOST,
+        6,
+      )
+      expect(slot(teammate, 'ice_blast').shardStackWith).toBeUndefined()
+      expect(slot(teammate, 'ice_blast').consolidatedScore).toBeCloseTo(
+        slot(none, 'ice_blast').consolidatedScore,
+        6,
+      )
+      // Scepter-only candidate: untouched by a Shard pick
+      expect(slot(own, 'blink').scepterStackWith).toBeUndefined()
+      expect(slot(own, 'blink').consolidatedScore).toBeCloseTo(
+        slot(none, 'blink').consolidatedScore,
+        6,
+      )
+    })
+
+    it('Scepter stacking fires per family and both can stack on one candidate', () => {
+      const none = runWithPicks([], { roleMode: 'off' })
+      const scepter = runWithPicks([['blink', 0]], { roleMode: 'off' })
+      expect(slot(scepter, 'ice_blast').scepterStackWith).toEqual(['Blink'])
+      expect(slot(scepter, 'ice_blast').shardStackWith).toBeUndefined()
+      expect(slot(scepter, 'ice_blast').consolidatedScore).toBeCloseTo(
+        slot(none, 'ice_blast').consolidatedScore + AGHS_STACK_BOOST,
+        6,
+      )
+
+      const both = runWithPicks(
+        [
+          ['fireball', 0],
+          ['blink', 0],
+        ],
+        { roleMode: 'off' },
+      )
+      expect(slot(both, 'ice_blast').shardStackWith).toEqual(['Fireball'])
+      expect(slot(both, 'ice_blast').scepterStackWith).toEqual(['Blink'])
+      expect(slot(both, 'ice_blast').consolidatedScore).toBeCloseTo(
+        slot(none, 'ice_blast').consolidatedScore + 2 * AGHS_STACK_BOOST,
+        6,
+      )
+    })
+
+    it('damps a second skill-point sink once MY pick is one (teammates do not count)', () => {
+      const none = runWithPicks([], { roleMode: 'off' })
+      const own = runWithPicks([['fireball', 0]], { roleMode: 'off' })
+      const teammate = runWithPicks([['fireball', 1]], { roleMode: 'off' })
+
+      expect(slot(own, 'firestorm').pointSinkConflictWith).toEqual(['Fireball'])
+      expect(slot(own, 'firestorm').consolidatedScore).toBeCloseTo(
+        slot(none, 'firestorm').consolidatedScore - POINT_SINK_DAMP,
+        6,
+      )
+      expect(slot(teammate, 'firestorm').pointSinkConflictWith).toBeUndefined()
+      expect(slot(teammate, 'firestorm').consolidatedScore).toBeCloseTo(
+        slot(none, 'firestorm').consolidatedScore,
+        6,
+      )
+      // Not a sink: untouched
+      expect(slot(own, 'blink').pointSinkConflictWith).toBeUndefined()
+    })
+
+    it('always-on Shard/Scepter markers are gated by the setting and pool-only', () => {
+      const off = runWithPicks([], { roleMode: 'off' })
+      expect(slot(off, 'ice_blast').goodShard).toBeUndefined()
+      expect(slot(off, 'ice_blast').goodScepter).toBeUndefined()
+
+      const on = runWithPicks([['fireball', 0]], { roleMode: 'off', aghsMarkersEnabled: true })
+      expect(slot(on, 'ice_blast').goodShard).toBe(true)
+      expect(slot(on, 'ice_blast').goodScepter).toBe(true)
+      expect(slot(on, 'blink').goodShard).toBeUndefined()
+      expect(slot(on, 'blink').goodScepter).toBe(true)
+      expect(slot(on, 'firestorm').goodShard).toBeUndefined()
+      // The drafted Fireball is a good_shard ability but sits in the pick box
+      const picked = on.scanData!.selectedAbilities.find((s) => s.name === 'fireball')!
+      expect(picked.goodShard).toBeUndefined()
+      expect(picked.shardStackWith).toBeUndefined()
+    })
+
+    it('keeps the role-off invariant: mode off and absent stay bit-identical', () => {
+      const off = runWithPicks([['fireball', 0]], { roleMode: 'off' })
+      const absent = runWithPicks([['fireball', 0]])
+      expect(off).toEqual(absent)
+      expect(slot(absent, 'ice_blast').shardStackWith).toEqual(['Fireball'])
+    })
   })
 
   it('overrated abilities (early pick, low winrate) get damped and marked', () => {

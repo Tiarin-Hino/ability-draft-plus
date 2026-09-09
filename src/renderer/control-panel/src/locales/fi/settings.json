@@ -25,7 +25,9 @@
     "overlayOpacityLabel": "Overlay-paneelien läpinäkyvyys",
     "overlayAnchorLabel": "Overlay-paneelien sijainti",
     "anchorLeft": "Vasen",
-    "anchorRight": "Oikea"
+    "anchorRight": "Oikea",
+    "aghsMarkersLabel": "Merkitse aina kyvyt, joilla on vahva Aghanim's Shard / Scepter -päivitys",
+    "aghsMarkersHint": "Kulmamerkki jokaiseen valitsemattomaan kykyyn, jolla on vahva Shard- tai Scepter-päivitys (sininen vinoneliö = Shard, violetti piste = Scepter). Tulee voimaan seuraavassa skannauksessa."
   },
   "backup": {
     "title": "Tietokannan varmuuskopiointi",

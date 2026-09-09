@@ -20,6 +20,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   autoInitialScanDelayS: AUTO_INITIAL_SCAN_DELAY_S,
   roleMode: 'off',
   roleFixedPositions: [],
+  aghsMarkersEnabled: false,
 }
 
 export const SUPPORTED_LANGUAGES = [

@@ -25,7 +25,9 @@
     "overlayOpacityLabel": "Overlay panels opacity",
     "overlayAnchorLabel": "Overlay panels position",
     "anchorLeft": "Left",
-    "anchorRight": "Right"
+    "anchorRight": "Right",
+    "aghsMarkersLabel": "Always mark strong Aghanim's Shard / Scepter abilities",
+    "aghsMarkersHint": "Corner markers on every unpicked ability with a strong Shard or Scepter upgrade (blue diamond = Shard, violet dot = Scepter). Applies on the next scan."
   },
   "backup": {
     "title": "Database Backup",

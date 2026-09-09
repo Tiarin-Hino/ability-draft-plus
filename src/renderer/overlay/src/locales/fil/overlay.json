@@ -102,7 +102,12 @@
     "requiresTag": "Kailangan ng {{name}} na ability — walang na-draft o natitira sa pool",
     "roleAvoided": "Curated na iwasan para sa spot na ito — hindi imumungkahi",
     "overrated": "Maagang pinipili pero {{value}} lang ang panalo — malamang overrated",
-    "contestedSoon": "Karaniwang kuha na sa puntong ito — baka hindi na umabot sa susunod na round"
+    "contestedSoon": "Karaniwang kuha na sa puntong ito — baka hindi na umabot sa susunod na round",
+    "shardStack": "Malakas na Shard upgrade — isang Shard ang magpapalakas din sa {{names}}",
+    "scepterStack": "Malakas na Scepter upgrade — isang Scepter ang magpapalakas din sa {{names}}",
+    "goodShard": "Malakas na Aghanim's Shard upgrade",
+    "goodScepter": "Malakas na Aghanim's Scepter upgrade",
+    "pointSinkConflict": "Nag-aagawan ng skill points kasama ang {{names}} — isa sa kanila ang maiiwan sa level"
   },
   "role": {
     "aria": "Mga role suggestion",
