@@ -1,0 +1,49 @@
+<!doctype html>
+<!-- End-card overlay for the last ~3 s of a clip. Transparent 1080x1920 canvas; the call-to-action panel sits in
+     the lower-middle band (y 1130-1470) so a build panel fits above it and the Reels/Shorts caption zone
+     (bottom ~420 px) and the right-hand button column (right ~120 px) stay clear. -->
+<html><head><meta charset="utf-8">
+<style>
+  html, body { margin:0; background:#0000ff; }
+  #stage { position:relative; width:1080px; height:1920px; overflow:hidden; background:#0000ff;
+           font-family:"Liberation Sans","DejaVu Sans",Arial,Helvetica,sans-serif; color:#fff; }
+  #card { position:absolute; left:110px; top:1130px; width:860px; box-sizing:border-box;
+          padding:30px 34px 28px; border-radius:34px;
+          background:#0e0a14;
+          box-shadow:0 0 0 3px rgba(255,255,255,0.10) inset; }
+  .hook { text-align:center; font-size:44px; font-weight:700; line-height:1.15; letter-spacing:.5px;
+          text-shadow:0 2px 8px rgba(0,0,0,.6); }
+  .hook .en { display:block; font-size:32px; font-weight:700; opacity:.85; margin-top:4px; }
+  .lockup { display:flex; align-items:center; justify-content:center; gap:22px; margin:26px 0 22px; }
+  .lockup svg { width:104px; height:104px; flex:none; filter:drop-shadow(0 2px 6px rgba(0,0,0,.6)); }
+  .brand { display:flex; flex-direction:column; line-height:1; text-shadow:0 2px 8px rgba(0,0,0,.7); }
+  .brand .b1 { font-size:48px; font-weight:700; letter-spacing:2px; white-space:nowrap; }
+  .brand .b2 { font-size:26px; font-weight:700; letter-spacing:1px; margin-top:8px; color:#74dfa6; white-space:nowrap; }
+  .pill { margin:0 auto; width:fit-content; padding:16px 40px; border-radius:999px;
+          background:linear-gradient(180deg,#74dfa6,#37a568); color:#0d1a12;
+          font-size:34px; font-weight:700; letter-spacing:.5px; white-space:nowrap;
+          box-shadow:0 6px 18px rgba(55,165,104,.45); }
+  .url { text-align:center; margin-top:18px; font-size:28px; font-weight:700; letter-spacing:1px; color:#d9a514;
+         text-shadow:0 2px 8px rgba(0,0,0,.7); }
+</style></head>
+<body><div id="stage"><div id="card">
+  <div class="hook">Хочешь такие билды?<span class="en">Want builds like this?</span></div>
+  <div class="lockup">
+    <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="frame" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#a97fe0"/><stop offset="0.55" stop-color="#219180"/><stop offset="1" stop-color="#d9a514"/>
+        </linearGradient>
+        <linearGradient id="plus" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#74dfa6"/><stop offset="1" stop-color="#37a568"/>
+        </linearGradient>
+      </defs>
+      <rect x="5" y="5" width="54" height="54" rx="14" fill="#211a2a"/>
+      <rect x="5" y="5" width="54" height="54" rx="14" fill="none" stroke="url(#frame)" stroke-width="4.5"/>
+      <path d="M32 18.5 v27 M18.5 32 h27" stroke="url(#plus)" stroke-width="9.5" stroke-linecap="round"/>
+    </svg>
+    <div class="brand"><div class="b1">ABILITY DRAFT PLUS</div><div class="b2">FREE OVERLAY · БЕСПЛАТНЫЙ ОВЕРЛЕЙ</div></div>
+  </div>
+  <div class="pill">Ссылка в профиле · Link in bio</div>
+  <div class="url">tiarinhino.com</div>
+</div></div></body></html>
