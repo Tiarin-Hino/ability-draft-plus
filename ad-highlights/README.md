@@ -124,3 +124,7 @@ with headless Chromium if you change the text:
 chrome --headless=new --hide-scrollbars --default-background-color=00000000 --window-size=1080,1920 --screenshot=lockup_raw.png lockup.html
 python make_bounce.py            # then crop lockup_raw.png to content, or let the script's --lockup point at it
 ```
+
+`promo/make_endcard.py` does the same for the end card (`promo/endcard.html` -> `endcard_overlay.png`):
+a 3 s slide-up/fade-in clip with alpha for the last seconds of a video, positioned under a build panel and
+clear of the Reels/Shorts caption and button zones. Static PNG, MOV (PNG codec), WebM and GIF outputs.
