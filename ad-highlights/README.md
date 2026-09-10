@@ -128,3 +128,7 @@ python make_bounce.py            # then crop lockup_raw.png to content, or let t
 `promo/make_endcard.py` does the same for the end card (`promo/endcard.html` -> `endcard_overlay.png`):
 a 3 s slide-up/fade-in clip with alpha for the last seconds of a video, positioned under a build panel and
 clear of the Reels/Shorts caption and button zones. Static PNG, MOV (PNG codec), WebM and GIF outputs.
+
+`promo/make_prompts.py` builds the mid-video prompts from `promo/prompts.html` (channel avatar `promo/avatar.png`):
+a 3 s like-and-follow animation (heart pops, button fills) and five bilingual comment prompts, positioned at
+x=60 / y=1180 so they sit under the action and clear of every platform's caption and button zones.

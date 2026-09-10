@@ -1,0 +1,65 @@
+<!doctype html>
+<!-- Mid-video prompt widgets, rendered once by headless Chromium and cropped/animated by make_prompts.py.
+     Each element sits in its own horizontal band (data-band) on a transparent 1080x1920 stage. -->
+<html><head><meta charset="utf-8">
+<style>
+  html, body { margin:0; background:transparent; }
+  #stage { position:relative; width:1080px; height:1920px; background:transparent;
+           font-family:"Liberation Sans","DejaVu Sans",Arial,Helvetica,sans-serif; color:#fff; }
+  .panel { position:absolute; left:40px; display:flex; align-items:center; gap:18px; height:124px;
+           padding:0 26px 0 18px; border-radius:62px; background:rgba(14,10,20,0.86);
+           box-shadow:0 0 0 3px rgba(255,255,255,0.10) inset; box-sizing:border-box; white-space:nowrap; }
+  .avatar { width:88px; height:88px; flex:none; border-radius:50%; box-shadow:0 0 0 3px #74dfa6, 0 2px 8px rgba(0,0,0,.6); }
+  .name { display:flex; flex-direction:column; line-height:1; text-shadow:0 2px 8px rgba(0,0,0,.7); }
+  .name .n1 { font-size:34px; font-weight:700; letter-spacing:1px; }
+  .name .n2 { font-size:22px; font-weight:700; margin-top:6px; color:#74dfa6; letter-spacing:.5px; }
+  .heart { width:64px; height:64px; flex:none; margin-left:6px; }
+  .btn { height:74px; padding:0 30px; border-radius:37px; display:flex; align-items:center; font-size:30px; font-weight:700;
+         letter-spacing:.5px; box-sizing:border-box; }
+  .btn.outline { border:4px solid #74dfa6; color:#74dfa6; }
+  .btn.filled { background:linear-gradient(180deg,#74dfa6,#37a568); color:#0d1a12; box-shadow:0 6px 18px rgba(55,165,104,.45); }
+  .bubble { width:70px; height:70px; flex:none; }
+  .q { display:flex; flex-direction:column; line-height:1.05; text-shadow:0 2px 8px rgba(0,0,0,.7); }
+  .q .ru { font-size:36px; font-weight:700; }
+  .q .en { font-size:24px; font-weight:700; margin-top:6px; opacity:.85; }
+  .arrow { font-size:54px; font-weight:700; color:#74dfa6; margin-left:6px; line-height:1; }
+</style></head>
+<body><div id="stage">
+
+<!-- band 0: follow panel, state A (outline heart, outline button) -->
+<div class="panel" style="top:20px" data-band="A">
+  <img class="avatar" src="avatar.png" alt="">
+  <div class="name"><div class="n1">Tiarin Hino</div><div class="n2">AD highlights daily · Хайлайты АД каждый день</div></div>
+  <svg class="heart" viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.6 2.6 5 6.2 5c2 0 3.4 1.1 4.3 2.4h.9C12.4 6.1 13.8 5 15.8 5c3.6 0 5.3 3.6 3.8 6.8C17.5 16.4 12 21 12 21z" fill="none" stroke="#fff" stroke-width="2"/></svg>
+  <div class="btn outline">Подписаться · Follow</div>
+</div>
+
+<!-- band 1: state AB (filled heart, outline button) -->
+<div class="panel" style="top:180px" data-band="AB">
+  <img class="avatar" src="avatar.png" alt="">
+  <div class="name"><div class="n1">Tiarin Hino</div><div class="n2">AD highlights daily · Хайлайты АД каждый день</div></div>
+  <svg class="heart" viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.6 2.6 5 6.2 5c2 0 3.4 1.1 4.3 2.4h.9C12.4 6.1 13.8 5 15.8 5c3.6 0 5.3 3.6 3.8 6.8C17.5 16.4 12 21 12 21z" fill="#ff3b5c" stroke="#ff3b5c" stroke-width="2"/></svg>
+  <div class="btn outline">Подписаться · Follow</div>
+</div>
+
+<!-- band 2: state B (filled heart, filled button) -->
+<div class="panel" style="top:340px" data-band="B">
+  <img class="avatar" src="avatar.png" alt="">
+  <div class="name"><div class="n1">Tiarin Hino</div><div class="n2">AD highlights daily · Хайлайты АД каждый день</div></div>
+  <svg class="heart" viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.6 2.6 5 6.2 5c2 0 3.4 1.1 4.3 2.4h.9C12.4 6.1 13.8 5 15.8 5c3.6 0 5.3 3.6 3.8 6.8C17.5 16.4 12 21 12 21z" fill="#ff3b5c" stroke="#ff3b5c" stroke-width="2"/></svg>
+  <div class="btn filled">✓ Подписан · Following</div>
+</div>
+
+<!-- band 3: big filled heart alone, for the pop overlay -->
+<div style="position:absolute; left:40px; top:500px; width:140px; height:140px" data-band="HEART">
+  <svg viewBox="0 0 24 24" width="140" height="140"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.6 2.6 5 6.2 5c2 0 3.4 1.1 4.3 2.4h.9C12.4 6.1 13.8 5 15.8 5c3.6 0 5.3 3.6 3.8 6.8C17.5 16.4 12 21 12 21z" fill="#ff3b5c" stroke="#ff3b5c" stroke-width="2"/></svg>
+</div>
+
+<!-- bands 4-8: comment prompts (RU big, EN small, arrow toward the comment button) -->
+<div class="panel" style="top:680px" data-band="Q1"><svg class="bubble" viewBox="0 0 24 24"><path d="M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-5 4v-4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="none" stroke="#74dfa6" stroke-width="2"/></svg><div class="q"><div class="ru">Какое комбо показать следующим?</div><div class="en">Which combo should be next?</div></div><div class="arrow">➜</div></div>
+<div class="panel" style="top:840px" data-band="Q2"><svg class="bubble" viewBox="0 0 24 24"><path d="M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-5 4v-4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="none" stroke="#74dfa6" stroke-width="2"/></svg><div class="q"><div class="ru">Билд или предметы?</div><div class="en">Build or items? Comment</div></div><div class="arrow">➜</div></div>
+<div class="panel" style="top:1000px" data-band="Q3"><svg class="bubble" viewBox="0 0 24 24"><path d="M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-5 4v-4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="none" stroke="#74dfa6" stroke-width="2"/></svg><div class="q"><div class="ru">Имба или мусор?</div><div class="en">Broken or trash? Comment</div></div><div class="arrow">➜</div></div>
+<div class="panel" style="top:1160px" data-band="Q4"><svg class="bubble" viewBox="0 0 24 24"><path d="M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-5 4v-4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="none" stroke="#74dfa6" stroke-width="2"/></svg><div class="q"><div class="ru">Взял бы такое в драфте?</div><div class="en">Would you draft this?</div></div><div class="arrow">➜</div></div>
+<div class="panel" style="top:1320px" data-band="Q5"><svg class="bubble" viewBox="0 0 24 24"><path d="M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-5 4v-4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="none" stroke="#74dfa6" stroke-width="2"/></svg><div class="q"><div class="ru">Твоё лучшее комбо в АД?</div><div class="en">Your best AD combo ever?</div></div><div class="arrow">➜</div></div>
+
+</div></body></html>
