@@ -20,7 +20,8 @@ W, H = 1080, 1920
 FPS = 15
 X, Y = 60, 1180
 BANDS = {"A": (0, 170), "AB": (170, 330), "B": (330, 490), "HEART": (490, 660),
-         "Q1": (660, 820), "Q2": (820, 980), "Q3": (980, 1140), "Q4": (1140, 1300), "Q5": (1300, 1460)}
+         "Q1": (660, 820), "Q2": (820, 980), "Q3": (980, 1140), "Q4": (1140, 1300), "Q5": (1300, 1460),
+         "A2": (1460, 1620), "AB2": (1620, 1780), "B2": (1780, 1920)}
 
 
 def ease_out(t: float) -> float:
@@ -137,6 +138,7 @@ def main() -> int:
     for k, v in el.items():
         v.save(args.out / f"element_{k}.png")
     export(follow_frames(el), args.out, "follow", args.ffmpeg)
+    export(follow_frames({"A": el["A2"], "AB": el["AB2"], "B": el["B2"], "HEART": el["HEART"]}), args.out, "follow_youtube", args.ffmpeg)
     for q in ("Q1", "Q2", "Q3", "Q4", "Q5"):
         export(comment_frames(el[q]), args.out, f"comment_{q}", args.ffmpeg)
     return 0
