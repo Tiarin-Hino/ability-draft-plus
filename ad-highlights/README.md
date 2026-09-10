@@ -136,3 +136,6 @@ x=60 / y=1180 so they sit under the action and clear of every platform's caption
 `promo/make_native.py` builds platform-native like+follow rows from `promo/native.html`: Instagram (outlined Follow ->
 Following, heart), YouTube (white Subscribe -> grey Subscribed, thumbs-up), TikTok (red + badge -> check -> gone,
 heart), each with a tap ripple. Use the variant matching the platform you upload to.
+
+`promo/make_chroma.py --all` writes chroma-key MP4s (H.264, 30 fps) of every overlay into `promo/out/chroma/` for editors that
+ignore alpha: green key for the platform-native rows, blue key for everything that contains green.
