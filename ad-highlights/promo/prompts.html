@@ -6,15 +6,15 @@
   html, body { margin:0; background:transparent; }
   #stage { position:relative; width:1080px; height:1920px; background:transparent;
            font-family:"Liberation Sans","DejaVu Sans",Arial,Helvetica,sans-serif; color:#fff; }
-  .panel { position:absolute; left:40px; display:flex; align-items:center; gap:18px; height:124px;
-           padding:0 26px 0 18px; border-radius:62px; background:rgba(14,10,20,0.86);
+  .panel { position:absolute; left:40px; display:flex; align-items:center; gap:14px; height:116px;
+           padding:0 20px 0 14px; border-radius:62px; background:rgba(14,10,20,0.86);
            box-shadow:0 0 0 3px rgba(255,255,255,0.10) inset; box-sizing:border-box; white-space:nowrap; }
-  .avatar { width:88px; height:88px; flex:none; border-radius:50%; box-shadow:0 0 0 3px #74dfa6, 0 2px 8px rgba(0,0,0,.6); }
+  .avatar { width:78px; height:78px; flex:none; border-radius:50%; box-shadow:0 0 0 3px #74dfa6, 0 2px 8px rgba(0,0,0,.6); }
   .name { display:flex; flex-direction:column; line-height:1; text-shadow:0 2px 8px rgba(0,0,0,.7); }
-  .name .n1 { font-size:34px; font-weight:700; letter-spacing:1px; }
-  .name .n2 { font-size:22px; font-weight:700; margin-top:6px; color:#74dfa6; letter-spacing:.5px; }
-  .heart { width:64px; height:64px; flex:none; margin-left:6px; }
-  .btn { height:74px; padding:0 30px; border-radius:37px; display:flex; align-items:center; font-size:30px; font-weight:700;
+  .name .n1 { font-size:30px; font-weight:700; letter-spacing:1px; }
+  .name .n2 { font-size:18px; font-weight:700; margin-top:6px; color:#74dfa6; letter-spacing:.5px; }
+  .heart { width:60px; height:60px; flex:none; margin-left:2px; }
+  .btn { height:68px; padding:0 22px; border-radius:34px; display:flex; align-items:center; font-size:27px; font-weight:700;
          letter-spacing:.5px; box-sizing:border-box; }
   .btn.outline { border:4px solid #74dfa6; color:#74dfa6; }
   .btn.filled { background:linear-gradient(180deg,#74dfa6,#37a568); color:#0d1a12; box-shadow:0 6px 18px rgba(55,165,104,.45); }
@@ -29,7 +29,7 @@
 <!-- band 0: follow panel, state A (outline heart, outline button) -->
 <div class="panel" style="top:20px" data-band="A">
   <img class="avatar" src="avatar.png" alt="">
-  <div class="name"><div class="n1">Tiarin Hino</div><div class="n2">AD highlights daily · Хайлайты АД каждый день</div></div>
+  <div class="name"><div class="n1">Tiarin Hino</div><div class="n2">AD highlights · Хайлайты АД</div></div>
   <svg class="heart" viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.6 2.6 5 6.2 5c2 0 3.4 1.1 4.3 2.4h.9C12.4 6.1 13.8 5 15.8 5c3.6 0 5.3 3.6 3.8 6.8C17.5 16.4 12 21 12 21z" fill="none" stroke="#fff" stroke-width="2"/></svg>
   <div class="btn outline">Подписаться · Follow</div>
 </div>
@@ -37,7 +37,7 @@
 <!-- band 1: state AB (filled heart, outline button) -->
 <div class="panel" style="top:180px" data-band="AB">
   <img class="avatar" src="avatar.png" alt="">
-  <div class="name"><div class="n1">Tiarin Hino</div><div class="n2">AD highlights daily · Хайлайты АД каждый день</div></div>
+  <div class="name"><div class="n1">Tiarin Hino</div><div class="n2">AD highlights · Хайлайты АД</div></div>
   <svg class="heart" viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.6 2.6 5 6.2 5c2 0 3.4 1.1 4.3 2.4h.9C12.4 6.1 13.8 5 15.8 5c3.6 0 5.3 3.6 3.8 6.8C17.5 16.4 12 21 12 21z" fill="#ff3b5c" stroke="#ff3b5c" stroke-width="2"/></svg>
   <div class="btn outline">Подписаться · Follow</div>
 </div>
@@ -45,7 +45,7 @@
 <!-- band 2: state B (filled heart, filled button) -->
 <div class="panel" style="top:340px" data-band="B">
   <img class="avatar" src="avatar.png" alt="">
-  <div class="name"><div class="n1">Tiarin Hino</div><div class="n2">AD highlights daily · Хайлайты АД каждый день</div></div>
+  <div class="name"><div class="n1">Tiarin Hino</div><div class="n2">AD highlights · Хайлайты АД</div></div>
   <svg class="heart" viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.6 2.6 5 6.2 5c2 0 3.4 1.1 4.3 2.4h.9C12.4 6.1 13.8 5 15.8 5c3.6 0 5.3 3.6 3.8 6.8C17.5 16.4 12 21 12 21z" fill="#ff3b5c" stroke="#ff3b5c" stroke-width="2"/></svg>
   <div class="btn filled">✓ Подписан · Following</div>
 </div>
