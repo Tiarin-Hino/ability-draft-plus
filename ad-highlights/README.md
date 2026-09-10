@@ -132,3 +132,7 @@ clear of the Reels/Shorts caption and button zones. Static PNG, MOV (PNG codec),
 `promo/make_prompts.py` builds the mid-video prompts from `promo/prompts.html` (channel avatar `promo/avatar.png`):
 a 3 s like-and-follow animation (heart pops, button fills) and five bilingual comment prompts, positioned at
 x=60 / y=1180 so they sit under the action and clear of every platform's caption and button zones.
+
+`promo/make_native.py` builds platform-native like+follow rows from `promo/native.html`: Instagram (outlined Follow ->
+Following, heart), YouTube (white Subscribe -> grey Subscribed, thumbs-up), TikTok (red + badge -> check -> gone,
+heart), each with a tap ripple. Use the variant matching the platform you upload to.

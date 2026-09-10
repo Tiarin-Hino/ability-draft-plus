@@ -1,0 +1,57 @@
+<!doctype html>
+<!-- Platform-native follow/like rows (Instagram Reels, YouTube Shorts, TikTok), one band per state.
+     Rendered by headless Chromium with --window-size=1080,2100, cropped/animated by make_native.py. -->
+<html><head><meta charset="utf-8">
+<style>
+  html, body { margin:0; background:transparent; }
+  #stage { position:relative; width:1080px; height:1920px; background:transparent;
+           font-family:"Liberation Sans","DejaVu Sans",Arial,Helvetica,sans-serif; color:#fff; }
+  .row { position:absolute; left:40px; display:flex; align-items:center; gap:22px; height:110px; white-space:nowrap;
+         text-shadow:0 1px 6px rgba(0,0,0,.8); }
+  .av { width:84px; height:84px; border-radius:50%; flex:none; position:relative; }
+  .av img { width:100%; height:100%; border-radius:50%; display:block; }
+  .av.ig { padding:4px; background:linear-gradient(45deg,#f9ce34,#ee2a7b,#6228d7); box-sizing:border-box; }
+  .av.ig img { border:3px solid #111; box-sizing:border-box; }
+  .av.tt img { border:3px solid #fff; box-sizing:border-box; }
+  .badge { position:absolute; left:50%; bottom:-12px; transform:translateX(-50%); width:30px; height:30px; border-radius:50%;
+           background:#fe2c55; color:#fff; font-size:26px; font-weight:700; line-height:30px; text-align:center; }
+  .badge.check { font-size:20px; }
+  .name { font-size:32px; font-weight:700; }
+  .name.yt { font-weight:500; }
+  .like { width:62px; height:62px; flex:none; margin:0 6px; filter:drop-shadow(0 1px 6px rgba(0,0,0,.8)); }
+  .pill { height:64px; padding:0 30px; border-radius:32px; display:flex; align-items:center; font-size:30px; box-sizing:border-box; }
+  .pill.ig { border:3px solid #fff; border-radius:18px; color:#fff; font-weight:500; background:rgba(0,0,0,.15); }
+  .pill.yt-sub { background:#fff; color:#0f0f0f; font-weight:700; }
+  .pill.yt-subd { background:rgba(255,255,255,.22); color:#fff; font-weight:500; }
+</style></head>
+<body><div id="stage">
+<!-- Instagram -->
+<div class="row" style="top:10px" data-band="ig_A"><div class="av ig"><img src="avatar.png"></div><div class="name">tiarinhino</div>
+  <svg class="like" viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.6 2.6 5 6.2 5c2 0 3.4 1.1 4.3 2.4h.9C12.4 6.1 13.8 5 15.8 5c3.6 0 5.3 3.6 3.8 6.8C17.5 16.4 12 21 12 21z" fill="none" stroke="#fff" stroke-width="1.8"/></svg>
+  <div class="pill ig">Follow</div></div>
+<div class="row" style="top:140px" data-band="ig_AB"><div class="av ig"><img src="avatar.png"></div><div class="name">tiarinhino</div>
+  <svg class="like" viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.6 2.6 5 6.2 5c2 0 3.4 1.1 4.3 2.4h.9C12.4 6.1 13.8 5 15.8 5c3.6 0 5.3 3.6 3.8 6.8C17.5 16.4 12 21 12 21z" fill="#ff3040" stroke="#ff3040" stroke-width="1.8"/></svg>
+  <div class="pill ig">Follow</div></div>
+<div class="row" style="top:270px" data-band="ig_B"><div class="av ig"><img src="avatar.png"></div><div class="name">tiarinhino</div>
+  <svg class="like" viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.6 2.6 5 6.2 5c2 0 3.4 1.1 4.3 2.4h.9C12.4 6.1 13.8 5 15.8 5c3.6 0 5.3 3.6 3.8 6.8C17.5 16.4 12 21 12 21z" fill="#ff3040" stroke="#ff3040" stroke-width="1.8"/></svg>
+  <div class="pill ig">Following</div></div>
+<!-- YouTube -->
+<div class="row" style="top:400px" data-band="yt_A"><div class="av"><img src="avatar.png"></div><div class="name yt">@tiarinhino</div>
+  <svg class="like" viewBox="0 0 24 24"><path d="M2 10h4v11H2zM8 10l4-8c1.5 0 2.5 1 2.5 2.5V9H20a2 2 0 0 1 2 2.3l-1.2 7A2 2 0 0 1 18.8 20H8z" fill="none" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/></svg>
+  <div class="pill yt-sub">Subscribe</div></div>
+<div class="row" style="top:530px" data-band="yt_AB"><div class="av"><img src="avatar.png"></div><div class="name yt">@tiarinhino</div>
+  <svg class="like" viewBox="0 0 24 24"><path d="M2 10h4v11H2zM8 10l4-8c1.5 0 2.5 1 2.5 2.5V9H20a2 2 0 0 1 2 2.3l-1.2 7A2 2 0 0 1 18.8 20H8z" fill="#fff" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/></svg>
+  <div class="pill yt-sub">Subscribe</div></div>
+<div class="row" style="top:660px" data-band="yt_B"><div class="av"><img src="avatar.png"></div><div class="name yt">@tiarinhino</div>
+  <svg class="like" viewBox="0 0 24 24"><path d="M2 10h4v11H2zM8 10l4-8c1.5 0 2.5 1 2.5 2.5V9H20a2 2 0 0 1 2 2.3l-1.2 7A2 2 0 0 1 18.8 20H8z" fill="#fff" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/></svg>
+  <div class="pill yt-subd">Subscribed</div></div>
+<!-- TikTok: plus badge -> check badge -> no badge -->
+<div class="row" style="top:790px" data-band="tt_A"><div class="av tt"><img src="avatar.png"><div class="badge">+</div></div><div class="name">Tiarin Hino</div>
+  <svg class="like" viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.6 2.6 5 6.2 5c2 0 3.4 1.1 4.3 2.4h.9C12.4 6.1 13.8 5 15.8 5c3.6 0 5.3 3.6 3.8 6.8C17.5 16.4 12 21 12 21z" fill="#fff" stroke="#fff" stroke-width="1.8"/></svg></div>
+<div class="row" style="top:920px" data-band="tt_AB"><div class="av tt"><img src="avatar.png"><div class="badge">+</div></div><div class="name">Tiarin Hino</div>
+  <svg class="like" viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.6 2.6 5 6.2 5c2 0 3.4 1.1 4.3 2.4h.9C12.4 6.1 13.8 5 15.8 5c3.6 0 5.3 3.6 3.8 6.8C17.5 16.4 12 21 12 21z" fill="#fe2c55" stroke="#fe2c55" stroke-width="1.8"/></svg></div>
+<div class="row" style="top:1050px" data-band="tt_B"><div class="av tt"><img src="avatar.png"><div class="badge check">✓</div></div><div class="name">Tiarin Hino</div>
+  <svg class="like" viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.6 2.6 5 6.2 5c2 0 3.4 1.1 4.3 2.4h.9C12.4 6.1 13.8 5 15.8 5c3.6 0 5.3 3.6 3.8 6.8C17.5 16.4 12 21 12 21z" fill="#fe2c55" stroke="#fe2c55" stroke-width="1.8"/></svg></div>
+<div class="row" style="top:1180px" data-band="tt_C"><div class="av tt"><img src="avatar.png"></div><div class="name">Tiarin Hino</div>
+  <svg class="like" viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.6 2.6 5 6.2 5c2 0 3.4 1.1 4.3 2.4h.9C12.4 6.1 13.8 5 15.8 5c3.6 0 5.3 3.6 3.8 6.8C17.5 16.4 12 21 12 21z" fill="#fe2c55" stroke="#fe2c55" stroke-width="1.8"/></svg></div>
+</div></body></html>
