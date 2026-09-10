@@ -4,6 +4,8 @@
   follow  - 3 s: slide in, heart pops red, button fills to "Following", slide out
   Q1..Q5  - 3 s comment prompts: slide in, arrow nudges toward the comment button, slide out
 
+Render the sheet with --window-size=1080,2100: headless Chromium's viewport is ~90 px shorter than the window,
+so a 1920 window clips anything below y~1830.
 Widgets sit at x=60, y=1180 (bottom edge ~1305): below the centre of the action, above TikTok's caption
 bubble, left of every platform's button column. Usage: python make_prompts.py [--ffmpeg PATH]
 """
