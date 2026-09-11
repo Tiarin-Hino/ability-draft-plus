@@ -94,7 +94,7 @@ maintenance spec — the authoritative map of what IS, not a build plan.
   The opt-in `aghsMarkersEnabled` setting only adds always-on overlay markers,
   resolved in scan-processor (payload-gated)
 - `resources/data/ability_tags.json` + `hero_meta.json` are GENERATED (community Tag
-  Lab on tiarinhino.com + ../ad_data_gather_script/build_ability_tags.py; the durable
+  Lab on abilitydraftplus.com + ../ad_data_gather_script/build_ability_tags.py; the durable
   source of truth is that repo's tag_overrides.json) — never hand-edit, and keep
   TAG_VOCABULARY (core/domain/ability-tags.ts) in lockstep with the script's VOCAB
 - Role weights in thresholds.ts carry their empirical rationale (expert-draft corpus +
