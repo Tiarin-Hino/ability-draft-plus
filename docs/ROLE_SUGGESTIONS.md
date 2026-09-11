@@ -17,7 +17,8 @@ Both JSON files are GENERATED — never hand-edit. Pipeline:
 mechanical → heuristics → Liquipedia CC source-lists → LLM judgment →
 `tag_overrides.json`, which is the durable source of truth). Community flow and
 the export/import loop: `../tiarinhino.com/TAGS-WORKFLOW.md` (Tag Lab is LIVE at
-tiarinhino.com/ability-tags.html with a Lambda/DynamoDB backend).
+abilitydraftplus.com/ability-tags.html with a Lambda/DynamoDB backend; the repo
+is still named tiarinhino.com — the old host 301-redirects there).
 
 ## Scoring stack (fixed layer order)
 
