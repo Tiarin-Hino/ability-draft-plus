@@ -9,6 +9,47 @@
 // - PLAYING: player block is the local player object only (no slot index available).
 // The parser normalizes both into GsiSnapshot.
 
+/**
+ * Live in-game stats for one player — the caster-edition telemetry. SPECTATOR
+ * ONLY: a playing client receives its own numbers and nothing else, which is why
+ * this whole surface is gated on spectating rather than merged into the board.
+ * Every field is optional: Dota omits blocks by phase (nothing here exists
+ * during hero selection), older cfgs lack the `items` block entirely, and the
+ * parser must never throw on a shape it has not seen.
+ */
+export interface GsiPlayerLive {
+  netWorth?: number
+  gold?: number
+  gpm?: number
+  xpm?: number
+  kills?: number
+  deaths?: number
+  assists?: number
+  lastHits?: number
+  denies?: number
+  heroDamage?: number
+  heroHealing?: number
+  towerDamage?: number
+  /** Sum of damage taken, post-reduction, across types. */
+  damageTaken?: number
+  level?: number
+  alive?: boolean
+  respawnSeconds?: number
+  buybackCost?: number
+  buybackCooldown?: number
+  hasScepter?: boolean
+  hasShard?: boolean
+  /** Inventory slots 0-5, then backpack, then neutral/TP — internal item names
+   * ("item_blink"); null for an empty slot. */
+  items?: (string | null)[]
+  backpack?: (string | null)[]
+  neutral?: string | null
+  /** Neutral enchantment (second neutral slot); null when empty. */
+  neutralEnchant?: string | null
+  /** TP scroll slot — its own slot in Dota, not part of the inventory. */
+  teleport?: string | null
+}
+
 /** One known player slot, parsed from spectator-mode allplayers data. */
 export interface GsiPlayer {
   /** 0–9, matching the scan pipeline's selected-abilities player index. */
@@ -17,6 +58,8 @@ export interface GsiPlayer {
   accountId: string | null
   /** Picked hero model as Valve npc short name (e.g. "sand_king"); null until picked. */
   heroNpcName: string | null
+  /** In-game telemetry; absent outside a running game or when playing. */
+  live?: GsiPlayerLive
 }
 
 export interface GsiSnapshot {

@@ -1,0 +1,796 @@
+/* Ability Draft Plus — Twitch video overlay. Palette mirrors the app's stream board
+   (src/renderer/stream/src/stream.css) and the overlay tooltip typography. The root is
+   click-through; only hit regions, panels and the launcher accept pointer events.
+   No backdrop-filter (cheap to composite on top of video). */
+
+:root {
+  --bg-deep: #0b0d11;
+  --panel: rgba(18, 21, 27, 0.96);
+  --panel-border: rgba(255, 255, 255, 0.09);
+  --text: #eef1f6;
+  --text-dim: #97a0b0;
+  --gold: #c9a34c;
+  --gold-soft: rgba(201, 163, 76, 0.5);
+  --radiant: #6fbf4a;
+  --dire: #d34b3a;
+  --op: #4caf7d;
+  --trap: #d9534f;
+  --teal: #3fb8c8;
+  --unknown: #e8b93c;
+  --picked-opacity: 0.35;
+  --font: 'Segoe UI', 'Trebuchet MS', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+}
+
+.overlay-body {
+  font-family: var(--font);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.overlay-root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+/* ---------------- launcher ---------------- */
+
+.launcher {
+  position: absolute;
+  z-index: 30;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  pointer-events: auto;
+}
+.launcher-tl {
+  top: 10px;
+  left: 10px;
+}
+.launcher-tr {
+  top: 10px;
+  right: 10px;
+  flex-direction: row-reverse;
+}
+.launcher-bl {
+  bottom: 60px;
+  left: 10px;
+}
+.launcher-br {
+  bottom: 60px;
+  right: 10px;
+  flex-direction: row-reverse;
+}
+
+.launcher-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px 5px 8px;
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+  background: var(--panel);
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+.launcher-mark {
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 0.04em;
+}
+.launcher-phase {
+  color: var(--text-dim);
+}
+.launcher-phase.phase-drafting {
+  color: var(--radiant);
+}
+.launcher-phase.launcher-warn {
+  color: var(--unknown);
+}
+.launcher-actions {
+  display: flex;
+  gap: 6px;
+}
+.launcher-btn {
+  padding: 5px 10px;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: var(--panel);
+  cursor: pointer;
+}
+.launcher-btn:hover,
+.launcher-btn.is-active {
+  border-color: var(--gold-soft);
+  color: var(--gold);
+}
+
+/* ---------------- hit regions ---------------- */
+
+.hit-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Demo-mode board (?demo=<mode>). Never rendered over a live stream — there the
+   real draft screen is the video underneath. Sits below the hit regions and is
+   inert; the hit layer above it stays the only interactive thing. */
+.demo-board {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.demo-board-surface {
+  position: absolute;
+  border-radius: 10px;
+  background: linear-gradient(160deg, rgb(32 38 46 / 92%), rgb(18 22 28 / 92%));
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 6%);
+}
+
+.demo-tile {
+  position: absolute;
+  object-fit: cover;
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 60%);
+}
+
+.demo-tile.is-picked {
+  filter: grayscale(85%) brightness(0.45);
+}
+
+.hit {
+  position: absolute;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+.hit:hover {
+  border-color: var(--gold);
+}
+.hit.is-selected {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px var(--gold-soft), 0 0 14px var(--gold-soft);
+}
+.hit.is-picked {
+  border-style: dashed;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+.hit.is-picked:hover {
+  border-color: var(--text-dim);
+}
+.hit.is-unknown {
+  border-style: dashed;
+  border-color: rgba(232, 185, 60, 0.45);
+  cursor: default;
+}
+.hit.is-partner-strong {
+  border-color: var(--teal);
+}
+.hit.is-partner-weak {
+  border-color: var(--trap);
+}
+.hit-portrait.team-radiant:hover {
+  border-color: var(--radiant);
+}
+.hit-portrait.team-dire:hover {
+  border-color: var(--dire);
+}
+
+/* ---------------- art ---------------- */
+
+.art {
+  display: inline-block;
+  border-radius: 4px;
+  object-fit: cover;
+  background: #1a1e26;
+  flex: none;
+}
+.art-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+  font-weight: 700;
+  border: 1px solid var(--panel-border);
+}
+.art-portrait {
+  border-radius: 3px;
+}
+
+/* ---------------- details dock ---------------- */
+
+.details-dock {
+  position: absolute;
+  top: 6%;
+  z-index: 20;
+  width: 340px;
+  max-height: 88%;
+  overflow-y: auto;
+  padding: 12px 14px 14px;
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  background: var(--panel);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+  pointer-events: auto;
+  scrollbar-width: thin;
+}
+.dock-left {
+  left: 2%;
+}
+.dock-right {
+  right: 2%;
+}
+.details-close {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 18px;
+  cursor: pointer;
+}
+.details-close:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.08);
+}
+.details-header {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding-right: 24px;
+}
+.details-heading {
+  min-width: 0;
+}
+.details-title {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--gold);
+}
+.details-subtitle {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.details-section {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--panel-border);
+}
+.details-section:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+.muted {
+  color: var(--text-dim);
+  margin: 4px 0;
+}
+.small {
+  font-size: 11px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.chip {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.chip-pool {
+  color: var(--radiant);
+  border-color: rgba(111, 191, 74, 0.4);
+}
+.chip-picked {
+  color: var(--text);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+.chip-top {
+  color: var(--gold);
+  border-color: var(--gold-soft);
+}
+.chip-new {
+  margin-left: 6px;
+  color: var(--teal);
+  border-color: rgba(63, 184, 200, 0.5);
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 10px;
+  margin: 0;
+}
+.stat-grid-3 {
+  grid-template-columns: auto 1fr auto 1fr auto 1fr;
+}
+.stat-grid dt {
+  color: var(--text-dim);
+}
+.stat-grid dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.dota-desc {
+  margin: 8px 0;
+  line-height: 1.4;
+  white-space: pre-line;
+}
+.attrib-list {
+  margin: 6px 0 0;
+}
+.attrib-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 0;
+  border-bottom: 1px dotted rgba(255, 255, 255, 0.06);
+}
+.attrib-row dt {
+  color: var(--text-dim);
+  font-size: 11px;
+  text-transform: capitalize;
+}
+.attrib-row dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.aghs-card {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(63, 184, 200, 0.35);
+  background: rgba(63, 184, 200, 0.08);
+}
+.aghs-shard {
+  border-color: rgba(201, 163, 76, 0.4);
+  background: rgba(201, 163, 76, 0.08);
+}
+.aghs-title {
+  margin: 0 0 4px;
+  font-size: 12px;
+  color: var(--teal);
+}
+.aghs-shard .aghs-title {
+  color: var(--gold);
+}
+.aghs-card p {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.partner-block {
+  margin-top: 6px;
+}
+.partner-label {
+  margin: 4px 0;
+  font-size: 11px;
+  color: var(--op);
+}
+.tone-weak .partner-label {
+  color: var(--trap);
+}
+.partner-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.partner-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 3px 4px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.partner-row:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.partner-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.partner-wr {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+}
+.partner-note {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.is-gone .partner-row {
+  opacity: var(--picked-opacity);
+}
+
+.talent-tree {
+  display: grid;
+  gap: 4px;
+}
+.talent-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 6px;
+  align-items: center;
+  font-size: 12px;
+}
+.talent-row .talent:first-child {
+  text-align: right;
+}
+.talent-level {
+  min-width: 26px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(201, 163, 76, 0.18);
+  color: var(--gold);
+  text-align: center;
+  font-size: 11px;
+}
+.talent.is-inert {
+  opacity: 0.45;
+}
+
+/* ---------------- in-game ---------------- */
+
+.pick-col {
+  position: absolute;
+  transform: translateX(-50%);
+  z-index: 14;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 8px;
+  border-top: 2px solid var(--radiant);
+  background: rgba(11, 13, 17, 0.75);
+  pointer-events: auto;
+}
+.pick-col.team-dire {
+  border-top-color: var(--dire);
+}
+.pick-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+}
+.pick-tile.is-ult {
+  border-color: var(--gold-soft);
+  margin-top: 3px;
+}
+.pick-tile.is-empty {
+  border-style: dashed;
+  cursor: default;
+}
+.pick-tile:not(.is-empty):hover {
+  border-color: var(--gold);
+}
+
+/* ---------------- caster scoreboard ---------------- */
+
+.caster-panel {
+  position: absolute;
+  top: 8%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 26;
+  /* Sized to the content: the columns are fixed, so a wider panel only grows the
+     items column. 900px fits six items plus a neutral without stretching. */
+  width: min(96%, 900px);
+  max-height: 78%;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  background: rgba(11, 13, 17, 0.94);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55);
+  pointer-events: auto;
+  overflow: hidden;
+}
+.caster-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--panel-border);
+}
+.caster-head h2 {
+  margin: 0;
+  font-size: 15px;
+  color: var(--gold);
+}
+.caster-totals {
+  display: flex;
+  gap: 18px;
+  margin-left: auto;
+  margin-right: 14px;
+}
+.caster-total {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.caster-total-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.caster-total.team-radiant .caster-total-value { color: var(--radiant); }
+.caster-total.team-dire .caster-total-value { color: var(--dire); }
+.caster-total-value { font-weight: 700; }
+
+/* The legend and each row are SEPARATE grids, so every column has to size
+   identically without reference to its own content — otherwise the header words
+   and the data below them resolve to different widths and nothing lines up.
+   Hence fixed tracks throughout, with a single flexible column (items) last to
+   absorb the panel's slack. A flexible NAME column would take that slack instead
+   and leave a canyon between the names and the numbers. */
+.caster-legend,
+.caster-row {
+  display: grid;
+  grid-template-columns: 44px 176px 72px 66px 74px 82px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 4px 14px;
+}
+.caster-legend {
+  /* Matches the rows' 3px team stripe so the header sits on the same grid. */
+  border-left: 3px solid transparent;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--panel-border);
+}
+.caster-legend span:first-child { grid-column: 1 / span 2; }
+.caster-rows { overflow-y: auto; }
+.caster-row {
+  border-left: 3px solid var(--radiant);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+}
+.caster-row.team-dire { border-left-color: var(--dire); }
+.caster-row.is-dead { opacity: 0.55; }
+.caster-identity { min-width: 0; display: flex; flex-direction: column; }
+.caster-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.caster-sub { display: flex; align-items: center; gap: 5px; margin-top: 1px; }
+.caster-level {
+  min-width: 18px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 10.5px;
+  text-align: center;
+}
+.pip {
+  padding: 0 4px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 15px;
+}
+.pip-scepter { background: rgba(88, 160, 255, 0.25); color: #8dc0ff; }
+.pip-shard { background: rgba(120, 220, 255, 0.2); color: #8fe3ff; }
+.pip-dead { background: rgba(217, 88, 70, 0.2); color: var(--dire); }
+/* Buyback: held / on cooldown / unaffordable. The unaffordable state stays
+   visible but recedes — absence of a pip would read as "no data". */
+.pip-buyback { background: rgba(111, 191, 74, 0.22); color: var(--radiant); }
+.pip-bb-cooldown { background: rgba(201, 163, 76, 0.18); color: var(--gold); }
+.pip-bb-none {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-dim);
+  text-decoration: line-through;
+}
+
+.caster-xpm,
+.caster-taken {
+  display: block;
+  font-size: 10.5px;
+  color: var(--text-dim);
+}
+.caster-net { font-weight: 700; color: var(--gold); }
+.caster-items { display: flex; gap: 3px; flex-wrap: wrap; }
+.art-item { border-radius: 3px; object-fit: cover; }
+.art-empty {
+  display: inline-block;
+  border: 1px dashed var(--panel-border);
+  border-radius: 3px;
+}
+
+/* ---------------- overview modal ---------------- */
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  pointer-events: auto;
+}
+.modal {
+  max-width: 92%;
+  max-height: 90%;
+  overflow: auto;
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+}
+.modal-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 10px 40px 8px 16px;
+  border-bottom: 1px solid var(--panel-border);
+}
+.modal-head h2 {
+  margin: 0;
+  font-size: 15px;
+  color: var(--gold);
+}
+.ov-body {
+  display: flex;
+  gap: 18px;
+  padding: 12px 16px 16px;
+}
+.ov-pool {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ov-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.ov-ults {
+  justify-content: center;
+  margin-bottom: 4px;
+}
+.ov-gap {
+  width: 22px;
+}
+.ov-tile {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+}
+.ov-tile.is-large {
+  border-color: var(--gold-soft);
+}
+.ov-tile:hover {
+  border-color: var(--gold);
+}
+.ov-tile.is-picked {
+  opacity: var(--picked-opacity);
+}
+.ov-tile.is-unknown {
+  border-style: dashed;
+  border-color: rgba(232, 185, 60, 0.45);
+  cursor: default;
+}
+.ov-hero {
+  padding: 1px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+}
+.ov-hero:hover {
+  border-color: var(--gold);
+}
+.ov-hero.is-picked {
+  opacity: var(--picked-opacity);
+}
+.ov-order {
+  width: 260px;
+  max-height: 480px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.order-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.order-row {
+  display: grid;
+  grid-template-columns: 26px 90px 1fr;
+  gap: 6px;
+  padding: 3px 4px;
+  border-left: 3px solid var(--radiant);
+  margin-bottom: 2px;
+  border-radius: 0 4px 4px 0;
+  background: rgba(255, 255, 255, 0.03);
+}
+.order-row.team-dire {
+  border-left-color: var(--dire);
+}
+.order-num {
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+.order-player {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.order-pick {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* light theme (Twitch context.theme) */
+.theme-light {
+  --panel: rgba(250, 250, 252, 0.97);
+  --panel-border: rgba(0, 0, 0, 0.12);
+  --text: #16181d;
+  --text-dim: #5b6472;
+}

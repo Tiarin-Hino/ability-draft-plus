@@ -23,6 +23,18 @@
     "errorGeneric": "Palvelimen käynnistys epäonnistui. Katso lisätiedot lokeista.",
     "errorInvalidPort": "Virheellinen portti. Käytä numeroa väliltä 1024–65535."
   },
+  "background": {
+    "title": "Taustatila",
+    "description": "Aja draft-istunto ilman että overlay näkyy näytölläsi. Skannaukset, automaattinen seuranta, striimitaulu ja Twitch-laajennus toimivat kuten ennenkin.",
+    "toggle": "Älä koskaan näytä overlaytä",
+    "hint": "Striimaajille, jotka lähettävät taulun tai Twitch-laajennuksen mutta eivät halua overlaytä pelatessaan. Käynnistä istunto tavalliseen tapaan — pikanäppäimet Ctrl+Shift+S ja Ctrl+Shift+R skannaavat ja uudelleenskannaavat edelleen.",
+    "activeNote": "Istunto on nyt käynnissä taustalla.",
+    "autoCloseNote": "Overlayn automaattinen sulkeminen pysyy pois päältä tässä tilassa: overlay ei peitä peliä, ja sulkeminen tyhjentäisi draftin kesken ottelun.",
+    "resetDraft": "Nollaa draft",
+    "endSession": "Lopeta istunto",
+    "resetDone": "Draft tyhjennetty. Seuraava skannaus aloittaa uuden draftin.",
+    "controlsHint": "Uusi ottelu tyhjentää edellisen draftin automaattisesti. Käytä Nollaa draft -painiketta, jos vanha draft jäi näkyviin, tai Lopeta istunto -painiketta seurannan lopettamiseksi."
+  },
   "gsi": {
     "title": "Dota 2 Game State Integration",
     "description": "Antaa Dotan lähettää pelaajien nimet, pelivaiheen ja kellon striimilaudalle. Vaatii kertaluonteisen asetustiedoston Dota-kansioosi ja Dotan uudelleenkäynnistyksen.",
@@ -32,6 +44,7 @@
     "notDetected": "Dota-asennusta ei löytynyt — valitse \"dota 2 beta\" -kansio manuaalisesti.",
     "cfgPresent": "Asetustiedosto asennettu",
     "cfgMissing": "Asetustiedostoa ei ole vielä asennettu",
+    "cfgOutdated": "Asennettu asetustiedosto on selostajatilastoja vanhempi (esineet puuttuvat siitä). Asenna se uudelleen ja käynnistä Dota 2 uudelleen.",
     "writeCfg": "Asenna asetustiedosto",
     "browse": "Selaa…",
     "pickFolderTitle": "Valitse \"dota 2 beta\" -kansio",
@@ -56,5 +69,40 @@
     "step2": "OBS:ssä: Sources → Add → Browser, liitä URL, aseta kooksi 1920×1080.",
     "step3": "Tausta on oletuksena läpinäkyvä. Lisää ?bg=dark yhtenäistä taustaa varten tai ?bg=chroma green screeniä varten.",
     "note": "Lauta seuraa overlay-skannauksiasi: pooli ilmestyy skannauksen jälkeen (Ctrl+Shift+S) ja pickit päivittyvät jokaisen uudelleenskannauksen jälkeen (Ctrl+Shift+R)."
+  },
+  "twitch": {
+    "title": "Twitch-laajennus",
+    "description": "Antaa katsojiesi klikata draftisi kykyjä suoraan Twitchissä. Yhdistä sovellus kanavaasi kerran ja pidä lähetys päällä.",
+    "status": {
+      "unpaired": "Ei yhdistetty",
+      "paired": "Yhdistetty",
+      "broadcasting": "Lähettää",
+      "error": "Virhe"
+    },
+    "step1": "Asenna Ability Draft Plus -laajennus Twitch-kanavallesi ja avaa sen asetussivu.",
+    "step2": "Kopioi siellä näkyvä yhdistämiskoodi.",
+    "step3": "Liitä koodi alle ja paina Yhdistä.",
+    "codeLabel": "Yhdistämiskoodi",
+    "codePlaceholder": "XXXX-XXXX",
+    "pairButton": "Yhdistä",
+    "pairing": "Yhdistetään…",
+    "channel": "Kanava: {{name}}",
+    "channelUnknown": "Kanava {{id}}",
+    "enable": "Lähetä draft Twitchiin",
+    "enableHint": "Lähettää draft-taulun katsojillesi jokaisen skannauksen jälkeen. Pelivaiheen seuranta vaatii käynnissä olevan stream-palvelimen; OBS:ää ei tarvita.",
+    "lastPublish": "Viimeisin päivitys lähetetty klo {{time}}",
+    "neverPublished": "Päivityksiä ei ole vielä lähetetty",
+    "testButton": "Lähetä testipäivitys",
+    "testSent": "Päivitys toimitettu laajennuksen taustapalveluun.",
+    "unpairButton": "Poista yhdistys",
+    "errorInvalidCode": "Yhdistämiskoodi on virheellinen tai vanhentunut — luo uusi laajennuksen asetussivulla.",
+    "errorNetwork": "Laajennuksen taustapalveluun ei saatu yhteyttä. Tarkista internetyhteytesi.",
+    "errorUnauthorized": "Kanavan yhdistys ei ole enää voimassa. Poista yhdistys ja yhdistä uudelleen.",
+    "errorPublishFailed": "Viimeisintä päivitystä ei voitu toimittaa. Sitä yritetään automaattisesti uudelleen.",
+    "errorLiveFailed": "Ottelun reaaliaikaiset tilastot eivät tavoita katsojia — laajennuksen taustapalvelu voi olla vanhentunut. Draft-taulu toimii normaalisti.",
+    "errorTooLarge": "Draft-päivitys oli Twitchille liian suuri, eikä sitä toimitettu.",
+    "errorVersion": "Laajennuksen taustapalvelu vaatii uudemman sovellusversion. Päivitä sovellus.",
+    "errorDisabled": "Kytke lähetys ensin päälle.",
+    "errorNothingToSend": "Ei vielä mitään lähetettävää — skannaa ensin draft."
   }
 }

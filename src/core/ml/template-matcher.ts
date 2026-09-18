@@ -47,6 +47,8 @@ export interface PickMatchResult {
   secondName: string | null
   /** Winner's NCC lead over the runner-up; null when there is no runner-up. */
   margin: number | null
+  /** Pixel std of the crop — what the empty-box cutoff was judged on. */
+  pixelStd: number
 }
 
 export function computePixelStats(vec: Uint8Array): PixelStats {
@@ -155,6 +157,7 @@ export function matchPickSlot(
       bestName: null,
       secondName: null,
       margin: null,
+      pixelStd: stats.std,
     }
   }
 
@@ -178,6 +181,7 @@ export function matchPickSlot(
       bestName: null,
       secondName: null,
       margin: null,
+      pixelStd: stats.std,
     }
   }
 
@@ -191,5 +195,6 @@ export function matchPickSlot(
     bestName,
     secondName,
     margin: Number.isFinite(second) ? best - second : null,
+    pixelStd: stats.std,
   }
 }

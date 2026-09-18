@@ -102,6 +102,19 @@ Caveats:
 - All 10 player names are only available while **spectating/casting**. When playing,
   Dota reports only your own identity.
 
+## Background mode (no overlay on your screen)
+
+Streaming page → **Background mode** → *Never show the overlay*. Activate a session as
+usual; the overlay window is created but never shown, so nothing appears on your screen
+while the board, the picks strips and the Twitch extension keep updating. Ctrl+Shift+S
+and Ctrl+Shift+R still scan and rescan.
+
+For streamers and casters who broadcast the board (or the Twitch extension) but do not
+want the overlay while they play. Two deliberate differences from a normal session: the
+control panel is not minimized (you are not being sent into the game), and GSI overlay
+auto-close does nothing — there is nothing covering the game, and closing would clear the
+draft mid-match.
+
 ## Experimental: automatic draft tracking
 
 Off by default (Streaming page → *Auto draft tracking*). When enabled, during the
@@ -149,18 +162,11 @@ Things to know before enabling:
 
 - Hero-model pick recognition (the `modelSelectionMarker` events mark the hook).
 - Caster-triggered short clips explaining broken/bugged abilities during the draft.
-- **Twitch extension** letting viewers browse pool abilities themselves (PGL-style video
-  overlay). Deliberately deferred until Streamer View is finalized and cleaned up: the
-  board state assembled here is already the complete data set an overlay needs, so the
-  extension is primarily a *transport swap* — instead of SSE to localhost, the same
-  versioned `StreamEnvelope` goes to a hosted EBS that relays it to viewers via Twitch
-  PubSub. Do not design a second data path for it.
-  Extension-specific work that does NOT exist yet:
-  - EBS (small Node service): Twitch JWT verification, `send-extension-message` relay.
-    Envelope must fit the 5KB / 1-msg-per-sec-per-channel PubSub limits.
-  - Streamer-side opt-in: Twitch OAuth pairing + a "broadcast" toggle that pushes
-    envelopes to the EBS alongside (not instead of) the local SSE feed.
-  - Stream-delay sync: timestamp each envelope; the frontend buffers against
-    `hlsLatencyBroadcaster` so viewers see the board matching their delayed video.
-  - Overlay alignment assumes a fullscreen 16:9 game scene; cropped/custom OBS scenes
-    need a calibration offset on the extension config page.
+- ~~**Twitch extension**~~ — built (streamer edition, see `docs/TWITCH_EXTENSION.md`).
+  It is the *transport swap* this section always described: the built board state is
+  projected (`core/domain/twitch-projection.ts`) and pushed by
+  `main/services/twitch-publisher-service.ts` to the EBS in `twitch/ebs`, which relays a
+  compact (<5 KB) message to viewers over Twitch PubSub; the frontend in `twitch/frontend`
+  delay-buffers it against `hlsLatencyBroadcaster`. No second data path exists — the
+  publisher is a `subscribeState` consumer of this server. Still open: the caster edition
+  (spectator GSI extras, reserved `caster` field in the rich state) and a mobile view.

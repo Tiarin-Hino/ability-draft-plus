@@ -44,23 +44,33 @@ export interface StreamHeroRow {
   heroDisplayName: string | null
   /** Server-relative portrait path; null when the hero's CDN name could not be derived. */
   portraitPath: string | null
+  /** Valve CDN short name the portrait path was built from (e.g. "sand_king");
+   * null when underivable. Consumed by the Twitch projection as the catalog key. */
+  cdnName: string | null
   /** ability_order 1–3 (Q/W/E), sorted. */
   standard: StreamAbilitySlot[]
   ultimate: StreamAbilitySlot | null
-  /** True once this hero MODEL was drafted by a player (tile-diff detection while
-   * playing, GSI while spectating feeds the player rows instead). */
+  /** True once this hero MODEL was drafted by a player (card OCR while playing;
+   * while spectating GSI feeds the player rows instead). */
   modelPicked: boolean
 }
 
 export type StreamTeam = 'radiant' | 'dire'
 
-/** A player's picked hero model (from GSI). */
+/** A player's picked hero model (from GSI, or scan attribution while playing). */
 export interface StreamPlayerModel {
-  /** Valve npc short name (e.g. "sand_king") — also the CDN portrait key. */
+  /** GSI: Valve npc short name (e.g. "sand_king"). Scan attribution: the DB hero
+   * name, which is Windrun's concatenated form ("sandking") — NOT a CDN key.
+   * Use cdnName for anything that must resolve art or catalog entries. */
   npcName: string
   displayName: string
   /** Server-relative portrait path. */
   portraitPath: string
+  /** Valve CDN short name the portrait path was built from. */
+  cdnName: string
+  /** Pool hero row 0-11 when the model was attributed from the pool (scan
+   * attribution); absent for GSI-sourced models. */
+  poolHeroOrder?: number
 }
 
 /** One of the 10 player rows with their picked abilities. */
@@ -165,8 +175,8 @@ export interface StreamServerStatusInfo {
 
 /**
  * One attributed pick in the draft timeline (experimental auto-rescan feature, Phase 5).
- * kind 'modelSelectionMarker' records a turn where no ability left the pool — the player
- * picked a hero model instead; model recognition itself is future work.
+ * kind 'modelSelectionMarker' records a turn where the player drafted a hero model
+ * instead of an ability (playing mode: read off their card; spectate: from GSI).
  */
 export interface PickEvent {
   seq: number
@@ -174,6 +184,29 @@ export interface PickEvent {
   abilityName: string | null
   kind: 'ability' | 'modelSelectionMarker'
   clockTime: number | null
+  /**
+   * Markers only: the pool hero (0-11) this model pick stands for. Lets a later
+   * card read re-label or move exactly this marker instead of appending a
+   * duplicate (see core/domain/model-picks-from-ocr.ts). Absent on spectate
+   * markers, which come from GSI and are never corrected.
+   */
+  poolHeroOrder?: number
+  /**
+   * Ability events only: which box group on the card the pick was read from.
+   * Standard boxes are a SET (Dota reorders them as picks land); the single
+   * ultimate box never moves (core/domain/pick-attribution.ts).
+   */
+  box?: 'std' | 'ult'
+  /** Ability events only: not visible on the card while some box was unreadable —
+   * a phantom if it is still missing once every box reads cleanly. */
+  vacated?: boolean
+  /**
+   * Seconds since the pick-phase anchor when the capture that first showed this
+   * pick started. Places the pick at its draft turn (orderByDraftTurns). Absent
+   * when no trustworthy anchor exists (replay, mid-draft join) and on spectate
+   * GSI markers; a renamed misread keeps the original's.
+   */
+  seenAtS?: number
 }
 
 // ---------------------------------------------------------------------------

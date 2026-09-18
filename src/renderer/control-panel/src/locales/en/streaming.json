@@ -23,6 +23,18 @@
     "errorGeneric": "The server failed to start. Check the logs for details.",
     "errorInvalidPort": "Invalid port. Use a number between 1024 and 65535."
   },
+  "background": {
+    "title": "Background mode",
+    "description": "Run the draft session without the overlay appearing on your screen. Scans, automatic tracking, the stream board and the Twitch extension all work exactly as usual.",
+    "toggle": "Never show the overlay",
+    "hint": "For streamers who broadcast the board or the Twitch extension but do not want the overlay while they play. Activate a session as normal — the hotkeys Ctrl+Shift+S and Ctrl+Shift+R still scan and rescan.",
+    "activeNote": "A session is running in the background right now.",
+    "autoCloseNote": "Overlay auto-close stays off in this mode: there is nothing covering the game, and closing would clear the draft mid-match.",
+    "resetDraft": "Reset draft",
+    "endSession": "End session",
+    "resetDone": "Draft cleared. The next scan starts a fresh draft.",
+    "controlsHint": "A new match clears the previous draft automatically. Use Reset draft if a draft is left over, or End session to stop tracking."
+  },
   "gsi": {
     "title": "Dota 2 Game State Integration",
     "description": "Lets Dota send player names, game phase, and clock to the stream board. Requires a one-time config file in your Dota folder and a Dota restart.",
@@ -32,6 +44,7 @@
     "notDetected": "Dota installation not found — pick the \"dota 2 beta\" folder manually.",
     "cfgPresent": "Config file installed",
     "cfgMissing": "Config file not installed yet",
+    "cfgOutdated": "Your installed config predates the caster stats (items are missing from it). Reinstall it and restart Dota 2 to enable them.",
     "writeCfg": "Install config file",
     "browse": "Browse…",
     "pickFolderTitle": "Select the \"dota 2 beta\" folder",
@@ -56,5 +69,40 @@
     "step2": "In OBS: Sources → Add → Browser, paste the URL, set the size to 1920×1080.",
     "step3": "The background is transparent by default. Append ?bg=dark for a solid background or ?bg=chroma for a green screen.",
     "note": "The board follows your overlay scans: the pool appears after a scan (Ctrl+Shift+S) and picks update after each rescan (Ctrl+Shift+R)."
+  },
+  "twitch": {
+    "title": "Twitch extension",
+    "description": "Lets your viewers click the abilities in your draft on Twitch. Pair the app with your channel once, then keep broadcasting on.",
+    "status": {
+      "unpaired": "Not paired",
+      "paired": "Paired",
+      "broadcasting": "Broadcasting",
+      "error": "Error"
+    },
+    "step1": "Install the Ability Draft Plus extension on your Twitch channel and open its configuration page.",
+    "step2": "Copy the pairing code shown there.",
+    "step3": "Paste the code below and press Pair.",
+    "codeLabel": "Pairing code",
+    "codePlaceholder": "XXXX-XXXX",
+    "pairButton": "Pair",
+    "pairing": "Pairing…",
+    "channel": "Channel: {{name}}",
+    "channelUnknown": "Channel {{id}}",
+    "enable": "Broadcast the draft to Twitch",
+    "enableHint": "Sends the draft board to your viewers after every scan. Game-phase tracking needs the stream server running; OBS is not required.",
+    "lastPublish": "Last update sent at {{time}}",
+    "neverPublished": "No update sent yet",
+    "testButton": "Send test update",
+    "testSent": "Update delivered to the extension backend.",
+    "unpairButton": "Unpair",
+    "errorInvalidCode": "That pairing code is invalid or has expired — generate a new one on the extension's configuration page.",
+    "errorNetwork": "Could not reach the extension backend. Check your internet connection.",
+    "errorUnauthorized": "The channel pairing is no longer valid. Unpair and pair again.",
+    "errorPublishFailed": "The last update could not be delivered. It will be retried automatically.",
+    "errorLiveFailed": "Live game stats are not reaching viewers — the extension backend may be out of date. The draft board is unaffected.",
+    "errorTooLarge": "The draft update was too large for Twitch and was not delivered.",
+    "errorVersion": "The extension backend requires a newer app version. Please update the app.",
+    "errorDisabled": "Turn on broadcasting first.",
+    "errorNothingToSend": "Nothing to send yet — scan a draft first."
   }
 }

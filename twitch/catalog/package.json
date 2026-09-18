@@ -1,0 +1,15 @@
+{
+  "name": "ability-draft-plus-twitch-catalog",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Builds the Dota game-data catalog (dotaconstants) used by the Twitch extension frontend",
+  "type": "module",
+  "scripts": {
+    "build": "node build-catalog.mjs",
+    "build:demo": "node build-catalog.mjs --slice demo",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^4.0.18"
+  }
+}

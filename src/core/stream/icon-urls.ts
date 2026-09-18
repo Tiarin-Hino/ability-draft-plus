@@ -47,6 +47,17 @@ export function heroIconPath(heroCdnName: string): string {
 }
 
 /**
+ * Full CDN URL for an item icon. Takes the internal name with or without the
+ * `item_` prefix ("blink" and "item_blink" both work) — the caster telemetry
+ * strips the prefix on the wire to save bytes. Verified 200 on the CDN for
+ * blink, ultimate_scepter and aghanims_shard.
+ */
+export function itemCdnUrl(itemName: string): string {
+  const name = itemName.startsWith('item_') ? itemName.slice(5) : itemName
+  return `${VALVE_CDN_BASE}/items/${name}.png`
+}
+
+/**
  * True when the name is safe to embed in a URL path segment. Ability names from the ML
  * class list are lowercase snake_case; anything else (corrupt scan data, injection via a
  * crafted payload) must not reach the icon route.

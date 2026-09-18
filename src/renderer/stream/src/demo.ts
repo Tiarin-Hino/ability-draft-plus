@@ -83,6 +83,7 @@ export function buildDemoState(): StreamBoardState {
     // A few models already drafted, mirroring a mid-draft board
     modelPicked: order % 4 === 2,
     portraitPath: `/icons/heroes/${hero.npc}.png`,
+    cdnName: hero.npc,
     standard: hero.abilities.map((name, i) =>
       slot(name, titleCase(name), winrates[(order + i) % winrates.length], {
         isTopTier: (order * 3 + i) % 11 === 0,
@@ -109,6 +110,7 @@ export function buildDemoState(): StreamBoardState {
             npcName: HERO_SETS[(playerIndex * 7) % 12].npc,
             displayName: HERO_SETS[(playerIndex * 7) % 12].display,
             portraitPath: `/icons/heroes/${HERO_SETS[(playerIndex * 7) % 12].npc}.png`,
+            cdnName: HERO_SETS[(playerIndex * 7) % 12].npc,
           }
         : null
     return {

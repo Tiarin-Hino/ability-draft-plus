@@ -38,7 +38,7 @@ import {
   PICK_TEMPLATE_COMPARE_SIZE,
   PICK_TEMPLATE_CROP_INSET_RATIO,
   PICK_TEMPLATE_FALLBACK_MIN_NCC,
-  PICK_TEMPLATE_EMPTY_STD,
+  TILE_EMPTY_STD,
   MODEL_INPUT_SIZE,
   OCR_NAME_STRIP_HEIGHT_RATIO,
   OCR_STRIP_TARGET_WIDTH,
@@ -72,9 +72,9 @@ import {
 // are new OR whose mtime changed — the icon cache rewrites files when Valve reworks art
 // (see ICON_CACHE_REFRESH_TTL_MS), so templates must not be treated as append-only.
 // The classifier remains the pick-slot path only when no templates are available.
-// Every scan additionally captures the 12 model portrait tiles (models_coords) as
-// normalized raw crops — the scan-processor diffs them against the initial-scan
-// baseline to detect picked models (see core/domain/model-pick-detection.ts) —
+// Every scan additionally crops the 12 model portrait tiles (models_coords) to
+// identify the pool's heroes against the reference-tile library (they never leave
+// the worker — picked models come from card OCR, core/domain/model-picks-from-ocr.ts),
 // plus the 10 player cards (heroes_coords) for the GSI slot <-> scan row
 // correlation (see core/domain/slot-row-correlation.ts).
 
@@ -344,7 +344,7 @@ async function handleScan(payload: {
     )
   }
 
-  // Model portrait tiles for picked-model diff detection — captured every scan
+  // Model portrait tiles for pool-hero identification — cropped every scan
   // (~10ms for 12 small crops from the already-decoded bitmap)
   const modelTiles = await captureModelTiles(screenshot, coords)
   // Player cards for GSI slot <-> scan row correlation — same cost profile
@@ -354,15 +354,13 @@ async function handleScan(payload: {
   // "YOU WILL DRAFT IN" digits for countdown-based own-row detection
   const countdownStrip = await captureCountdownStrip(screenshot)
   // Model-tile identification against the reference library (no-op until the
-  // gather script's models mode populates it) — MUST run before the tiles'
-  // buffers are transferred away below
+  // gather script's models mode populates it)
   const modelTileMatches = await matchModelTiles(modelTiles)
 
   const response: MlWorkerSuccessResponse = {
     status: 'success',
     results,
     isInitialScan,
-    modelTiles,
     playerCardTiles,
     nameStrips,
     countdownStrip,
@@ -370,7 +368,6 @@ async function handleScan(payload: {
     modelTileMatches,
   }
   parentPort!.postMessage(response, [
-    ...(modelTiles?.map((t) => t.tile) ?? []),
     ...(playerCardTiles?.map((t) => t.tile) ?? []),
     ...(nameStrips?.map((s) => s.png) ?? []),
     ...(countdownStrip ? [countdownStrip] : []),
@@ -500,8 +497,8 @@ async function captureCountdownStrip(
 }
 
 /**
- * Identifies the 12 model tiles against the reference-tile library. Reuses the
- * raw tiles already captured for diff detection — no extra cropping.
+ * Identifies the 12 model tiles against the reference-tile library, from the raw
+ * tiles cropped earlier in this scan.
  */
 async function matchModelTiles(
   modelTiles: { heroOrder: number; tile: ArrayBuffer }[] | undefined,
@@ -619,7 +616,7 @@ async function retryUnknownPoolSlots(
     try {
       const raw = await cropTile(screenshot, slot, PICK_TEMPLATE_COMPARE_SIZE)
       const vec = new Uint8Array(raw.buffer, raw.byteOffset, raw.byteLength)
-      if (computePixelStats(vec).std < PICK_TEMPLATE_EMPTY_STD) continue
+      if (computePixelStats(vec).std < TILE_EMPTY_STD) continue
       live.push(slot)
     } catch {
       // Out-of-bounds crop — skip
@@ -741,14 +738,13 @@ async function matchPickSlots(
           templates,
           slot.is_ultimate ? candidates?.ultimates : candidates?.standard,
           PICK_TEMPLATE_FALLBACK_MIN_NCC,
-  PICK_TEMPLATE_EMPTY_STD,
-  MODEL_INPUT_SIZE,
         )
         result = {
           ...result,
           name: match.name,
           // NCC in [-1,1]; clamp so downstream confidence semantics (>= 0) hold
           confidence: Math.max(0, match.score),
+          boxStd: Math.round(match.pixelStd * 10) / 10,
         }
         if (match.name === null && !match.isEmpty) {
           result.rejectedMatch = {

@@ -21,6 +21,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   roleMode: 'off',
   roleFixedPositions: [],
   aghsMarkersEnabled: false,
+  twitchBroadcastEnabled: false,
+  overlayBackgroundMode: false,
 }
 
 export const SUPPORTED_LANGUAGES = [
@@ -51,6 +53,11 @@ export const LANGUAGE_META: Record<SupportedLanguage, { short: string; autonym: 
 
 export const APP_ID = 'com.tiarinhino.dota2abilitydraftplus'
 export const APP_NAME = 'Dota 2 Ability Draft Plus'
+
+/** Public base URL of the Twitch extension backend (EBS). Not a secret — overridable
+ * via TWITCH_EBS_URL (.env in dev, app-config.json when packaged) for local EBS runs. */
+export const DEFAULT_TWITCH_EBS_URL =
+  'https://r8xvmhusi7.execute-api.eu-north-1.amazonaws.com/twitch'
 
 export const SUPPORT_URL = 'https://ko-fi.com/tiarinhino'
 export const SUPPORT_DATDOTA_URL = 'https://ko-fi.com/datdota'

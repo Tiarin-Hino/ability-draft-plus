@@ -27,10 +27,13 @@ import { registerResolutionHandlers } from './resolution-handlers'
 import { registerFeedbackHandlers } from './feedback-handlers'
 import { registerDevHandlers } from './dev-handlers'
 import { registerStreamHandlers } from './stream-handlers'
+import { registerTwitchHandlers } from './twitch-handlers'
+import type { TwitchPublisherService } from '../services/twitch-publisher-service'
 import { loadApiConfig } from '../services/api-config'
 import type { FeedbackService } from '../services/feedback-service'
 import type { ScanTriggerService } from '../services/scan-trigger-service'
 import type { SlotMappingService } from '../services/slot-mapping-service'
+import type { AutoRescanService } from '../services/auto-rescan-service'
 import { startDevControlServer } from '../services/dev-control-service'
 import {
   initialOverlayLifecycleState,
@@ -79,6 +82,8 @@ export function registerIpcHandlers(
   scanTrigger: ScanTriggerService,
   slotMappingService: SlotMappingService,
   playerStatsService: PlayerStatsService,
+  twitchPublisher: TwitchPublisherService,
+  autoRescan: Pick<AutoRescanService, 'finalizeDraft' | 'resetSession'>,
 ): void {
   logger.info('Registering IPC handlers...')
 
@@ -136,6 +141,14 @@ export function registerIpcHandlers(
   // so overlay:getInitialData lets it pull data when ready instead of relying on did-finish-load.
   // Exposed as a plain function too (activateOverlay) so the dev-only control server can
   // re-activate the overlay between automated game restarts (diagnostic harness).
+  //
+  // BACKGROUND MODE (overlayBackgroundMode setting) changes four things and nothing else:
+  // the window is created but never shown, the control panel is not minimized, scan
+  // hotkeys call the pipeline directly instead of routing through the renderer, and GSI
+  // overlay auto-close is inert. The session is otherwise identical — same window, same
+  // renderer, same capture agent — which is why the fast capture path survives. It is a
+  // NEVER-SHOWN session, never a "close the overlay to go headless": closing resets the
+  // draft session and would drop the stream board to 'waiting' mid-game.
   function activateOverlay(): {
     success: boolean
     resolution?: string
@@ -157,14 +170,28 @@ export function registerIpcHandlers(
       return { success: false, error: `Unsupported resolution: ${resolution}. No layout coordinates available.` }
     }
 
+    // Background mode: the session runs with the overlay never shown. Everything
+    // downstream (capture agent, hotkeys, scans, stream server, Twitch publisher)
+    // is unchanged — only visibility differs.
+    const backgroundMode =
+      dbService.metadata.getSettings().overlayBackgroundMode === true
+
     const controlPanel = windowManager.getControlPanelWindow()
-    if (controlPanel && !controlPanel.isDestroyed()) {
+    if (controlPanel && !controlPanel.isDestroyed() && !backgroundMode) {
+      // Minimize only when the overlay is actually shown: a restored panel
+      // overlapping a windowed game contaminates scan screenshots. In background
+      // mode the user is not being taken into the game, so leave their window be.
       controlPanel.minimize()
     }
 
-    const overlayWin = windowManager.createOverlayWindow()
+    const overlayWin = windowManager.createOverlayWindow({ visible: !backgroundMode })
     bridge.subscribe([overlayWin])
-    appStore.setState({ overlayActive: true, activeResolution: resolution, activeResolutionSource: source })
+    appStore.setState({
+      overlayActive: true,
+      overlayBackground: backgroundMode,
+      activeResolution: resolution,
+      activeResolutionSource: source,
+    })
 
     // Personalization: refresh the linked profile's stats snapshot if stale
     // (fire-and-forget — a failed/slow fetch must never delay the overlay)
@@ -173,7 +200,15 @@ export function registerIpcHandlers(
     // Global scan hotkeys, active only while the overlay is open. The overlay never
     // holds keyboard focus (showInactive + click-through), so in-window key handlers
     // can't work — globalShortcut is the only way to trigger a scan from the game.
+    // In background mode the scan is driven straight from main: there are no
+    // overlay decorations to hide before a capture, and the renderer path waits
+    // on two requestAnimationFrame ticks, which a never-shown window is not
+    // guaranteed to deliver.
     const sendHotkey = (action: 'scan' | 'rescan'): void => {
+      if (backgroundMode) {
+        void scanTrigger.performScan(action === 'scan')
+        return
+      }
       const win = windowManager.getOverlayWindow()
       if (win && !win.isDestroyed()) {
         win.webContents.send('overlay:hotkey', { action })
@@ -224,7 +259,12 @@ export function registerIpcHandlers(
       globalShortcut.unregister('Control+Shift+S')
       globalShortcut.unregister('Control+Shift+R')
       windowTracker.stopTracking()
-      appStore.setState({ overlayActive: false, activeResolution: null, activeResolutionSource: null })
+      appStore.setState({
+        overlayActive: false,
+        overlayBackground: false,
+        activeResolution: null,
+        activeResolutionSource: null,
+      })
       draftStore.getState().resetSession()
       streamService.onSessionReset()
       slotMappingService.onSessionReset()
@@ -254,9 +294,13 @@ export function registerIpcHandlers(
   let overlayLifecycle = initialOverlayLifecycleState()
   streamService.onGsiSnapshot((snapshot) => {
     const settings = dbService.metadata.getSettings()
+    // Auto-close is inert in background mode: nothing is covering the game, and
+    // closing would reset the draft session mid-game — dropping the Twitch board
+    // and the OBS picks strips exactly when the caster still needs them.
     const enabled =
       settings.overlayAutoCloseEnabled === true &&
-      settings.experimentalAutoDraftTracking === true
+      settings.experimentalAutoDraftTracking === true &&
+      settings.overlayBackgroundMode !== true
     const { action, state } = nextOverlayLifecycle(
       overlayLifecycle,
       snapshot,
@@ -265,14 +309,20 @@ export function registerIpcHandlers(
     )
     overlayLifecycle = state
     if (action === 'close') {
-      logger.info('Overlay auto-close: draft ended', { matchId: snapshot.matchId })
-      suppressPanelRestoreOnce = true
-      windowTracker.stopTracking()
-      windowManager.closeOverlay()
-      appStore.setState({
-        overlayActive: false,
-        activeResolution: null,
-        activeResolutionSource: null,
+      // Closing the overlay ends capture, and the last turn's pick is not read
+      // yet when GSI leaves hero selection — let the final pass take its
+      // capture first (bounded, never rejects; strategy time is not gameplay)
+      void autoRescan.finalizeDraft().then(() => {
+        if (!appStore.getState().overlayActive) return // closed meanwhile
+        logger.info('Overlay auto-close: draft ended', { matchId: snapshot.matchId })
+        suppressPanelRestoreOnce = true
+        windowTracker.stopTracking()
+        windowManager.closeOverlay()
+        appStore.setState({
+          overlayActive: false,
+          activeResolution: null,
+          activeResolutionSource: null,
+        })
       })
     } else if (action === 'open') {
       logger.info('Overlay auto-open: match ended or new draft', {
@@ -302,15 +352,24 @@ export function registerIpcHandlers(
   ipcMain.on('overlay:close', () => {
     windowTracker.stopTracking()
     windowManager.closeOverlay()
-    appStore.setState({ overlayActive: false, activeResolution: null, activeResolutionSource: null })
+    appStore.setState({
+      overlayActive: false,
+      overlayBackground: false,
+      activeResolution: null,
+      activeResolutionSource: null,
+    })
   })
 
-  // Overlay Reset button: clear the main-process draft session (pool caches + selections).
-  // Without this, a Reset followed by a Rescan diffs against the previous draft's pool.
+  // Draft reset — the overlay's Reset button, and the control panel's Reset draft
+  // for a background session (whose overlay is never shown): clear the main-process
+  // draft session (pool caches + selections). Without this, a Reset followed by a
+  // Rescan diffs against the previous draft's pool. Auto-rescan is re-armed so the
+  // draft being reset gets a fresh automatic initial scan.
   ipcMain.on('overlay:reset', () => {
     draftStore.getState().resetSession()
     streamService.onSessionReset()
     slotMappingService.onSessionReset()
+    autoRescan.resetSession()
   })
 
   ipcMain.on(
@@ -344,6 +403,9 @@ export function registerIpcHandlers(
 
   // Streamer view domain
   registerStreamHandlers(streamService, dbService, iconCache, gsiCfgService, windowManager)
+
+  // Twitch extension pairing + broadcast toggle
+  registerTwitchHandlers(twitchPublisher)
 
   // Resolution domain
   registerResolutionHandlers(layoutService, screenshotService, windowTracker, windowManager, apiConfig)

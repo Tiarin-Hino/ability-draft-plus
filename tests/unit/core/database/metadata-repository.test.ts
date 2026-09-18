@@ -73,6 +73,24 @@ describe('MetadataRepository', () => {
       expect(settings.trapThreshold).toBe(0.08)
       expect(settings.language).toBe('ru')
     })
+
+    it('defaults overlayBackgroundMode to off and round-trips it', async () => {
+      const freshDb = await createTestDb()
+      const freshRepo = createMetadataRepository(freshDb.db)
+
+      expect(freshRepo.getSettings().overlayBackgroundMode).toBe(
+        DEFAULT_SETTINGS.overlayBackgroundMode,
+      )
+      expect(freshRepo.getSettings().overlayBackgroundMode).toBe(false)
+
+      freshRepo.setSettings({ overlayBackgroundMode: true })
+      expect(freshRepo.getSettings().overlayBackgroundMode).toBe(true)
+
+      freshRepo.setSettings({ overlayBackgroundMode: false })
+      expect(freshRepo.getSettings().overlayBackgroundMode).toBe(false)
+
+      freshDb.close()
+    })
   })
 
   describe('setSettings', () => {

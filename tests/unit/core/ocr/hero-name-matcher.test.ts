@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   normalizeHeroText,
   matchHeroName,
+  matchThinTwoLetterHero,
 } from '@core/ocr/hero-name-matcher'
 import type { HeroNameCandidate } from '@core/ocr/hero-name-matcher'
 
@@ -16,6 +17,7 @@ const ROSTER: HeroNameCandidate[] = [
   { name: 'shadow_demon', displayName: 'Shadow Demon' },
   { name: 'shadow_shaman', displayName: 'Shadow Shaman' },
   { name: 'axe', displayName: 'Axe' },
+  { name: 'wisp', displayName: 'Io' },
 ]
 
 describe('normalizeHeroText', () => {
@@ -46,11 +48,40 @@ describe('matchHeroName', () => {
     expect(matchHeroName('TEMPLAR ASSASSIN', ROSTER)?.name).toBe('templar_assassin')
   })
 
+  it('reads Io, the only two-letter hero, by exact match only', () => {
+    const m = matchHeroName('I O', ROSTER)
+    expect(m?.name).toBe('wisp')
+    expect(m?.similarity).toBe(1)
+    // One wrong letter is half the word: never a match
+    expect(matchHeroName('IQ', ROSTER)).toBeNull()
+    expect(matchHeroName('LO', ROSTER)).toBeNull()
+    // Single letters stay rejected
+    expect(matchHeroName('I', ROSTER)).toBeNull()
+  })
+
   it('rejects garbage, empty, and pre-pick card text', () => {
     expect(matchHeroName('NO HERO', ROSTER)).toBeNull()
     expect(matchHeroName('', ROSTER)).toBeNull()
     expect(matchHeroName('XQ', ROSTER)).toBeNull()
     expect(matchHeroName('QWERTYUIOPLKJHG', ROSTER)).toBeNull()
+  })
+
+  it('reads a dropped-glyph Io off the hero-name line (thin-letter fallback)', () => {
+    // Io's "I" is a hairline stroke tesseract drops: every pass read "O"
+    expect(matchThinTwoLetterHero('O', ROSTER)?.name).toBe('wisp')
+    expect(matchThinTwoLetterHero('O', ROSTER)?.similarity).toBe(0.5)
+    // A full read is the exact matcher's job, not this fallback's
+    expect(matchThinTwoLetterHero('I O', ROSTER)).toBeNull()
+    // Only the hairline letter may be missing: a stray "I" is not Io
+    // (2026-09-18 overnight sweep: read off a post-draft screen as Io)
+    expect(matchThinTwoLetterHero('I', ROSTER)).toBeNull()
+    // Letters that are not part of the name, or too many of them, are not Io
+    expect(matchThinTwoLetterHero('T', ROSTER)).toBeNull()
+    expect(matchThinTwoLetterHero('OI', ROSTER)).toBeNull()
+    expect(matchThinTwoLetterHero('ION', ROSTER)).toBeNull()
+    expect(matchThinTwoLetterHero('', ROSTER)).toBeNull()
+    // Nothing to fall back to when Io is not in the draft's pool
+    expect(matchThinTwoLetterHero('O', ROSTER.filter((c) => c.name !== 'wisp'))).toBeNull()
   })
 
   it('rejects ambiguous reads equidistant from two names', () => {

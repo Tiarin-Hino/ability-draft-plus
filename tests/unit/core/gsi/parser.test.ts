@@ -39,6 +39,83 @@ const SPECTATOR_PAYLOAD = {
   },
 }
 
+/**
+ * In-game spectator payload. Key names transcribed from a REAL
+ * GAME_IN_PROGRESS capture (2026-09-04) — the economy/damage counters live on
+ * the player block, level/buyback/Aghanim's on the hero block, and the items
+ * block only exists once the cfg requests it.
+ */
+const SPECTATOR_INGAME_PAYLOAD = {
+  map: {
+    matchid: '7000000002',
+    clock_time: 620,
+    game_state: 'DOTA_GAMERULES_STATE_GAME_IN_PROGRESS',
+  },
+  player: {
+    team2: {
+      player0: {
+        accountid: '40000001',
+        name: 'Alice',
+        team_slot: 0,
+        kills: 7,
+        deaths: 2,
+        assists: 5,
+        last_hits: 120,
+        denies: 11,
+        gold: 1500,
+        gpm: 620,
+        xpm: 710,
+        net_worth: 12345,
+        hero_damage: 18000,
+        hero_healing: 400,
+        tower_damage: 2500,
+        damage_received_post_reduction_physical: 3000,
+        damage_received_post_reduction_magical: 1500,
+        damage_received_post_reduction_pure: 500,
+      },
+    },
+    team3: {
+      player5: { accountid: '40000006', name: 'Frank', team_slot: 0, net_worth: 9000 },
+    },
+  },
+  hero: {
+    team2: {
+      player0: {
+        id: 28,
+        name: 'npc_dota_hero_slardar',
+        level: 18,
+        alive: true,
+        respawn_seconds: 0,
+        buyback_cost: 1400,
+        buyback_cooldown: 0,
+        aghanims_scepter: true,
+        aghanims_shard: false,
+      },
+    },
+    team3: {
+      player5: { id: 74, name: 'npc_dota_hero_sand_king', level: 14, alive: false, respawn_seconds: 32 },
+    },
+  },
+  items: {
+    team2: {
+      player0: {
+        slot0: { name: 'item_blink' },
+        slot1: { name: 'item_black_king_bar' },
+        slot2: { name: 'empty' },
+        slot3: { name: 'empty' },
+        slot4: { name: 'empty' },
+        slot5: { name: 'empty' },
+        slot6: { name: 'item_tpscroll' },
+        slot7: { name: 'empty' },
+        slot8: { name: 'empty' },
+        teleport0: { name: 'item_tpscroll' },
+        neutral0: { name: 'item_pirate_hat' },
+        neutral1: { name: 'empty' },
+      },
+    },
+  },
+}
+
 const PLAYING_PAYLOAD = {
   provider: { name: 'Dota 2', appid: 570, version: 47, timestamp: 1700000000 },
   map: {
@@ -246,6 +323,90 @@ describe('parseGsiPayload', () => {
   it('accepts clock_time of zero', () => {
     const snapshot = parseGsiPayload({ map: { clock_time: 0, game_state: 'X' } })
     expect(snapshot.clockTime).toBe(0)
+  })
+})
+
+describe('parseGsiPayload — caster telemetry (spectator only)', () => {
+  it('parses the economy and damage counters from the player block', () => {
+    const snapshot = parseGsiPayload(SPECTATOR_INGAME_PAYLOAD)
+    const alice = snapshot.players.find((p) => p.slotIndex === 0)
+    expect(alice?.live).toMatchObject({
+      netWorth: 12345,
+      gold: 1500,
+      gpm: 620,
+      xpm: 710,
+      kills: 7,
+      deaths: 2,
+      assists: 5,
+      lastHits: 120,
+      denies: 11,
+      heroDamage: 18000,
+      heroHealing: 400,
+      towerDamage: 2500,
+    })
+  })
+
+  it('sums post-reduction damage taken across all three types', () => {
+    const snapshot = parseGsiPayload(SPECTATOR_INGAME_PAYLOAD)
+    // 3000 physical + 1500 magical + 500 pure
+    expect(snapshot.players[0]?.live?.damageTaken).toBe(5000)
+  })
+
+  it('parses level, buyback and Aghanims state from the hero block', () => {
+    const snapshot = parseGsiPayload(SPECTATOR_INGAME_PAYLOAD)
+    expect(snapshot.players[0]?.live).toMatchObject({
+      level: 18,
+      alive: true,
+      buybackCost: 1400,
+      buybackCooldown: 0,
+      hasScepter: true,
+      hasShard: false,
+    })
+  })
+
+  it('keeps a dead player’s respawn timer', () => {
+    const snapshot = parseGsiPayload(SPECTATOR_INGAME_PAYLOAD)
+    const frank = snapshot.players.find((p) => p.slotIndex === 5)
+    expect(frank?.live).toMatchObject({ alive: false, respawnSeconds: 32 })
+  })
+
+  it('splits inventory from backpack and reads empty slots as null', () => {
+    const snapshot = parseGsiPayload(SPECTATOR_INGAME_PAYLOAD)
+    const live = snapshot.players[0]?.live
+    expect(live?.items).toEqual([
+      'item_blink',
+      'item_black_king_bar',
+      null,
+      null,
+      null,
+      null,
+    ])
+    expect(live?.backpack).toEqual(['item_tpscroll', null, null])
+    expect(live?.neutral).toBe('item_pirate_hat')
+  })
+
+  it('reads the TP and neutral-enchantment slots, which live outside the inventory', () => {
+    const live = parseGsiPayload(SPECTATOR_INGAME_PAYLOAD).players[0]?.live
+    expect(live?.teleport).toBe('item_tpscroll')
+    expect(live?.neutralEnchant).toBeNull()
+  })
+
+  it('omits live entirely during hero selection', () => {
+    const snapshot = parseGsiPayload(SPECTATOR_PAYLOAD)
+    expect(snapshot.players.every((p) => p.live === undefined)).toBe(true)
+  })
+
+  it('survives a payload with no items block (cfg predates the caster edition)', () => {
+    const withoutItems: Record<string, unknown> = { ...SPECTATOR_INGAME_PAYLOAD }
+    delete withoutItems.items
+    const snapshot = parseGsiPayload(withoutItems)
+    expect(snapshot.players[0]?.live?.netWorth).toBe(12345)
+    expect(snapshot.players[0]?.live?.items).toBeUndefined()
+  })
+
+  it('reports no telemetry while playing (Valve exposes only the local player)', () => {
+    const snapshot = parseGsiPayload(PLAYING_PAYLOAD)
+    expect(snapshot.players).toEqual([])
   })
 })
 

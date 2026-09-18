@@ -104,13 +104,6 @@ export interface MlWorkerSuccessResponse {
   results: InitialScanResults | ScanResult[]
   isInitialScan: boolean
   /**
-   * Normalized crops of the 12 model portrait tiles (raw RGB at
-   * MODEL_TILE_COMPARE_SIZE²), captured on every scan for picked-model diff
-   * detection. Buffers are transferred, not copied. Absent when the layout has
-   * no models_coords or a tile crop failed.
-   */
-  modelTiles?: { heroOrder: number; tile: ArrayBuffer }[]
-  /**
    * Normalized crops of the 10 player cards (heroes_coords regions at
    * PLAYER_CARD_COMPARE_SIZE²), captured on every scan for the GSI slot <->
    * scan row correlation (spectate/replay name placement). Buffers are

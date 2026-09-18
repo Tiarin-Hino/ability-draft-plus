@@ -1,21 +1,19 @@
-import { screen, app } from 'electron'
+import { app } from 'electron'
 import { promises as fs } from 'fs'
 import { join } from 'path'
-import sharp from 'sharp'
 import log from 'electron-log/main'
-import { GAME_WINDOW_TITLE } from './window-tracker-service'
 import type { MlService } from './ml-service'
 import type { DatabaseService } from './database-service'
 import type { LayoutService } from './layout-service'
 import type { ScreenshotService } from './screenshot-service'
 import type { CachedWindowCaptureService } from './cached-window-capture-service'
-import type { DecodedScreenshot } from '@core/ml/preprocessing'
 import type { WindowManager } from './window-manager'
 import type { ScanProcessingService } from './scan-processing-service'
 import type { WindowTrackerService } from './window-tracker-service'
 import type { FeedbackService } from './feedback-service'
 import type { IconCacheService } from './icon-cache-service'
 import type { OcrService } from './ocr-service'
+import { createGameFrameCapture } from './game-frame-capture'
 import type { AppStore } from '../store/app-store'
 import type { StoreApi } from 'zustand/vanilla'
 import type { DraftStore } from '../store/draft-store'
@@ -74,6 +72,11 @@ export function createScanTriggerService(
   iconCache: IconCacheService,
   ocrService: OcrService,
 ): ScanTriggerService {
+  const captureGameFrame = createGameFrameCapture(
+    screenshotService,
+    cachedWindowCapture,
+    windowTracker,
+  )
   // Pick-slot template-matching candidates, split by pick-box type: a standard
   // box can only contain one of the pool's 36 standard abilities, the ultimate
   // box one of its 12 ultimates.
@@ -211,37 +214,8 @@ export function createScanTriggerService(
 
         // Fullscreen/borderless: capture ONLY the game window — far cheaper than a
         // full-display capture session and it leaves the cursor/compositor alone.
-        // Windowed mode (game smaller than the display) keeps the screen path,
-        // whose crop logic below aligns coordinates to the game client area.
-        const primary = screen.getPrimaryDisplay()
-        const physicalScreen = {
-          width: Math.round(primary.size.width * primary.scaleFactor),
-          height: Math.round(primary.size.height * primary.scaleFactor),
-        }
-        const gameBounds = windowTracker.getGameWindowPhysicalBounds()
-        const isFullscreen =
-          !gameBounds ||
-          (gameBounds.width >= physicalScreen.width &&
-            gameBounds.height >= physicalScreen.height)
-
-        // Capture cascade: cached-source frame grab (persistent renderer
-        // stream, ~10-50ms) -> per-scan getSources window capture (~1s) ->
-        // full-display capture. Each step returns null to hand off downward.
-        let screenshot: DecodedScreenshot | null = null
-        if (isFullscreen) {
-          screenshot = await cachedWindowCapture.captureFrame(
-            GAME_WINDOW_TITLE,
-            physicalScreen,
-          )
-          screenshot ??= await screenshotService.captureWindow(
-            GAME_WINDOW_TITLE,
-            physicalScreen,
-          )
-        }
-        screenshot ??= await screenshotService.capture()
-        // On-screen state (e.g. the draft countdown) reflects THIS moment, not
-        // when the ML worker finishes — stamp it for time-sensitive consumers
-        const capturedAtMs = Date.now()
+        // Game-relative frame: capture cascade + windowed crop (game-frame-capture.ts)
+        const { screenshot, capturedAtMs } = await captureGameFrame()
 
         const layout = layoutService.getLayout(resolution)
         if (!layout) {
@@ -250,35 +224,6 @@ export function createScanTriggerService(
           })
           appStore.setState({ mlStatus: 'ready' })
           return
-        }
-
-        // In windowed mode, crop the full-screen screenshot to the game window
-        // so that JSON coordinates (relative to the game window) align correctly
-        if (
-          gameBounds &&
-          (gameBounds.width < screenshot.width ||
-            gameBounds.height < screenshot.height)
-        ) {
-          const cropped = await sharp(screenshot.data, {
-            raw: {
-              width: screenshot.width,
-              height: screenshot.height,
-              channels: 3,
-            },
-          })
-            .extract({
-              left: gameBounds.x,
-              top: gameBounds.y,
-              width: gameBounds.width,
-              height: gameBounds.height,
-            })
-            .raw()
-            .toBuffer()
-          screenshot = {
-            data: cropped,
-            width: gameBounds.width,
-            height: gameBounds.height,
-          }
         }
 
         // DB ability names = classes still in the draft pool. Model classes
@@ -381,10 +326,6 @@ export function createScanTriggerService(
           result.isInitialScan,
           resolution,
           scaleFactor,
-          result.modelTiles?.map((t) => ({
-            heroOrder: t.heroOrder,
-            tile: new Uint8Array(t.tile),
-          })),
           result.playerCardTiles?.map((t) => ({
             row: t.row,
             tile: new Uint8Array(t.tile),

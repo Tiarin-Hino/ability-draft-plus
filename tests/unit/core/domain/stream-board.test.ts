@@ -267,6 +267,7 @@ describe('buildStreamBoardState', () => {
       npcName: 'sand_king',
       displayName: 'Sand King',
       portraitPath: '/icons/heroes/sand_king.png',
+      cdnName: 'sand_king',
     })
     expect(state.players[1].model).toBeNull()
     expect(state.players[0].picks.map((p) => p?.name ?? null)).toEqual([

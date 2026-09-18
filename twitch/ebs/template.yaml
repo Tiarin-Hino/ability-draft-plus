@@ -1,0 +1,138 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Ability Draft Plus - Twitch extension backend (EBS). One Lambda behind its own HTTP API
+  (routes under /twitch/*, CORS open for the Twitch iframe origin), one DynamoDB table,
+  secrets in SSM (/twitch-ext/*). Separate from the website admin API on purpose: that
+  API's gateway-level CORS is restricted to tiarinhino.com origins.
+
+Parameters:
+  SsmPrefix:
+    Type: String
+    Default: /twitch-ext
+    Description: SSM parameter prefix holding secret, client-id, owner-id, client-secret
+
+Globals:
+  Function:
+    Runtime: nodejs22.x
+    Architectures: [arm64]
+    Timeout: 10
+    MemorySize: 256
+
+Resources:
+  TwitchEbsApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Name: ADPlus-Twitch-EBS
+      # Viewers call from https://<clientId>.ext-twitch.tv; the GETs are public and the
+      # POSTs carry their own bearer auth, so an open origin is fine (no credentials mode).
+      CorsConfiguration:
+        AllowOrigins: ['*']
+        AllowMethods: [GET, POST, OPTIONS]
+        AllowHeaders: [authorization, content-type, if-none-match]
+        ExposeHeaders: [etag, retry-after]
+        MaxAge: 86400
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 200
+        ThrottlingRateLimit: 100
+      RouteSettings:
+        'POST /twitch/pair/complete':
+          ThrottlingBurstLimit: 10
+          ThrottlingRateLimit: 5
+        'POST /twitch/pair/start':
+          ThrottlingBurstLimit: 10
+          ThrottlingRateLimit: 5
+
+  TwitchExtensionTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: TwitchExtensionTable
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+
+  TwitchEbsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: TwitchEbsHandler
+      # Bundled by `npm run bundle` (esbuild, ESM, @aws-sdk/* external) into dist/
+      CodeUri: dist/
+      Handler: handler.handler
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref TwitchExtensionTable
+          SSM_PREFIX: !Ref SsmPrefix
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TwitchExtensionTable
+        - Statement:
+            - Effect: Allow
+              Action: ssm:GetParameter
+              Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${SsmPrefix}/*
+            - Effect: Allow
+              Action: kms:Decrypt
+              Resource: '*'
+              Condition:
+                StringEquals:
+                  kms:ViaService: !Sub ssm.${AWS::Region}.amazonaws.com
+      Events:
+        PairStart:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref TwitchEbsApi
+            Path: /twitch/pair/start
+            Method: POST
+        PairComplete:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref TwitchEbsApi
+            Path: /twitch/pair/complete
+            Method: POST
+        Publish:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref TwitchEbsApi
+            Path: /twitch/channels/{id}/publish
+            Method: POST
+        State:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref TwitchEbsApi
+            Path: /twitch/channels/{id}/state
+            Method: GET
+        Compact:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref TwitchEbsApi
+            Path: /twitch/channels/{id}/compact
+            Method: GET
+        Status:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref TwitchEbsApi
+            Path: /twitch/channels/{id}/status
+            Method: GET
+        Unpair:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref TwitchEbsApi
+            Path: /twitch/channels/{id}/unpair
+            Method: POST
+
+Outputs:
+  EbsBaseUrl:
+    Description: Base URL the desktop app and the extension frontend use
+    Value: !Sub https://${TwitchEbsApi}.execute-api.${AWS::Region}.amazonaws.com/twitch
+  TableName:
+    Value: !Ref TwitchExtensionTable

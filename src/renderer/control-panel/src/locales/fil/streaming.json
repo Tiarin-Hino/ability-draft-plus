@@ -23,6 +23,18 @@
     "errorGeneric": "Nabigong mag-start ang server. Tingnan ang logs para sa detalye.",
     "errorInvalidPort": "Invalid na port. Gumamit ng number sa pagitan ng 1024 at 65535."
   },
+  "background": {
+    "title": "Background mode",
+    "description": "Patakbuhin ang draft session nang hindi lumalabas ang overlay sa iyong screen. Gumagana pa rin gaya ng dati ang mga scan, awtomatikong pagsubaybay, ang stream board, at ang Twitch extension.",
+    "toggle": "Huwag kailanman ipakita ang overlay",
+    "hint": "Para sa mga streamer na nagbo-broadcast ng board o ng Twitch extension pero ayaw ng overlay habang naglalaro. Mag-activate ng session gaya ng dati — gumagana pa rin ang Ctrl+Shift+S at Ctrl+Shift+R para mag-scan at mag-rescan.",
+    "activeNote": "May session na tumatakbo sa background ngayon.",
+    "autoCloseNote": "Nananatiling naka-off ang auto-close ng overlay sa mode na ito: wala itong tinatakpan sa laro, at ang pagsasara ay magbubura ng draft sa gitna ng laban.",
+    "resetDraft": "I-reset ang draft",
+    "endSession": "Tapusin ang session",
+    "resetDone": "Na-clear ang draft. Magsisimula ng bagong draft ang susunod na scan.",
+    "controlsHint": "Awtomatikong nabubura ang nakaraang draft kapag may bagong laban. Gamitin ang I-reset ang draft kung may naiwang draft, o Tapusin ang session para itigil ang pag-track."
+  },
   "gsi": {
     "title": "Dota 2 Game State Integration",
     "description": "Pinapayagan ang Dota na magpadala ng player names, game phase, at clock sa stream board. Kailangan ng isang beses na config file sa Dota folder mo at pag-restart ng Dota.",
@@ -32,6 +44,7 @@
     "notDetected": "Hindi nahanap ang Dota installation — piliin nang manual ang \"dota 2 beta\" folder.",
     "cfgPresent": "Naka-install ang config file",
     "cfgMissing": "Hindi pa naka-install ang config file",
+    "cfgOutdated": "Mas luma ang naka-install na config kaysa sa caster stats (wala rito ang mga item). I-reinstall ito at i-restart ang Dota 2 para paganahin.",
     "writeCfg": "I-install ang config file",
     "browse": "Mag-browse…",
     "pickFolderTitle": "Piliin ang \"dota 2 beta\" folder",
@@ -56,5 +69,40 @@
     "step2": "Sa OBS: Sources → Add → Browser, i-paste ang URL, i-set ang size sa 1920×1080.",
     "step3": "Transparent ang background bilang default. Idagdag ang ?bg=dark para sa solid na background o ?bg=chroma para sa green screen.",
     "note": "Sumusunod ang board sa mga overlay scan mo: lumalabas ang pool pagkatapos ng scan (Ctrl+Shift+S) at nag-a-update ang picks pagkatapos ng bawat rescan (Ctrl+Shift+R)."
+  },
+  "twitch": {
+    "title": "Twitch extension",
+    "description": "Hinahayaan ang mga manonood na i-click ang mga ability sa iyong draft sa Twitch. Ipares ang app sa iyong channel nang isang beses, at panatilihing naka-on ang broadcast.",
+    "status": {
+      "unpaired": "Hindi nakapares",
+      "paired": "Nakapares",
+      "broadcasting": "Nagbo-broadcast",
+      "error": "Error"
+    },
+    "step1": "I-install ang Ability Draft Plus extension sa iyong Twitch channel at buksan ang configuration page nito.",
+    "step2": "Kopyahin ang pairing code na ipinapakita roon.",
+    "step3": "I-paste ang code sa ibaba at pindutin ang Ipares.",
+    "codeLabel": "Pairing code",
+    "codePlaceholder": "XXXX-XXXX",
+    "pairButton": "Ipares",
+    "pairing": "Ipinapares…",
+    "channel": "Channel: {{name}}",
+    "channelUnknown": "Channel {{id}}",
+    "enable": "I-broadcast ang draft sa Twitch",
+    "enableHint": "Ipinapadala ang draft board sa iyong mga manonood pagkatapos ng bawat scan. Kailangang tumatakbo ang stream server para sa game-phase tracking; hindi kailangan ang OBS.",
+    "lastPublish": "Huling update na ipinadala noong {{time}}",
+    "neverPublished": "Wala pang ipinadalang update",
+    "testButton": "Magpadala ng test update",
+    "testSent": "Naihatid ang update sa extension backend.",
+    "unpairButton": "Alisin ang pagkakapares",
+    "errorInvalidCode": "Hindi valid o expired na ang pairing code na iyon — gumawa ng bago sa configuration page ng extension.",
+    "errorNetwork": "Hindi maabot ang extension backend. Suriin ang iyong koneksyon sa internet.",
+    "errorUnauthorized": "Hindi na valid ang pagkakapares ng channel. Alisin ang pagkakapares at ipares muli.",
+    "errorPublishFailed": "Hindi naihatid ang huling update. Awtomatiko itong susubukang muli.",
+    "errorLiveFailed": "Hindi nakakarating sa mga manonood ang live na stats ng laro — maaaring luma na ang backend ng extension. Hindi apektado ang draft board.",
+    "errorTooLarge": "Masyadong malaki ang draft update para sa Twitch at hindi naihatid.",
+    "errorVersion": "Kailangan ng extension backend ng mas bagong bersyon ng app. Paki-update ang app.",
+    "errorDisabled": "I-on muna ang broadcasting.",
+    "errorNothingToSend": "Wala pang maipapadala — mag-scan muna ng draft."
   }
 }

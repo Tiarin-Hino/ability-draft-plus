@@ -18,6 +18,19 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ['out/', 'dist/', 'node_modules/', 'scripts/', '.claude/'],
+    ignores: [
+      'out/',
+      'dist/',
+      'node_modules/',
+      'scripts/',
+      '.claude/',
+      // twitch/ packages lint themselves (own package.json + config)
+      'twitch/**/dist/',
+      'twitch/**/.aws-sam/',
+      'twitch/**/node_modules/',
+      'twitch/catalog/dist/',
+      // Node ESM scripts (same reason scripts/ is ignored: no node globals in this config)
+      'twitch/**/*.mjs',
+    ],
   },
 )

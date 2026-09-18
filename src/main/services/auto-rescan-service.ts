@@ -4,6 +4,7 @@ import type { DraftStore } from '../store/draft-store'
 import type { DatabaseService } from './database-service'
 import type { StreamServerService } from './stream-server-service'
 import type { ScanTriggerService } from './scan-trigger-service'
+import type { OcrService } from './ocr-service'
 import type { AppStore } from '../store/app-store'
 import { GSI_HERO_SELECTION_PHASE } from '@core/gsi/types'
 import type { GsiSnapshot } from '@core/gsi/types'
@@ -14,15 +15,22 @@ import {
   countdownTargetRow,
   type TurnWindow,
 } from '@core/gsi/draft-clock'
-import { attributePicksByRow } from '@core/domain/pick-attribution'
-import { heroNameToken } from '@core/domain/own-row-detection'
+import { reconcileAbilityPicks } from '@core/domain/pick-attribution'
+import {
+  resolveModelAssignments,
+  reconcileModelMarkers,
+} from '@core/domain/model-picks-from-ocr'
+import type { PickEvent } from '@shared/types/stream'
 import {
   AUTO_RESCAN_TICK_MS,
   AUTO_RESCAN_PICK_VISIBLE_DELAY_S,
   AUTO_RESCAN_MAX_TARGET_RETRIES,
   AUTO_RESCAN_REPLAY_INTERVAL_MS,
   REPLAY_CLOCK_REWIND_THRESHOLD_S,
-  MODEL_PICK_CONFIRM_DELAY_MS,
+  OCR_SETTLE_TIMEOUT_MS,
+  OCR_FINAL_PASS_SETTLE_TIMEOUT_MS,
+  DRAFT_FINAL_PASS_TIMEOUT_MS,
+  DRAFT_FINAL_RESCAN_TIMEOUT_MS,
 } from '@shared/constants/thresholds'
 
 // @DEV-GUIDE: EXPERIMENTAL GSI-driven TURN-CLOCK auto-rescan (disabled by default —
@@ -37,9 +45,15 @@ import {
 // - When a round's last turn ends, a FULL 40-slot reconciliation rescan runs in the
 //   5s round break, catching anything the targeted scans missed (clock drift, hasty
 //   retries that hit the cap).
-// - Attribution is a ROW DIFF (pick-attribution.ts): a new name in row X IS player
-//   X's pick. The clock never guesses who picked what — it only decides when/where
-//   to look, so clock drift can delay detection but never mis-attribute.
+// - Attribution is by CARD SLOT (pick-attribution.ts): a new name in row X IS
+//   player X's pick. Standard boxes count as a SET (Dota reorders them), the
+//   ultimate box singly; a name that vanishes with every box readable is renamed
+//   (misread) or removed (phantom). The clock never guesses who picked what.
+// - ORDER: every new pick is stamped with `seenAtS` (seconds since the anchor at
+//   capture start) and the draft store places it at its player's serpentine turn
+//   (orderByDraftTurns), so late or batched discovery never reorders the history
+//   and a pick that is never read leaves a gap instead of shifting later picks.
+//   No anchor (replay, mid-draft join) -> unstamped -> placed by pick count.
 // Contaminated captures (hover tooltip; scan-processor guard) and hasty no-ops keep
 // the queued rows and retry next tick, up to AUTO_RESCAN_MAX_TARGET_RETRIES.
 //
@@ -56,9 +70,23 @@ import {
 //   back at -59 with the schedule at 38s). Sticky for the rest of the draft
 //   session; falls back to plain periodic FULL rescans
 //   (AUTO_RESCAN_REPLAY_INTERVAL_MS) with the same row-diff attribution.
-// Model picks come from GSI in both spectator kinds (tile diffing is disabled by
-// scan-processing-service there — the spectator screen's coordinate offsets make
-// tile diffs unreliable).
+// MODEL PICKS: in PLAYING mode they are read off the drafter's card — every
+// capture's name strips are OCR'd, the rescan waits for that (settle) and applies
+// the reads via core/domain/model-picks-from-ocr.ts, so a model pick is sequenced
+// before the ability picks found in the same capture. No tile state, no turn
+// timing. In spectate GSI reports every hero and slot-mapping-service emits the
+// markers instead.
+// NEW MATCH: GSI hero selection with a different matchid clears the whole draft
+// session (resetDraftState — pool, board, slot mapping), not just this service's
+// clock state, so the auto initial scan runs for the new draft. Nothing else
+// resets a session in background mode, and a game closed mid-draft never
+// reaches the draft end either.
+// DRAFT END: the last turn's scheduled scan always falls AFTER GSI leaves hero
+// selection, so finalizeDraft() runs one last capture on that transition — and
+// overlay auto-close awaits it, because closing the overlay ends capture. That
+// capture waits for card OCR to DRAIN (OCR_FINAL_PASS_SETTLE_TIMEOUT_MS, not the
+// per-scan 1.5s): a strip still queued when auto-close resets the session is
+// dropped, and that was how most last-turn model picks went missing.
 //
 // Gates per tick (ALL must hold): setting on, overlay active, ML idle, GSI
 // connected and in hero selection; the turn logic additionally needs an initial
@@ -70,6 +98,19 @@ const logger = log.scope('auto-rescan')
 export interface AutoRescanService {
   start(): void
   stop(): void
+  /**
+   * One final capture + card OCR when hero selection ends, so the last picks
+   * land before the overlay may close. Idempotent per draft (every caller gets
+   * the same promise), bounded by DRAFT_FINAL_PASS_TIMEOUT_MS, never rejects.
+   */
+  finalizeDraft(): Promise<void>
+  /**
+   * Re-arm for the CURRENT draft after a manual draft reset (overlay Reset
+   * button, control panel): the auto initial scan runs again once the draft
+   * clock is seen. The match identity is kept, so the same draft is not taken
+   * for a new match.
+   */
+  resetSession(): void
 }
 
 export function createAutoRescanService(
@@ -78,9 +119,17 @@ export function createAutoRescanService(
   dbService: DatabaseService,
   streamService: StreamServerService,
   scanTrigger: ScanTriggerService,
+  ocrService: Pick<OcrService, 'settle'>,
+  /** Clears the WHOLE draft session (pool, board, slot mapping) — the same
+   * reset closing the overlay performs. Called when GSI reports a new match. */
+  resetDraftState: () => void,
 ): AutoRescanService {
   let timer: NodeJS.Timeout | null = null
   let tickRunning = false
+  /** Settles when the in-flight tick finishes (the final pass waits on it). */
+  let tickDone: Promise<void> = Promise.resolve()
+  /** This draft's final pass, once started (see finalizeDraft). */
+  let finalPass: Promise<void> | null = null
 
   const schedule: TurnWindow[] = buildTurnSchedule()
   const scheduleEndS = schedule[schedule.length - 1].endS
@@ -102,23 +151,6 @@ export function createAutoRescanService(
   let targetRetries = 0
   /** Wall-clock ms of the last replay-mode periodic full rescan. */
   let lastReplayScanMs = 0
-  /**
-   * Model -> player attribution, keyed at FIRST-SEEN time: the pool tile greys
-   * exactly when the assigning player's turn ends (user-verified), so the turn
-   * that triggered the first-seen scan identifies the picker. The mapping is
-   * tentative until the two-scan persistence commit (commit time lags by one
-   * turn and must NOT be used for attribution). 'self' marks the user's own
-   * model (GSI hero block match): its row is resolved at COMMIT time from the
-   * OCR-derived My Spot (localPlayer.slotIndex is lobby-order, not the visual
-   * row — see own-row-detection.ts), which may still be resolving at first-seen.
-   */
-  const tentativeModelPicker = new Map<number, number | 'self'>()
-  /** Accepted rescans this session — the 1st sweeps up all preview-time picks
-   * at once, so its timing carries no per-turn information. */
-  let acceptedRescans = 0
-  /** When set, a model-tile CONFIRMATION capture (zero ability rows) is due —
-   * resolves pending tile changes in ~1.5s instead of one turn later. */
-  let modelConfirmAtMs: number | null = null
   /** Previous clock_time inside hero selection — rewind detector input. */
   let lastClockTime: number | null = null
   /** Sticky per draft session: a big clock rewind marked this as a replay. */
@@ -147,9 +179,7 @@ export function createAutoRescanService(
     scheduleUnknownLogged = false
     retriedEmptyRows.clear()
     lastCountdownAtMs = 0
-    tentativeModelPicker.clear()
-    acceptedRescans = 0
-    modelConfirmAtMs = null
+    finalPass = null
   }
 
   function handlePhaseChange(snapshot: GsiSnapshot): void {
@@ -171,6 +201,25 @@ export function createAutoRescanService(
         })
         return
       }
+      // A DIFFERENT match than the one tracked means the previous draft is over,
+      // whether or not the overlay closed in between: clear its pool too. The
+      // auto initial scan only fires with no pool loaded, so a leftover pool
+      // froze the board on the old draft — every draft in background mode (no
+      // auto-close to reset it), or after the game closed mid-draft
+      // (2026-09-18). Both ids must be known: a null matchid (replay flapping,
+      // menus) is not proof of a new match.
+      const previousMatchId = draftMatchId
+      if (
+        previousMatchId !== null &&
+        snapshot.matchId !== null &&
+        snapshot.matchId !== previousMatchId
+      ) {
+        resetDraftState()
+        logger.info('New match — previous draft session cleared', {
+          previousMatchId,
+          matchId: snapshot.matchId,
+        })
+      }
       draftMatchId = snapshot.matchId
       resetDraftSession()
       draftStore.getState().clearDraftTimeline()
@@ -183,6 +232,9 @@ export function createAutoRescanService(
       logger.info('Left hero selection (session retained for possible re-entry)', {
         nextPhase: snapshot.gamePhase,
       })
+      // Catch the last picks while the draft screen is still up (overlay
+      // auto-close awaits this same promise before closing)
+      void finalizeDraft()
     }
   }
 
@@ -226,6 +278,17 @@ export function createAutoRescanService(
         from: lastClockTime,
         to: snapshot.clockTime,
       })
+      // Seen-times measured against a seeked clock mean nothing: order by count
+      const timeline = draftStore.getState().draftTimeline
+      if (timeline.some((event) => event.seenAtS !== undefined)) {
+        draftStore.getState().setDraftTimeline(
+          timeline.map((event) => {
+            const unstamped = { ...event }
+            delete unstamped.seenAtS
+            return unstamped
+          }),
+        )
+      }
     }
     lastClockTime = snapshot.clockTime
 
@@ -269,6 +332,10 @@ export function createAutoRescanService(
   async function tick(): Promise<void> {
     if (tickRunning) return
     tickRunning = true
+    let finishTick = (): void => {}
+    tickDone = new Promise((resolve) => {
+      finishTick = resolve
+    })
     try {
       const settings = dbService.metadata.getSettings()
       if (!settings.experimentalAutoDraftTracking) return
@@ -352,15 +419,6 @@ export function createAutoRescanService(
         return
       }
 
-      // Fast model-pick confirmation: a tile read changed last scan — capture
-      // just the model tiles again (zero ability rows) so the persistence rule
-      // commits in ~1.5s instead of one full turn later
-      if (modelConfirmAtMs !== null && Date.now() >= modelConfirmAtMs) {
-        modelConfirmAtMs = null
-        await runRescan([], undefined, snapshot.clockTime, null, 'model-confirm')
-        return
-      }
-
       if (pickAnchorMs === null) return
 
       const elapsedS = (Date.now() - pickAnchorMs) / 1000
@@ -395,162 +453,66 @@ export function createAutoRescanService(
       })
     } finally {
       tickRunning = false
+      finishTick()
     }
   }
 
-  /**
-   * Attribute model-tile changes to players. AUTHORITATIVE source: the card
-   * OCR (the drafter's card prints the hero's name — see ocrRowForPoolHero);
-   * turn timing is the fallback while OCR hasn't read the card. Newly PENDING
-   * tiles are tentatively mapped to the single turn that triggered this scan
-   * (ambiguous multi-turn scans and the first sweep-up rescan attribute
-   * nothing); newly COMMITTED tiles resolve OCR-first, then tentative. The
-   * user's own model resolves via the OCR-derived My Spot ('self').
-   */
-  /**
-   * The unique player row whose card OCR'd as the given POOL hero, or null
-   * (not OCR'd yet / ambiguous). Direct evidence of who drafted the model —
-   * the draft screen prints the hero's name on the drafter's card.
-   */
-  function ocrRowForPoolHero(order: number): number | null {
-    const state = draftStore.getState()
-    const heroName = state.identifiedHeroModelsCache.find(
-      (m) => m.heroOrder === order,
-    )?.heroName
-    if (!heroName) return null
-    const token = heroNameToken(heroName)
-    const rows = Object.entries(state.ocrHeroNamesByRow)
-      .filter(([, ocr]) => heroNameToken(ocr.name) === token)
-      .map(([row]) => Number(row))
-    return rows.length === 1 ? rows[0] : null
+  /** Playing mode is where card OCR owns model picks (spectate: GSI does). */
+  function isPlaying(): boolean {
+    const { snapshot } = streamService.getGsiState()
+    return snapshot !== null && gsiSnapshotMode(snapshot) === 'playing'
   }
 
-  function attributeModelPicks(
-    prevPending: readonly number[],
-    prevPicked: readonly number[],
-    scannedRows: number[] | undefined,
-  ): void {
+  /**
+   * Apply the current card reads to the model picks: assignments, the picked
+   * set the scan processor reads, and the timeline's existing markers
+   * (re-labelled/moved/dropped in place). Returns NEW markers without seq —
+   * the caller sequences them ahead of the same capture's ability picks.
+   */
+  function applyOcrModelPicks(
+    clockTime: number | null,
+    seenAtS: number | undefined,
+  ): Omit<PickEvent, 'seq'>[] {
     const state = draftStore.getState()
+    if (state.identifiedHeroModelsCache.length === 0) return []
     const { snapshot } = streamService.getGsiState()
-
     const localNpc = snapshot?.localHeroNpcName ?? null
-    const localToken = localNpc ? heroNameToken(localNpc) : null
-
-    // Tentative mapping at FIRST-SEEN time
-    const prevPendingSet = new Set(prevPending)
-    const newlyPending = state.pendingModelChanges.filter(
-      (order) => !prevPendingSet.has(order),
-    )
-    for (const order of newlyPending) {
-      const heroName = state.identifiedHeroModelsCache.find(
-        (m) => m.heroOrder === order,
-      )?.heroName
-      if (
-        localToken !== null &&
-        heroName !== undefined &&
-        heroNameToken(heroName) === localToken
-      ) {
-        tentativeModelPicker.set(order, 'self')
-      } else if (acceptedRescans > 1 && scannedRows?.length === 1) {
-        tentativeModelPicker.set(order, scannedRows[0])
-      }
-    }
-    // Pending entries that neither persisted nor committed were flickers
-    const stillRelevant = new Set([
-      ...state.pendingModelChanges,
-      ...state.pickedModelHeroOrders,
-    ])
-    for (const order of [...tentativeModelPicker.keys()]) {
-      if (!stillRelevant.has(order)) tentativeModelPicker.delete(order)
-    }
-
-    // Commit priority: the LOCAL player's model goes to the known My Spot row
-    // (countdown/OCR-validated — a single card misread must never move it,
-    // observed 2026-08-26); other models take the card-OCR row (direct
-    // evidence), with the turn-timing tentative mapping as the fallback while
-    // OCR hasn't read the card (reconcileModelAssignmentsWithOcr fixes later)
-    const prevPickedSet = new Set(prevPicked)
-    const assignments: import('../store/draft-store').ModelAssignment[] = []
-    for (const order of state.pickedModelHeroOrders) {
-      if (prevPickedSet.has(order)) continue
-      const tentative = tentativeModelPicker.get(order)
-      tentativeModelPicker.delete(order)
-      const ocrRow = ocrRowForPoolHero(order)
-      const spotRow =
-        tentative === 'self' ? state.mySelectedSpotHeroOrder : null
-      if (spotRow !== null && ocrRow !== null && ocrRow !== spotRow) {
-        logger.warn(
-          'Card OCR disagrees with My Spot for the local model — trusting the spot',
-          { order, ocrRow, spotRow },
-        )
-      }
-      const playerIndex =
-        spotRow ?? ocrRow ?? (tentative === 'self' ? undefined : tentative)
-      if (playerIndex === undefined) {
-        logger.info('Model pick left unattributed (awaiting card OCR)', { order })
-        continue
-      }
-      assignments.push({ poolHeroOrder: order, playerIndex })
-    }
-    if (assignments.length > 0) {
-      draftStore.getState().appendModelAssignments(assignments)
-      logger.info('Model picks attributed', { assignments })
-    }
-  }
-
-  /**
-   * Card OCR lands on its own schedule (often a scan after the model commit)
-   * and outranks turn-timing guesses: append assignments timing couldn't make
-   * and CORRECT ones it got wrong (observed: adjacent-turn misattribution put
-   * Night Stalker on the wrong team's row, 2026-08-26).
-   */
-  function reconcileModelAssignmentsWithOcr(): boolean {
-    const state = draftStore.getState()
-    if (state.pickedModelHeroOrders.length === 0) return false
-
-    // The LOCAL player's model is anchored to the known My Spot row — card
-    // OCR must never "correct" it onto another player (misread protection)
-    const { snapshot } = streamService.getGsiState()
-    const localToken = snapshot?.localHeroNpcName
-      ? heroNameToken(snapshot.localHeroNpcName)
-      : null
     const spotRow = state.mySelectedSpotHeroOrder
 
-    let changed = false
-    let assignments = [...state.modelAssignments]
-    for (const order of state.pickedModelHeroOrders) {
-      const heroName = state.identifiedHeroModelsCache.find(
-        (m) => m.heroOrder === order,
-      )?.heroName
-      const isLocalModel =
-        localToken !== null &&
-        heroName !== undefined &&
-        heroNameToken(heroName) === localToken
-      const ocrRow =
-        isLocalModel && spotRow !== null ? spotRow : ocrRowForPoolHero(order)
-      if (ocrRow === null) continue
-      const existing = assignments.find((a) => a.poolHeroOrder === order)
-      if (!existing) {
-        assignments.push({ poolHeroOrder: order, playerIndex: ocrRow })
-        changed = true
-        logger.info('Model assignment added from card OCR', {
-          order,
-          row: ocrRow,
-        })
-      } else if (existing.playerIndex !== ocrRow) {
-        assignments = assignments.map((a) =>
-          a.poolHeroOrder === order ? { ...a, playerIndex: ocrRow } : a,
-        )
-        changed = true
-        logger.info('Model assignment corrected by card OCR', {
-          order,
-          from: existing.playerIndex,
-          to: ocrRow,
-        })
-      }
+    const assignments = resolveModelAssignments({
+      poolModels: state.identifiedHeroModelsCache,
+      ocrByRow: state.ocrHeroNamesByRow,
+      local: localNpc !== null && spotRow !== null ? { heroName: localNpc, row: spotRow } : null,
+    })
+    const update = reconcileModelMarkers(state.draftTimeline, assignments, clockTime, seenAtS)
+
+    if (update.added.length > 0 || update.corrected.length > 0 || update.dropped > 0) {
+      const heroName = (order: number | undefined): string =>
+        state.identifiedHeroModelsCache.find((m) => m.heroOrder === order)?.heroName ??
+        `#${order}`
+      logger.info('Model picks from card OCR', {
+        added: update.added.map((m) => `row ${m.playerIndex}: ${heroName(m.poolHeroOrder)}`),
+        ...(update.corrected.length > 0
+          ? {
+              corrected: update.corrected.map(
+                (c) => `${heroName(c.poolHeroOrder)} row ${c.fromRow} -> ${c.toRow}`,
+              ),
+            }
+          : {}),
+        ...(update.dropped > 0 ? { dropped: update.dropped } : {}),
+      })
     }
-    if (changed) draftStore.setState({ modelAssignments: assignments })
-    return changed
+
+    if (JSON.stringify(assignments) !== JSON.stringify(state.modelAssignments)) {
+      draftStore.setState({
+        modelAssignments: assignments,
+        pickedModelHeroOrders: assignments.map((a) => a.poolHeroOrder),
+      })
+    }
+    if (update.corrected.length > 0 || update.dropped > 0) {
+      draftStore.getState().setDraftTimeline(update.timeline)
+    }
+    return update.added
   }
 
   /**
@@ -563,18 +525,83 @@ export function createAutoRescanService(
     attributionRows: number[] | undefined,
     clockTime: number | null,
     elapsedS: number | null,
-    untimedKind?: 'periodic' | 'model-confirm',
+    untimedKind?: 'periodic' | 'final',
   ): Promise<void> {
-    const before = draftStore.getState()
-    const prevSelected = before.selectedAbilitiesCache
-    const prevPendingModels = before.pendingModelChanges
-    const prevPickedModels = before.pickedModelHeroOrders
+    // When this capture happens on the draft clock — new picks carry it so the
+    // store can place them at their turn (the final pass is timed too)
+    const seenAtS =
+      pickAnchorMs !== null && sawPreviewClock && !replayDetected
+        ? Math.round((Date.now() - pickAnchorMs) / 100) / 10
+        : undefined
 
     await scanTrigger.performScan(false, { heroOrders })
 
+    // Card reads from THIS capture first. A model pick is evidence even when the
+    // ability rows were obscured (the name strips are a separate region), and
+    // applying it before sequencing keeps it ahead of this capture's picks.
+    const newMarkers: Omit<PickEvent, 'seq'>[] = []
+    if (isPlaying()) {
+      const final = untimedKind === 'final'
+      const settleStartedAt = Date.now()
+      const drained = await ocrService.settle(
+        final ? OCR_FINAL_PASS_SETTLE_TIMEOUT_MS : OCR_SETTLE_TIMEOUT_MS,
+      )
+      if (final) {
+        logger.info('Draft final pass card OCR', {
+          drained,
+          waitedMs: Date.now() - settleStartedAt,
+        })
+      }
+      newMarkers.push(...applyOcrModelPicks(clockTime, seenAtS))
+    }
+
     const after = draftStore.getState()
-    if (after.lastRescanRejected || after.lastRescanHasty) {
-      // Tooltip over the rows — capture void, state untouched. Retry next
+    const rejected = after.lastRescanRejected || after.lastRescanHasty
+    let newAbilities: Omit<PickEvent, 'seq'>[] = []
+    if (!rejected) {
+      const update = reconcileAbilityPicks({
+        timeline: after.draftTimeline,
+        nextSelected: after.selectedAbilitiesCache,
+        clockTime,
+        seenAtS,
+      })
+      if (update.corrected.length > 0 || update.phantoms.length > 0) {
+        logger.info('Ability picks healed', {
+          ...(update.corrected.length > 0
+            ? { renamed: update.corrected.map((c) => `row ${c.playerIndex}: ${c.from} -> ${c.to}`) }
+            : {}),
+          ...(update.phantoms.length > 0
+            ? {
+                phantomsRemoved: update.phantoms.map((p) => `row ${p.playerIndex}: ${p.name}`),
+              }
+            : {}),
+        })
+      }
+      if (
+        update.corrected.length > 0 ||
+        update.phantoms.length > 0 ||
+        update.vacatedChanged ||
+        update.timeline.length !== after.draftTimeline.length
+      ) {
+        draftStore.getState().setDraftTimeline(update.timeline)
+      }
+      newAbilities = update.added
+    }
+
+    // Provisional seq only: the store re-orders every pick to its draft turn
+    const baseSeq = draftStore.getState().draftTimeline.length
+    const markers: PickEvent[] = newMarkers.map((m, i) => ({ ...m, seq: baseSeq + i }))
+    const events: PickEvent[] = newAbilities.map((e, i) => ({
+      ...e,
+      seq: baseSeq + markers.length + i,
+    }))
+    if (markers.length > 0 || events.length > 0) {
+      draftStore.getState().appendPickEvents([...markers, ...events])
+    }
+
+    if (rejected) {
+      if (markers.length > 0) streamService.refresh()
+      // Tooltip over the rows: ability read void, state untouched. Retry next
       // tick; past the cap, drop and let the round-break full scan catch up.
       targetRetries += 1
       if (targetRetries > AUTO_RESCAN_MAX_TARGET_RETRIES) {
@@ -588,27 +615,11 @@ export function createAutoRescanService(
       return
     }
 
-    acceptedRescans += 1
-    attributeModelPicks(prevPendingModels, prevPickedModels, attributionRows)
-    reconcileModelAssignmentsWithOcr()
-
-    // Pending tile changes await their persistence confirmation — schedule the
-    // fast model-only capture (chains naturally if new changes keep appearing)
-    modelConfirmAtMs =
-      draftStore.getState().pendingModelChanges.length > 0
-        ? Date.now() + MODEL_PICK_CONFIRM_DELAY_MS
-        : null
-
-    const events = attributePicksByRow({
-      prevSelected,
-      nextSelected: after.selectedAbilitiesCache,
-      nextSeq: after.draftTimeline.length,
-      clockTime,
-    })
-
     logger.info('Turn-driven rescan complete', {
       targeted: heroOrders ?? 'full',
+      attributionRows: attributionRows ?? null,
       newPicks: events.length,
+      newModelMarkers: markers.length,
       clockTime,
       ...(elapsedS !== null
         ? { elapsedS: Math.round(elapsedS) }
@@ -621,10 +632,10 @@ export function createAutoRescanService(
 
     // One bounded retry for a targeted row whose pick did not show up: the
     // icon reveal races the capture right after a turn (measured marginal at
-    // +1-2s, loses under CPU load). A model-draft turn also lands here — it
-    // never yields an ability pick, costing at most one extra capture per turn.
+    // +1-2s, loses under CPU load). A row whose card just read a model drafted
+    // its model this turn, so there is nothing more to find there.
     if (heroOrders && heroOrders.length > 0) {
-      const rowsWithEvents = new Set(events.map((e) => e.playerIndex))
+      const rowsWithEvents = new Set([...markers, ...events].map((e) => e.playerIndex))
       for (const row of heroOrders) {
         if (!rowsWithEvents.has(row) && !retriedEmptyRows.has(row)) {
           retriedEmptyRows.add(row)
@@ -633,10 +644,65 @@ export function createAutoRescanService(
       }
     }
 
-    if (events.length > 0) {
-      draftStore.getState().appendPickEvents(events)
-    }
     streamService.refresh()
+  }
+
+  /** Resolves true when the promise settles within ms, false on timeout. */
+  function within(promise: Promise<unknown>, ms: number): Promise<boolean> {
+    let timer: NodeJS.Timeout | undefined
+    return Promise.race([
+      promise.then(() => true),
+      new Promise<boolean>((resolve) => {
+        timer = setTimeout(() => resolve(false), ms)
+      }),
+    ]).finally(() => clearTimeout(timer))
+  }
+
+  function finalizeDraft(): Promise<void> {
+    if (finalPass !== null) return finalPass
+    finalPass = (async () => {
+      const startedAt = Date.now()
+      const skip = (reason: string): void => {
+        logger.info('Draft final pass skipped', { reason, durationMs: Date.now() - startedAt })
+      }
+      const settings = dbService.metadata.getSettings()
+      if (!settings.experimentalAutoDraftTracking) return skip('auto draft tracking off')
+      if (poolNames().length === 0) return skip('no draft tracked')
+
+      // The last round's scan is typically STILL RUNNING when hero selection ends
+      // (live 2026-09-16: gating on mlStatus first saw 'scanning', skipped, and
+      // the overlay closed under that scan). Wait for it before any readiness
+      // check — auto-close awaits this whole pass, so its capture stays valid.
+      if (!(await within(tickDone, DRAFT_FINAL_PASS_TIMEOUT_MS))) {
+        return skip('in-flight scan did not finish in time')
+      }
+      if (!appStore.getState().overlayActive) return skip('overlay already closed')
+      if (appStore.getState().mlStatus !== 'ready') {
+        return skip(`ml not ready (${appStore.getState().mlStatus})`)
+      }
+
+      tickRunning = true // hold off ticks: this capture is the last word
+      try {
+        const clockTime = streamService.getGsiState().snapshot?.clockTime ?? null
+        const finished = await within(
+          runRescan(undefined, undefined, clockTime, null, 'final'),
+          DRAFT_FINAL_RESCAN_TIMEOUT_MS,
+        )
+        logger.info('Draft final pass', {
+          finished,
+          durationMs: Date.now() - startedAt,
+          modelPicks: draftStore.getState().modelAssignments.length,
+          picks: draftStore.getState().draftTimeline.length,
+        })
+      } finally {
+        tickRunning = false
+      }
+    })().catch((error: unknown) => {
+      logger.warn('Draft final pass failed', {
+        error: error instanceof Error ? error.message : String(error),
+      })
+    })
+    return finalPass
   }
 
   return {
@@ -650,6 +716,13 @@ export function createAutoRescanService(
         clearInterval(timer)
         timer = null
       }
+    },
+    finalizeDraft,
+    resetSession(): void {
+      resetDraftSession()
+      logger.info('Draft session reset manually — auto-rescan re-armed', {
+        matchId: draftMatchId,
+      })
     },
   }
 }
