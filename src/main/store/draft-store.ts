@@ -2,7 +2,9 @@ import { createStore } from 'zustand/vanilla'
 import type { ScanResult } from '@shared/types'
 import type { PickEvent } from '@shared/types/stream'
 import type { IdentifiedHeroModel } from '@core/domain/types'
-import type { ModelTileCapture } from '@core/domain/model-pick-detection'
+import type { ModelAssignment } from '@core/domain/model-picks-from-ocr'
+import { orderByDraftTurns } from '@core/domain/pick-attribution'
+import { buildTurnSchedule } from '@core/gsi/draft-clock'
 import type {
   PlayerCardCapture,
   CardRowState,
@@ -39,13 +41,11 @@ export interface DraftSessionSlice {
   lastRescanRejected: boolean
   /** True when the most recent rescan was a hasty no-op (contaminated, no new info). */
   lastRescanHasty: boolean
-  /** Model tiles captured at initial scan (unpicked reference for pick detection). */
-  modelTileBaselines: ModelTileCapture[]
-  /** Model tiles that read changed in the last scan, awaiting confirmation. */
-  pendingModelChanges: number[]
-  /** Pool hero orders whose model was detected as picked (never reverts). */
+  /** Pool hero orders whose model has been drafted — mirrors modelAssignments
+   * (playing mode) for the scan processor's picked tiles and suggestions. */
   pickedModelHeroOrders: number[]
-  /** Model -> player attribution (auto-rescan turn timing + GSI self). */
+  /** Model -> player attribution, derived from card OCR in playing mode
+   * (core/domain/model-picks-from-ocr.ts). */
   modelAssignments: ModelAssignment[]
   /** Attributed pick events (experimental auto-rescan); empty otherwise. */
   draftTimeline: PickEvent[]
@@ -63,6 +63,13 @@ export interface DraftSessionSlice {
     number,
     { name: string; displayName: string; similarity: number }
   >
+  /**
+   * OCR'd PLAYER names per row, matched against the names GSI reports (spectate).
+   * Resolves a row's identity before its player has drafted a model, which the
+   * hero name cannot do. The value is the exact GSI name, so the slot join is
+   * equality rather than another fuzzy match.
+   */
+  ocrPlayerNamesByRow: Record<number, { name: string; similarity: number }>
   /** Latest OCR'd "YOU WILL DRAFT IN" seconds + its capture time (playing
    * mode; countdown-based own-row detection). */
   draftCountdown: { seconds: number; atMs: number } | null
@@ -72,24 +79,24 @@ export interface DraftSessionSlice {
   countdownSpotRow: { row: number; deltaS: number; atMs: number } | null
 }
 
-/** A picked hero model attributed to the player who drafted it. */
-export interface ModelAssignment {
-  /** Pool hero row 0-11. */
-  poolHeroOrder: number
-  /** Player index 0-9 (scan convention). */
-  playerIndex: number
-}
+export type { ModelAssignment }
 
 export interface DraftStoreActions {
   resetSession(): void
   selectMySpot(dbHeroId: number | null, heroOrder: number | null): void
   selectMyModel(dbHeroId: number | null, heroOrder: number | null): void
+  /** Append picks; the timeline is kept in DRAFT order (each pick at its
+   * player's serpentine turn, placed by when it was seen), not discovery order. */
   appendPickEvents(events: PickEvent[]): void
-  appendModelAssignments(assignments: ModelAssignment[]): void
+  /** Replace the timeline (corrections/removals), same draft ordering. */
+  setDraftTimeline(timeline: PickEvent[]): void
   clearDraftTimeline(): void
 }
 
 export type DraftStore = DraftSessionSlice & DraftStoreActions
+
+/** Every turn of an Ability Draft (serpentine, 5 rounds × 10) with its time window. */
+const DRAFT_SCHEDULE = buildTurnSchedule()
 
 export function createDraftStore() {
   return createStore<DraftStore>((set) => ({
@@ -104,8 +111,6 @@ export function createDraftStore() {
     rescanRejectionStreak: 0,
     lastRescanRejected: false,
     lastRescanHasty: false,
-    modelTileBaselines: [],
-    pendingModelChanges: [],
     pickedModelHeroOrders: [],
     modelAssignments: [],
     draftTimeline: [],
@@ -114,6 +119,7 @@ export function createDraftStore() {
     gsiHeroEvents: [],
     slotRowMappings: [],
     ocrHeroNamesByRow: {},
+    ocrPlayerNamesByRow: {},
     draftCountdown: null,
     countdownSpotRow: null,
 
@@ -130,8 +136,6 @@ export function createDraftStore() {
         rescanRejectionStreak: 0,
         lastRescanRejected: false,
         lastRescanHasty: false,
-        modelTileBaselines: [],
-        pendingModelChanges: [],
         pickedModelHeroOrders: [],
         modelAssignments: [],
         draftTimeline: [],
@@ -140,6 +144,7 @@ export function createDraftStore() {
         gsiHeroEvents: [],
         slotRowMappings: [],
         ocrHeroNamesByRow: {},
+        ocrPlayerNamesByRow: {},
         draftCountdown: null,
         countdownSpotRow: null,
       }),
@@ -157,12 +162,12 @@ export function createDraftStore() {
       }),
 
     appendPickEvents: (events) =>
-      set((state) => ({ draftTimeline: [...state.draftTimeline, ...events] })),
-
-    appendModelAssignments: (assignments) =>
       set((state) => ({
-        modelAssignments: [...state.modelAssignments, ...assignments],
+        draftTimeline: orderByDraftTurns([...state.draftTimeline, ...events], DRAFT_SCHEDULE),
       })),
+
+    setDraftTimeline: (timeline) =>
+      set({ draftTimeline: orderByDraftTurns(timeline, DRAFT_SCHEDULE) }),
 
     clearDraftTimeline: () => set({ draftTimeline: [], modelAssignments: [] }),
   }))

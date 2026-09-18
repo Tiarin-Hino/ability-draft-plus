@@ -51,6 +51,8 @@ export function createMetadataRepository(db: SQLJsDatabase): MetadataRepository 
       const roleMode = get('role_mode')
       const roleFixedPositions = get('role_fixed_positions')
       const aghsMarkersEnabled = get('aghs_markers_enabled')
+      const twitchBroadcastEnabled = get('twitch_broadcast_enabled')
+      const overlayBackgroundMode = get('overlay_background_mode')
 
       return {
         opThreshold:
@@ -110,6 +112,14 @@ export function createMetadataRepository(db: SQLJsDatabase): MetadataRepository 
           aghsMarkersEnabled !== null
             ? aghsMarkersEnabled === 'true'
             : DEFAULT_SETTINGS.aghsMarkersEnabled,
+        twitchBroadcastEnabled:
+          twitchBroadcastEnabled !== null
+            ? twitchBroadcastEnabled === 'true'
+            : DEFAULT_SETTINGS.twitchBroadcastEnabled,
+        overlayBackgroundMode:
+          overlayBackgroundMode !== null
+            ? overlayBackgroundMode === 'true'
+            : DEFAULT_SETTINGS.overlayBackgroundMode,
       }
     },
 
@@ -158,6 +168,12 @@ export function createMetadataRepository(db: SQLJsDatabase): MetadataRepository 
       }
       if (settings.aghsMarkersEnabled !== undefined) {
         set('aghs_markers_enabled', String(settings.aghsMarkersEnabled))
+      }
+      if (settings.twitchBroadcastEnabled !== undefined) {
+        set('twitch_broadcast_enabled', String(settings.twitchBroadcastEnabled))
+      }
+      if (settings.overlayBackgroundMode !== undefined) {
+        set('overlay_background_mode', String(settings.overlayBackgroundMode))
       }
     },
 

@@ -26,6 +26,7 @@ export function createAppStore() {
     resolvedDarkMode: true,
     language: 'en',
     overlayActive: false,
+    overlayBackground: false,
     activeResolution: null,
     activeResolutionSource: null,
     overlayOpacity: 1,
@@ -48,6 +49,12 @@ export function createAppStore() {
     streamServerError: null,
     streamClientCount: 0,
     gsiConnected: false,
+    twitchPaired: false,
+    twitchChannelName: null,
+    twitchBroadcastEnabled: false,
+    twitchPublishStatus: 'off',
+    twitchLastPublishAt: null,
+    twitchErrorKey: null,
   }))
 }
 

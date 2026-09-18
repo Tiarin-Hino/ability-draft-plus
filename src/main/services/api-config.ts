@@ -88,6 +88,29 @@ export function loadClientTag(): string | undefined {
 }
 
 /**
+ * Base URL of the Twitch extension backend (EBS). Optional override — absent
+ * means the public default (DEFAULT_TWITCH_EBS_URL). Same dev/packaged split as
+ * loadClientTag(); a local EBS run sets TWITCH_EBS_URL in .env.
+ */
+export function loadTwitchEbsUrl(): string | undefined {
+  if (app.isPackaged) {
+    const configPath = join(process.resourcesPath, 'app-config.json')
+    try {
+      const data = JSON.parse(readFileSync(configPath, 'utf-8'))
+      return data.TWITCH_EBS_URL || undefined
+    } catch {
+      return undefined
+    }
+  }
+  const envPath = resolve(app.getAppPath(), '.env')
+  if (existsSync(envPath)) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    require('dotenv').config({ path: envPath })
+  }
+  return process.env.TWITCH_EBS_URL || undefined
+}
+
+/**
  * Load Sentry DSN for crash reporting.
  * Returns undefined if not configured (crash reporting will be disabled).
  */

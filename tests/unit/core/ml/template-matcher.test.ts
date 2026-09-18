@@ -79,7 +79,22 @@ describe('matchPickSlot', () => {
       bestName: null,
       secondName: null,
       margin: null,
+      pixelStd: 0,
     })
+  })
+
+  it('treats a textured empty box (live std 5-20) as empty — the 2026-09-17 recalibration', () => {
+    // An empty ultimate box measured std 11.5-13.4 in production; the old cutoff
+    // of 5 sent it to the matcher, where it scored 0.457 as Focus Fire
+    const crop = new Uint8Array(VEC_LENGTH)
+    for (let i = 0; i < crop.length; i++) crop[i] = 20 + (i % 2 === 0 ? 24 : 0)
+    const std = computePixelStats(crop).std
+    expect(std).toBeGreaterThan(5)
+    expect(std).toBeLessThan(PICK_TEMPLATE_EMPTY_STD)
+    const result = matchPickSlot(crop, makeTemplates(5))
+    expect(result.isEmpty).toBe(true)
+    expect(result.name).toBeNull()
+    expect(result.pixelStd).toBeCloseTo(std)
   })
 
   it('treats near-uniform noise below the empty threshold as empty', () => {

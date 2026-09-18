@@ -65,6 +65,7 @@ describe('buildPicksViewState', () => {
         npcName: 'sand_king',
         displayName: 'Sand King',
         portraitPath: '/icons/heroes/sand_king.png',
+        cdnName: 'sand_king',
       },
       picks: [
         slot('sandking_burrowstrike'),

@@ -16,6 +16,15 @@ build/*
 # TypeScript build cache
 *.tsbuildinfo
 
+# Twitch extension packages (own node_modules / build output)
+twitch/**/node_modules/
+twitch/**/dist/
+twitch/**/.aws-sam/
+twitch/catalog/dist/
+twitch/frontend/*.zip
+twitch/frontend/smoke-out/
+twitch/frontend/preview.log
+
 # Environment
 .env
 .env.local
@@ -57,3 +66,4 @@ colab/**
 
 # Python bytecode (training pipeline)
 __pycache__/
+twitch/frontend/certs/

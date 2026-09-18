@@ -23,6 +23,18 @@
     "errorGeneric": "服务器启动失败。请查看日志了解详情。",
     "errorInvalidPort": "端口无效。请输入 1024 到 65535 之间的数字。"
   },
+  "background": {
+    "title": "后台模式",
+    "description": "运行征召会话而不在屏幕上显示覆盖层。扫描、自动追踪、直播面板和 Twitch 扩展均照常工作。",
+    "toggle": "从不显示覆盖层",
+    "hint": "适合播出面板或 Twitch 扩展、但自己游戏时不想看到覆盖层的主播。像平常一样启动会话——快捷键 Ctrl+Shift+S 和 Ctrl+Shift+R 仍可扫描和重新扫描。",
+    "activeNote": "当前有一个会话正在后台运行。",
+    "autoCloseNote": "此模式下覆盖层自动关闭保持禁用：覆盖层并未遮挡游戏，而关闭会在比赛中途清除征召数据。",
+    "resetDraft": "重置征召",
+    "endSession": "结束会话",
+    "resetDone": "征召数据已清除。下一次扫描将开始新的征召。",
+    "controlsHint": "新比赛开始时会自动清除上一场征召。如有遗留的征召数据，请使用“重置征召”；要停止追踪，请使用“结束会话”。"
+  },
   "gsi": {
     "title": "Dota 2 游戏状态集成",
     "description": "允许 Dota 将玩家名称、游戏阶段和计时器发送到直播面板。需要将配置文件安装到 Dota 文件夹一次，并重启 Dota。",
@@ -32,6 +44,7 @@
     "notDetected": "未找到 Dota 安装位置——请手动选择“dota 2 beta”文件夹。",
     "cfgPresent": "配置文件已安装",
     "cfgMissing": "尚未安装配置文件",
+    "cfgOutdated": "已安装的配置文件早于解说数据功能（其中缺少物品数据块）。请重新安装并重启 Dota 2 以启用。",
     "writeCfg": "安装配置文件",
     "browse": "浏览…",
     "pickFolderTitle": "选择“dota 2 beta”文件夹",
@@ -56,5 +69,40 @@
     "step2": "在 OBS 中：来源 → 添加 → 浏览器，粘贴网址，将大小设为 1920×1080。",
     "step3": "默认背景透明。追加 ?bg=dark 可使用纯色背景，追加 ?bg=chroma 可使用绿幕。",
     "note": "面板会跟随覆盖层扫描：扫描后（Ctrl+Shift+S）显示技能池，每次重新扫描后（Ctrl+Shift+R）更新选取。"
+  },
+  "twitch": {
+    "title": "Twitch 扩展",
+    "description": "让观众在 Twitch 上直接点击你草稿中的技能。将应用与频道配对一次，然后保持广播开启即可。",
+    "status": {
+      "unpaired": "未配对",
+      "paired": "已配对",
+      "broadcasting": "广播中",
+      "error": "错误"
+    },
+    "step1": "在你的 Twitch 频道安装 Ability Draft Plus 扩展并打开其配置页面。",
+    "step2": "复制页面上显示的配对码。",
+    "step3": "在下方粘贴配对码并点击“配对”。",
+    "codeLabel": "配对码",
+    "codePlaceholder": "XXXX-XXXX",
+    "pairButton": "配对",
+    "pairing": "配对中…",
+    "channel": "频道：{{name}}",
+    "channelUnknown": "频道 {{id}}",
+    "enable": "将草稿广播到 Twitch",
+    "enableHint": "每次扫描后将草稿面板发送给观众。游戏阶段跟踪需要流服务器处于运行状态；不需要 OBS。",
+    "lastPublish": "上次更新发送于 {{time}}",
+    "neverPublished": "尚未发送任何更新",
+    "testButton": "发送测试更新",
+    "testSent": "更新已送达扩展后端。",
+    "unpairButton": "取消配对",
+    "errorInvalidCode": "配对码无效或已过期——请在扩展配置页面生成新的配对码。",
+    "errorNetwork": "无法连接扩展后端。请检查网络连接。",
+    "errorUnauthorized": "频道配对已失效。请取消配对后重新配对。",
+    "errorPublishFailed": "上次更新未能送达，将自动重试。",
+    "errorLiveFailed": "对局实时数据未能送达观众——扩展后端可能已过期。征召面板不受影响。",
+    "errorTooLarge": "草稿更新过大，超出 Twitch 限制，未能送达。",
+    "errorVersion": "扩展后端需要更新版本的应用。请更新应用。",
+    "errorDisabled": "请先开启广播。",
+    "errorNothingToSend": "暂无可发送内容——请先扫描一次草稿。"
   }
 }

@@ -32,6 +32,7 @@ describe('buildGsiCfg', () => {
               "abilities"     "1"
               "draft"         "1"
               "allplayers"    "1"
+              "items"         "1"
           }
       }
       "

@@ -3,6 +3,9 @@ import {
   initialCardRows,
   detectCardChanges,
   correlateSlotRows,
+  correlateByHeroIdentity,
+  correlateByElimination,
+  meanAbsDiff,
 } from '@core/domain/slot-row-correlation'
 import type {
   PlayerCardCapture,
@@ -10,6 +13,21 @@ import type {
   GsiHeroEvent,
   SlotRowMapping,
 } from '@core/domain/slot-row-correlation'
+
+describe('meanAbsDiff', () => {
+  it('is 0 for identical tiles', () => {
+    expect(meanAbsDiff(new Uint8Array([1, 2, 3]), new Uint8Array([1, 2, 3]))).toBe(0)
+  })
+
+  it('averages per-byte differences', () => {
+    expect(meanAbsDiff(new Uint8Array([0, 0]), new Uint8Array([10, 30]))).toBe(20)
+  })
+
+  it('treats length mismatches as maximally different', () => {
+    expect(meanAbsDiff(new Uint8Array([1]), new Uint8Array([1, 2]))).toBe(Infinity)
+    expect(meanAbsDiff(new Uint8Array(0), new Uint8Array(0))).toBe(Infinity)
+  })
+})
 
 function card(row: number, fill: number, length = 27): PlayerCardCapture {
   return { row, tile: new Uint8Array(length).fill(fill) }
@@ -149,6 +167,224 @@ describe('detectCardChanges', () => {
       nowMs: 5_000,
     })
     expect(result.rows[3].status).toBe('static')
+  })
+})
+
+describe('correlateByHeroIdentity', () => {
+  // Real permutation captured from a live spectated game (2026-09-04). The
+  // Radiant half is fully shuffled and Dire has one swap — the case that made
+  // every in-game column show another player's picks.
+  const LIVE_GSI = [
+    { slot: 0, npcName: 'tusk' },
+    { slot: 1, npcName: 'zuus' },
+    { slot: 2, npcName: 'shadow_shaman' },
+    { slot: 3, npcName: 'arc_warden' },
+    { slot: 4, npcName: 'night_stalker' },
+    { slot: 5, npcName: 'leshrac' },
+    { slot: 6, npcName: 'windrunner' },
+    { slot: 7, npcName: 'morphling' },
+    { slot: 8, npcName: 'vengefulspirit' },
+    { slot: 9, npcName: 'beastmaster' },
+  ]
+  // OCR spells the same heroes differently (no underscores; Zeus, not Zuus)
+  const LIVE_OCR = {
+    0: { name: 'arc_warden' },
+    1: { name: 'nightstalker' },
+    2: { name: 'zeus' },
+    3: { name: 'shadowshaman' },
+    4: { name: 'tusk' },
+    5: { name: 'leshrac' },
+    6: { name: 'windrunner' },
+    7: { name: 'vengefulspirit' },
+    8: { name: 'morphling' },
+    9: { name: 'beastmaster' },
+  }
+
+  it('recovers the full mapping from a live permuted game', () => {
+    const result = correlateByHeroIdentity({
+      gsiHeroes: LIVE_GSI,
+      ocrHeroNamesByRow: LIVE_OCR,
+      mappings: [],
+    })
+    const bySlot = new Map(result.mappings.map((m) => [m.gsiSlot, m.scanRow]))
+    expect(bySlot.get(0)).toBe(4) // Tusk: top-bar seat 0, draft row 4
+    expect(bySlot.get(1)).toBe(2)
+    expect(bySlot.get(2)).toBe(3)
+    expect(bySlot.get(3)).toBe(0)
+    expect(bySlot.get(4)).toBe(1)
+    expect(bySlot.get(7)).toBe(8)
+    expect(bySlot.get(8)).toBe(7)
+    expect(result.mappings).toHaveLength(10)
+  })
+
+  it('normalizes naming differences between GSI and OCR', () => {
+    const result = correlateByHeroIdentity({
+      gsiHeroes: [{ slot: 1, npcName: 'zuus' }],
+      ocrHeroNamesByRow: { 2: { name: 'zeus' } },
+      mappings: [],
+    })
+    expect(result.newMappings).toEqual([{ gsiSlot: 1, scanRow: 2 }])
+  })
+
+  it('resolves partially — rows the OCR has not read yet simply wait', () => {
+    const result = correlateByHeroIdentity({
+      gsiHeroes: LIVE_GSI,
+      ocrHeroNamesByRow: { 4: { name: 'tusk' }, 0: { name: 'arc_warden' } },
+      mappings: [],
+    })
+    expect(result.newMappings).toEqual([
+      { gsiSlot: 0, scanRow: 4 },
+      { gsiSlot: 3, scanRow: 0 },
+    ])
+  })
+
+  it('never revises a committed mapping', () => {
+    const result = correlateByHeroIdentity({
+      gsiHeroes: LIVE_GSI,
+      ocrHeroNamesByRow: LIVE_OCR,
+      mappings: [{ gsiSlot: 0, scanRow: 9 }],
+    })
+    expect(result.mappings.filter((m) => m.gsiSlot === 0)).toEqual([
+      { gsiSlot: 0, scanRow: 9 },
+    ])
+    expect(result.newMappings.some((m) => m.scanRow === 4)).toBe(false)
+  })
+
+  it('rejects a cross-team match as a misread', () => {
+    const result = correlateByHeroIdentity({
+      gsiHeroes: [{ slot: 0, npcName: 'tusk' }],
+      ocrHeroNamesByRow: { 7: { name: 'tusk' } },
+      mappings: [],
+    })
+    expect(result.newMappings).toEqual([])
+  })
+
+  it('refuses an ambiguous token on either side', () => {
+    const duplicateRows = correlateByHeroIdentity({
+      gsiHeroes: [{ slot: 0, npcName: 'tusk' }],
+      ocrHeroNamesByRow: { 1: { name: 'tusk' }, 2: { name: 'tusk' } },
+      mappings: [],
+    })
+    expect(duplicateRows.newMappings).toEqual([])
+
+    const duplicateSlots = correlateByHeroIdentity({
+      gsiHeroes: [
+        { slot: 0, npcName: 'tusk' },
+        { slot: 1, npcName: 'tusk' },
+      ],
+      ocrHeroNamesByRow: { 2: { name: 'tusk' } },
+      mappings: [],
+    })
+    expect(duplicateSlots.newMappings).toEqual([])
+  })
+
+  // The same joiner is reused for PLAYER names (the key that resolves rows
+  // before anyone has drafted a model). Both sides carry the exact GSI string,
+  // so this is equality after normalization rather than a fuzzy match.
+  it('joins on player names, including spaces and mixed case', () => {
+    const result = correlateByHeroIdentity({
+      gsiHeroes: [
+        { slot: 0, npcName: 'FriscyDriscy' },
+        { slot: 1, npcName: 'DJ Dingus' },
+        { slot: 6, npcName: 'Poof' },
+      ],
+      ocrHeroNamesByRow: {
+        3: { name: 'FriscyDriscy' },
+        0: { name: 'DJ Dingus' },
+        8: { name: 'Poof' },
+      },
+      mappings: [],
+    })
+    expect(result.newMappings).toEqual([
+      { gsiSlot: 0, scanRow: 3 },
+      { gsiSlot: 1, scanRow: 0 },
+      { gsiSlot: 6, scanRow: 8 },
+    ])
+  })
+
+  it('is inert with no GSI heroes (playing mode)', () => {
+    const result = correlateByHeroIdentity({
+      gsiHeroes: [],
+      ocrHeroNamesByRow: LIVE_OCR,
+      mappings: [],
+    })
+    expect(result.newMappings).toEqual([])
+  })
+})
+
+describe('correlateByElimination', () => {
+  const ALL_SLOTS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+  it('forces the fifth player once four of a half are known', () => {
+    const result = correlateByElimination({
+      knownSlots: ALL_SLOTS,
+      mappings: [
+        { gsiSlot: 0, scanRow: 4 },
+        { gsiSlot: 1, scanRow: 2 },
+        { gsiSlot: 2, scanRow: 3 },
+        { gsiSlot: 3, scanRow: 0 },
+      ],
+    })
+    expect(result.newMappings).toEqual([{ gsiSlot: 4, scanRow: 1 }])
+  })
+
+  it('resolves both halves independently in one pass', () => {
+    const result = correlateByElimination({
+      knownSlots: ALL_SLOTS,
+      mappings: [
+        { gsiSlot: 0, scanRow: 4 },
+        { gsiSlot: 1, scanRow: 2 },
+        { gsiSlot: 2, scanRow: 3 },
+        { gsiSlot: 3, scanRow: 0 },
+        { gsiSlot: 5, scanRow: 5 },
+        { gsiSlot: 6, scanRow: 6 },
+        { gsiSlot: 7, scanRow: 8 },
+        { gsiSlot: 8, scanRow: 7 },
+      ],
+    })
+    expect(result.newMappings).toEqual([
+      { gsiSlot: 4, scanRow: 1 },
+      { gsiSlot: 9, scanRow: 9 },
+    ])
+  })
+
+  it('stays silent with two or more unknowns in a half', () => {
+    const result = correlateByElimination({
+      knownSlots: ALL_SLOTS,
+      mappings: [
+        { gsiSlot: 0, scanRow: 4 },
+        { gsiSlot: 1, scanRow: 2 },
+        { gsiSlot: 2, scanRow: 3 },
+      ],
+    })
+    expect(result.newMappings).toEqual([])
+  })
+
+  it('refuses when GSI does not report all five slots of the half', () => {
+    // Only four slots known: "the one left over" is not actually determined
+    const result = correlateByElimination({
+      knownSlots: [0, 1, 2, 3, 5, 6, 7, 8, 9],
+      mappings: [
+        { gsiSlot: 0, scanRow: 4 },
+        { gsiSlot: 1, scanRow: 2 },
+        { gsiSlot: 2, scanRow: 3 },
+      ],
+    })
+    expect(result.newMappings).toEqual([])
+  })
+
+  it('never crosses team halves', () => {
+    const result = correlateByElimination({
+      knownSlots: ALL_SLOTS,
+      mappings: [
+        { gsiSlot: 0, scanRow: 0 },
+        { gsiSlot: 1, scanRow: 1 },
+        { gsiSlot: 2, scanRow: 2 },
+        { gsiSlot: 3, scanRow: 3 },
+      ],
+    })
+    expect(result.newMappings).toEqual([{ gsiSlot: 4, scanRow: 4 }])
+    expect(result.newMappings.every((m) => m.scanRow < 5)).toBe(true)
   })
 })
 

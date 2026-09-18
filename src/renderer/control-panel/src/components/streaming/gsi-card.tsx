@@ -22,6 +22,8 @@ interface GsiDetection {
   cfgPath: string | null
   cfgExists: boolean
   cfgPort: number | null
+  /** Installed cfg is missing a data block this build needs (the items block). */
+  cfgOutdated: boolean
 }
 
 /** Install/browse buttons + detection status; reused outside the Streaming page. */
@@ -94,6 +96,16 @@ export function GsiSetupControls() {
         >
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           {t('gsi.portMismatch', { cfgPort: detection?.cfgPort, streamPort })}
+        </p>
+      )}
+
+      {detection?.cfgExists && detection.cfgOutdated && (
+        <p
+          className="flex items-start gap-1.5 text-sm text-amber-600 dark:text-amber-500"
+          role="alert"
+        >
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          {t('gsi.cfgOutdated')}
         </p>
       )}
 

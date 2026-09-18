@@ -3,7 +3,17 @@ import {
   SLOT_MAP_EVENT_SLACK_BEFORE_MS,
   SLOT_MAP_EVENT_SLACK_AFTER_MS,
 } from '@shared/constants/thresholds'
-import { meanAbsDiff } from './model-pick-detection'
+import { heroNameToken } from './own-row-detection'
+
+/** Mean absolute per-byte difference; Infinity on length mismatch (treat as changed). */
+export function meanAbsDiff(a: Uint8Array, b: Uint8Array): number {
+  if (a.length !== b.length || a.length === 0) return Infinity
+  let sum = 0
+  for (let i = 0; i < a.length; i++) {
+    sum += Math.abs(a[i] - b[i])
+  }
+  return sum / a.length
+}
 
 // @DEV-GUIDE: GSI slot <-> scan row correlation for SPECTATE/REPLAY sessions.
 // Problem: in spectate, GSI reports players by team_slot but that order does NOT
@@ -15,7 +25,7 @@ import { meanAbsDiff } from './model-pick-detection'
 // - Each of the 10 player cards (heroes_coords) shows pixel-static "NO HERO" art
 //   until that row's player drafts a model, then permanently switches to ANIMATED
 //   hero art. Diffing a card against its initial-scan baseline detects the switch
-//   without any image recognition (same principle as model-pick-detection).
+//   without any image recognition.
 // - When GSI says slot S gained a hero in the same time window that card row R
 //   first read changed, S<->R. Mappings accumulate per draft (sticky) and
 //   ambiguous multi-pick windows resolve by elimination.
@@ -76,6 +86,122 @@ export function initialCardRows(rows: number[]): CardRowState[] {
     status: 'static' as const,
     firstChangedAtMs: null,
   }))
+}
+
+// ---------------------------------------------------------------------------
+// Identity join (preferred) — see correlateByHeroIdentity below.
+// ---------------------------------------------------------------------------
+
+export interface HeroIdentityInput {
+  /** Spectate GSI: slot -> hero npc short name. Slots without a hero omitted. */
+  gsiHeroes: ReadonlyArray<{ slot: number; npcName: string }>
+  /** Card OCR per draft row (DraftStore.ocrHeroNamesByRow). */
+  ocrHeroNamesByRow: Readonly<Record<number, { name: string }>>
+  /** Already-committed mappings — identity facts, never revised. */
+  mappings: readonly SlotRowMapping[]
+}
+
+/**
+ * Correlate GSI slots to draft rows by HERO IDENTITY: GSI says slot 0 is Tusk,
+ * the drafter's card OCRs as "Tusk" on row 4, therefore slot 0 <-> row 4.
+ *
+ * This is strictly better than the pixel/timing correlation below and runs
+ * first. That one has to catch the *moment* a card switches art, which makes it
+ * hostile to reality: it needs a clean baseline (a card already showing a hero
+ * when the baseline was captured can never verify), a diff above a noise
+ * threshold, and a GSI event inside a ±10/20 s window. Observed 2026-09-04:
+ * cards flagged changed 14 s after baseline with diffs of 10-22 against a
+ * threshold of 10, which burned every row, so all ten GSI events were dropped
+ * unmatchable and no name, model or in-game column could be placed all game.
+ * The identity join has no timing window, no threshold, and works from a single
+ * observation of each side — a hero's name is on the card for the rest of the
+ * draft, so a late scan resolves it just as well as an early one.
+ *
+ * Safeguards: a token must match exactly ONE unmapped slot and ONE unmapped row
+ * (AD models are unique, so anything else is an OCR misread), and the two must
+ * be in the same team half — GSI teams are authoritative (team2 -> rows 0-4,
+ * team3 -> rows 5-9), so a cross-half match is proof of a bad read.
+ */
+export function correlateByHeroIdentity(input: HeroIdentityInput): {
+  mappings: SlotRowMapping[]
+  newMappings: SlotRowMapping[]
+} {
+  const mappedSlots = new Set(input.mappings.map((m) => m.gsiSlot))
+  const mappedRows = new Set(input.mappings.map((m) => m.scanRow))
+
+  const slotsByToken = new Map<string, number[]>()
+  for (const { slot, npcName } of input.gsiHeroes) {
+    if (mappedSlots.has(slot)) continue
+    const token = heroNameToken(npcName)
+    const list = slotsByToken.get(token)
+    if (list) list.push(slot)
+    else slotsByToken.set(token, [slot])
+  }
+
+  const rowsByToken = new Map<string, number[]>()
+  for (const [rowKey, ocr] of Object.entries(input.ocrHeroNamesByRow)) {
+    const row = Number(rowKey)
+    if (!Number.isInteger(row) || mappedRows.has(row)) continue
+    const token = heroNameToken(ocr.name)
+    const list = rowsByToken.get(token)
+    if (list) list.push(row)
+    else rowsByToken.set(token, [row])
+  }
+
+  const newMappings: SlotRowMapping[] = []
+  for (const [token, slots] of slotsByToken) {
+    const rows = rowsByToken.get(token)
+    if (!rows || slots.length !== 1 || rows.length !== 1) continue
+    const gsiSlot = slots[0]
+    const scanRow = rows[0]
+    // Same team half, or the read is wrong
+    if (gsiSlot < 5 !== scanRow < 5) continue
+    newMappings.push({ gsiSlot, scanRow })
+  }
+
+  return {
+    mappings: [...input.mappings, ...newMappings],
+    newMappings,
+  }
+}
+
+/**
+ * Force the last unmapped slot/row in a team half. GSI teams are authoritative
+ * (team2 -> rows 0-4, team3 -> rows 5-9), so with four of a half's five slots
+ * mapped the fifth is determined by elimination — no card evidence needed. This
+ * matters because the identity join can only resolve a row once its player has
+ * drafted a model, so the last player to pick would otherwise stay anonymous
+ * for the whole draft.
+ *
+ * `knownSlots` are the slots GSI actually reports for that half (normally all
+ * five); passing fewer prevents inventing a mapping for a slot that isn't there.
+ */
+export function correlateByElimination(input: {
+  knownSlots: readonly number[]
+  mappings: readonly SlotRowMapping[]
+}): { mappings: SlotRowMapping[]; newMappings: SlotRowMapping[] } {
+  const mappedSlots = new Set(input.mappings.map((m) => m.gsiSlot))
+  const mappedRows = new Set(input.mappings.map((m) => m.scanRow))
+  const newMappings: SlotRowMapping[] = []
+
+  for (const half of [0, 5]) {
+    const slots = input.knownSlots.filter(
+      (s) => s >= half && s < half + 5 && !mappedSlots.has(s),
+    )
+    const rows = [half, half + 1, half + 2, half + 3, half + 4].filter(
+      (r) => !mappedRows.has(r),
+    )
+    // Exactly one candidate on each side, and GSI must know all five of the
+    // half's slots — otherwise "the only one left" is not actually determined.
+    const halfSlotsKnown = input.knownSlots.filter(
+      (s) => s >= half && s < half + 5,
+    ).length
+    if (halfSlotsKnown === 5 && slots.length === 1 && rows.length === 1) {
+      newMappings.push({ gsiSlot: slots[0], scanRow: rows[0] })
+    }
+  }
+
+  return { mappings: [...input.mappings, ...newMappings], newMappings }
 }
 
 export interface CardChangeResult {

@@ -4,6 +4,7 @@ import { Monitor, Brain, Download, RefreshCw, FileJson, Loader2 } from 'lucide-r
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useAppStore } from '@/hooks/use-app-store'
+import { BackgroundSessionControls } from '@/components/streaming/background-session-controls'
 
 export function QuickActions() {
   const { t } = useTranslation('dashboard')
@@ -129,6 +130,8 @@ export function QuickActions() {
             </Button>
           )}
         </div>
+        {/* A background session's overlay is never shown: reset / end it here */}
+        <BackgroundSessionControls />
         {error && (
           <p className="text-sm text-destructive">{error}</p>
         )}

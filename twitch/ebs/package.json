@@ -1,0 +1,28 @@
+{
+  "name": "ability-draft-plus-twitch-ebs",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Extension Backend Service for the Ability Draft Plus Twitch extension (AWS Lambda)",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx scripts/dev-server.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build": "npm run bundle && sam build",
+    "deploy": "npm run build && sam deploy --no-confirm-changeset --no-fail-on-empty-changeset",
+    "bundle": "esbuild src/handler.ts --bundle --platform=node --format=esm --target=es2022 --outfile=dist/handler.mjs --external:@aws-sdk/*"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.700.0",
+    "@aws-sdk/client-ssm": "^3.700.0",
+    "@aws-sdk/lib-dynamodb": "^3.700.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.19.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  }
+}

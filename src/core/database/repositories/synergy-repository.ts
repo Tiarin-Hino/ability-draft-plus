@@ -59,6 +59,13 @@ export interface PairSynergyAmongRow {
   synergyIncrease: number | null
 }
 
+export interface HeroPairSynergyAmongRow {
+  heroName: string
+  abilityName: string
+  synergyWinrate: number
+  synergyIncrease: number | null
+}
+
 export interface SynergyClearInsertData {
   ability1Name: string
   ability2Name: string
@@ -106,6 +113,16 @@ export interface SynergyRepository {
    * per-player draft score (each player has at most 4 picks, so this stays tiny).
    */
   getSynergiesAmong(names: string[]): PairSynergyAmongRow[]
+
+  /**
+   * Hero-model x ability synergy rows restricted to the given hero names (DB
+   * form, e.g. "sandking") and ability names, own-kit pairs excluded. Feeds the
+   * Twitch projection's pool-internal hero synergy graph.
+   */
+  getHeroSynergiesAmong(
+    heroNames: string[],
+    abilityNames: string[],
+  ): HeroPairSynergyAmongRow[]
 
   clearAndInsertAbilitySynergies(
     pairs: SynergyClearInsertData[],
@@ -389,6 +406,33 @@ export function createSynergyRepository(db: SQLJsDatabase): SynergyRepository {
         .all()
 
       return rows
+    },
+
+    getHeroSynergiesAmong(
+      heroNames: string[],
+      abilityNames: string[],
+    ): HeroPairSynergyAmongRow[] {
+      if (heroNames.length === 0 || abilityNames.length === 0) return []
+
+      return db
+        .select({
+          heroName: heroes.name,
+          abilityName: abilities.name,
+          synergyWinrate: heroAbilitySynergies.synergyWinrate,
+          synergyIncrease: heroAbilitySynergies.synergyIncrease,
+        })
+        .from(heroAbilitySynergies)
+        .innerJoin(heroes, eq(heroAbilitySynergies.heroId, heroes.heroId))
+        .innerJoin(abilities, eq(heroAbilitySynergies.abilityId, abilities.abilityId))
+        .where(
+          and(
+            inArray(heroes.name, heroNames),
+            inArray(abilities.name, abilityNames),
+            // Own-kit pairs are uninformative (same rule as queryHeroAbilitySynergies)
+            or(isNull(abilities.heroId), ne(heroAbilitySynergies.heroId, abilities.heroId)),
+          ),
+        )
+        .all()
     },
 
     clearAndInsertAbilitySynergies(

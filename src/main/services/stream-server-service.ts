@@ -76,6 +76,37 @@ const MIME_TYPES: Record<string, string> = {
   '.woff2': 'font/woff2',
 }
 
+/** What a state subscriber gets alongside every built board (Twitch publisher). */
+export interface StreamStateContext {
+  initialPayload: OverlayDataPayload | null
+  latestPayload: OverlayDataPayload | null
+  /** FULL attributed timeline (draftStore.draftTimeline), not the board's capped feed. */
+  pickEvents: PickEvent[]
+  /** My Spot player row 0-9, null when unknown. */
+  myRow: number | null
+  gsiMatchId: string | null
+  /**
+   * Learned GSI slot <-> draft row mappings (spectate). The in-game top bar is
+   * ordered by GSI slot while picks are keyed by draft row, and the two orders
+   * differ — consumers rendering over the top bar MUST translate through this
+   * or they show one player's draft under another's portrait.
+   */
+  slotRowMappings: Array<{ gsiSlot: number; scanRow: number }>
+  /** True while GSI reports all ten players (spectating/casting). */
+  spectating: boolean
+}
+
+/**
+ * Secondary consumer of built board states (the Twitch publisher). While no
+ * subscriber is active the server behaves exactly as without subscribers:
+ * builds are skipped with zero SSE clients, and nothing else changes.
+ */
+export interface StreamStateSubscriber {
+  isActive(): boolean
+  onState(message: StreamStateMessage, context: StreamStateContext): void
+  onSessionReset(): void
+}
+
 export interface StreamServerService {
   start(port: number): Promise<boolean>
   stop(): Promise<void>
@@ -92,6 +123,8 @@ export interface StreamServerService {
   onGsiSnapshot(listener: (snapshot: GsiSnapshot) => void): void
   /** Latest parsed GSI snapshot + liveness (null before the first POST). */
   getGsiState(): { snapshot: GsiSnapshot | null; connected: boolean }
+  /** Register a secondary state consumer; returns an unsubscribe function. */
+  subscribeState(subscriber: StreamStateSubscriber): () => void
 }
 
 export function createStreamServerService(
@@ -126,6 +159,7 @@ export function createStreamServerService(
   let gsiStaleTimer: NodeJS.Timeout | null = null
   let gsiBroadcastTimer: NodeJS.Timeout | null = null
   const gsiListeners: Array<(snapshot: GsiSnapshot) => void> = []
+  const stateSubscribers = new Set<StreamStateSubscriber>()
   // Raw-payload capture for empirical validation (slot ordering, phase names,
   // AD turn timings): latest payload per mode+game_state, overwritten, throttled.
   // Mode prefix keeps playing captures from overwriting spectating ones.
@@ -146,13 +180,29 @@ export function createStreamServerService(
     return gsiLastAt !== null && Date.now() - gsiLastAt < GSI_STALE_MS
   }
 
+  // Hero display names, cached: this runs on EVERY GSI broadcast (up to 2/s,
+  // once per player in spectate), and querying the Heroes table each time was
+  // the hottest DB path in the app — together with a sql.js statement leak in
+  // drizzle it crashed a 5-hour session with "out of memory" (2026-09-18; the
+  // leak itself is fixed by patches/drizzle-orm+0.45.2.patch). The table only
+  // changes on a data update, so a miss re-reads it, at most once a minute.
+  let heroNamesCache: Map<string, string> | null = null
+  let heroNamesLoadedAt = 0
+  const HERO_NAMES_RELOAD_MS = 60_000
+  function cachedHeroDisplayName(shortName: string): string | undefined {
+    const stale = Date.now() - heroNamesLoadedAt > HERO_NAMES_RELOAD_MS
+    if (heroNamesCache === null || (!heroNamesCache.has(shortName) && stale)) {
+      heroNamesCache = new Map(dbService.heroes.getAll().map((h) => [h.name, h.displayName]))
+      heroNamesLoadedAt = Date.now()
+    }
+    return heroNamesCache.get(shortName)
+  }
+
   /** npc short name -> display name via the DB (Windrun short names are the npc
    * name without underscores, e.g. sand_king -> sandking); title-case fallback. */
   function heroDisplayName(npcName: string): string {
-    const dbHero = dbService.heroes
-      .getAll()
-      .find((h) => h.name === npcName.replace(/_/g, ''))
-    if (dbHero) return dbHero.displayName
+    const displayName = cachedHeroDisplayName(npcName.replace(/_/g, ''))
+    if (displayName) return displayName
     return npcName
       .split('_')
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
@@ -318,10 +368,48 @@ export function createStreamServerService(
    * persistence) happen even with zero clients connected — scans must land in
    * the snapshot regardless of whether OBS currently has a source open.
    */
+  function activeSubscribers(): StreamStateSubscriber[] {
+    return [...stateSubscribers].filter((s) => {
+      try {
+        return s.isActive()
+      } catch {
+        return false
+      }
+    })
+  }
+
   function broadcast(forceBuild = false): void {
-    if (sseClients.size === 0 && picksSseClients.size === 0 && !forceBuild) return
+    const subscribers = activeSubscribers()
+    if (
+      sseClients.size === 0 &&
+      picksSseClients.size === 0 &&
+      subscribers.length === 0 &&
+      !forceBuild
+    ) {
+      return
+    }
     const message = buildState()
     updatePicksSnapshot(message)
+    if (subscribers.length > 0) {
+      const context: StreamStateContext = {
+        initialPayload,
+        latestPayload,
+        pickEvents: getPickEvents?.() ?? [],
+        myRow: getLocalPlayerRow?.() ?? null,
+        gsiMatchId: gsiSnapshot?.matchId ?? null,
+        slotRowMappings: getSlotRowMappings?.() ?? [],
+        spectating: (gsiSnapshot?.players.length ?? 0) > 0,
+      }
+      for (const subscriber of subscribers) {
+        try {
+          subscriber.onState(message, context)
+        } catch (error) {
+          logger.warn('State subscriber threw', {
+            error: error instanceof Error ? error.message : String(error),
+          })
+        }
+      }
+    }
     for (const client of sseClients) {
       try {
         sseWrite(client, message)
@@ -767,6 +855,15 @@ export function createStreamServerService(
     onSessionReset(): void {
       initialPayload = null
       latestPayload = null
+      for (const subscriber of activeSubscribers()) {
+        try {
+          subscriber.onSessionReset()
+        } catch (error) {
+          logger.warn('State subscriber threw on reset', {
+            error: error instanceof Error ? error.message : String(error),
+          })
+        }
+      }
       broadcast()
     },
 
@@ -780,6 +877,13 @@ export function createStreamServerService(
 
     getGsiState(): { snapshot: GsiSnapshot | null; connected: boolean } {
       return { snapshot: gsiSnapshot, connected: gsiConnected() }
+    },
+
+    subscribeState(subscriber): () => void {
+      stateSubscribers.add(subscriber)
+      return () => {
+        stateSubscribers.delete(subscriber)
+      }
     },
   }
 }

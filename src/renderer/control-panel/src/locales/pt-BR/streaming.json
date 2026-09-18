@@ -23,6 +23,18 @@
     "errorGeneric": "O servidor não conseguiu iniciar. Verifique os logs para mais detalhes.",
     "errorInvalidPort": "Porta inválida. Use um número entre 1024 e 65535."
   },
+  "background": {
+    "title": "Modo em segundo plano",
+    "description": "Execute a sessão de draft sem que a sobreposição apareça na sua tela. Escaneamentos, rastreamento automático, o painel de transmissão e a extensão da Twitch funcionam normalmente.",
+    "toggle": "Nunca mostrar a sobreposição",
+    "hint": "Para streamers que exibem o painel ou a extensão da Twitch, mas não querem a sobreposição enquanto jogam. Ative uma sessão normalmente — os atalhos Ctrl+Shift+S e Ctrl+Shift+R continuam escaneando e reescaneando.",
+    "activeNote": "Há uma sessão rodando em segundo plano agora.",
+    "autoCloseNote": "O fechamento automático da sobreposição fica desativado neste modo: ela não cobre o jogo, e fechá-la limparia o draft no meio da partida.",
+    "resetDraft": "Reiniciar draft",
+    "endSession": "Encerrar sessão",
+    "resetDone": "Draft limpo. A próxima varredura começa um draft novo.",
+    "controlsHint": "Uma nova partida limpa o draft anterior automaticamente. Use Reiniciar draft se sobrar um draft antigo, ou Encerrar sessão para parar o acompanhamento."
+  },
   "gsi": {
     "title": "Game State Integration do Dota 2",
     "description": "Permite que o Dota envie nomes dos jogadores, fase do jogo e relógio ao quadro de stream. Requer um arquivo de config único na sua pasta do Dota e um reinício do Dota.",
@@ -32,6 +44,7 @@
     "notDetected": "Instalação do Dota não encontrada — selecione a pasta \"dota 2 beta\" manualmente.",
     "cfgPresent": "Arquivo de config instalado",
     "cfgMissing": "Arquivo de config ainda não instalado",
+    "cfgOutdated": "O arquivo de configuração instalado é anterior às estatísticas de narração (faltam os itens). Reinstale-o e reinicie o Dota 2 para ativá-las.",
     "writeCfg": "Instalar arquivo de config",
     "browse": "Procurar…",
     "pickFolderTitle": "Selecione a pasta \"dota 2 beta\"",
@@ -56,5 +69,40 @@
     "step2": "No OBS: Fontes → Adicionar → Navegador, cole a URL e defina o tamanho como 1920×1080.",
     "step3": "O fundo é transparente por padrão. Acrescente ?bg=dark para um fundo sólido ou ?bg=chroma para chroma key.",
     "note": "O quadro acompanha os escaneamentos do seu overlay: o pool aparece após um escaneamento (Ctrl+Shift+S) e os picks se atualizam após cada rescan (Ctrl+Shift+R)."
+  },
+  "twitch": {
+    "title": "Extensão da Twitch",
+    "description": "Permite que seus espectadores cliquem nas habilidades do seu draft na Twitch. Pareie o app com o seu canal uma vez e mantenha a transmissão ligada.",
+    "status": {
+      "unpaired": "Não pareado",
+      "paired": "Pareado",
+      "broadcasting": "Transmitindo",
+      "error": "Erro"
+    },
+    "step1": "Instale a extensão Ability Draft Plus no seu canal da Twitch e abra a página de configuração dela.",
+    "step2": "Copie o código de pareamento exibido lá.",
+    "step3": "Cole o código abaixo e pressione Parear.",
+    "codeLabel": "Código de pareamento",
+    "codePlaceholder": "XXXX-XXXX",
+    "pairButton": "Parear",
+    "pairing": "Pareando…",
+    "channel": "Canal: {{name}}",
+    "channelUnknown": "Canal {{id}}",
+    "enable": "Transmitir o draft para a Twitch",
+    "enableHint": "Envia o painel do draft aos seus espectadores após cada escaneamento. O acompanhamento da fase do jogo precisa do servidor de stream em execução; o OBS não é necessário.",
+    "lastPublish": "Última atualização enviada às {{time}}",
+    "neverPublished": "Nenhuma atualização enviada ainda",
+    "testButton": "Enviar atualização de teste",
+    "testSent": "Atualização entregue ao backend da extensão.",
+    "unpairButton": "Desparear",
+    "errorInvalidCode": "Esse código de pareamento é inválido ou expirou — gere um novo na página de configuração da extensão.",
+    "errorNetwork": "Não foi possível acessar o backend da extensão. Verifique sua conexão com a internet.",
+    "errorUnauthorized": "O pareamento do canal não é mais válido. Despareie e pareie novamente.",
+    "errorPublishFailed": "A última atualização não pôde ser entregue. Ela será reenviada automaticamente.",
+    "errorLiveFailed": "As estatísticas ao vivo não estão chegando aos espectadores — o backend da extensão pode estar desatualizado. O painel de draft não é afetado.",
+    "errorTooLarge": "A atualização do draft era grande demais para a Twitch e não foi entregue.",
+    "errorVersion": "O backend da extensão exige uma versão mais nova do app. Atualize o app.",
+    "errorDisabled": "Ligue a transmissão primeiro.",
+    "errorNothingToSend": "Nada para enviar ainda — escaneie um draft primeiro."
   }
 }

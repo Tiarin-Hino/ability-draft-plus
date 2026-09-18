@@ -1,0 +1,5 @@
+{
+  "_comment": "Explicit exceptions for the coverage check. abilities: app class names with no dotaconstants entry; heroes: hero_meta.json keys with no CDN hero. Each value is the reason.",
+  "abilities": {},
+  "heroes": {}
+}
