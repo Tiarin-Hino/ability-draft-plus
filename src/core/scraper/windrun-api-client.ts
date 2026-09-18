@@ -33,6 +33,15 @@ const TIMEOUT_MS = 30_000
 /** Query param carrying the client tag (the value itself is NOT stored here). */
 const CLIENT_TAG_PARAM = 'idf'
 
+export class WindrunApiError extends Error {
+  constructor(public readonly status: number, statusText: string, path: string) {
+    super(`Windrun API error: ${status} ${statusText} for ${path}`)
+    this.name = 'WindrunApiError'
+  }
+}
+
+export type WindrunFetch = (url: string, init: RequestInit) => Promise<Response>
+
 export interface WindrunApiClient {
   fetchStaticAbilities(): Promise<WindrunStaticAbilitiesResponse>
   fetchStaticHeroes(): Promise<WindrunStaticHeroesResponse>
@@ -50,18 +59,19 @@ export interface WindrunApiClient {
 export function createWindrunApiClient(
   baseUrl = DEFAULT_BASE_URL,
   clientTag?: string,
+  fetchRequest: WindrunFetch = (url, init) => fetch(url, init),
 ): WindrunApiClient {
   async function fetchJson<T>(path: string, patch?: string): Promise<T> {
     const url = new URL(path, baseUrl.endsWith('/') ? baseUrl : baseUrl + '/')
     if (patch) url.searchParams.set('patch', patch)
     if (clientTag) url.searchParams.set(CLIENT_TAG_PARAM, clientTag)
-    const response = await fetch(url.toString(), {
+    const response = await fetchRequest(url.toString(), {
       signal: AbortSignal.timeout(TIMEOUT_MS),
       headers: { Accept: 'application/json' },
     })
     if (!response.ok) {
       // Never interpolate url here -- it carries the client tag
-      throw new Error(`Windrun API error: ${response.status} ${response.statusText} for ${path}`)
+      throw new WindrunApiError(response.status, response.statusText, path)
     }
     return response.json() as Promise<T>
   }

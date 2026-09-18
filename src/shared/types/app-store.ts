@@ -1,3 +1,4 @@
+import type { WindrunBrowserErrorCode } from '../windrun-browser-error'
 import type { MlModelGaps } from '@core/ml/staleness-detector'
 import type { LayoutSource } from '@shared/ipc/api'
 
@@ -31,6 +32,9 @@ export interface AppStoreState {
   mlModelGaps: MlModelGaps | null
 
   // Scraper Status
+  scraperBrowserRequired: boolean
+  scraperBrowserOpen: boolean
+  scraperBrowserError: WindrunBrowserErrorCode | null
   scraperStatus: 'idle' | 'running' | 'error'
   scraperMessage: string | null
   scraperLastUpdated: string | null

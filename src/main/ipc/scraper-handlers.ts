@@ -17,6 +17,9 @@ export function registerScraperHandlers(scraperService: ScraperService): void {
     scraperService.startScrape()
   })
 
+  ipcMain.on('scraper:openBrowser', () => scraperService.openBrowser())
+  ipcMain.on('scraper:startBrowser', () => scraperService.startScrape(true))
+
   ipcMain.on('scraper:startLiquipedia', () => {
     logger.info('Received scraper:startLiquipedia request')
     scraperService.startLiquipedia()

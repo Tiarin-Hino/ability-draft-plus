@@ -78,7 +78,21 @@
       "running": "Enriquecendo...",
       "warning": "Isso leva ~67 minutos para todos os heróis por causa dos limites de requisição da Liquipedia.",
       "lastUpdated": "Último enriquecimento:"
-    }
+    },
+    "browserErrors": {
+      "unsupported": "Solicitação não compatível com o navegador do Windrun.",
+      "openRequired": "Primeiro abra o navegador do Windrun e conclua a verificação do Cloudflare.",
+      "loading": "Aguarde a página do Windrun carregar antes de continuar.",
+      "timeout": "A solicitação do navegador foi cancelada ou excedeu o tempo limite. Tente novamente.",
+      "closed": "A janela do Windrun foi fechada. Abra-a novamente e tente de novo.",
+      "verification": "O Windrun retornou uma página de verificação. Conclua a verificação do Cloudflare no navegador e tente novamente.",
+      "failed": "A solicitação do navegador falhou. Aguarde a página carregar, conclua a verificação do Cloudflare e tente novamente.",
+      "openFailed": "Não foi possível abrir o navegador do Windrun. Tente novamente.",
+      "forbidden": "O Windrun negou o acesso (403). Conclua a verificação do Cloudflare no navegador e tente novamente."
+    },
+    "browserHelp": "O Windrun retornou o erro 403. Abra o navegador, conclua a verificação do Cloudflare até os dados JSON aparecerem e continue o download aqui. Se o acesso continuar bloqueado, tente novamente mais tarde.",
+    "openBrowser": "Abrir navegador do Windrun",
+    "continueBrowser": "Continuar pelo navegador"
   },
   "mapper": {
     "title": "Mapeador de resolução",
