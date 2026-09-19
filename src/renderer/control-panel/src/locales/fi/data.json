@@ -78,7 +78,21 @@
       "running": "Täydennetään...",
       "warning": "Tämä kestää ~67 minuuttia kaikille sankareille Liquipedian nopeusrajoitusten takia.",
       "lastUpdated": "Viimeksi täydennetty:"
-    }
+    },
+    "browserErrors": {
+      "unsupported": "Windrun-selain ei tue tätä pyyntöä.",
+      "openRequired": "Avaa ensin Windrun-selain ja suorita Cloudflare-tarkistus.",
+      "loading": "Odota Windrun-sivun latautumista ennen jatkamista.",
+      "timeout": "Selainpyyntö peruttiin tai aikakatkaistiin. Yritä uudelleen.",
+      "closed": "Windrun-ikkuna suljettiin. Avaa se uudelleen ja yritä uudelleen.",
+      "verification": "Windrun palautti tarkistussivun. Suorita Cloudflare-tarkistus selaimessa ja yritä uudelleen.",
+      "failed": "Selainpyyntö epäonnistui. Odota sivun latautumista, suorita Cloudflare-tarkistus ja yritä uudelleen.",
+      "openFailed": "Windrun-selainta ei voitu avata. Yritä uudelleen.",
+      "forbidden": "Windrun esti pääsyn (403). Suorita Cloudflare-tarkistus selaimessa ja yritä uudelleen."
+    },
+    "browserHelp": "Windrun palautti virheen 403. Avaa selain, suorita Cloudflare-tarkistus, kunnes JSON-tiedot näkyvät, ja jatka latausta tästä. Jos pääsy on edelleen estetty, yritä myöhemmin uudelleen.",
+    "openBrowser": "Avaa Windrun-selain",
+    "continueBrowser": "Jatka selaimen kautta"
   },
   "mapper": {
     "title": "Resoluutiomapperi",

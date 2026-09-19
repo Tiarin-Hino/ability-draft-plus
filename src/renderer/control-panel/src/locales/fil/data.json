@@ -78,7 +78,21 @@
       "running": "Nag-e-enrich...",
       "warning": "Aabutin ito ng ~67 minuto para sa lahat ng hero dahil sa rate limits ng Liquipedia.",
       "lastUpdated": "Huling na-enrich:"
-    }
+    },
+    "browserErrors": {
+      "unsupported": "Hindi suportado ang kahilingang ito sa browser ng Windrun.",
+      "openRequired": "Buksan muna ang browser ng Windrun at kumpletuhin ang pagsusuri ng Cloudflare.",
+      "loading": "Hintaying mag-load ang pahina ng Windrun bago magpatuloy.",
+      "timeout": "Nakansela ang kahilingan sa browser o lumampas sa oras ng paghihintay. Subukan muli.",
+      "closed": "Naisara ang window ng Windrun. Buksan itong muli at subukang muli.",
+      "verification": "Nagbalik ang Windrun ng pahina ng beripikasyon. Kumpletuhin ang pagsusuri ng Cloudflare sa browser at subukang muli.",
+      "failed": "Nabigo ang kahilingan sa browser. Hintaying mag-load ang pahina, kumpletuhin ang pagsusuri ng Cloudflare at subukang muli.",
+      "openFailed": "Hindi mabuksan ang browser ng Windrun. Subukan muli.",
+      "forbidden": "Tinanggihan ng Windrun ang pag-access (403). Kumpletuhin ang pagsusuri ng Cloudflare sa browser at subukang muli."
+    },
+    "browserHelp": "Nagbalik ang Windrun ng error 403. Buksan ang browser, kumpletuhin ang pagsusuri ng Cloudflare hanggang lumitaw ang JSON data, at ipagpatuloy ang pag-download dito. Kung hindi pa rin makapasok, subukan muli sa ibang pagkakataon.",
+    "openBrowser": "Buksan ang browser ng Windrun",
+    "continueBrowser": "Magpatuloy gamit ang browser"
   },
   "mapper": {
     "title": "Resolution Mapper",

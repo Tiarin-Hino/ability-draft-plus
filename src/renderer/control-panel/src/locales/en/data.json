@@ -78,6 +78,20 @@
       "running": "Enriching...",
       "warning": "This takes ~67 minutes for all heroes due to Liquipedia rate limits.",
       "lastUpdated": "Last enriched:"
+    },
+    "browserHelp": "Windrun returned 403. Open the browser, complete the Cloudflare check until JSON data appears, then continue the download here. If access is still denied, try again later.",
+    "openBrowser": "Open Windrun browser",
+    "continueBrowser": "Continue through browser",
+    "browserErrors": {
+      "unsupported": "Unsupported Windrun browser request.",
+      "openRequired": "Open the Windrun browser and complete the Cloudflare check first.",
+      "loading": "Wait for the Windrun page to load before continuing.",
+      "timeout": "The browser request was cancelled or timed out. Try again.",
+      "closed": "The Windrun browser was closed. Reopen it and try again.",
+      "verification": "Windrun returned a verification page. Complete the Cloudflare check in the browser and try again.",
+      "failed": "The browser request failed. Wait for the page to load, complete the Cloudflare check and try again.",
+      "openFailed": "Could not open the Windrun browser. Try again.",
+      "forbidden": "Windrun denied access (403). Complete the Cloudflare check in the browser and try again."
     }
   },
   "mapper": {

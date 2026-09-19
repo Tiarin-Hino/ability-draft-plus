@@ -238,6 +238,8 @@ export interface IpcSendMap {
   // The capture track died (game window closed/recreated, e.g. resolution
   // change) — main must drop the cached source id and re-resolve.
   'capture:sessionEnded': void
+  'scraper:openBrowser': void
+  'scraper:startBrowser': void
   'scraper:start': void
   'scraper:startLiquipedia': void
   'overlay:close': void
