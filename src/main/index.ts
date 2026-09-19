@@ -1,3 +1,4 @@
+import { join } from 'path'
 import { app, nativeTheme, globalShortcut } from 'electron'
 import log from 'electron-log/main'
 import { createZustandBridge } from '@zubridge/electron/main'
@@ -17,6 +18,12 @@ import { createSpotDetectionService } from './services/spot-detection-service'
 import { createSlotMappingService } from './services/slot-mapping-service'
 import { createScanTriggerService } from './services/scan-trigger-service'
 import { createAutoRescanService } from './services/auto-rescan-service'
+import { createTopbarSeatService } from './services/topbar-seat-service'
+import { createGameFrameCapture } from './services/game-frame-capture'
+import { createTwitchPublisherService } from './services/twitch-publisher-service'
+import { createTwitchEbsClient } from './services/twitch-ebs-client'
+import { loadTwitchEbsUrl } from './services/api-config'
+import { DEFAULT_TWITCH_EBS_URL } from '@shared/constants/defaults'
 import { createUpdateService } from './services/update-service'
 import { createWindowTrackerService } from './services/window-tracker-service'
 import { createScraperService } from './services/scraper-service'
@@ -244,7 +251,18 @@ app.whenReady().then(async () => {
   const feedbackService = createFeedbackService(loadApiConfig())
 
   // Hero-name OCR over the per-scan name strips (results in DraftStore)
-  const ocrService = createOcrService(dbService, draftStore)
+  const ocrService = createOcrService(
+    dbService,
+    draftStore,
+    () =>
+      streamService
+        .getGsiState()
+        .snapshot?.players.map((p) => p.name)
+        .filter((name) => name.length > 0) ?? [],
+    // Dev-only diagnostics, like debug/rejected-picks: per-read JSONL + the
+    // strips no pass could read (see the ocr-service DEV-GUIDE)
+    app.isPackaged ? undefined : join(app.getPath('userData'), 'debug'),
+  )
 
   // The single scan pipeline, shared by the ml:scan IPC handler and auto-rescan
   const scanTrigger = createScanTriggerService(
@@ -273,8 +291,38 @@ app.whenReady().then(async () => {
     dbService,
     streamService,
     scanTrigger,
+    ocrService,
+    // A new match clears the previous draft exactly like closing the overlay
+    () => {
+      draftStore.getState().resetSession()
+      streamService.onSessionReset()
+      slotMappingService.onSessionReset()
+    },
   )
   autoRescanService.start()
+
+  // Twitch extension publisher: secondary consumer of the stream board (inert
+  // until the channel is paired AND the broadcast toggle is on)
+  const twitchPublisher = createTwitchPublisherService(
+    dbService,
+    appStore,
+    streamService,
+    createTwitchEbsClient(loadTwitchEbsUrl() ?? DEFAULT_TWITCH_EBS_URL),
+    // Caster telemetry is keyed by draft row, GSI reports slots — the publisher
+    // needs the learned mapping to place it (see slot-row-correlation.ts).
+    { getSlotRowMappings: () => draftStore.getState().slotRowMappings },
+  )
+  twitchPublisher.start()
+
+  // In-game top bar -> draft rows while PLAYING (GSI only knows the local hero),
+  // so the extension puts each player's picks under the right portrait
+  const topbarSeatService = createTopbarSeatService(
+    streamService,
+    twitchPublisher,
+    iconCache,
+    createGameFrameCapture(screenshotService, cachedWindowCapture, windowTracker),
+  )
+  topbarSeatService.start()
 
   registerIpcHandlers(
     windowManager,
@@ -297,6 +345,8 @@ app.whenReady().then(async () => {
     scanTrigger,
     slotMappingService,
     playerStatsService,
+    twitchPublisher,
+    autoRescanService,
   )
 
   // Streamer view autostart (opt-in setting)
@@ -312,6 +362,8 @@ app.whenReady().then(async () => {
     autoRescanService.stop()
     cachedWindowCapture.dispose()
     bridge.destroy()
+    // Before the stream server: publishes 'ended' for a live draft (bounded wait)
+    await twitchPublisher.stop()
     await streamService.stop()
     await ocrService.dispose()
     await mlService.terminate()

@@ -43,6 +43,57 @@ describe('deriveHeroCdnName', () => {
     ).toBe('lina')
   })
 
+  // Ability Draft leaves a hero short when some of its abilities are excluded from
+  // the pool, and fills the gap with randomised abilities from other heroes. All
+  // four rows below are REAL, captured from live drafts on 2026-09-04.
+  it('survives a foreign filler ability in the row', () => {
+    // Outworld Destroyer: Batrider's Firefly filled the missing fourth slot
+    expect(
+      deriveHeroCdnName([
+        'obsidian_destroyer_sanity_eclipse',
+        'obsidian_destroyer_arcane_orb',
+        'obsidian_destroyer_astral_imprisonment',
+        'batrider_firefly',
+      ]),
+    ).toBe('obsidian_destroyer')
+  })
+
+  it('survives a foreign ULTIMATE (Rubick’s is never in the pool)', () => {
+    expect(
+      deriveHeroCdnName([
+        'grimstroke_soul_chain',
+        'rubick_telekinesis',
+        'rubick_fade_bolt',
+        'rubick_arcane_supremacy',
+      ]),
+    ).toBe('rubick')
+  })
+
+  it('is not fooled by a sub-group larger than the hero prefix', () => {
+    // Three of Void's four abilities share "faceless_void_time"
+    expect(
+      deriveHeroCdnName([
+        'faceless_void_chronosphere',
+        'faceless_void_time_walk',
+        'faceless_void_time_dilation',
+        'faceless_void_time_lock',
+      ]),
+    ).toBe('faceless_void')
+  })
+
+  it('refuses when two unrelated prefixes tie', () => {
+    // A hero down to two pool abilities whose fillers both came from one hero:
+    // nothing here identifies the row, so the caller falls back to the display name.
+    expect(
+      deriveHeroCdnName([
+        'lion_impale',
+        'lion_finger_of_death',
+        'axe_berserkers_call',
+        'axe_culling_blade',
+      ]),
+    ).toBeNull()
+  })
+
   it('handles legacy valve names that differ from display names', () => {
     expect(deriveHeroCdnName(['wisp_tether', 'wisp_spirits'])).toBe('wisp')
     expect(deriveHeroCdnName(['zuus_arc_lightning', 'zuus_thundergods_wrath'])).toBe('zuus')
@@ -94,6 +145,10 @@ describe('heroCdnNameFromDisplayName', () => {
 
   it('maps npc-divergent display names to the CDN name', () => {
     expect(heroCdnNameFromDisplayName('Outworld Destroyer')).toBe('obsidian_destroyer')
+    // Our hero data still uses the pre-rename name — this is the slug that
+    // actually reaches the fallback, and missing it produced a 404 portrait
+    // and "Dota data not available" in the extension (2026-09-04).
+    expect(heroCdnNameFromDisplayName('Outworld Devourer')).toBe('obsidian_destroyer')
     expect(heroCdnNameFromDisplayName("Nature's Prophet")).toBe('furion')
     expect(heroCdnNameFromDisplayName('Shadow Fiend')).toBe('nevermore')
     expect(heroCdnNameFromDisplayName('Windranger')).toBe('windrunner')

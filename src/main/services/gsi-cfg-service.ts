@@ -3,7 +3,12 @@ import { promises as fs } from 'fs'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
 import log from 'electron-log/main'
-import { buildGsiCfg, parseGsiCfgPort, GSI_CFG_FILE_NAME } from '@core/gsi/cfg-generator'
+import {
+  buildGsiCfg,
+  parseGsiCfgPort,
+  isGsiCfgOutdated,
+  GSI_CFG_FILE_NAME,
+} from '@core/gsi/cfg-generator'
 import { parseLibraryFolders } from '@core/gsi/vdf'
 
 // @DEV-GUIDE: Writes the GSI cfg into Dota's cfg folder so the game POSTs state to the
@@ -30,6 +35,12 @@ export interface GsiCfgStatus {
   cfgExists: boolean
   /** Port pinned in the existing cfg's uri; null if the cfg is absent or unparseable. */
   cfgPort: number | null
+  /**
+   * The installed cfg predates a data block this build needs (currently the
+   * `items` block the caster telemetry reads). Reinstalling and restarting Dota
+   * fixes it; everything else keeps working meanwhile.
+   */
+  cfgOutdated: boolean
 }
 
 export interface GsiCfgService {
@@ -97,17 +108,28 @@ export function createGsiCfgService(): GsiCfgService {
   return {
     async detect(): Promise<GsiCfgStatus> {
       const dotaPath = await findDotaDir()
-      if (!dotaPath) return { dotaPath: null, cfgPath: null, cfgExists: false, cfgPort: null }
+      if (!dotaPath) {
+        return {
+          dotaPath: null,
+          cfgPath: null,
+          cfgExists: false,
+          cfgPort: null,
+          cfgOutdated: false,
+        }
+      }
       const cfgPath = join(cfgDirFor(dotaPath), GSI_CFG_FILE_NAME)
       let cfgExists = false
       let cfgPort: number | null = null
+      let cfgOutdated = false
       try {
-        cfgPort = parseGsiCfgPort(await fs.readFile(cfgPath, 'utf-8'))
+        const cfg = await fs.readFile(cfgPath, 'utf-8')
+        cfgPort = parseGsiCfgPort(cfg)
+        cfgOutdated = isGsiCfgOutdated(cfg)
         cfgExists = true
       } catch {
         // not written yet
       }
-      return { dotaPath, cfgPath, cfgExists, cfgPort }
+      return { dotaPath, cfgPath, cfgExists, cfgPort, cfgOutdated }
     },
 
     async writeCfg(port, overrideDotaDir) {

@@ -45,10 +45,21 @@ export const PICK_TEMPLATE_MIN_MARGIN = 0.02
 // only above this much stricter floor, which sits far above any wrong match
 // observed in the runs (max 0.782) and below every correct one.
 export const PICK_TEMPLATE_FALLBACK_MIN_NCC = 0.85
-// An empty pick box is near-uniform dark pixels: measured std 0.8 vs 54+ for
-// any real icon. Detected before matching — empties never reach the matcher
-// (the classifier used to argmax tusk_snowball 0.33-0.52 on them).
-export const PICK_TEMPLATE_EMPTY_STD = 5
+// An EMPTY PICK BOX is detected by pixel std before matching, so it never reaches
+// the matcher. Originally measured at std 0.8 with a cutoff of 5 — but by
+// 2026-09 empty boxes measure 5-20: 0 of 4,527 rejected production crops fell
+// below 5, so every empty box was being matched, and dark ultimates occasionally
+// won (Warpath x4, Flesh Golem x3, Mystic Flare x2, Focus Fire at 0.457 — each a
+// phantom pick). Re-measured 2026-09-17 on 9 real 2560x1440 draft screenshots:
+// every empty box (73 ult + 228 standard) 5-20, every filled box (59) 35+, none
+// in between; 95% of rejected crops below 20; the flattest of all 542 cached
+// icons is 31.6 (Quill Spray). 25 sits mid-gap. Scan diagnostics record each
+// box's `boxStd` — if a real icon ever reads near 25, it shows up there.
+export const PICK_TEMPLATE_EMPTY_STD = 25
+// The same idea for the draft stage's hero MODEL tiles and the pool-slot retry.
+// Those tiles were NOT part of the 2026-09-17 re-measurement, so they keep the
+// original cutoff rather than inheriting the pick-box one.
+export const TILE_EMPTY_STD = 5
 // Cached CDN icons go stale when Valve reworks art in place (2026-08: all four
 // Pugna icons — old art broke pick-slot template matching AND the streamer
 // view). During prefetch, a cached icon older than this TTL is refetched with a
@@ -249,6 +260,29 @@ export const STREAM_TOP_WINRATE_COUNT = 8
 export const STREAM_MAX_COMBO_PANEL_ENTRIES = 8
 export const STREAM_PICK_FEED_LENGTH = 20
 
+// Twitch extension (see src/shared/types/twitch.ts)
+// Twitch Extension PubSub rejects messages above 5 KB (5120 bytes); keep a
+// margin for the JSON the EBS wraps nothing around — the compact state IS the
+// message. The projection's encoder strips player names, then the feed, until
+// the UTF-8 length fits.
+export const TWITCH_COMPACT_MAX_BYTES = 4600
+// Coalesce bursts (GSI-rate rebuilds, targeted rescans) and stay well under
+// Twitch's ~100 messages/min/channel budget (1.5 s => <= 40/min).
+// Caster telemetry tick. Twitch allows 1 PubSub message per second per channel,
+// so 1 Hz would sit exactly on the limit and ordinary jitter would earn 429s.
+// 2 s is also imperceptible to viewers, who are watching video delayed by
+// 10-30 s (hlsLatencyBroadcaster) — the delay buffer holds each tick anyway.
+// Telemetry only sends during the 'ingame' phase, where the draft path is idle,
+// so the two never contend for the budget despite sharing it.
+export const TWITCH_LIVE_INTERVAL_MS = 2_000
+export const TWITCH_PUBLISH_DEBOUNCE_MS = 1_000
+export const TWITCH_PUBLISH_MIN_INTERVAL_MS = 1_500
+export const TWITCH_PUBLISH_RETRY_BACKOFF_MS = [2_000, 5_000, 15_000, 60_000] as const
+export const TWITCH_PLAYER_NAME_MAX_CHARS = 24
+// An in-game snapshot older than this is assumed to belong to a finished game.
+export const TWITCH_STATE_STALE_MS = 3 * 60 * 60 * 1000
+export const TWITCH_RECT_DECIMALS = 4
+
 // Model-tile IDENTIFICATION via NCC against the gathered reference-tile library
 // (core/ml/model-tile-matcher.ts; references from ad_data_gather_script's
 // models mode land in userData/model-tiles/<hero>/*.png).
@@ -271,6 +305,35 @@ export const MODEL_TILE_MATCH_MIN_MARGIN = 0.03
 // below this similarity (1 - levenshtein/len) is discarded as a misread.
 export const OCR_NAME_STRIP_HEIGHT_RATIO = 0.5
 export const OCR_MIN_SIMILARITY = 0.6
+// Dev builds dump card-name strips that changed but resolved to no hero (and
+// are not the pre-pick "NO HERO" card) to userData/debug/ocr-unresolved, so a
+// model pick OCR never read (2026-09-17: an Io card) can be diagnosed from what
+// tesseract saw. Capped PER DRAFT SESSION — an overnight diagnostic run drafts
+// a hundred-plus lobbies back to back, and a per-run cap would either fill the
+// disk or go blind after the first few drafts. Unchanged strips are never
+// re-OCR'd, so a normal draft dumps far fewer than this.
+export const OCR_UNRESOLVED_DUMP_MAX = 40
+// Card-name strips are OCR'd in up to three passes, stopping at the first read
+// that names a hero (core/../ocr-service.ts). Measured 2026-09-17 over 72 live
+// strips the single-pass reader had failed on, plus 257 readable strips cut from
+// 55 finished diagnostic boards:
+//   pass 1 sparse text  ......  40/72 live, 242/257 boards
+//   pass 2 dark-text threshold  56/72 live, 240/257 (this is what reads the
+//                               HIGHLIGHTED card, whose name is dark on light)
+//   pass 3 the original mode .. 10/72 live, 190/257 (+1 wrong: Phantom Assassin
+//                               read as Nyx Assassin)
+//   all three, in that order .. 62/72 live, 257/257, zero wrong reads
+// The threshold: text on a highlighted card measures well under it, the card's
+// lit background well over.
+export const OCR_DARK_TEXT_THRESHOLD = 120
+// A card read matched against the FULL hero roster instead of the draft's
+// identified pool must be this similar. Two cases: the pool is not known yet,
+// or the pool scan missed a hero (its W-slot unrecognized — 1 draft in 3 in the
+// 2026-09-18 overnight sweep, even with a clean pool). Measured over 213 reads
+// of heroes missing from the pool: 209 named the right hero, the 4 wrong ones
+// all scored <= 0.75, and garbage read off the post-draft screen scored 0.667
+// ("AME" -> Axe). At 0.85, 199 of the 213 are recovered with no wrong read.
+export const OCR_UNSCOPED_MIN_SIMILARITY = 0.85
 export const OCR_STRIP_DIFF_SIZE = 32
 export const OCR_STRIP_DIFF_THRESHOLD = 4
 // Strips are upscaled to this width before OCR so letter height is consistent
@@ -289,17 +352,41 @@ export const COUNTDOWN_REGION_Y_RATIO = 0.088
 export const COUNTDOWN_REGION_HEIGHT_RATIO = 0.05
 export const COUNTDOWN_STRIP_TARGET_WIDTH = 300
 
-// Picked-model detection via model-tile diffing. The 12 model portrait tiles on
-// the draft stage are pixel-STATIC while unpicked (measured mean abs diff 0.0
-// across scans) and change drastically when picked (measured 35-120). Tiles are
-// normalized to a small square for comparison; the threshold sits in the huge
-// gap between "identical" and "changed".
+// Size the 12 model portrait tiles are normalized to before they are matched
+// against the reference tiles that identify the pool's heroes. (Tile DIFFING for
+// pick detection was removed 2026-09-16: model picks come from card OCR — see
+// core/domain/model-picks-from-ocr.ts.)
 export const MODEL_TILE_COMPARE_SIZE = 48
-export const MODEL_PICK_DIFF_THRESHOLD = 10
-// A model tile that just read changed gets a dedicated CONFIRMATION capture this
-// soon (zero ability slots — model tiles only), so the two-scan persistence rule
-// resolves in ~1.5s instead of waiting a full turn for the next scheduled scan.
-export const MODEL_PICK_CONFIRM_DELAY_MS = 1_500
+// Card OCR runs asynchronously after each capture. A rescan waits this long for
+// the queue to drain so a model pick read from THIS capture is sequenced before
+// the ability picks the same capture found (a changed card OCRs in ~0.1-0.4s,
+// measured 2026-09-15; a full 10-card read is ~2s, so later reads just land on
+// the next rescan instead of stalling this one).
+export const OCR_SETTLE_TIMEOUT_MS = 1_500
+// Draft-end pass: when hero selection ends, one final capture + card OCR runs
+// before the overlay may auto-close. The last turn's own scheduled scan always
+// falls AFTER the phase change, so without this the final pick was only caught
+// by luck (a model pick lost this way, 2026-09-15). Bounded so a slow capture
+// can never hold the overlay over strategy time for long.
+export const DRAFT_FINAL_PASS_TIMEOUT_MS = 4_000
+// The draft-end pass is the LAST chance to read a card: nothing scans after it,
+// and a strip still queued when auto-close resets the session is dropped. So it
+// waits for card OCR to drain fully instead of the per-scan 1.5s. With up to
+// three OCR passes per strip, 1.5s expired on most final passes (median final
+// pass 3.4s = ~1.8s capture + the whole 1.5s wait) and 4 of the 7 missed models
+// in the 2026-09-18 sweep were strips dropped exactly this way.
+export const OCR_FINAL_PASS_SETTLE_TIMEOUT_MS = 4_000
+// Bound on the final capture + that OCR wait together (the in-flight scan wait
+// before it keeps DRAFT_FINAL_PASS_TIMEOUT_MS). Worst case the overlay stays up
+// ~10s into strategy time; typically ~1s longer than before.
+export const DRAFT_FINAL_RESCAN_TIMEOUT_MS = 6_500
+// In-game top-bar seat identification (playing mode; topbar-seat-service.ts):
+// one capture per attempt, retried until all ten portraits are identified —
+// dead heroes turn grey and fail to match until they respawn. The cap bounds a
+// match with an unreadable bar to ~2 minutes of occasional captures; the best
+// merged result stays published either way.
+export const TOPBAR_SEAT_RETRY_MS = 5_000
+export const TOPBAR_SEAT_MAX_ATTEMPTS = 24
 
 // GSI slot <-> scan row correlation via player-card diffing (spectate/replay).
 // The 10 player cards on the draft screen show pixel-static "NO HERO" art until
@@ -330,6 +417,20 @@ export const AUTO_RESCAN_TICK_MS = 1_000
 // next turn to spare. A row whose targeted scan still comes up empty gets one
 // retry a tick later (see runRescan).
 export const AUTO_RESCAN_PICK_VISIBLE_DELAY_S = 2
+// Draft-turn ORDERING (core/domain/pick-attribution.ts orderByDraftTurns): a pick
+// first seen within this many seconds after one of its player's free turns ended
+// belongs to the EARLIEST such turn; seen later, it goes to the latest free turn
+// that had started (the earlier turn's pick is missing). Only double turns need
+// the grace: consecutive turns of one player are 12 s apart at a round break
+// (end to end) and 26 s+ otherwise. A late first pick of a double turn must
+// still land first (2026-09-16: Death Ward seen 14 s after its turn); a pick of
+// the NEXT turn must not slide into an unread earlier one, which with 26 s gaps
+// only happens when it is seen more than 26 - grace seconds before its own turn
+// ends (targeted scans fire after the turn ends).
+export const LATE_PICK_GRACE_S = 20
+// Capture-vs-clock slack: a pick may appear this long "before" its turn starts
+// (the anchor is predicted from integer GSI clock readings).
+export const PICK_SEEN_EARLY_TOLERANCE_S = 2
 // A targeted rescan blocked by the contamination guard (hover tooltip over the
 // rows) retries every tick; after this many attempts the pending rows are
 // dropped — the next round-break full reconciliation scan will catch the pick.

@@ -3,7 +3,7 @@ import { computePixelStats } from './template-matcher'
 import {
   MODEL_TILE_MATCH_MIN_NCC,
   MODEL_TILE_MATCH_MIN_MARGIN,
-  PICK_TEMPLATE_EMPTY_STD,
+  TILE_EMPTY_STD,
 } from '@shared/constants/thresholds'
 
 // @DEV-GUIDE: Identifies the 12 draft-board hero MODEL tiles by NCC against a
@@ -55,7 +55,7 @@ export function matchModelTile(
   templates: readonly IconTemplate[],
 ): ModelTileMatch {
   const stats = computePixelStats(vec)
-  if (stats.std < PICK_TEMPLATE_EMPTY_STD) {
+  if (stats.std < TILE_EMPTY_STD) {
     return { name: null, score: 0, bestName: null, secondName: null, margin: null }
   }
 

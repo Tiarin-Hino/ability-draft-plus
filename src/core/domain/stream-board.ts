@@ -115,8 +115,8 @@ function buildHeroRows(
     const heroDisplayName =
       model && model.dbHeroId !== null ? model.heroDisplayName : null
 
-    // Picked-model state updates on RESCANS (tile-diff detection), so it must
-    // come from the latest payload, not the frozen initial one
+    // Picked-model state updates on RESCANS (card OCR, applied by auto-rescan),
+    // so it must come from the latest payload, not the frozen initial one
     const latestModel = latestPayload?.heroModels.find(
       (m) => m.heroOrder === heroOrder,
     )
@@ -134,6 +134,7 @@ function buildHeroRows(
       heroOrder,
       heroDisplayName,
       portraitPath: cdnName ? heroIconPath(cdnName) : null,
+      cdnName,
       standard: rowStandard.map((s) => toStreamSlot(s, pickedNames)),
       ultimate: rowUltimate ? toStreamSlot(rowUltimate, pickedNames) : null,
       modelPicked: latestModel?.isPicked ?? model?.isPicked ?? false,
@@ -173,12 +174,14 @@ function buildPlayerRows(
     // Portrait: the row's ability-prefix derivation when available; otherwise
     // the display-name -> CDN mapping (handles npc-divergent names like
     // "Outworld Destroyer" -> obsidian_destroyer)
+    const cdnName =
+      heroRow.cdnName ?? heroCdnNameFromDisplayName(model.heroDisplayName)
     assignedByPlayer.set(assignment.playerIndex, {
       npcName: model.heroName,
       displayName: model.heroDisplayName,
-      portraitPath:
-        heroRow.portraitPath ??
-        heroIconPath(heroCdnNameFromDisplayName(model.heroDisplayName)),
+      portraitPath: heroIconPath(cdnName),
+      cdnName,
+      poolHeroOrder: assignment.poolHeroOrder,
     })
   }
 
@@ -221,7 +224,11 @@ function buildPlayerRows(
       team: playerIndex < PLAYER_COUNT / 2 ? 'radiant' : 'dire',
       playerName: gsiSlot !== null ? (gsi.playerNames[gsiSlot] ?? null) : null,
       model: gsiModel
-        ? { ...gsiModel, portraitPath: heroIconPath(gsiModel.npcName) }
+        ? {
+            ...gsiModel,
+            portraitPath: heroIconPath(gsiModel.npcName),
+            cdnName: gsiModel.npcName,
+          }
         : (assignedByPlayer.get(playerIndex) ?? null),
       picks,
       draftScore,

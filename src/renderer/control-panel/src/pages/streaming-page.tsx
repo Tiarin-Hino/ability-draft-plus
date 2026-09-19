@@ -15,6 +15,8 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { useAppStore } from '@/hooks/use-app-store'
 import { GsiCard } from '@/components/streaming/gsi-card'
+import { TwitchCard } from '@/components/streaming/twitch-card'
+import { BackgroundSessionControls } from '@/components/streaming/background-session-controls'
 import { DEFAULT_STREAM_PORT } from '@shared/constants/thresholds'
 
 // @DEV-GUIDE: Streaming page — controls the local stream-board server (see
@@ -22,6 +24,53 @@ import { DEFAULT_STREAM_PORT } from '@shared/constants/thresholds'
 // via the zubridge AppStore; start/stop go over stream:* invoke channels; the port and
 // autostart flag persist through the regular settings channels. streamServerError holds
 // an i18n key in the 'streaming' namespace, translated here (FeedbackStatus pattern).
+
+// Background mode: activate a draft session with the overlay never shown, for
+// streamers who broadcast the board or the Twitch extension but do not want the
+// overlay on their own screen. Scans, GSI tracking and both feeds are unaffected.
+function BackgroundModeCard() {
+  const { t } = useTranslation('streaming')
+  const [enabled, setEnabled] = useState(false)
+  const sessionActive = useAppStore((s) => s.overlayActive)
+
+  useEffect(() => {
+    window.electronApi.invoke('settings:get').then((settings) => {
+      setEnabled(settings.overlayBackgroundMode)
+    })
+  }, [])
+
+  const handleToggle = (checked: boolean) => {
+    setEnabled(checked)
+    window.electronApi.invoke('settings:set', { overlayBackgroundMode: checked })
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t('background.title')}</CardTitle>
+        <CardDescription>{t('background.description')}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        <div className="flex items-center gap-2">
+          <Switch
+            id="overlay-background-mode"
+            checked={enabled}
+            onCheckedChange={handleToggle}
+          />
+          <Label htmlFor="overlay-background-mode">{t('background.toggle')}</Label>
+        </div>
+        <p className="text-xs text-muted-foreground">{t('background.hint')}</p>
+        {enabled && sessionActive && (
+          <p className="text-xs text-muted-foreground">{t('background.activeNote')}</p>
+        )}
+        <BackgroundSessionControls />
+        {enabled && (
+          <p className="text-xs text-muted-foreground">{t('background.autoCloseNote')}</p>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
 
 function IconPrefetchCard() {
   const { t } = useTranslation('streaming')
@@ -231,7 +280,11 @@ export function StreamingPage() {
         </CardContent>
       </Card>
 
+      <BackgroundModeCard />
+
       <GsiCard />
+
+      <TwitchCard />
 
       <IconPrefetchCard />
 

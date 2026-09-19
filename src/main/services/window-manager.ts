@@ -29,7 +29,8 @@ const logger = log.scope('window-manager')
 
 export interface WindowManager {
   createControlPanelWindow(): BrowserWindow
-  createOverlayWindow(): BrowserWindow
+  /** `visible: false` creates the overlay for BACKGROUND MODE — renderer running, never shown. */
+  createOverlayWindow(options?: { visible?: boolean }): BrowserWindow
   repositionOverlay(bounds: { x: number; y: number; width: number; height: number }): void
   getControlPanelWindow(): BrowserWindow | null
   getOverlayWindow(): BrowserWindow | null
@@ -108,7 +109,17 @@ export function createWindowManager(): WindowManager {
     return controlPanelWindow
   }
 
-  function createOverlayWindow(): BrowserWindow {
+  /**
+   * `visible: false` is BACKGROUND MODE: the window is created and its renderer
+   * runs normally — the capture agent, hotkey routing and overlay:data IPC all
+   * keep working — it is simply never shown. That is why background mode costs
+   * nothing in scan speed: the fast getUserMedia capture path lives in this
+   * renderer, and losing it would fall back to the ~1 s desktopCapturer path.
+   * `backgroundThrottling: false` below is what keeps a never-shown window's
+   * timers running at full rate.
+   */
+  function createOverlayWindow(options?: { visible?: boolean }): BrowserWindow {
+    const visible = options?.visible !== false
     if (overlayWindow && !overlayWindow.isDestroyed()) {
       overlayWindow.close()
     }
@@ -138,10 +149,12 @@ export function createWindowManager(): WindowManager {
       },
     })
 
-    overlayWindow.setAlwaysOnTop(true, 'screen-saver')
-    overlayWindow.setVisibleOnAllWorkspaces(true)
-    applyOverlayMouseEvents(true, true)
-    overlayWindow.showInactive()
+    if (visible) {
+      overlayWindow.setAlwaysOnTop(true, 'screen-saver')
+      overlayWindow.setVisibleOnAllWorkspaces(true)
+      applyOverlayMouseEvents(true, true)
+      overlayWindow.showInactive()
+    }
 
     loadWindowContent(overlayWindow, 'overlay/index.html')
 
@@ -149,7 +162,8 @@ export function createWindowManager(): WindowManager {
       logger.error('Overlay renderer crashed', { reason: details.reason, exitCode: details.exitCode })
     })
 
-    if (!app.isPackaged) {
+    // Detached devtools would be a visible window — never in background mode.
+    if (!app.isPackaged && visible) {
       overlayWindow.webContents.openDevTools({ mode: 'detach' })
     }
 
@@ -162,7 +176,7 @@ export function createWindowManager(): WindowManager {
       logger.info('Overlay window closed')
     })
 
-    logger.info('Overlay window created', { width, height })
+    logger.info('Overlay window created', { width, height, visible })
     return overlayWindow
   }
 

@@ -12,6 +12,14 @@ import type { HeroLookup, IdentifiedHeroModel } from './types'
  * Returns an array of identified hero models matching modelCoords order,
  * with "Unknown Hero" fallback for unidentified slots.
  */
+/** Name given to a pool hero whose defining ability was not recognized. */
+export const UNKNOWN_MODEL_PREFIX = 'unknown_model_'
+
+/** True for a pool entry the scan could not identify (see identifyHeroModels). */
+export function isUnidentifiedModel(heroName: string | null): boolean {
+  return heroName === null || heroName.startsWith(UNKNOWN_MODEL_PREFIX)
+}
+
 export function identifyHeroModels(
   heroDefiningAbilities: Array<{
     name: string | null
@@ -50,7 +58,7 @@ export function identifyHeroModels(
     if (matched) return matched
     return {
       heroOrder: coord.hero_order,
-      heroName: `unknown_model_${coord.hero_order}`,
+      heroName: `${UNKNOWN_MODEL_PREFIX}${coord.hero_order}`,
       heroDisplayName: 'Unknown Hero',
       dbHeroId: null,
       winrate: null,

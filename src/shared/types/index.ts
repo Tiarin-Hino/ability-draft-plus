@@ -101,6 +101,16 @@ export interface AppSettings {
    * tooltip note. The stacking boost for your own picks is independent of
    * this — it only controls the always-on markers. Applies on the next scan. */
   aghsMarkersEnabled: boolean
+  /** Push draft states to the paired Twitch channel's extension (needs a
+   * pairing; see twitch-publisher-service). Default off. */
+  twitchBroadcastEnabled: boolean
+  /** Background mode: run a draft session WITHOUT ever showing the overlay —
+   * scans, GSI tracking and the Twitch/OBS feeds all work as usual, the window
+   * is simply never shown. For streamers who want the Twitch extension but not
+   * the overlay on their own screen. GSI overlay auto-close is inert in this
+   * mode (there is nothing covering the game, and closing would reset the
+   * draft session mid-game). Default off. */
+  overlayBackgroundMode: boolean
 }
 
 export interface SlotCoordinate {
@@ -145,6 +155,12 @@ export interface ScanResult {
     secondName: string | null
     margin: number | null
   }
+  /**
+   * Pick boxes matched by template: pixel std of the inset crop (diagnostics).
+   * Below PICK_TEMPLATE_EMPTY_STD the box counts as empty; a real icon reading
+   * close to that cutoff would show up here first.
+   */
+  boxStd?: number
 }
 
 export interface EnrichedScanSlot extends ScanResult {
@@ -231,6 +247,12 @@ export interface OverlayDataPayload {
   heroesCoords: SlotCoordinate[]
   heroesParams: { width: number; height: number }
   modelsCoords: SlotCoordinate[]
+  /** The layout's 40 pick boxes (per player: 3 standard boxes then the
+   * ultimate, hero_order = player index) and their common tile size. Optional:
+   * only the Twitch projection reads them (pick-box geometry); the overlay gets
+   * pick coordinates from the scanned selectedAbilities slots instead. */
+  pickBoxCoords?: SlotCoordinate[]
+  pickBoxParams?: { width: number; height: number }
   /** When automatic draft tracking is on, the overlay hides the manual
    * My Spot / My Model buttons (both are selected automatically via GSI). */
   autoDraftTrackingEnabled: boolean
@@ -289,7 +311,7 @@ export interface HeroSynergyDisplay {
 }
 
 export interface HeroModelDisplay {
-  /** True when tile-diff detection saw this model get picked (never reverts). */
+  /** True once a player's card reads this model (card OCR; a corrected misread can clear it). */
   isPicked?: boolean
   heroOrder: number
   heroName: string

@@ -10,6 +10,7 @@ import type {
 } from '../types'
 import type { InitialScanResults } from '../types/ml'
 import type { StreamServerStatusInfo } from '../types/stream'
+import type { TwitchLinkInfo } from '../types/twitch'
 import type { CalibrationAnchors, ValidationResult } from '@core/resolution/types'
 import type { MlModelGaps } from '@core/ml/staleness-detector'
 
@@ -193,6 +194,20 @@ export interface IpcInvokeMap {
   }
   'player:unlinkProfile': { request: void; response: void }
   'player:refreshStats': { request: void; response: PlayerStatsRefreshInfo }
+  // Twitch extension pairing + broadcast toggle (twitch-publisher-service).
+  // The channel token is stored in Metadata and never crosses IPC. Error keys
+  // are i18n keys in the streaming namespace (twitch.*).
+  'twitch:getStatus': {
+    request: void
+    response: { link: TwitchLinkInfo | null; broadcastEnabled: boolean; ebsUrl: string }
+  }
+  'twitch:pair': {
+    request: { code: string }
+    response: { success: boolean; link?: TwitchLinkInfo; errorKey?: string }
+  }
+  'twitch:unpair': { request: void; response: void }
+  'twitch:setBroadcastEnabled': { request: { enabled: boolean }; response: void }
+  'twitch:republish': { request: void; response: { success: boolean; errorKey?: string } }
 }
 
 /** Result of a personal-stats fetch (player:linkProfile / player:refreshStats).

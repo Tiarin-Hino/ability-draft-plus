@@ -1,0 +1,30 @@
+diff --git a/node_modules/drizzle-orm/sql-js/session.cjs b/node_modules/drizzle-orm/sql-js/session.cjs
+index 91635e3..3cfbee9 100644
+--- a/node_modules/drizzle-orm/sql-js/session.cjs
++++ b/node_modules/drizzle-orm/sql-js/session.cjs
+@@ -89,9 +89,9 @@ class PreparedQuery extends import_session.SQLitePreparedQuery {
+     return result;
+   }
+   all(placeholderValues) {
+-    const stmt = this.client.prepare(this.query.sql);
+     const { fields, joinsNotNullableMap, logger, query, customResultMapper } = this;
+     if (!fields && !customResultMapper) {
++      const stmt = this.client.prepare(this.query.sql);
+       const params = (0, import_sql.fillPlaceholders)(query.params, placeholderValues ?? {});
+       logger.logQuery(query.sql, params);
+       stmt.bind(params);
+diff --git a/node_modules/drizzle-orm/sql-js/session.js b/node_modules/drizzle-orm/sql-js/session.js
+index 8b34f6d..5a62552 100644
+--- a/node_modules/drizzle-orm/sql-js/session.js
++++ b/node_modules/drizzle-orm/sql-js/session.js
+@@ -64,9 +64,9 @@ class PreparedQuery extends PreparedQueryBase {
+     return result;
+   }
+   all(placeholderValues) {
+-    const stmt = this.client.prepare(this.query.sql);
+     const { fields, joinsNotNullableMap, logger, query, customResultMapper } = this;
+     if (!fields && !customResultMapper) {
++      const stmt = this.client.prepare(this.query.sql);
+       const params = fillPlaceholders(query.params, placeholderValues ?? {});
+       logger.logQuery(query.sql, params);
+       stmt.bind(params);

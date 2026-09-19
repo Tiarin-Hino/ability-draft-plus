@@ -19,6 +19,9 @@ export interface AppStoreState {
 
   // Overlay
   overlayActive: boolean
+  /** True while the active session is running in background mode (overlay
+   * window created but never shown). Only meaningful when overlayActive. */
+  overlayBackground: boolean
   activeResolution: string | null
   activeResolutionSource: LayoutSource | null
   overlayOpacity: number
@@ -59,6 +62,15 @@ export interface AppStoreState {
 
   // Dota GSI: true while the stream server has received a POST in the last 30s
   gsiConnected: boolean
+
+  // Twitch extension publisher (twitch-publisher-service). twitchErrorKey is an
+  // i18n key in the 'streaming' namespace. The channel token never enters the store.
+  twitchPaired: boolean
+  twitchChannelName: string | null
+  twitchBroadcastEnabled: boolean
+  twitchPublishStatus: 'off' | 'idle' | 'ok' | 'error'
+  twitchLastPublishAt: number | null
+  twitchErrorKey: string | null
 }
 
 // Action types for @zubridge dispatch

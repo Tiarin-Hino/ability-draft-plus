@@ -27,7 +27,6 @@ export interface ScanProcessingService {
     isInitialScan: boolean,
     resolution: string,
     scaleFactor: number,
-    modelTiles?: import('@core/domain/model-pick-detection').ModelTileCapture[],
     playerCardTiles?: import('@core/domain/slot-row-correlation').PlayerCardCapture[],
   ): void
 }
@@ -71,7 +70,6 @@ export function createScanProcessingService(
       isInitialScan,
       resolution,
       scaleFactor,
-      modelTiles,
       playerCardTiles,
     ) {
       const start = performance.now()
@@ -91,15 +89,9 @@ export function createScanProcessingService(
         // the contamination guard's verdict below is irrelevant to them.
         slotMapping?.onCardTiles(playerCardTiles, isInitialScan)
 
-        // While SPECTATING, GSI is the authoritative model-pick source and the
-        // spectator draft screen's coordinate offsets make tile diffs garbage
-        // (observed: 'Unknown Hero' commits) — drop the tiles entirely.
-        const gsiSnapshot = streamService?.getGsiState().snapshot
-        const spectating = (gsiSnapshot?.players.length ?? 0) > 0
         const output = processScanResults({
           rawResults: results,
           isInitialScan,
-          modelTiles: spectating ? undefined : modelTiles,
           state: {
             initialPoolAbilitiesCache: state.initialPoolAbilitiesCache,
             identifiedHeroModelsCache: state.identifiedHeroModelsCache,
@@ -109,8 +101,6 @@ export function createScanProcessingService(
             mySelectedModelHeroOrder: state.mySelectedModelHeroOrder,
             selectedAbilitiesCache: state.selectedAbilitiesCache,
             rescanRejectionStreak: state.rescanRejectionStreak,
-            modelTileBaselines: state.modelTileBaselines,
-            pendingModelChanges: state.pendingModelChanges,
             pickedModelHeroOrders: state.pickedModelHeroOrders,
           },
           deps: {
@@ -125,6 +115,8 @@ export function createScanProcessingService(
           modelCoords: coords.models_coords ?? [],
           heroesCoords: coords.heroes_coords ?? [],
           heroesParams: coords.heroes_params ?? { width: 0, height: 0 },
+          pickBoxCoords: coords.selected_abilities_coords ?? [],
+          pickBoxParams: coords.selected_abilities_params ?? { width: 0, height: 0 },
           targetResolution: resolution,
           scaleFactor,
         })
@@ -144,23 +136,14 @@ export function createScanProcessingService(
           rescanRejectionStreak: output.updatedState.rescanRejectionStreak,
           lastRescanRejected: output.rescanRejected === true,
           lastRescanHasty: output.rescanHasty === true,
-          modelTileBaselines: output.updatedState.modelTileBaselines,
-          pendingModelChanges: output.updatedState.pendingModelChanges,
-          pickedModelHeroOrders: output.updatedState.pickedModelHeroOrders,
+          // Picked models belong to the auto-rescan service (card OCR); the
+          // processor only clears them when a new draft's initial scan lands.
+          // Writing them back on every rescan could clobber a pick applied
+          // while this scan was being processed.
+          ...(isInitialScan
+            ? { pickedModelHeroOrders: output.updatedState.pickedModelHeroOrders }
+            : {}),
         })
-
-        if (output.newlyPickedModels && output.newlyPickedModels.length > 0) {
-          // Cross-check against the GSI local-hero log line when playing:
-          // your own pick must show up here within a scan or two of the
-          // 'GSI local player' heroModel update
-          const names = output.newlyPickedModels.map((order) => {
-            const model = output.updatedState.identifiedHeroModelsCache.find(
-              (m) => m.heroOrder === order,
-            )
-            return model ? `${order}:${model.heroDisplayName}` : `${order}:?`
-          })
-          logger.info('Model picks detected (tile diff)', { models: names })
-        }
 
         if (output.rescanRejected) {
           logger.warn(
