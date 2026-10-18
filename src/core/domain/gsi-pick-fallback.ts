@@ -15,6 +15,10 @@ import type { AbilityDetail, EnrichedScanSlot, OverlayDataPayload } from '@share
 // the same identity mapping for names/models/seats, so the board is consistent
 // with itself (only the draft-screen row order is unknown, and that screen is gone).
 //
+// The ability bar is LIVE (casts swap abilities in and out), the draft is not:
+// reads are merged add-only per match (mergeLatchedPicks) — a shown pick is never
+// replaced or removed.
+//
 // The fallback never mixes with scan picks: it is used only while the scan has
 // zero named picks. A synthetic payload stands in when there was no initial scan
 // at all (app restarted mid-game — the draft session is memory-only).
@@ -82,6 +86,36 @@ export function buildGsiFallbackPicks(
     }
   })
   return slots
+}
+
+/**
+ * Merge a fresh GSI read into the picks already shown for this match. The draft
+ * is over, so what a player drafted never changes — but GSI reports the hero's
+ * CURRENT ability bar, and casts swap entries in and out (2026-10-17 cast: a
+ * swapped-in sub-ability is not DB-known, so its box went empty; three boxes of
+ * one player vanished at once). So picks are ADD-ONLY: every latched pick keeps
+ * its box, and a fresh name only fills a box that is still empty (a hero read
+ * before its bar was complete). Once a row holds 3 standard + 1 ultimate it is
+ * frozen.
+ */
+export function mergeLatchedPicks(
+  latched: readonly EnrichedScanSlot[],
+  fresh: readonly EnrichedScanSlot[],
+): EnrichedScanSlot[] {
+  const merged = [...latched]
+  for (const slot of fresh) {
+    const row = merged.filter((s) => s.hero_order === slot.hero_order)
+    if (row.some((s) => s.name === slot.name)) continue
+    if (slot.is_ultimate) {
+      if (row.some((s) => s.is_ultimate)) continue
+      merged.push({ ...slot, ability_order: 0 })
+    } else {
+      const standard = row.filter((s) => !s.is_ultimate).length
+      if (standard >= STANDARD_BOXES) continue
+      merged.push({ ...slot, ability_order: standard + 1 })
+    }
+  }
+  return merged
 }
 
 /** Payload with an empty pool, standing in when no initial scan exists. */
