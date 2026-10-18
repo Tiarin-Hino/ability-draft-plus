@@ -49,7 +49,12 @@ maintenance spec — the authoritative map of what IS, not a build plan.
   `mlStatus` first skipped the pass while the last round scanned, 2026-09-16),
   and waits for card OCR to DRAIN (OCR_FINAL_PASS_SETTLE_TIMEOUT_MS) rather than
   the per-scan 1.5s — strips still queued at the session reset are dropped, which
-  cost 4 of 7 missed models in the 2026-09-18 sweep
+  cost 4 of 7 missed models in the 2026-09-18 sweep.
+  An empty GSI payload (gamePhase null) is NOT a phase change, and re-entering
+  hero selection for the same match re-arms the final pass; back in the preview
+  with no pick tracked it restarts the draft clock (classifyHeroSelectionReentry)
+  — a spectator GSI dropout replayed the preview and the stale clock state left
+  the whole draft untracked (2026-10-17)
 - Background mode (`overlayBackgroundMode`): a NEVER-SHOWN session, not a
   "close the overlay to go headless". `createOverlayWindow({visible:false})`
   keeps the renderer — and therefore the fast getUserMedia capture agent —

@@ -13,6 +13,8 @@ import {
   buildTurnSchedule,
   turnsEndedBetween,
   countdownTargetRow,
+  classifyHeroSelectionReentry,
+  isPreviewClock,
   type TurnWindow,
 } from '@core/gsi/draft-clock'
 import { reconcileAbilityPicks } from '@core/domain/pick-attribution'
@@ -23,6 +25,7 @@ import {
 import type { PickEvent } from '@shared/types/stream'
 import {
   AUTO_RESCAN_TICK_MS,
+  AUTO_INITIAL_SCAN_MAX_ATTEMPTS,
   AUTO_RESCAN_PICK_VISIBLE_DELAY_S,
   AUTO_RESCAN_MAX_TARGET_RETRIES,
   AUTO_RESCAN_REPLAY_INTERVAL_MS,
@@ -59,7 +62,8 @@ import {
 //
 // Fallback auto INITIAL scan: if the user never pressed the initial-scan hotkey,
 // the pool is scanned automatically autoInitialScanDelayS (setting) after the draft
-// clock is first identified (hero selection + clock_time present) — one attempt per draft.
+// clock is first identified (hero selection + clock_time present). A scan that read
+// no pool is retried after the same delay, up to AUTO_INITIAL_SCAN_MAX_ATTEMPTS.
 //
 // Three session kinds:
 // - PLAYING: turn-driven targeted scanning (the headline path).
@@ -81,6 +85,13 @@ import {
 // clock state, so the auto initial scan runs for the new draft. Nothing else
 // resets a session in background mode, and a game closed mid-draft never
 // reaches the draft end either.
+// SAME-MATCH RE-ENTRY (core/gsi/draft-clock.ts classifyHeroSelectionReentry):
+// back in the preview with no pick tracked = the draft started over (spectator
+// GSI dropout, 2026-10-17) -> fresh clock state: initial-scan delay, anchor,
+// final pass. Anything else keeps the session but re-arms the final pass, so a
+// flap's pass never stands in for the real draft end.
+// EMPTY PAYLOADS (gamePhase null — no map block while GSI reconnects/loads) are
+// not a phase: they neither leave hero selection nor run the final pass.
 // DRAFT END: the last turn's scheduled scan always falls AFTER GSI leaves hero
 // selection, so finalizeDraft() runs one last capture on that transition — and
 // overlay auto-close awaits it, because closing the overlay ends capture. That
@@ -138,8 +149,10 @@ export function createAutoRescanService(
   let lastPhase: string | null = null
   /** Wall-clock ms when a hero-selection clock was first seen (draft identified). */
   let draftClockSeenAtMs: number | null = null
-  /** One fallback auto initial scan per draft session. */
-  let autoInitialScanAttempted = false
+  /** Fallback auto initial scans run this draft session (bounded retries). */
+  let autoInitialScanAttempts = 0
+  /** Wall-clock ms of the last auto initial scan attempt. */
+  let lastAutoInitialScanMs = 0
   /** Wall-clock ms of the pick-phase start (GSI clock_time crossing 0). */
   let pickAnchorMs: number | null = null
   /** Seconds (pick-phase relative) up to which turn ends have been queued. */
@@ -166,7 +179,8 @@ export function createAutoRescanService(
 
   function resetDraftSession(): void {
     draftClockSeenAtMs = null
-    autoInitialScanAttempted = false
+    autoInitialScanAttempts = 0
+    lastAutoInitialScanMs = 0
     pickAnchorMs = null
     queuedUpToS = 0
     pendingRows.clear()
@@ -182,7 +196,20 @@ export function createAutoRescanService(
     finalPass = null
   }
 
+  /** Let the next draft end run its own final pass once this one settles. */
+  function rearmFinalPass(): void {
+    const pass = finalPass
+    if (pass === null) return
+    void pass.then(() => {
+      if (finalPass === pass) finalPass = null
+    })
+  }
+
   function handlePhaseChange(snapshot: GsiSnapshot): void {
+    // An empty payload says nothing about the phase (overlay-lifecycle ignores
+    // it too). Treating it as "left hero selection" ran — and used up — the
+    // draft's final pass 10s into the preview (2026-10-17).
+    if (snapshot.gamePhase === null) return
     if (snapshot.gamePhase === lastPhase) return
     const prevPhase = lastPhase
     lastPhase = snapshot.gamePhase
@@ -196,6 +223,23 @@ export function createAutoRescanService(
         snapshot.matchId !== null &&
         snapshot.matchId === draftMatchId
       if (isSameDraft) {
+        const reentry = classifyHeroSelectionReentry({
+          clockTime: snapshot.clockTime,
+          picksTracked: draftStore.getState().draftTimeline.length,
+        })
+        if (reentry === 'restart') {
+          // The draft started over: the old entry's clock state (initial-scan
+          // delay already elapsed, anchor a minute stale) would scan a screen
+          // that has not rendered and time every turn wrong. The pool, if one
+          // was read, is the same draft's and stays.
+          resetDraftSession()
+          logger.info('Re-entered hero selection at the preview (same match, draft clock restarted)', {
+            matchId: snapshot.matchId,
+            clockTime: snapshot.clockTime,
+          })
+          return
+        }
+        rearmFinalPass()
         logger.info('Re-entered hero selection (same match, keeping session)', {
           matchId: snapshot.matchId,
         })
@@ -261,7 +305,7 @@ export function createAutoRescanService(
     // condition under which the anchor below is trustworthy. Joining mid-draft
     // (app/GSI started late) must NOT anchor: clock-0 crossings happen at every
     // turn boundary and would offset the whole schedule (observed 2026-08-26).
-    if (snapshot.clockTime <= -8) sawPreviewClock = true
+    if (isPreviewClock(snapshot.clockTime)) sawPreviewClock = true
 
     // Replay detector: a spectated draft whose clock jumps BACKWARD beyond the
     // per-turn countdown depth is being seeked — the turn schedule is void for
@@ -382,18 +426,24 @@ export function createAutoRescanService(
 
       if (poolNames().length === 0) {
         // Fallback auto INITIAL scan: the user hasn't scanned the pool yet —
-        // do it for them once, autoInitialScanDelayS (user setting; slower PCs
-        // need the draft screen fully rendered) after the draft clock was seen
+        // do it for them, autoInitialScanDelayS (user setting; slower PCs need
+        // the draft screen fully rendered) after the draft clock was seen, and
+        // again that long after an attempt that read no pool
+        const delayMs = settings.autoInitialScanDelayS * 1000
         if (
-          !autoInitialScanAttempted &&
+          autoInitialScanAttempts < AUTO_INITIAL_SCAN_MAX_ATTEMPTS &&
           draftClockSeenAtMs !== null &&
-          Date.now() - draftClockSeenAtMs >=
-            settings.autoInitialScanDelayS * 1000
+          Date.now() - draftClockSeenAtMs >= delayMs &&
+          Date.now() - lastAutoInitialScanMs >= delayMs
         ) {
-          autoInitialScanAttempted = true
-          logger.info('Auto initial scan (no manual scan yet)', {
-            clockTime: snapshot.clockTime,
-          })
+          autoInitialScanAttempts += 1
+          lastAutoInitialScanMs = Date.now()
+          logger.info(
+            autoInitialScanAttempts === 1
+              ? 'Auto initial scan (no manual scan yet)'
+              : 'Auto initial scan retry (previous attempt read no pool)',
+            { clockTime: snapshot.clockTime, attempt: autoInitialScanAttempts },
+          )
           await scanTrigger.performScan(true)
         }
         // Turn logic needs the pool baseline either way
