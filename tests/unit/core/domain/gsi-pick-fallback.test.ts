@@ -5,6 +5,7 @@ import {
   buildGsiFallbackPicks,
   emptyFallbackPayload,
   hasScannedPicks,
+  mergeLatchedPicks,
   withFallbackPicks,
 } from '@core/domain/gsi-pick-fallback'
 import { buildStreamBoardState } from '@core/domain/stream-board'
@@ -171,5 +172,60 @@ describe('GSI pick fallback', () => {
       'legion_commander_moment_of_courage',
       'furion_wrath_of_nature',
     ])
+  })
+
+  describe('latched picks (casts swap the live ability bar)', () => {
+    const row0 = (abilities: string[]): (string[] | null)[] => [
+      abilities,
+      ...Array.from({ length: 9 }, () => null),
+    ]
+    const drafted = [
+      'death_prophet_carrion_swarm',
+      'weaver_shukuchi',
+      'legion_commander_moment_of_courage',
+      'furion_wrath_of_nature',
+    ]
+    const read = (abilities: string[]) => buildGsiFallbackPicks(row0(abilities), details, (s) => s)
+    const names = (picks: { name: string | null }[]) => picks.map((p) => p.name)
+
+    it('keeps a pick whose slot was swapped for a non-draftable sub-ability', () => {
+      const first = mergeLatchedPicks([], read(drafted))
+      const swapped = read([
+        'death_prophet_carrion_swarm',
+        'weaver_shukuchi_end', // not DB-known: the box used to go empty
+        'legion_commander_moment_of_courage',
+        'furion_wrath_of_nature',
+      ])
+      expect(names(mergeLatchedPicks(first, swapped))).toEqual(names(first))
+    })
+
+    it('keeps every pick when the whole bar is replaced at once', () => {
+      const first = mergeLatchedPicks([], read(drafted))
+      expect(names(mergeLatchedPicks(first, read(['furion_wrath_of_nature'])))).toEqual(
+        names(first),
+      )
+      expect(names(mergeLatchedPicks(first, []))).toEqual(names(first))
+    })
+
+    it('never adds a draftable ability to a full row (stolen/granted spells)', () => {
+      const first = mergeLatchedPicks([], read(drafted))
+      const merged = mergeLatchedPicks(first, read([...drafted, 'windrunner_powershot']))
+      expect(merged).toHaveLength(4)
+      expect(names(merged)).not.toContain('windrunner_powershot')
+    })
+
+    it('does not reorder boxes when GSI reorders the bar', () => {
+      const first = mergeLatchedPicks([], read(drafted))
+      const reordered = read([...drafted].reverse())
+      expect(names(mergeLatchedPicks(first, reordered))).toEqual(names(first))
+    })
+
+    it('fills boxes still empty from a partial first read', () => {
+      const first = mergeLatchedPicks([], read(['death_prophet_carrion_swarm']))
+      const merged = mergeLatchedPicks(first, read(drafted))
+      expect(names(merged)).toEqual(drafted)
+      expect(merged.filter((p) => !p.is_ultimate).map((p) => p.ability_order)).toEqual([1, 2, 3])
+      expect(merged.find((p) => p.is_ultimate)?.ability_order).toBe(0)
+    })
   })
 })

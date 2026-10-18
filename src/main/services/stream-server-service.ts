@@ -8,6 +8,7 @@ import {
   buildGsiFallbackPicks,
   emptyFallbackPayload,
   hasScannedPicks,
+  mergeLatchedPicks,
   withFallbackPicks,
 } from '@core/domain/gsi-pick-fallback'
 import type {
@@ -167,9 +168,12 @@ export function createStreamServerService(
   // GSI pick fallback (core/domain/gsi-pick-fallback.ts). Picks are rebuilt only
   // when the GSI ability lists change (DB lookup off the per-tick path); the
   // synthetic initial payload is stable per match so the Twitch publisher sees
-  // one draft, not a new one every tick.
+  // one draft, not a new one every tick. Picks are LATCHED per match + mapping
+  // (mergeLatchedPicks: add-only — casts swap the live ability bar, the draft
+  // never changes); a GSI hiccup that drops the gate does not clear them.
   let fallbackKey = ''
   let fallbackPicks: EnrichedScanSlot[] = []
+  let fallbackLatchKey = ''
   let fallbackInitial: OverlayDataPayload | null = null
   let fallbackInitialMatchId: string | null = null
   let effectiveSlotRowMappings: Array<{ gsiSlot: number; scanRow: number }> = []
@@ -240,8 +244,10 @@ export function createStreamServerService(
   function gsiInfo(): StreamGsiInfo {
     const connected = gsiConnected()
     const playerNames: (string | null)[] = Array.from({ length: 10 }, () => null)
-    const playerModels: ({ npcName: string; displayName: string } | null)[] =
-      Array.from({ length: 10 }, () => null)
+    const playerModels: ({ npcName: string; displayName: string } | null)[] = Array.from(
+      { length: 10 },
+      () => null,
+    )
     if (gsiSnapshot) {
       // Spectating: allplayers carries every slot
       for (const player of gsiSnapshot.players) {
@@ -276,9 +282,7 @@ export function createStreamServerService(
       connected,
       gamePhase: connected ? (gsiSnapshot?.gamePhase ?? null) : null,
       clockTime: connected ? (gsiSnapshot?.clockTime ?? null) : null,
-      spectating: gsiSnapshot
-        ? gsiSnapshotMode(gsiSnapshot) === 'spectating'
-        : false,
+      spectating: gsiSnapshot ? gsiSnapshotMode(gsiSnapshot) === 'spectating' : false,
       playerNames,
       playerModels,
     }
@@ -385,7 +389,6 @@ export function createStreamServerService(
       hasScannedPicks(latestPayload ?? initialPayload) ||
       !snapshot.players.some((p) => (p.abilities?.length ?? 0) > 0)
     ) {
-      fallbackKey = ''
       return base
     }
 
@@ -402,15 +405,23 @@ export function createStreamServerService(
         abilitiesBySlot[player.slotIndex] = player.abilities ?? null
       }
     }
-    const key = JSON.stringify([abilitiesBySlot, effMappings])
+    const latchKey = JSON.stringify([snapshot.matchId, effMappings])
+    if (latchKey !== fallbackLatchKey) {
+      fallbackLatchKey = latchKey
+      fallbackPicks = []
+      fallbackKey = ''
+    }
+    const key = JSON.stringify(abilitiesBySlot)
     if (key !== fallbackKey) {
       const names = [...new Set(abilitiesBySlot.flatMap((list) => list ?? []))]
-      fallbackPicks = buildGsiFallbackPicks(
+      const fresh = buildGsiFallbackPicks(
         abilitiesBySlot,
         dbService.abilities.getDetails(names),
         (slot) => rowBySlot.get(slot) ?? null,
       )
-      if (fallbackKey === '') {
+      const isFirstRead = fallbackPicks.length === 0
+      fallbackPicks = mergeLatchedPicks(fallbackPicks, fresh)
+      if (isFirstRead) {
         logger.warn('No scanned picks — showing drafted abilities from GSI', {
           matchId: snapshot.matchId,
           picks: fallbackPicks.length,
@@ -459,10 +470,7 @@ export function createStreamServerService(
     }
   }
 
-  function sseWrite(
-    res: ServerResponse,
-    message: StreamStateMessage | PicksStateMessage,
-  ): void {
+  function sseWrite(res: ServerResponse, message: StreamStateMessage | PicksStateMessage): void {
     res.write(`data: ${JSON.stringify(message)}\n\n`)
   }
 
@@ -650,11 +658,7 @@ export function createStreamServerService(
     res.end(data)
   }
 
-  function captureGsiPayload(
-    rawBody: string,
-    phase: string | null,
-    mode: string,
-  ): void {
+  function captureGsiPayload(rawBody: string, phase: string | null, mode: string): void {
     const safePhase = (phase ?? 'unknown').replace(/[^A-Za-z0-9_]/g, '_')
     const captureKey = `${mode}_${safePhase}`
     const now = Date.now()
@@ -857,8 +861,7 @@ export function createStreamServerService(
 
         srv.on('error', (error: NodeJS.ErrnoException) => {
           logger.error('Stream server error', { code: error.code, message: error.message })
-          errorKey =
-            error.code === 'EADDRINUSE' ? 'server.errorPortInUse' : 'server.errorGeneric'
+          errorKey = error.code === 'EADDRINUSE' ? 'server.errorPortInUse' : 'server.errorGeneric'
           server = null
           activePort = port
           syncStoreStatus()
