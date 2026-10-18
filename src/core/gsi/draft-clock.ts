@@ -148,3 +148,33 @@ export function isRoundBreak(
   if (elapsedS >= last.endS) return true
   return elapsedS >= 0 && turnAt(elapsedS, schedule) === null
 }
+
+/**
+ * Per-turn countdowns only reach -7; a clock at or below this is the PREVIEW
+ * ramp (-59 -> 0) before the first pick turn.
+ */
+export const PREVIEW_CLOCK_MAX_S = -8
+
+/** True when a hero-selection clock reading is the pre-pick preview ramp. */
+export function isPreviewClock(clockTime: number | null): boolean {
+  return clockTime !== null && clockTime <= PREVIEW_CLOCK_MAX_S
+}
+
+/**
+ * What re-entering hero selection for the SAME match means for the tracked draft.
+ * - 'restart': the draft starts over — back in the preview with no pick tracked
+ *   yet. Spectating (2026-10-17, match 9049573510): the spectator landed in hero
+ *   selection at -59, GSI dropped out 10s later (empty payload, then loading) and
+ *   hero selection began AGAIN at -59 two minutes on. Keeping the first entry's
+ *   clock state fired the auto initial scan the moment the screen came back
+ *   (blank pool, one attempt — nothing tracked all draft) and kept a pick anchor
+ *   a minute stale.
+ * - 'resume': anything else (replay seeking, directed-camera flaps mid-draft):
+ *   the anchor and timeline stay.
+ */
+export function classifyHeroSelectionReentry(input: {
+  clockTime: number | null
+  picksTracked: number
+}): 'restart' | 'resume' {
+  return input.picksTracked === 0 && isPreviewClock(input.clockTime) ? 'restart' : 'resume'
+}

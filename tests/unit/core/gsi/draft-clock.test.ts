@@ -5,6 +5,8 @@ import {
   turnsEndedBetween,
   isRoundBreak,
   countdownTargetRow,
+  classifyHeroSelectionReentry,
+  isPreviewClock,
 } from '@core/gsi/draft-clock'
 
 // Small config for arithmetic-friendly tests: 4 players (2 per team), 5s turns,
@@ -149,5 +151,27 @@ describe('countdownTargetRow', () => {
   it('returns the exact-match delta', () => {
     const result = countdownTargetRow({ countdownS: 14, elapsedS: 0 })
     expect(result).toEqual({ row: 1, deltaS: 0 })
+  })
+})
+
+describe('isPreviewClock', () => {
+  it('is the -59..-8 ramp; per-turn countdowns (-7..0) and no clock are not', () => {
+    expect(isPreviewClock(-59)).toBe(true)
+    expect(isPreviewClock(-8)).toBe(true)
+    expect(isPreviewClock(-7)).toBe(false)
+    expect(isPreviewClock(0)).toBe(false)
+    expect(isPreviewClock(null)).toBe(false)
+  })
+})
+
+describe('classifyHeroSelectionReentry', () => {
+  it('restarts when back in the preview with nothing tracked (2026-10-17 spectator dropout)', () => {
+    expect(classifyHeroSelectionReentry({ clockTime: -59, picksTracked: 0 })).toBe('restart')
+  })
+
+  it('resumes once a pick is tracked, during picking, or without a clock', () => {
+    expect(classifyHeroSelectionReentry({ clockTime: -59, picksTracked: 3 })).toBe('resume')
+    expect(classifyHeroSelectionReentry({ clockTime: -4, picksTracked: 0 })).toBe('resume')
+    expect(classifyHeroSelectionReentry({ clockTime: null, picksTracked: 0 })).toBe('resume')
   })
 })

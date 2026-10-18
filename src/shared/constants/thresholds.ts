@@ -408,6 +408,10 @@ export const SLOT_MAP_EVENT_SLACK_AFTER_MS = 20_000
 // identified (hero selection + clock_time present) when the user hasn't run
 // the initial scan themselves — deep in the preview, pool fully rendered.
 export const AUTO_INITIAL_SCAN_DELAY_S = 15
+// An auto initial scan that read NO pool (captured before the draft screen
+// rendered, or over another view) is retried after the same delay, up to this
+// many attempts per draft. One attempt only left a whole draft untracked.
+export const AUTO_INITIAL_SCAN_MAX_ATTEMPTS = 3
 // The tick only CHECKS the turn clock; scans fire when a turn ends (~7s apart),
 // so a 1s tick costs nothing between turns but keeps boundary latency low.
 export const AUTO_RESCAN_TICK_MS = 1_000
