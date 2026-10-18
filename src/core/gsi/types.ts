@@ -1,7 +1,9 @@
 // @DEV-GUIDE: Types for Dota 2 Game State Integration (GSI) ingestion. Dota POSTs JSON
 // to the stream server's /gsi endpoint (cfg written by gsi-cfg-service). GSI does NOT
-// carry the Ability Draft pool or ability picks — the ML scan remains the source for
-// those; GSI contributes player identity, game phase, and clock only.
+// carry the Ability Draft pool or ability picks DURING the draft — the ML scan remains
+// the source for those; GSI contributes player identity, game phase, and clock. In
+// game, a spectator's `abilities` block is the fallback pick source when the scan
+// tracked none (core/domain/gsi-pick-fallback.ts).
 //
 // Payload shapes differ by role:
 // - SPECTATING/casting: player block is { team2: { player0..player4 }, team3: { player5..player9 } }
@@ -60,6 +62,9 @@ export interface GsiPlayer {
   heroNpcName: string | null
   /** In-game telemetry; absent outside a running game or when playing. */
   live?: GsiPlayerLive
+  /** Spectator `abilities` block: the hero's ability names in slot order (in
+   * game only; includes innates/sub-abilities — filter against the DB). */
+  abilities?: string[]
 }
 
 export interface GsiSnapshot {

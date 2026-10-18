@@ -78,6 +78,7 @@ function parseTeamPlayers(
   isDire: boolean,
   heroStatsByKey?: Map<number, GsiPlayerLive>,
   itemsByKey?: Map<number, GsiPlayerLive>,
+  abilitiesByKey?: Map<number, string[]>,
 ): void {
   const teamRecord = asRecord(team)
   if (!teamRecord) return
@@ -95,12 +96,14 @@ function parseTeamPlayers(
       ...(heroStatsByKey?.get(keyIndex) ?? {}),
       ...(itemsByKey?.get(keyIndex) ?? {}),
     }
+    const abilities = abilitiesByKey?.get(keyIndex)
     into.push({
       slotIndex,
       name,
       accountId: asString(player['accountid']),
       heroNpcName: heroesByKey.get(keyIndex) ?? null,
       ...(Object.keys(live).length > 0 ? { live } : {}),
+      ...(abilities && abilities.length > 0 ? { abilities } : {}),
     })
   }
 }
@@ -203,6 +206,31 @@ function parseTeamItems(team: unknown): Map<number, GsiPlayerLive> {
   return items
 }
 
+/**
+ * Spectator abilities block: { playerN: { ability0: { name }, ability1: ... } },
+ * keyed by raw playerN. Names come back in abilityK order.
+ */
+function parseTeamAbilities(team: unknown): Map<number, string[]> {
+  const abilities = new Map<number, string[]>()
+  const teamRecord = asRecord(team)
+  if (!teamRecord) return abilities
+  for (const [key, value] of Object.entries(teamRecord)) {
+    const keyIndex = slotIndexFromKey(key)
+    const block = asRecord(value)
+    if (keyIndex === null || !block) continue
+    const names = Object.entries(block)
+      .map(([abilityKey, ability]) => ({
+        order: Number(/^ability(\d+)$/.exec(abilityKey)?.[1] ?? NaN),
+        name: asString(asRecord(ability)?.['name']),
+      }))
+      .filter((a): a is { order: number; name: string } => !Number.isNaN(a.order) && !!a.name)
+      .sort((a, b) => a.order - b.order)
+      .map((a) => a.name)
+    if (names.length > 0) abilities.set(keyIndex, names)
+  }
+  return abilities
+}
+
 /** Spectator hero block team: { playerN: { name: "npc_dota_hero_x" } } — keyed by raw playerN. */
 function parseTeamHeroes(team: unknown): Map<number, string> {
   const heroes = new Map<number, string>()
@@ -246,8 +274,19 @@ export function parseGsiPayload(json: unknown): GsiSnapshot {
       const itemBlock = asRecord(root['items'])
       const radiantItems = parseTeamItems(itemBlock?.['team2'])
       const direItems = parseTeamItems(itemBlock?.['team3'])
-      parseTeamPlayers(team2, players, radiantHeroes, false, radiantStats, radiantItems)
-      parseTeamPlayers(team3, players, direHeroes, true, direStats, direItems)
+      const abilityBlock = asRecord(root['abilities'])
+      const radiantAbilities = parseTeamAbilities(abilityBlock?.['team2'])
+      const direAbilities = parseTeamAbilities(abilityBlock?.['team3'])
+      parseTeamPlayers(
+        team2,
+        players,
+        radiantHeroes,
+        false,
+        radiantStats,
+        radiantItems,
+        radiantAbilities,
+      )
+      parseTeamPlayers(team3, players, direHeroes, true, direStats, direItems, direAbilities)
       players.sort((a, b) => a.slotIndex - b.slotIndex)
     } else {
       const name = asString(playerBlock['name'])

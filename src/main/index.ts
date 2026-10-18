@@ -310,7 +310,9 @@ app.whenReady().then(async () => {
     createTwitchEbsClient(loadTwitchEbsUrl() ?? DEFAULT_TWITCH_EBS_URL),
     // Caster telemetry is keyed by draft row, GSI reports slots — the publisher
     // needs the learned mapping to place it (see slot-row-correlation.ts).
-    { getSlotRowMappings: () => draftStore.getState().slotRowMappings },
+    // The stream server's EFFECTIVE mappings: identity while the GSI pick
+    // fallback is active (core/domain/gsi-pick-fallback.ts).
+    { getSlotRowMappings: () => streamService.getEffectiveSlotRowMappings() },
   )
   twitchPublisher.start()
 

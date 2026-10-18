@@ -3,7 +3,13 @@ import { join, normalize, extname } from 'path'
 import { promises as fs } from 'fs'
 import { app } from 'electron'
 import log from 'electron-log/main'
-import type { OverlayDataPayload } from '@shared/types'
+import type { EnrichedScanSlot, OverlayDataPayload } from '@shared/types'
+import {
+  buildGsiFallbackPicks,
+  emptyFallbackPayload,
+  hasScannedPicks,
+  withFallbackPicks,
+} from '@core/domain/gsi-pick-fallback'
 import type {
   PicksStateMessage,
   PicksViewState,
@@ -125,7 +131,19 @@ export interface StreamServerService {
   getGsiState(): { snapshot: GsiSnapshot | null; connected: boolean }
   /** Register a secondary state consumer; returns an unsubscribe function. */
   subscribeState(subscriber: StreamStateSubscriber): () => void
+  /** Slot -> row mappings the board was last built with (identity while the
+   * GSI pick fallback is active). Caster telemetry must use the same ones. */
+  getEffectiveSlotRowMappings(): Array<{ gsiSlot: number; scanRow: number }>
 }
+
+/** Phases where spectator GSI carries spawned heroes' abilities. */
+const GSI_ABILITY_PHASES: ReadonlySet<string> = new Set([
+  'DOTA_GAMERULES_STATE_PRE_GAME',
+  'DOTA_GAMERULES_STATE_GAME_IN_PROGRESS',
+  'DOTA_GAMERULES_STATE_POST_GAME',
+])
+
+const IDENTITY_SLOT_ROWS = Array.from({ length: 10 }, (_, i) => ({ gsiSlot: i, scanRow: i }))
 
 export function createStreamServerService(
   dbService: DatabaseService,
@@ -145,6 +163,16 @@ export function createStreamServerService(
 
   let initialPayload: OverlayDataPayload | null = null
   let latestPayload: OverlayDataPayload | null = null
+
+  // GSI pick fallback (core/domain/gsi-pick-fallback.ts). Picks are rebuilt only
+  // when the GSI ability lists change (DB lookup off the per-tick path); the
+  // synthetic initial payload is stable per match so the Twitch publisher sees
+  // one draft, not a new one every tick.
+  let fallbackKey = ''
+  let fallbackPicks: EnrichedScanSlot[] = []
+  let fallbackInitial: OverlayDataPayload | null = null
+  let fallbackInitialMatchId: string | null = null
+  let effectiveSlotRowMappings: Array<{ gsiSlot: number; scanRow: number }> = []
 
   // Last recorded draft's picks — survives session resets; see dev-guide above.
   let picksSnapshot: PicksViewState | null = null
@@ -333,14 +361,89 @@ export function createStreamServerService(
       // No file yet (or unreadable) — nothing to restore.
     })
 
-  function buildState(): StreamStateMessage {
+  interface BoardInputs {
+    initial: OverlayDataPayload | null
+    latest: OverlayDataPayload | null
+    mappings: Array<{ gsiSlot: number; scanRow: number }>
+  }
+
+  /**
+   * The payloads + mappings the board is built from. Normally the scan's; while
+   * spectating a game whose draft the scan tracked NO picks for, the picks come
+   * from GSI's ability lists instead (see core/domain/gsi-pick-fallback.ts).
+   */
+  function boardInputs(): BoardInputs {
+    const mappings = getSlotRowMappings?.() ?? []
+    const base: BoardInputs = { initial: initialPayload, latest: latestPayload, mappings }
+    const snapshot = gsiSnapshot
+    if (
+      !snapshot ||
+      !gsiConnected() ||
+      gsiSnapshotMode(snapshot) !== 'spectating' ||
+      snapshot.gamePhase === null ||
+      !GSI_ABILITY_PHASES.has(snapshot.gamePhase) ||
+      hasScannedPicks(latestPayload ?? initialPayload) ||
+      !snapshot.players.some((p) => (p.abilities?.length ?? 0) > 0)
+    ) {
+      fallbackKey = ''
+      return base
+    }
+
+    // A learned mapping is only trusted when it covers every slot; otherwise
+    // identity for EVERYTHING (names, models, picks, seats) keeps the board
+    // consistent with itself.
+    const fullMapping = new Set(mappings.map((m) => m.gsiSlot)).size >= 10
+    const effMappings = fullMapping ? mappings : IDENTITY_SLOT_ROWS
+    const rowBySlot = new Map(effMappings.map((m) => [m.gsiSlot, m.scanRow]))
+
+    const abilitiesBySlot: (string[] | null)[] = Array.from({ length: 10 }, () => null)
+    for (const player of snapshot.players) {
+      if (player.slotIndex >= 0 && player.slotIndex < 10) {
+        abilitiesBySlot[player.slotIndex] = player.abilities ?? null
+      }
+    }
+    const key = JSON.stringify([abilitiesBySlot, effMappings])
+    if (key !== fallbackKey) {
+      const names = [...new Set(abilitiesBySlot.flatMap((list) => list ?? []))]
+      fallbackPicks = buildGsiFallbackPicks(
+        abilitiesBySlot,
+        dbService.abilities.getDetails(names),
+        (slot) => rowBySlot.get(slot) ?? null,
+      )
+      if (fallbackKey === '') {
+        logger.warn('No scanned picks — showing drafted abilities from GSI', {
+          matchId: snapshot.matchId,
+          picks: fallbackPicks.length,
+          mapping: fullMapping ? 'learned' : 'identity',
+        })
+      }
+      fallbackKey = key
+    }
+
+    let initial = initialPayload
+    if (!initial) {
+      if (!fallbackInitial || fallbackInitialMatchId !== snapshot.matchId) {
+        fallbackInitial = emptyFallbackPayload()
+        fallbackInitialMatchId = snapshot.matchId
+      }
+      initial = fallbackInitial
+    }
+    return {
+      initial,
+      latest: withFallbackPicks(latestPayload ?? initial, fallbackPicks),
+      mappings: effMappings,
+    }
+  }
+
+  function buildState(inputs: BoardInputs = boardInputs()): StreamStateMessage {
+    effectiveSlotRowMappings = inputs.mappings
     const state = buildStreamBoardState({
-      initialPayload,
-      latestPayload,
+      initialPayload: inputs.initial,
+      latestPayload: inputs.latest,
       gsi: gsiInfo(),
       pickEvents: getPickEvents?.(),
       modelAssignments: getModelAssignments?.(),
-      slotRowMappings: getSlotRowMappings?.(),
+      slotRowMappings: inputs.mappings,
       meta: {
         language: appStore.getState().language,
         appVersion: app.getVersion(),
@@ -388,16 +491,17 @@ export function createStreamServerService(
     ) {
       return
     }
-    const message = buildState()
+    const inputs = boardInputs()
+    const message = buildState(inputs)
     updatePicksSnapshot(message)
     if (subscribers.length > 0) {
       const context: StreamStateContext = {
-        initialPayload,
-        latestPayload,
+        initialPayload: inputs.initial,
+        latestPayload: inputs.latest,
         pickEvents: getPickEvents?.() ?? [],
         myRow: getLocalPlayerRow?.() ?? null,
         gsiMatchId: gsiSnapshot?.matchId ?? null,
-        slotRowMappings: getSlotRowMappings?.() ?? [],
+        slotRowMappings: inputs.mappings,
         spectating: (gsiSnapshot?.players.length ?? 0) > 0,
       }
       for (const subscriber of subscribers) {
@@ -736,6 +840,12 @@ export function createStreamServerService(
   }
 
   return {
+    getEffectiveSlotRowMappings() {
+      return effectiveSlotRowMappings.length > 0
+        ? effectiveSlotRowMappings
+        : (getSlotRowMappings?.() ?? [])
+    },
+
     start(port: number): Promise<boolean> {
       if (server) {
         logger.warn('Stream server already running', { port: activePort })
