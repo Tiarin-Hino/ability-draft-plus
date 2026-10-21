@@ -1,0 +1,3160 @@
+[
+ {
+  "id": "A-001",
+  "section": "A",
+  "kind": "rule",
+  "title": "Board tag profile (shared plumbing)",
+  "body": "Compute once per scan: tag counts over MY picks, TEAMMATES' picks, ENEMY picks (the other five rows) and the UNPICKED pool. Passed to the scorer like the scarcity map. Every new verdict below reads from it. Enemy/team-aware boosts are board facts, so they join the role-independent set (Aghs stacking, overrated damp, point-sink) and apply with role mode off; golden tests zero the new terms."
+ },
+ {
+  "id": "B-002",
+  "section": "B",
+  "kind": "rule",
+  "title": "Split into reposition_enemy + reposition_ally",
+  "body": "THREE tags now. reposition_enemy = pulls / throws / swaps / long pushes that change where the fight happens. reposition_ally = moves an ally to safety. knockback = a short displacement whose value is the interrupt (stops Charge, Blast Off, Skewer) and the spacing, not the catch. Black Hole, Bushwhack, Tornado, Arena, Electric Vortex, Ice Vortex, Wheel of Wonder and Fiend's Gate carry none of the three. move_enemy stays a rename alias to reposition_enemy in the import script.",
+  "round": 1
+ },
+ {
+  "id": "B-003",
+  "section": "B",
+  "kind": "rule",
+  "title": "reposition_enemy scoring: a pos-4 'catch' need + pos-3 initiation alternative",
+  "body": "New need key catch for position 4 (priority 0.5, own scarcity key: a pool with one Hook and no stuns rates it like the last stun does today). Full-credit alternative for the pos-3 initiation need. The catch need STACKS with the hard_cc need when an ability carries both, which is the 'breaks formation, stronger than plain CC' premium. Role layer only, role-off invariant untouched."
+ },
+ {
+  "id": "B-004",
+  "section": "B",
+  "kind": "rule",
+  "title": "reposition_ally scoring: covers the pos-5 save need + pos-4/5 accent",
+  "body": "Full-credit alternative for the pos-5 save need (chip: covers: save (via reposition_ally)), plus a +ROLE_TAG_ACCENT_WEIGHT (0.05) accent for positions 4 and 5 as the 'brings them to safety, stronger than a plain save' premium. No pos-1/2 minus accent: a swap is a fine core escape."
+ },
+ {
+  "id": "B-005",
+  "section": "B",
+  "kind": "map",
+  "title": "Meat Hook",
+  "body": "Pulls the hooked unit to Pudge. Also hooks allies: both tags.",
+  "ability": "pudge_meat_hook",
+  "current": [
+   "hard_cc",
+   "initiation",
+   "move_enemy",
+   "nuke"
+  ],
+  "proposed": [
+   "reposition_enemy",
+   "reposition_ally"
+  ],
+  "remove": [
+   "move_enemy"
+  ],
+  "confidence": "high",
+  "wr": 0.4959406373,
+  "pick": 7.8284591881274554
+ },
+ {
+  "id": "B-006",
+  "section": "B",
+  "kind": "map",
+  "title": "Flaming Lasso",
+  "body": "Drags the target in Batrider's wake.",
+  "ability": "batrider_flaming_lasso",
+  "current": [
+   "hard_cc",
+   "initiation",
+   "mana_hungry",
+   "move_enemy"
+  ],
+  "proposed": [
+   "reposition_enemy"
+  ],
+  "remove": [
+   "move_enemy"
+  ],
+  "confidence": "high",
+  "wr": 0.473923445,
+  "pick": 37.78995215311005
+ },
+ {
+  "id": "B-007",
+  "section": "B",
+  "kind": "map",
+  "title": "Vacuum",
+  "body": "Pulls every enemy in the area to a point.",
+  "ability": "dark_seer_vacuum",
+  "current": [
+   "aoe",
+   "hard_cc",
+   "initiation",
+   "mana_hungry",
+   "move_enemy",
+   "setup_cc"
+  ],
+  "proposed": [
+   "reposition_enemy"
+  ],
+  "remove": [
+   "move_enemy"
+  ],
+  "confidence": "high",
+  "wr": 0.5065015056,
+  "pick": 31.167841500136873
+ },
+ {
+  "id": "B-008",
+  "section": "B",
+  "kind": "map",
+  "title": "Glimpse",
+  "body": "Teleports the target to where it was 4 s ago.",
+  "ability": "disruptor_glimpse",
+  "current": [
+   "initiation",
+   "move_enemy",
+   "setup_cc"
+  ],
+  "proposed": [
+   "reposition_enemy"
+  ],
+  "remove": [
+   "move_enemy"
+  ],
+  "confidence": "high",
+  "wr": 0.5057235553,
+  "pick": 24.3166319784525
+ },
+ {
+  "id": "B-009",
+  "section": "B",
+  "kind": "map",
+  "title": "Gust",
+  "body": "Knockback scaled by proximity.",
+  "ability": "drow_ranger_wave_of_silence",
+  "current": [
+   "aoe",
+   "move_enemy",
+   "soft_cc"
+  ],
+  "proposed": [
+   "knockback"
+  ],
+  "remove": [
+   "move_enemy"
+  ],
+  "confidence": "high",
+  "wr": 0.4841439215,
+  "pick": 39.60320491220188,
+  "round": 1
+ },
+ {
+  "id": "B-010",
+  "section": "B",
+  "kind": "map",
+  "title": "Bushwhack",
+  "body": "Drags trapped enemies to the tree.",
+  "ability": "hoodwink_bushwhack",
+  "current": [
+   "aoe",
+   "hard_cc",
+   "initiation",
+   "move_enemy",
+   "setup_cc"
+  ],
+  "proposed": [],
+  "remove": [
+   "move_enemy"
+  ],
+  "confidence": "high",
+  "wr": 0.5015645535,
+  "pick": 28.87517992364979,
+  "round": 1
+ },
+ {
+  "id": "B-011",
+  "section": "B",
+  "kind": "map",
+  "title": "Reverse Polarity",
+  "body": "Pulls everyone in radius to Magnus.",
+  "ability": "magnataur_reverse_polarity",
+  "current": [
+   "aoe",
+   "hard_cc",
+   "initiation",
+   "mana_hungry",
+   "move_enemy",
+   "teamfight_ult"
+  ],
+  "proposed": [
+   "reposition_enemy"
+  ],
+  "remove": [
+   "move_enemy"
+  ],
+  "confidence": "high",
+  "wr": 0.5115337566,
+  "pick": 26.56765888041009
+ },
+ {
+  "id": "B-012",
+  "section": "B",
+  "kind": "map",
+  "title": "Skewer",
+  "body": "Drags heroes hit to the destination.",
+  "ability": "magnataur_skewer",
+  "current": [
+   "aoe",
+   "hard_cc",
+   "initiation",
+   "mobility",
+   "move_enemy",
+   "soft_cc"
+  ],
+  "proposed": [
+   "reposition_enemy"
+  ],
+  "remove": [
+   "move_enemy"
+  ],
+  "confidence": "high",
+  "wr": 0.5051302522,
+  "pick": 17.325231378810727
+ },
+ {
+  "id": "B-013",
+  "section": "B",
+  "kind": "map",
+  "title": "Shockwave",
+  "body": "Pulls enemies in the line toward Magnus (short).",
+  "ability": "magnataur_shockwave",
+  "current": [
+   "aoe",
+   "nuke",
+   "skill_point_sink",
+   "soft_cc",
+   "waveclear"
+  ],
+  "proposed": [
+   "knockback"
+  ],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.4799054374,
+  "pick": 26.542442868400315,
+  "round": 1
+ },
+ {
+  "id": "B-014",
+  "section": "B",
+  "kind": "map",
+  "title": "Spear of Mars",
+  "body": "Carries the first hero hit until it pins.",
+  "ability": "mars_spear",
+  "current": [
+   "aoe",
+   "hard_cc",
+   "initiation",
+   "move_enemy",
+   "nuke",
+   "setup_cc",
+   "waveclear"
+  ],
+  "proposed": [
+   "reposition_enemy"
+  ],
+  "remove": [
+   "move_enemy"
+  ],
+  "confidence": "high",
+  "wr": 0.5183341428,
+  "pick": 23.56389630888781
+ },
+ {
+  "id": "B-015",
+  "section": "B",
+  "kind": "map",
+  "title": "Nightmare",
+  "body": "Vector-targeted slow move while asleep (your ruling: stays).",
+  "ability": "bane_nightmare",
+  "current": [
+   "hard_cc",
+   "mana_hungry",
+   "move_enemy",
+   "save_ally",
+   "setup_cc"
+  ],
+  "proposed": [
+   "reposition_enemy",
+   "reposition_ally"
+  ],
+  "remove": [
+   "move_enemy"
+  ],
+  "confidence": "high",
+  "wr": 0.4498855411,
+  "pick": 28.427828992142548,
+  "round": 1
+ },
+ {
+  "id": "B-016",
+  "section": "B",
+  "kind": "map",
+  "title": "Toss",
+  "body": "Grabs the nearest unit, ally or enemy, and throws it: both tags.",
+  "ability": "tiny_toss",
+  "current": [
+   "aoe",
+   "hard_cc",
+   "initiation",
+   "nuke",
+   "setup_cc"
+  ],
+  "proposed": [
+   "reposition_enemy",
+   "reposition_ally"
+  ],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.4619229203,
+  "pick": 32.19543889526489
+ },
+ {
+  "id": "B-017",
+  "section": "B",
+  "kind": "map",
+  "title": "Nether Swap",
+  "body": "Swaps positions with friend or enemy: both tags.",
+  "ability": "vengefulspirit_nether_swap",
+  "current": [
+   "initiation",
+   "mana_hungry",
+   "mobility",
+   "save_ally",
+   "setup_cc"
+  ],
+  "proposed": [
+   "reposition_enemy",
+   "reposition_ally"
+  ],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.4985393659,
+  "pick": 37.440114000712505
+ },
+ {
+  "id": "B-018",
+  "section": "B",
+  "kind": "map",
+  "title": "Dispose",
+  "body": "Dispose: grabs ally or enemy and throws it behind her: both tags.",
+  "ability": "marci_grapple",
+  "current": [
+   "aoe",
+   "nuke",
+   "save_ally",
+   "soft_cc"
+  ],
+  "proposed": [
+   "reposition_enemy",
+   "reposition_ally"
+  ],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.4862755532,
+  "pick": 35.65549199592036
+ },
+ {
+  "id": "B-019",
+  "section": "B",
+  "kind": "map",
+  "title": "Telekinesis",
+  "body": "Lifts and throws an enemy; ally cast with Shard.",
+  "ability": "rubick_telekinesis",
+  "current": [
+   "aoe",
+   "hard_cc",
+   "setup_cc"
+  ],
+  "proposed": [
+   "reposition_enemy",
+   "reposition_ally"
+  ],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.5000812788,
+  "pick": 38.902573828230835,
+  "round": 1,
+  "viaUpgrade": {
+   "reposition_ally": "shard"
+  }
+ },
+ {
+  "id": "B-020",
+  "section": "B",
+  "kind": "map",
+  "title": "Deafening Blast",
+  "body": "Knocks enemies back along the wave.",
+  "ability": "invoker_deafening_blast_ad",
+  "current": [
+   "aoe",
+   "mana_hungry",
+   "nuke",
+   "soft_cc"
+  ],
+  "proposed": [
+   "reposition_enemy"
+  ],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.4961538462,
+  "pick": 35.526923076923076
+ },
+ {
+  "id": "B-021",
+  "section": "B",
+  "kind": "map",
+  "title": "Blinding Light",
+  "body": "Knocks units back to the edge of the area.",
+  "ability": "keeper_of_the_light_blinding_light",
+  "current": [
+   "aoe",
+   "mana_hungry",
+   "nuke",
+   "soft_cc"
+  ],
+  "proposed": [
+   "reposition_enemy"
+  ],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.4668205424,
+  "pick": 41.77567801500288
+ },
+ {
+  "id": "B-022",
+  "section": "B",
+  "kind": "map",
+  "title": "Boulder Smash",
+  "body": "Pushes the target (enemy, ally or remnant) a long way: both tags.",
+  "ability": "earth_spirit_boulder_smash",
+  "current": [
+   "aoe",
+   "nuke",
+   "save_ally",
+   "soft_cc"
+  ],
+  "proposed": [
+   "reposition_enemy",
+   "reposition_ally"
+  ],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.4657404484,
+  "pick": 37.495895168929586
+ },
+ {
+  "id": "B-023",
+  "section": "B",
+  "kind": "map",
+  "title": "Electric Vortex",
+  "body": "Pulls the enemy to Storm's location.",
+  "ability": "storm_spirit_electric_vortex",
+  "current": [
+   "hard_cc",
+   "setup_cc"
+  ],
+  "proposed": [],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.4937602939,
+  "pick": 31.416603319396934,
+  "round": 1
+ },
+ {
+  "id": "B-024",
+  "section": "B",
+  "kind": "map",
+  "title": "Aether Remnant",
+  "body": "Pulls units that cross its gaze into the remnant.",
+  "ability": "void_spirit_aether_remnant",
+  "current": [
+   "aoe",
+   "good_with_rearm",
+   "nuke",
+   "setup_cc",
+   "soft_cc"
+  ],
+  "proposed": [
+   "reposition_enemy"
+  ],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.5179259038,
+  "pick": 33.60402258028338
+ },
+ {
+  "id": "B-025",
+  "section": "B",
+  "kind": "map",
+  "title": "X Marks the Spot",
+  "body": "Returns the target (ally or enemy) to the mark: both tags.",
+  "ability": "kunkka_x_marks_the_spot",
+  "current": [
+   "initiation",
+   "setup_cc"
+  ],
+  "proposed": [
+   "reposition_enemy",
+   "reposition_ally"
+  ],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.4584398199,
+  "pick": 39.178228063770234
+ },
+ {
+  "id": "B-026",
+  "section": "B",
+  "kind": "map",
+  "title": "Reality Rift",
+  "body": "Pulls the target toward CK along the line.",
+  "ability": "chaos_knight_reality_rift",
+  "current": [
+   "initiation",
+   "mobility"
+  ],
+  "proposed": [],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.4946412577,
+  "pick": 27.233807950088025,
+  "round": 1
+ },
+ {
+  "id": "B-027",
+  "section": "B",
+  "kind": "map",
+  "title": "Onslaught",
+  "body": "Knocks back enemies and allies in the charge path.",
+  "ability": "primal_beast_onslaught",
+  "current": [
+   "aoe",
+   "hard_cc",
+   "initiation",
+   "mobility"
+  ],
+  "proposed": [
+   "reposition_enemy"
+  ],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.4808022677,
+  "pick": 38.08383439271603
+ },
+ {
+  "id": "B-028",
+  "section": "B",
+  "kind": "map",
+  "title": "Flamebreak",
+  "body": "Knockback away from the impact point.",
+  "ability": "batrider_flamebreak",
+  "current": [
+   "aoe",
+   "nuke",
+   "setup_cc",
+   "soft_cc"
+  ],
+  "proposed": [
+   "reposition_enemy"
+  ],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.4687806473,
+  "pick": 40.40634194181105
+ },
+ {
+  "id": "B-029",
+  "section": "B",
+  "kind": "map",
+  "title": "Inner Fire",
+  "body": "Knocks all nearby enemies to a fixed distance.",
+  "ability": "huskar_inner_fire",
+  "current": [
+   "aoe",
+   "nuke",
+   "soft_cc"
+  ],
+  "proposed": [
+   "knockback"
+  ],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.4759064454,
+  "pick": 36.64385641470556,
+  "round": 1
+ },
+ {
+  "id": "B-030",
+  "section": "B",
+  "kind": "map",
+  "title": "God's Rebuke",
+  "body": "Knocks enemies back in the cone.",
+  "ability": "mars_gods_rebuke",
+  "current": [
+   "aoe",
+   "nuke",
+   "soft_cc"
+  ],
+  "proposed": [
+   "knockback"
+  ],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.5058489155,
+  "pick": 17.913418100224384,
+  "round": 1
+ },
+ {
+  "id": "B-031",
+  "section": "B",
+  "kind": "map",
+  "title": "Adaptive Strike",
+  "body": "Knockback with the stun.",
+  "ability": "morphling_adaptive_strike_agi",
+  "current": [
+   "hard_cc",
+   "nuke"
+  ],
+  "proposed": [
+   "knockback"
+  ],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.4955757433,
+  "pick": 40.59721566776781,
+  "round": 1
+ },
+ {
+  "id": "B-032",
+  "section": "B",
+  "kind": "map",
+  "title": "Sonic Wave",
+  "body": "Pushes enemies back along the wave.",
+  "ability": "queenofpain_sonic_wave",
+  "current": [
+   "aoe",
+   "mana_hungry",
+   "nuke",
+   "teamfight_ult"
+  ],
+  "proposed": [
+   "reposition_enemy"
+  ],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.4635898479,
+  "pick": 34.36535529124733
+ },
+ {
+  "id": "B-033",
+  "section": "B",
+  "kind": "map",
+  "title": "Rolling Thunder",
+  "body": "Rolling Thunder knocks struck enemies back.",
+  "ability": "pangolier_gyroshell",
+  "current": [
+   "aoe",
+   "hard_cc",
+   "initiation",
+   "mana_hungry",
+   "mobility",
+   "teamfight_ult"
+  ],
+  "proposed": [
+   "reposition_enemy"
+  ],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.5041343959,
+  "pick": 34.35196617652561
+ },
+ {
+  "id": "B-034",
+  "section": "B",
+  "kind": "map",
+  "title": "Catchy Lick",
+  "body": "Pulls the target (ally or enemy) back a short distance: both tags.",
+  "ability": "largo_catchy_lick",
+  "current": [
+   "dispel",
+   "nuke",
+   "save_ally"
+  ],
+  "proposed": [
+   "reposition_enemy",
+   "reposition_ally"
+  ],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.5139263804,
+  "pick": 22.57696319018405
+ },
+ {
+  "id": "B-035",
+  "section": "B",
+  "kind": "map",
+  "title": "Firesnap Cookie",
+  "body": "Landing knocks enemies back; the cookie target (self/ally) jumps: both tags.",
+  "ability": "snapfire_firesnap_cookie",
+  "current": [
+   "aoe",
+   "hard_cc",
+   "initiation",
+   "mobility",
+   "save_ally",
+   "setup_cc"
+  ],
+  "proposed": [
+   "reposition_enemy",
+   "reposition_ally"
+  ],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.5041686437,
+  "pick": 31.159120178946655
+ },
+ {
+  "id": "B-036",
+  "section": "B",
+  "kind": "map",
+  "title": "Snowball",
+  "body": "Carries allied heroes inside the snowball; enemies hit are stunned in place.",
+  "ability": "tusk_snowball",
+  "current": [
+   "aoe",
+   "hard_cc",
+   "initiation",
+   "mobility",
+   "nuke",
+   "save_ally"
+  ],
+  "proposed": [
+   "reposition_ally"
+  ],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.5250386583,
+  "pick": 22.4691923397169
+ },
+ {
+  "id": "B-037",
+  "section": "B",
+  "kind": "map",
+  "title": "Relocate",
+  "body": "Teleports Io and the tethered ally, then returns them.",
+  "ability": "wisp_relocate",
+  "current": [
+   "initiation",
+   "mana_hungry",
+   "mobility"
+  ],
+  "proposed": [
+   "reposition_ally"
+  ],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.4557355876,
+  "pick": 41.37818480685687
+ },
+ {
+  "id": "B-038",
+  "section": "B",
+  "kind": "map",
+  "title": "Fiend's Gate",
+  "body": "Fiend's Gate: allies walk through the portal pair.",
+  "ability": "abyssal_underlord_dark_portal",
+  "current": [
+   "initiation",
+   "mobility"
+  ],
+  "proposed": [],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.459805745,
+  "pick": 41.26417303850658,
+  "round": 1
+ },
+ {
+  "id": "B-039",
+  "section": "B",
+  "kind": "map",
+  "title": "Geomagnetic Grip",
+  "body": "Pulls an allied unit (or remnant) to Earth Spirit.",
+  "ability": "earth_spirit_geomagnetic_grip",
+  "current": [
+   "aoe",
+   "save_ally",
+   "soft_cc"
+  ],
+  "proposed": [
+   "reposition_ally"
+  ],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.4434084434,
+  "pick": 39.65967365967366
+ },
+ {
+  "id": "B-040",
+  "section": "B",
+  "kind": "map",
+  "title": "Tornado (AD)",
+  "body": "Lifts in place and carries along the path only slightly. Displacement or not?",
+  "ability": "invoker_tornado_ad",
+  "current": [
+   "aoe",
+   "good_with_rearm",
+   "hard_cc",
+   "initiation",
+   "nuke"
+  ],
+  "proposed": [],
+  "remove": [],
+  "confidence": "low",
+  "wr": 0.5114600046,
+  "pick": 28.44774237909695,
+  "round": 1
+ },
+ {
+  "id": "B-041",
+  "section": "B",
+  "kind": "map",
+  "title": "Primal Roar",
+  "body": "Pushes units aside in the shout's path (450). Minor displacement.",
+  "ability": "beastmaster_primal_roar",
+  "current": [
+   "hard_cc",
+   "initiation",
+   "mana_hungry",
+   "soft_cc"
+  ],
+  "proposed": [
+   "reposition_enemy"
+  ],
+  "remove": [],
+  "confidence": "low",
+  "wr": 0.5068843151,
+  "pick": 23.550603264726757
+ },
+ {
+  "id": "B-042",
+  "section": "B",
+  "kind": "map",
+  "title": "Arena Of Blood",
+  "body": "Edge spears knock enemies back INTO the arena. Containment rather than catch.",
+  "ability": "mars_arena_of_blood",
+  "current": [
+   "aoe",
+   "good_aghanims",
+   "initiation",
+   "mana_hungry",
+   "setup_cc",
+   "soft_cc",
+   "teamfight_ult"
+  ],
+  "proposed": [],
+  "remove": [],
+  "confidence": "low",
+  "wr": 0.5207188899,
+  "pick": 34.9197916997428,
+  "round": 1
+ },
+ {
+  "id": "B-043",
+  "section": "B",
+  "kind": "map",
+  "title": "Nether Strike",
+  "body": "Knockback exists only with Greater Bash drafted: conditional entry with: {reposition_enemy: ['spirit_breaker_greater_bash']}.",
+  "ability": "spirit_breaker_nether_strike",
+  "current": [
+   "hard_cc",
+   "initiation",
+   "mana_hungry",
+   "mobility",
+   "nuke"
+  ],
+  "proposed": [],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.4309974973,
+  "pick": 39.484626385412945,
+  "round": 1,
+  "conditional": {
+   "reposition_enemy": [
+    "spirit_breaker_greater_bash"
+   ]
+  }
+ },
+ {
+  "id": "B-044",
+  "section": "B",
+  "kind": "map",
+  "title": "Wheel of Wonder",
+  "body": "Knocks enemies aside on the way to the target.",
+  "ability": "ringmaster_wheel",
+  "current": [
+   "aoe",
+   "mana_hungry",
+   "setup_cc",
+   "soft_cc",
+   "teamfight_ult"
+  ],
+  "proposed": [],
+  "remove": [],
+  "confidence": "low",
+  "wr": 0.5124841471,
+  "pick": 38.70291693088142,
+  "round": 1
+ },
+ {
+  "id": "B-045",
+  "section": "B",
+  "kind": "map",
+  "title": "Ice Vortex",
+  "body": "dotaconstants lists a DRAG SPEED: current Vortex pulls units toward its center slowly.",
+  "ability": "ancient_apparition_ice_vortex",
+  "current": [
+   "aoe",
+   "soft_cc"
+  ],
+  "proposed": [],
+  "remove": [],
+  "confidence": "low",
+  "wr": 0.5007853545,
+  "pick": 36.958457455451445,
+  "round": 1
+ },
+ {
+  "id": "B-046",
+  "section": "B",
+  "kind": "map",
+  "title": "Power Cogs",
+  "body": "Knocks back enemies touching a cog from outside; the trap itself holds.",
+  "ability": "rattletrap_power_cogs",
+  "current": [
+   "aoe",
+   "initiation",
+   "nuke",
+   "setup_cc",
+   "soft_cc"
+  ],
+  "proposed": [
+   "reposition_enemy"
+  ],
+  "remove": [],
+  "confidence": "low",
+  "wr": 0.4863285907,
+  "pick": 35.34897861855178
+ },
+ {
+  "id": "B-047",
+  "section": "B",
+  "kind": "map",
+  "title": "Grappling Claw",
+  "body": "Kez pulls HIMSELF to the target. Self-mobility only; listed so you can confirm the exclusion.",
+  "ability": "kez_grappling_claw",
+  "current": [
+   "initiation",
+   "mobility",
+   "soft_cc"
+  ],
+  "proposed": [],
+  "remove": [],
+  "confidence": "low",
+  "wr": 0.4869089739,
+  "pick": 30.475394017368927
+ },
+ {
+  "id": "B-048",
+  "section": "B",
+  "kind": "map",
+  "title": "Solar Guardian",
+  "body": "Dawnbreaker flies to the ally; the ally does not move. Exclusion to confirm.",
+  "ability": "dawnbreaker_solar_guardian",
+  "current": [
+   "aoe",
+   "channeled",
+   "good_aghanims",
+   "hard_cc",
+   "mana_hungry",
+   "mobility",
+   "save_ally",
+   "teamfight_ult"
+  ],
+  "proposed": [],
+  "remove": [],
+  "confidence": "low",
+  "wr": 0.5213271586,
+  "pick": 33.87270733044909
+ },
+ {
+  "id": "B-049",
+  "section": "B",
+  "kind": "map",
+  "title": "Rebound",
+  "body": "Rebound carries the ally with Shard. Tagged per the upgrade policy, marked 'with Shard'.",
+  "ability": "marci_companion_run",
+  "current": [
+   "aoe",
+   "hard_cc",
+   "initiation",
+   "mobility",
+   "save_ally"
+  ],
+  "proposed": [
+   "reposition_ally"
+  ],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.483835713,
+  "pick": 32.44202362065926,
+  "viaUpgrade": {
+   "reposition_ally": "shard"
+  },
+  "round": 1
+ },
+ {
+  "id": "B-050",
+  "section": "B",
+  "kind": "map",
+  "title": "Disruption",
+  "body": "Banish in place, no movement. Exclusion to confirm (it keeps save_ally).",
+  "ability": "shadow_demon_disruption",
+  "current": [
+   "hard_cc",
+   "initiation",
+   "save_ally",
+   "setup_cc"
+  ],
+  "proposed": [],
+  "remove": [],
+  "confidence": "low",
+  "wr": 0.5390558976,
+  "pick": 18.84042617409151
+ },
+ {
+  "id": "C-051",
+  "section": "C",
+  "kind": "rule",
+  "title": "Split damage_amp into spell_steroid / amp_physical / amp_magical / amp_all",
+  "body": "spell_steroid = SELF spell amp (Arcane Supremacy, Overcharge, Croak of Genius). amp_physical / amp_magical / amp_all = amps the whole team benefits from. Self-only amps that need SPECIFIC partners (Sticky Napalm, Liquid Frost) are not tagged at all: they are combo hubs and live in the combos: relation. Self-only amps on a right-click kit (Flesh Golem, Wild Axes on the BM side) stay plain steroid.",
+  "round": 1
+ },
+ {
+  "id": "C-052",
+  "section": "C",
+  "kind": "rule",
+  "title": "Team-amp demand boost (role-independent)",
+  "body": "demand(physical) = steroid count over my + teammates' picks; demand(magical) = nuke + teamfight_ult count; amp_all uses both. boost = AMP_TEAM_WEIGHT (0.06, the Aghs figure) x clamp(demand / 3, 0, 1). Zero demand = zero boost (a Gush on a caster team stays a slow). Teammates DO count here, unlike Aghs stacking: the amp lands on the enemy and everyone benefits. Tooltip names the picks it amplifies."
+ },
+ {
+  "id": "C-053",
+  "section": "C",
+  "kind": "rule",
+  "title": "spell_steroid: pos-2 nuke alternative, gated on owning a nuke",
+  "body": "spell_steroid is a plus accent for position 2 and counts as a full-credit alternative for the pos-2 nuke need ONLY when the drafter already owns a nuke (soft gate, same shape as the Aghs own-pick gate). Not a requires hard gate: Arcane Supremacy is picked 4.6th on average, a hard gate would hide a top-10 pick."
+ },
+ {
+  "id": "C-054",
+  "section": "C",
+  "kind": "rule",
+  "title": "Team amps get the pos-4/5 plus accent",
+  "body": "amp_physical / amp_magical / amp_all are farm-free team actives, the same reasoning that puts team_aura on the pos-5 plus list. +ROLE_TAG_ACCENT_WEIGHT for positions 4 and 5."
+ },
+ {
+  "id": "C-055",
+  "section": "C",
+  "kind": "map",
+  "title": "Arcane Supremacy",
+  "body": "Self spell amp 11-26%.",
+  "ability": "rubick_arcane_supremacy",
+  "current": [
+   "damage_amp",
+   "passive_value"
+  ],
+  "proposed": [
+   "spell_steroid"
+  ],
+  "remove": [
+   "damage_amp"
+  ],
+  "confidence": "high",
+  "wr": 0.4927853721,
+  "pick": 4.567648089730109
+ },
+ {
+  "id": "C-056",
+  "section": "C",
+  "kind": "map",
+  "title": "Bloodrage",
+  "body": "Self (or ally) attack speed + spell damage. No longer castable on enemies.",
+  "ability": "bloodseeker_bloodrage",
+  "current": [
+   "damage_amp",
+   "steroid"
+  ],
+  "proposed": [
+   "spell_steroid"
+  ],
+  "remove": [
+   "damage_amp"
+  ],
+  "confidence": "high",
+  "wr": 0.4637578547,
+  "pick": 23.662625011062925
+ },
+ {
+  "id": "C-057",
+  "section": "C",
+  "kind": "map",
+  "title": "Overcharge",
+  "body": "Io gains spell amp (and attack speed); shared with the tethered ally. NEW carrier.",
+  "ability": "wisp_overcharge",
+  "current": [
+   "steroid",
+   "sustain_self"
+  ],
+  "proposed": [
+   "spell_steroid"
+  ],
+  "remove": [],
+  "confidence": "medium",
+  "wr": 0.4768966258,
+  "pick": 29.160756501182032
+ },
+ {
+  "id": "C-058",
+  "section": "C",
+  "kind": "map",
+  "title": "Sticky Napalm",
+  "body": "Amplifies Batrider's OWN attacks and abilities only. The combo enabler. NEW carrier.",
+  "ability": "batrider_sticky_napalm",
+  "current": [
+   "aoe",
+   "soft_cc"
+  ],
+  "proposed": [],
+  "remove": [],
+  "confidence": "medium",
+  "wr": 0.466420265,
+  "pick": 14.435319570900567,
+  "round": 1
+ },
+ {
+  "id": "C-059",
+  "section": "C",
+  "kind": "map",
+  "title": "Wild Axes",
+  "body": "Amplifies subsequent damage from Beastmaster and his units only: self amp, not team.",
+  "ability": "beastmaster_wild_axes",
+  "current": [
+   "aoe",
+   "damage_amp",
+   "farm_tool",
+   "nuke",
+   "waveclear"
+  ],
+  "proposed": [
+   "spell_steroid"
+  ],
+  "remove": [
+   "damage_amp"
+  ],
+  "confidence": "medium",
+  "wr": 0.5125674043,
+  "pick": 12.81501016589563
+ },
+ {
+  "id": "C-060",
+  "section": "C",
+  "kind": "map",
+  "title": "Liquid Frost",
+  "body": "Increases damage taken from Jakiro's attacks and abilities only. NEW carrier.",
+  "ability": "jakiro_liquid_ice",
+  "current": [
+   "soft_cc"
+  ],
+  "proposed": [],
+  "remove": [],
+  "confidence": "low",
+  "wr": 0.4907000542,
+  "pick": 23.317943778968278,
+  "round": 1
+ },
+ {
+  "id": "C-061",
+  "section": "C",
+  "kind": "map",
+  "title": "Lil' Shredder",
+  "body": "Each shot reduces armor.",
+  "ability": "snapfire_lil_shredder",
+  "current": [
+   "damage_amp",
+   "good_counter",
+   "grants_ranged",
+   "steroid"
+  ],
+  "proposed": [
+   "amp_physical"
+  ],
+  "remove": [
+   "damage_amp"
+  ],
+  "confidence": "high",
+  "wr": 0.4510778951,
+  "pick": 10.12001638049551
+ },
+ {
+  "id": "C-062",
+  "section": "C",
+  "kind": "map",
+  "title": "Forge Spirit (AD)",
+  "body": "Spirit attacks melt armor.",
+  "ability": "invoker_forge_spirit_ad",
+  "current": [
+   "damage_amp",
+   "farm_tool",
+   "pick_asap",
+   "skill_point_sink",
+   "summon"
+  ],
+  "proposed": [
+   "amp_physical"
+  ],
+  "remove": [
+   "damage_amp"
+  ],
+  "confidence": "high",
+  "wr": 0.5565962307,
+  "pick": 17.579440319817248
+ },
+ {
+  "id": "C-063",
+  "section": "C",
+  "kind": "map",
+  "title": "Rip Tide",
+  "body": "Armor reduction every 6th attack.",
+  "ability": "naga_siren_rip_tide",
+  "current": [
+   "aoe",
+   "damage_amp",
+   "farm_tool",
+   "steroid"
+  ],
+  "proposed": [
+   "amp_physical"
+  ],
+  "remove": [
+   "damage_amp"
+  ],
+  "confidence": "high",
+  "wr": 0.5129664255,
+  "pick": 30.59511421835623
+ },
+ {
+  "id": "C-064",
+  "section": "C",
+  "kind": "map",
+  "title": "Presence of the Dark Lord",
+  "body": "Armor aura.",
+  "ability": "nevermore_dark_lord",
+  "current": [
+   "aoe",
+   "damage_amp",
+   "passive_value"
+  ],
+  "proposed": [
+   "amp_physical"
+  ],
+  "remove": [
+   "damage_amp"
+  ],
+  "confidence": "high",
+  "wr": 0.5266847314,
+  "pick": 24.603734684260132
+ },
+ {
+  "id": "C-065",
+  "section": "C",
+  "kind": "map",
+  "title": "Gush",
+  "body": "Armor reduction + slow.",
+  "ability": "tidehunter_gush",
+  "current": [
+   "damage_amp",
+   "good_aghanims",
+   "good_with_rearm",
+   "nuke",
+   "soft_cc"
+  ],
+  "proposed": [
+   "amp_physical"
+  ],
+  "remove": [
+   "damage_amp"
+  ],
+  "confidence": "high",
+  "wr": 0.5107479388,
+  "pick": 21.181065959952885
+ },
+ {
+  "id": "C-066",
+  "section": "C",
+  "kind": "map",
+  "title": "Corrosive Haze",
+  "body": "Corrosive Haze: armor reduction + true sight.",
+  "ability": "slardar_amplify_damage",
+  "current": [
+   "damage_amp",
+   "steroid"
+  ],
+  "proposed": [
+   "amp_physical"
+  ],
+  "remove": [
+   "damage_amp"
+  ],
+  "confidence": "high",
+  "wr": 0.4886544168,
+  "pick": 31.36776475525314
+ },
+ {
+  "id": "C-067",
+  "section": "C",
+  "kind": "map",
+  "title": "Viscous Nasal Goo",
+  "body": "Stacking armor reduction.",
+  "ability": "bristleback_viscous_nasal_goo",
+  "current": [
+   "damage_amp",
+   "soft_cc"
+  ],
+  "proposed": [
+   "amp_physical"
+  ],
+  "remove": [
+   "damage_amp"
+  ],
+  "confidence": "high",
+  "wr": 0.4406798803,
+  "pick": 33.07007736179344
+ },
+ {
+  "id": "C-068",
+  "section": "C",
+  "kind": "map",
+  "title": "Wave of Terror",
+  "body": "Armor + attack damage reduction.",
+  "ability": "vengefulspirit_wave_of_terror",
+  "current": [
+   "aoe",
+   "damage_amp",
+   "soft_cc"
+  ],
+  "proposed": [
+   "amp_physical"
+  ],
+  "remove": [
+   "damage_amp"
+  ],
+  "confidence": "high",
+  "wr": 0.500702631,
+  "pick": 38.21613709110782
+ },
+ {
+  "id": "C-069",
+  "section": "C",
+  "kind": "map",
+  "title": "Howl",
+  "body": "Armor + attack damage reduction in 2000 range.",
+  "ability": "lycan_howl",
+  "current": [
+   "aoe",
+   "damage_amp"
+  ],
+  "proposed": [
+   "amp_physical"
+  ],
+  "remove": [
+   "damage_amp"
+  ],
+  "confidence": "high",
+  "wr": 0.5000453309,
+  "pick": 39.521124206708976
+ },
+ {
+  "id": "C-070",
+  "section": "C",
+  "kind": "map",
+  "title": "Stone Gaze",
+  "body": "Petrified units take bonus physical damage.",
+  "ability": "medusa_stone_gaze",
+  "current": [
+   "aoe",
+   "damage_amp",
+   "hard_cc",
+   "mana_hungry",
+   "teamfight_ult"
+  ],
+  "proposed": [
+   "amp_physical"
+  ],
+  "remove": [
+   "damage_amp"
+  ],
+  "confidence": "high",
+  "wr": 0.4849184688,
+  "pick": 39.58926446917209
+ },
+ {
+  "id": "C-071",
+  "section": "C",
+  "kind": "map",
+  "title": "Lucky Shot",
+  "body": "17% chance: attack slow + armor reduction (dotaconstants confirms; my earlier doubt was wrong).",
+  "ability": "pangolier_lucky_shot",
+  "current": [
+   "damage_amp",
+   "passive_value",
+   "soft_cc"
+  ],
+  "proposed": [
+   "amp_physical"
+  ],
+  "remove": [
+   "damage_amp"
+  ],
+  "confidence": "medium",
+  "wr": 0.4896817279,
+  "pick": 23.951777871367547
+ },
+ {
+  "id": "C-072",
+  "section": "C",
+  "kind": "map",
+  "title": "Natural Order",
+  "body": "Removes base armor AND base magic resistance.",
+  "ability": "elder_titan_natural_order",
+  "current": [
+   "aoe",
+   "damage_amp",
+   "good_shard",
+   "passive_value"
+  ],
+  "proposed": [
+   "amp_physical",
+   "amp_magical"
+  ],
+  "remove": [
+   "damage_amp"
+  ],
+  "confidence": "high",
+  "wr": 0.5449468892,
+  "pick": 22.213839150227617
+ },
+ {
+  "id": "C-073",
+  "section": "C",
+  "kind": "map",
+  "title": "Acid Spray",
+  "body": "Armor reduction + DPS in the area. NEW carrier.",
+  "ability": "alchemist_acid_spray",
+  "current": [
+   "aoe",
+   "farm_tool"
+  ],
+  "proposed": [
+   "amp_physical"
+  ],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.4693156439,
+  "pick": 32.97149904996833
+ },
+ {
+  "id": "C-074",
+  "section": "C",
+  "kind": "map",
+  "title": "The Swarm",
+  "body": "Beetles reduce armor until killed. NEW carrier.",
+  "ability": "weaver_the_swarm",
+  "current": [
+   "aoe",
+   "soft_cc"
+  ],
+  "proposed": [
+   "amp_physical"
+  ],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.5078463114,
+  "pick": 32.993921173477816
+ },
+ {
+  "id": "C-075",
+  "section": "C",
+  "kind": "map",
+  "title": "Reality Rift",
+  "body": "Armor reduced for 6 s after the pull. NEW carrier.",
+  "ability": "chaos_knight_reality_rift",
+  "current": [
+   "initiation",
+   "mobility"
+  ],
+  "proposed": [
+   "amp_physical"
+  ],
+  "remove": [],
+  "confidence": "medium",
+  "wr": 0.4946412577,
+  "pick": 27.233807950088025
+ },
+ {
+  "id": "C-076",
+  "section": "C",
+  "kind": "map",
+  "title": "Meld",
+  "body": "Meld strike reduces armor 6 s. NEW carrier.",
+  "ability": "templar_assassin_meld",
+  "current": [
+   "steroid"
+  ],
+  "proposed": [
+   "amp_physical"
+  ],
+  "remove": [],
+  "confidence": "medium",
+  "wr": 0.4760998732,
+  "pick": 31.81530809800387
+ },
+ {
+  "id": "C-077",
+  "section": "C",
+  "kind": "map",
+  "title": "Eye of the Storm",
+  "body": "Each strike reduces armor. NEW carrier.",
+  "ability": "razor_eye_of_the_storm",
+  "current": [
+   "aoe",
+   "farm_tool",
+   "mana_hungry",
+   "teamfight_ult"
+  ],
+  "proposed": [
+   "amp_physical"
+  ],
+  "remove": [],
+  "confidence": "medium",
+  "wr": 0.4825082508,
+  "pick": 32.75524123840955
+ },
+ {
+  "id": "C-078",
+  "section": "C",
+  "kind": "map",
+  "title": "Flesh Golem",
+  "body": "Attacks apply damage amplification + slow. NEW carrier.",
+  "ability": "undying_flesh_golem",
+  "current": [
+   "mana_hungry",
+   "steroid",
+   "sustain_self",
+   "teamfight_ult"
+  ],
+  "proposed": [],
+  "remove": [],
+  "confidence": "medium",
+  "wr": 0.5230343112,
+  "pick": 21.075857780792493,
+  "round": 1
+ },
+ {
+  "id": "C-079",
+  "section": "C",
+  "kind": "map",
+  "title": "Ancient Seal",
+  "body": "Magic resistance reduction + silence.",
+  "ability": "skywrath_mage_ancient_seal",
+  "current": [
+   "damage_amp",
+   "soft_cc"
+  ],
+  "proposed": [
+   "amp_magical"
+  ],
+  "remove": [
+   "damage_amp"
+  ],
+  "confidence": "high",
+  "wr": 0.49498362,
+  "pick": 34.639332514332516
+ },
+ {
+  "id": "C-080",
+  "section": "C",
+  "kind": "map",
+  "title": "Decrepify",
+  "body": "Extra magic damage taken (and physical immunity).",
+  "ability": "pugna_decrepify",
+  "current": [
+   "damage_amp",
+   "save_ally",
+   "soft_cc"
+  ],
+  "proposed": [
+   "amp_magical"
+  ],
+  "remove": [
+   "damage_amp"
+  ],
+  "confidence": "high",
+  "wr": 0.4735555649,
+  "pick": 32.88440305111889
+ },
+ {
+  "id": "C-081",
+  "section": "C",
+  "kind": "map",
+  "title": "Poison Attack",
+  "body": "Stacking magic resistance reduction. NEW carrier.",
+  "ability": "viper_poison_attack",
+  "current": [
+   "good_shard",
+   "soft_cc",
+   "steroid"
+  ],
+  "proposed": [
+   "amp_magical"
+  ],
+  "remove": [],
+  "confidence": "medium",
+  "wr": 0.499855508,
+  "pick": 12.79909837013062
+ },
+ {
+  "id": "C-082",
+  "section": "C",
+  "kind": "map",
+  "title": "Proximity Mines",
+  "body": "Temporary magic resistance reduction on detonation. NEW carrier (minor).",
+  "ability": "techies_land_mines",
+  "current": [
+   "aoe",
+   "mana_hungry",
+   "nuke"
+  ],
+  "proposed": [
+   "amp_magical"
+  ],
+  "remove": [],
+  "confidence": "low",
+  "wr": 0.5085994356,
+  "pick": 18.675627506312193
+ },
+ {
+  "id": "C-083",
+  "section": "C",
+  "kind": "map",
+  "title": "Requiem of Souls",
+  "body": "Brief magic resistance reduction per line hit. Probably too short to count.",
+  "ability": "nevermore_requiem",
+  "current": [
+   "aoe",
+   "mana_hungry",
+   "nuke",
+   "soft_cc",
+   "teamfight_ult"
+  ],
+  "proposed": [],
+  "remove": [],
+  "confidence": "low",
+  "wr": 0.4883994818,
+  "pick": 37.81533388293487,
+  "round": 1
+ },
+ {
+  "id": "C-084",
+  "section": "C",
+  "kind": "map",
+  "title": "Track",
+  "body": "DAMAGE AMPLIFICATION 8/12/16% (dotaconstants confirms; my earlier doubt was wrong).",
+  "ability": "bounty_hunter_track",
+  "current": [
+   "damage_amp",
+   "soft_cc"
+  ],
+  "proposed": [
+   "amp_all"
+  ],
+  "remove": [
+   "damage_amp"
+  ],
+  "confidence": "high",
+  "wr": 0.4928571429,
+  "pick": 24.339698349459304
+ },
+ {
+  "id": "C-085",
+  "section": "C",
+  "kind": "map",
+  "title": "Fatal Bonds",
+  "body": "Damage sharing across bonded units.",
+  "ability": "warlock_fatal_bonds",
+  "current": [
+   "aoe",
+   "damage_amp",
+   "good_with_rearm",
+   "mana_hungry"
+  ],
+  "proposed": [
+   "amp_all"
+  ],
+  "remove": [
+   "damage_amp"
+  ],
+  "confidence": "high",
+  "wr": 0.4847031534,
+  "pick": 26.128079744216663
+ },
+ {
+  "id": "C-086",
+  "section": "C",
+  "kind": "map",
+  "title": "Disseminate",
+  "body": "Damage sharing.",
+  "ability": "shadow_demon_disseminate",
+  "current": [
+   "aoe",
+   "damage_amp"
+  ],
+  "proposed": [
+   "amp_all"
+  ],
+  "remove": [
+   "damage_amp"
+  ],
+  "confidence": "high",
+  "wr": 0.4944424737,
+  "pick": 37.763450396121556
+ },
+ {
+  "id": "C-087",
+  "section": "C",
+  "kind": "map",
+  "title": "Maledict",
+  "body": "Bursts scale with HP lost: a follow-up amplifier rather than a debuff amp. Keep as amp_all?",
+  "ability": "witch_doctor_maledict",
+  "current": [
+   "aoe",
+   "damage_amp",
+   "nuke"
+  ],
+  "proposed": [
+   "amp_all"
+  ],
+  "remove": [
+   "damage_amp"
+  ],
+  "confidence": "medium",
+  "wr": 0.5026064546,
+  "pick": 14.792684355414982
+ },
+ {
+  "id": "C-088",
+  "section": "C",
+  "kind": "map",
+  "title": "Croak of Genius",
+  "body": "Spell amp, self-cast or on an ally. Tagged spell_steroid; the ally cast is noted in the tooltip, no team-demand term (one ally's nukes, not the team's).",
+  "ability": "largo_croak_of_genius",
+  "current": [
+   "damage_amp"
+  ],
+  "proposed": [
+   "spell_steroid"
+  ],
+  "remove": [
+   "damage_amp"
+  ],
+  "confidence": "medium",
+  "wr": 0.4904351596,
+  "pick": 31.89470546794559,
+  "round": 1
+ },
+ {
+  "id": "C-089",
+  "section": "C",
+  "kind": "map",
+  "title": "Pulse Nova",
+  "body": "No amplification mechanic. Propose removing damage_amp.",
+  "ability": "leshrac_pulse_nova",
+  "current": [
+   "aoe",
+   "damage_amp",
+   "farm_tool",
+   "waveclear"
+  ],
+  "proposed": [],
+  "remove": [
+   "damage_amp"
+  ],
+  "confidence": "high",
+  "wr": 0.5232219943,
+  "pick": 21.020849279000704
+ },
+ {
+  "id": "C-090",
+  "section": "C",
+  "kind": "map",
+  "title": "Spirit Form",
+  "body": "Your call: cast-range amp is caster value. Tagged spell_steroid so it rides the pos-2 accent and the owns-a-nuke gate, with the caveat that it does not raise damage numbers.",
+  "ability": "keeper_of_the_light_spirit_form",
+  "current": [
+   "damage_amp",
+   "good_aghanims",
+   "mana_hungry",
+   "soft_cc",
+   "teamfight_ult"
+  ],
+  "proposed": [
+   "spell_steroid"
+  ],
+  "remove": [
+   "damage_amp"
+  ],
+  "confidence": "low",
+  "wr": 0.4751648187,
+  "pick": 36.81858705424033,
+  "round": 1
+ },
+ {
+  "id": "C-091",
+  "section": "C",
+  "kind": "map",
+  "title": "Winter's Curse",
+  "body": "Dispel + freeze + taunt. Not an amp. Propose removing damage_amp (it gains purge_enemy in section F).",
+  "ability": "winter_wyvern_winters_curse",
+  "current": [
+   "aoe",
+   "damage_amp",
+   "hard_cc",
+   "initiation",
+   "mana_hungry",
+   "teamfight_ult"
+  ],
+  "proposed": [],
+  "remove": [
+   "damage_amp"
+  ],
+  "confidence": "high",
+  "wr": 0.5190068245,
+  "pick": 29.015129954987657
+ },
+ {
+  "id": "D-092",
+  "section": "D",
+  "kind": "rule",
+  "title": "Rename good_counter to good_deny; combo links are curated, never data-driven",
+  "body": "good_deny marks 'playable on its own, so the deny is not a dead pick'. The combo links are CURATED ONLY: your partner lists overrode the synergy table in 14 of 16 carriers (Dispersion / Borrowed Time style pairs are good, not deny-worthy). The table stays a suggestion source inside the Tag Lab composer and never triggers anything in the app.",
+  "round": 1
+ },
+ {
+  "id": "D-093",
+  "section": "D",
+  "kind": "rule",
+  "title": "Deny marker + boost logic",
+  "body": "For each unpicked candidate C with good_deny and a combos: list: if the ENEMY holds any listed partner (ability, or model:<hero> for the OD case), show the deny marker, tooltip 'deny: completes <partner> for row N', and add DENY_BOOST (0.05), role-independent, outside the role cap. Fires only while the enemy still has turns. No partner held by the enemy = nothing at all.",
+  "round": 1
+ },
+ {
+  "id": "D-094",
+  "section": "D",
+  "kind": "rule",
+  "title": "Not-a-dead-pick guard",
+  "body": "The boost applies only when C's own global score sits above the pool median (so a 0.44-winrate ability is never pushed by a deny alone); below that, the marker still shows with the tooltip but the score is untouched. Tell me if you would rather trust the tag fully and skip the guard."
+ },
+ {
+  "id": "D-095",
+  "section": "D",
+  "kind": "rule",
+  "title": "Curated combos: feature (partner lists)",
+  "body": "combos: ['ability' | 'model:<hero>', ...] on a dataset entry, next to requires:, curated in tag_overrides.json and preserved by import_site_export.py. Seeded from your lists below. The relation is directional (Counter Helix lists Berserker's Call; Berserker's Call lists Counter Helix, Retaliate, Dispersion) because deny-worthiness is not symmetric.",
+  "round": 1
+ },
+ {
+  "id": "D-096",
+  "section": "D",
+  "kind": "map",
+  "title": "Berserker's Call",
+  "body": "Deny fires only when the enemy holds one of: Counter Helix, Retaliate, Dispersion. Confirm the list is exactly right (names resolved to internal ids).",
+  "ability": "axe_berserkers_call",
+  "current": [
+   "aoe",
+   "good_counter",
+   "good_shard",
+   "hard_cc",
+   "initiation"
+  ],
+  "proposed": [
+   "good_deny"
+  ],
+  "remove": [
+   "good_counter"
+  ],
+  "confidence": "high",
+  "wr": 0.5325048935,
+  "pick": 18.00803725013346,
+  "combos": [
+   "Counter Helix",
+   "Retaliate",
+   "Dispersion"
+  ],
+  "round": 1
+ },
+ {
+  "id": "D-097",
+  "section": "D",
+  "kind": "map",
+  "title": "Counter Helix",
+  "body": "Deny fires only when the enemy holds one of: Berserker's Call. Confirm the list is exactly right (names resolved to internal ids).",
+  "ability": "axe_counter_helix",
+  "current": [
+   "aoe",
+   "farm_tool",
+   "good_counter",
+   "passive_value"
+  ],
+  "proposed": [
+   "good_deny"
+  ],
+  "remove": [
+   "good_counter"
+  ],
+  "confidence": "high",
+  "wr": 0.5304396021,
+  "pick": 10.102914150695721,
+  "combos": [
+   "Berserker's Call"
+  ],
+  "round": 1
+ },
+ {
+  "id": "D-098",
+  "section": "D",
+  "kind": "map",
+  "title": "Quill Spray",
+  "body": "Deny fires only when the enemy holds one of: Aftershock. Confirm the list is exactly right (names resolved to internal ids).",
+  "ability": "bristleback_quill_spray",
+  "current": [
+   "aoe",
+   "farm_tool",
+   "good_counter"
+  ],
+  "proposed": [
+   "good_deny"
+  ],
+  "remove": [
+   "good_counter"
+  ],
+  "confidence": "high",
+  "wr": 0.4733804512,
+  "pick": 19.023332613190952,
+  "combos": [
+   "Aftershock"
+  ],
+  "round": 1
+ },
+ {
+  "id": "D-099",
+  "section": "D",
+  "kind": "map",
+  "title": "Time Lock",
+  "body": "Never a good deny (your ruling). good_counter removed, no good_deny.",
+  "ability": "faceless_void_time_lock",
+  "current": [
+   "good_counter",
+   "hard_cc",
+   "passive_value",
+   "steroid"
+  ],
+  "proposed": [],
+  "remove": [
+   "good_counter"
+  ],
+  "confidence": "high",
+  "wr": 0.4770013076,
+  "pick": 6.296411448496295,
+  "round": 1
+ },
+ {
+  "id": "D-100",
+  "section": "D",
+  "kind": "map",
+  "title": "Time Walk",
+  "body": "A good spell, not a good deny (your ruling). The Time Lock + Time Walk Scepter combo could come back as a combos: entry if you want it.",
+  "ability": "faceless_void_time_walk",
+  "current": [
+   "good_counter",
+   "initiation",
+   "mobility",
+   "sustain_self"
+  ],
+  "proposed": [],
+  "remove": [
+   "good_counter"
+  ],
+  "confidence": "high",
+  "wr": 0.5351895941,
+  "pick": 8.054845827768423,
+  "round": 1
+ },
+ {
+  "id": "D-101",
+  "section": "D",
+  "kind": "map",
+  "title": "Homing Missile",
+  "body": "Deny fires only when the enemy holds one of: Rocket Barrage. Confirm the list is exactly right (names resolved to internal ids).",
+  "ability": "gyrocopter_homing_missile",
+  "current": [
+   "good_counter",
+   "hard_cc",
+   "initiation",
+   "mana_hungry",
+   "setup_cc"
+  ],
+  "proposed": [
+   "good_deny"
+  ],
+  "remove": [
+   "good_counter"
+  ],
+  "confidence": "high",
+  "wr": 0.5255937147,
+  "pick": 20.054699125052082,
+  "combos": [
+   "Rocket Barrage"
+  ],
+  "round": 1
+ },
+ {
+  "id": "D-102",
+  "section": "D",
+  "kind": "map",
+  "title": "Rocket Barrage",
+  "body": "Deny fires only when the enemy holds one of: Aftershock, Sticky Napalm, Homing Missile. Confirm the list is exactly right (names resolved to internal ids).",
+  "ability": "gyrocopter_rocket_barrage",
+  "current": [
+   "good_counter",
+   "skill_point_sink"
+  ],
+  "proposed": [
+   "good_deny"
+  ],
+  "remove": [
+   "good_counter"
+  ],
+  "confidence": "high",
+  "wr": 0.510151437,
+  "pick": 21.028011289490454,
+  "combos": [
+   "Aftershock",
+   "Sticky Napalm",
+   "Homing Missile"
+  ],
+  "round": 1
+ },
+ {
+  "id": "D-103",
+  "section": "D",
+  "kind": "map",
+  "title": "Burning Spear",
+  "body": "Deny fires only when the enemy holds one of: Chemical Rage, Sticky Napalm, Berserker's Blood, Liquid Frost. Confirm the list is exactly right (names resolved to internal ids).",
+  "ability": "huskar_burning_spear",
+  "current": [
+   "good_counter",
+   "steroid"
+  ],
+  "proposed": [
+   "good_deny"
+  ],
+  "remove": [
+   "good_counter"
+  ],
+  "confidence": "high",
+  "wr": 0.5032308245,
+  "pick": 19.11771568744765,
+  "combos": [
+   "Chemical Rage",
+   "Sticky Napalm",
+   "Berserker's Blood",
+   "Liquid Frost"
+  ],
+  "round": 1
+ },
+ {
+  "id": "D-104",
+  "section": "D",
+  "kind": "map",
+  "title": "Lucent Beam",
+  "body": "Deny fires only when the enemy holds one of: Eclipse. Confirm the list is exactly right (names resolved to internal ids).",
+  "ability": "luna_lucent_beam",
+  "current": [
+   "good_counter",
+   "nuke",
+   "skill_point_sink",
+   "soft_cc"
+  ],
+  "proposed": [
+   "good_deny"
+  ],
+  "remove": [
+   "good_counter"
+  ],
+  "confidence": "high",
+  "wr": 0.4852566096,
+  "pick": 21.288584758942456,
+  "combos": [
+   "Eclipse"
+  ],
+  "round": 1
+ },
+ {
+  "id": "D-105",
+  "section": "D",
+  "kind": "map",
+  "title": "Crippling Fear",
+  "body": "Deny fires only when the enemy holds one of: Liquid Frost, Sticky Napalm. Confirm the list is exactly right (names resolved to internal ids).",
+  "ability": "night_stalker_crippling_fear",
+  "current": [
+   "aoe",
+   "good_counter",
+   "soft_cc"
+  ],
+  "proposed": [
+   "good_deny"
+  ],
+  "remove": [
+   "good_counter"
+  ],
+  "confidence": "high",
+  "wr": 0.5275718033,
+  "pick": 31.142505585597256,
+  "combos": [
+   "Liquid Frost",
+   "Sticky Napalm"
+  ],
+  "round": 1
+ },
+ {
+  "id": "D-106",
+  "section": "D",
+  "kind": "map",
+  "title": "Doppelganger",
+  "body": "Deny fires only when the enemy holds one of: Moon Glaives, Juxtapose. Confirm the list is exactly right (names resolved to internal ids).",
+  "ability": "phantom_lancer_doppelwalk",
+  "current": [
+   "dispel",
+   "good_counter",
+   "mobility",
+   "sustain_self"
+  ],
+  "proposed": [
+   "good_deny"
+  ],
+  "remove": [
+   "good_counter"
+  ],
+  "confidence": "high",
+  "wr": 0.5295502638,
+  "pick": 24.537597234226446,
+  "combos": [
+   "Moon Glaives",
+   "Juxtapose"
+  ],
+  "round": 1
+ },
+ {
+  "id": "D-107",
+  "section": "D",
+  "kind": "map",
+  "title": "Scream Of Pain",
+  "body": "Deny fires only when the enemy holds one of: Aftershock, Shadow Strike. Confirm the list is exactly right (names resolved to internal ids).",
+  "ability": "queenofpain_scream_of_pain",
+  "current": [
+   "aoe",
+   "farm_tool",
+   "good_counter",
+   "nuke",
+   "waveclear"
+  ],
+  "proposed": [
+   "good_deny"
+  ],
+  "remove": [
+   "good_counter"
+  ],
+  "confidence": "high",
+  "wr": 0.4731800066,
+  "pick": 31.118358989359756,
+  "combos": [
+   "Aftershock",
+   "Shadow Strike"
+  ],
+  "round": 1
+ },
+ {
+  "id": "D-108",
+  "section": "D",
+  "kind": "map",
+  "title": "Shadow Strike",
+  "body": "Deny fires only when the enemy holds one of: Aftershock, Scream Of Pain. Confirm the list is exactly right (names resolved to internal ids).",
+  "ability": "queenofpain_shadow_strike",
+  "current": [
+   "good_counter",
+   "soft_cc"
+  ],
+  "proposed": [
+   "good_deny"
+  ],
+  "remove": [
+   "good_counter"
+  ],
+  "confidence": "high",
+  "wr": 0.4738358289,
+  "pick": 26.925132166260408,
+  "combos": [
+   "Aftershock",
+   "Scream Of Pain"
+  ],
+  "round": 1
+ },
+ {
+  "id": "D-109",
+  "section": "D",
+  "kind": "map",
+  "title": "Lil' Shredder",
+  "body": "Deny fires only when the enemy holds one of: Glaives of Wisdom, Poison Attack, Mana Break, Impetus, Haunt, Burning Spear, Fury Swipes, Frost Arrows. Confirm the list is exactly right (names resolved to internal ids).",
+  "ability": "snapfire_lil_shredder",
+  "current": [
+   "damage_amp",
+   "good_counter",
+   "grants_ranged",
+   "steroid"
+  ],
+  "proposed": [
+   "good_deny"
+  ],
+  "remove": [
+   "good_counter"
+  ],
+  "confidence": "high",
+  "wr": 0.4510778951,
+  "pick": 10.12001638049551,
+  "combos": [
+   "Glaives of Wisdom",
+   "Poison Attack",
+   "Mana Break",
+   "Impetus",
+   "Haunt",
+   "Burning Spear",
+   "Fury Swipes",
+   "Frost Arrows"
+  ],
+  "round": 1
+ },
+ {
+  "id": "D-110",
+  "section": "D",
+  "kind": "map",
+  "title": "Ball Lightning",
+  "body": "Deny fires only when the enemy holds one of: Aftershock, the obsidiandestroyer model. Confirm the list is exactly right (names resolved to internal ids).",
+  "ability": "storm_spirit_ball_lightning",
+  "current": [
+   "good_counter",
+   "initiation",
+   "mana_hungry",
+   "mobility",
+   "nuke"
+  ],
+  "proposed": [
+   "good_deny"
+  ],
+  "remove": [
+   "good_counter"
+  ],
+  "confidence": "high",
+  "wr": 0.5176477591,
+  "pick": 21.251145765133028,
+  "combos": [
+   "Aftershock",
+   "model:obsidiandestroyer"
+  ],
+  "round": 1
+ },
+ {
+  "id": "D-111",
+  "section": "D",
+  "kind": "map",
+  "title": "Tombstone",
+  "body": "Deny fires only when the enemy holds one of: Flesh Golem. Confirm the list is exactly right (names resolved to internal ids).",
+  "ability": "undying_tombstone",
+  "current": [
+   "aoe",
+   "good_counter",
+   "good_with_rearm",
+   "summon",
+   "teamfight_ult"
+  ],
+  "proposed": [
+   "good_deny"
+  ],
+  "remove": [
+   "good_counter"
+  ],
+  "confidence": "high",
+  "wr": 0.5149277689,
+  "pick": 11.384619874507514,
+  "combos": [
+   "Flesh Golem"
+  ],
+  "round": 1
+ },
+ {
+  "id": "D-112",
+  "section": "D",
+  "kind": "map",
+  "title": "Overpower",
+  "body": "Deny fires only when the enemy holds one of: Glaives of Wisdom, Poison Attack, Mana Break, Impetus, Haunt, Burning Spear, Fury Swipes, Frost Arrows. Confirm the list is exactly right (names resolved to internal ids).",
+  "ability": "ursa_overpower",
+  "current": [
+   "good_counter",
+   "steroid"
+  ],
+  "proposed": [
+   "good_deny"
+  ],
+  "remove": [
+   "good_counter"
+  ],
+  "confidence": "high",
+  "wr": 0.4411286104,
+  "pick": 14.69236357296449,
+  "combos": [
+   "Glaives of Wisdom",
+   "Poison Attack",
+   "Mana Break",
+   "Impetus",
+   "Haunt",
+   "Burning Spear",
+   "Fury Swipes",
+   "Frost Arrows"
+  ],
+  "round": 1
+ },
+ {
+  "id": "D-113",
+  "section": "D",
+  "kind": "map",
+  "title": "Lightning Bolt",
+  "body": "Deny fires only when the enemy holds one of: Thundergod's Wrath. Confirm the list is exactly right (names resolved to internal ids).",
+  "ability": "zuus_lightning_bolt",
+  "current": [
+   "good_counter",
+   "nuke",
+   "soft_cc"
+  ],
+  "proposed": [
+   "good_deny"
+  ],
+  "remove": [
+   "good_counter"
+  ],
+  "confidence": "high",
+  "wr": 0.5182217247,
+  "pick": 13.11793300533247,
+  "combos": [
+   "Thundergod's Wrath"
+  ],
+  "round": 1
+ },
+ {
+  "id": "E-114",
+  "section": "E",
+  "kind": "rule",
+  "title": "Visual only: distinct border + tooltip line, no score term",
+  "body": "A pick_asap pool slot gets its own border treatment and a tooltip line 'Community: pick as soon as possible'. No score change. Open question: show the border unconditionally (it is the community's verdict) or only while live stats agree (winrate >= 0.52 and avg pick <= 10)? My pick: unconditional border, and the tooltip adds the live numbers so a stale verdict is visible."
+ },
+ {
+  "id": "E-115",
+  "section": "E",
+  "kind": "rule",
+  "title": "Staleness audit at import time",
+  "body": "import_site_export.py prints pick_asap carriers whose live stats fail the gate above as Tag Lab review items. Today: Forge Spirit (avg pick 17.6); Shadow Dance borderline (10.9)."
+ },
+ {
+  "id": "F-116",
+  "section": "F",
+  "kind": "rule",
+  "title": "Split dispel into dispel_self / dispel_ally / purge_enemy",
+  "body": "dispel_self = removes debuffs from the caster. dispel_ally = can be cast on an ally to remove their debuffs (the save-grade one). purge_enemy = removes BUFFS from enemies (and kills illusions). Strength (basic vs strong) stays out of v1. dispel becomes a rename alias to dispel_self in the import script, with the per-ability remap below."
+ },
+ {
+  "id": "F-117",
+  "section": "F",
+  "kind": "rule",
+  "title": "Mechanical demand tags from dotaconstants: debuff_dispellable / debuff_strong_only",
+  "body": "Built by build_ability_tags.py from the dotaconstants dispellable field, no LLM, no voting, hidden from the Lab composer. Over the 513 draftables: Yes 176, No 128, Strong-only 48, unknown 161. Enemy-targeting + Yes = 70 abilities, 17 of them with no CC tag today (Wild Axes, Bramble Maze, Breathe Fire, Fade Bolt, Corrosive Haze, Fatal Bonds, Mortimer Kisses, Strafe, Life Break, Kazurai Katana...). No hand-curated dot tag needed: the scorer does not care that a debuff ticks."
+ },
+ {
+  "id": "F-118",
+  "section": "F",
+  "kind": "rule",
+  "title": "Dispel demand boost (role-independent)",
+  "body": "demand = enemy.debuff_dispellable + 0.5 x pool.debuff_dispellable. boost = DISPEL_WEIGHT (0.06) x clamp(demand / 4, 0, 1.5) on dispel_ally and dispel_self carriers; tooltip 'dispels: Corrosive Haze, Fatal Bonds (enemy)'. Zero demand = zero boost, the carriers fall back to the save_ally / sustain_self they already carry. purge_enemy demand = enemy steroid + summon + illusion counts."
+ },
+ {
+  "id": "F-119",
+  "section": "F",
+  "kind": "rule",
+  "title": "Role layer for the dispel tags",
+  "body": "dispel_ally covers the pos-5 save need and gets the pos-4/5 plus accent. dispel_self is a full-credit alternative for pos-1 survival and pos-3 durability."
+ },
+ {
+  "id": "F-120",
+  "section": "F",
+  "kind": "map",
+  "title": "Aphotic Shield",
+  "body": "Dispels the ally on cast.",
+  "ability": "abaddon_aphotic_shield",
+  "current": [
+   "aoe",
+   "dispel",
+   "save_ally",
+   "sustain_self"
+  ],
+  "proposed": [
+   "dispel_ally"
+  ],
+  "remove": [
+   "dispel"
+  ],
+  "confidence": "high",
+  "wr": 0.5169732132,
+  "pick": 31.766880632020737
+ },
+ {
+  "id": "F-121",
+  "section": "F",
+  "kind": "map",
+  "title": "Press The Attack",
+  "body": "Removes debuffs and disables from the friendly target.",
+  "ability": "legion_commander_press_the_attack",
+  "current": [
+   "dispel",
+   "good_aghanims",
+   "save_ally",
+   "sustain_self"
+  ],
+  "proposed": [
+   "dispel_ally"
+  ],
+  "remove": [
+   "dispel"
+  ],
+  "confidence": "high",
+  "wr": 0.5191703742,
+  "pick": 34.7890931693274
+ },
+ {
+  "id": "F-122",
+  "section": "F",
+  "kind": "map",
+  "title": "Catchy Lick",
+  "body": "Basic dispel on the target, ally or enemy.",
+  "ability": "largo_catchy_lick",
+  "current": [
+   "dispel",
+   "nuke",
+   "save_ally"
+  ],
+  "proposed": [
+   "dispel_ally",
+   "purge_enemy"
+  ],
+  "remove": [
+   "dispel"
+  ],
+  "confidence": "high",
+  "wr": 0.5139263804,
+  "pick": 22.57696319018405
+ },
+ {
+  "id": "F-123",
+  "section": "F",
+  "kind": "map",
+  "title": "Fortune's End",
+  "body": "Dispels enemies of buffs; on an ally only dispels.",
+  "ability": "oracle_fortunes_end",
+  "current": [
+   "aoe",
+   "channeled",
+   "dispel",
+   "nuke",
+   "save_ally",
+   "setup_cc",
+   "soft_cc"
+  ],
+  "proposed": [
+   "dispel_ally",
+   "purge_enemy"
+  ],
+  "remove": [
+   "dispel"
+  ],
+  "confidence": "high",
+  "wr": 0.5377039866,
+  "pick": 21.276127647485875
+ },
+ {
+  "id": "F-124",
+  "section": "F",
+  "kind": "map",
+  "title": "False Promise",
+  "body": "Strong dispel on initial cast. NEW carrier (currently save_ally only).",
+  "ability": "oracle_false_promise",
+  "current": [
+   "mana_hungry",
+   "save_ally",
+   "sustain_self"
+  ],
+  "proposed": [
+   "dispel_ally"
+  ],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.5118167898,
+  "pick": 34.78636575461021
+ },
+ {
+  "id": "F-125",
+  "section": "F",
+  "kind": "map",
+  "title": "Reactive Tazer",
+  "body": "Purges the enemies it hits, not the ally it is cast on.",
+  "ability": "techies_reactive_tazer",
+  "current": [
+   "aoe",
+   "save_ally",
+   "soft_cc"
+  ],
+  "proposed": [
+   "purge_enemy"
+  ],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.5326167401,
+  "pick": 36.10026431718062,
+  "round": 1
+ },
+ {
+  "id": "F-126",
+  "section": "F",
+  "kind": "map",
+  "title": "Repel",
+  "body": "Repel: debuff immunity on an ally counts as a dispel for this purpose (your ruling).",
+  "ability": "omniknight_martyr",
+  "current": [
+   "save_ally",
+   "sustain_self"
+  ],
+  "proposed": [
+   "dispel_ally"
+  ],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.5043110356,
+  "pick": 33.42796243469342,
+  "round": 1
+ },
+ {
+  "id": "F-127",
+  "section": "F",
+  "kind": "map",
+  "title": "Borrowed Time",
+  "body": "Dispels you on activation.",
+  "ability": "abaddon_borrowed_time",
+  "current": [
+   "dispel",
+   "good_aghanims",
+   "passive_value",
+   "sustain_self",
+   "teamfight_ult"
+  ],
+  "proposed": [
+   "dispel_self"
+  ],
+  "remove": [
+   "dispel"
+  ],
+  "confidence": "high",
+  "wr": 0.5752329492,
+  "pick": 14.25654738931466
+ },
+ {
+  "id": "F-128",
+  "section": "F",
+  "kind": "map",
+  "title": "Chemical Rage",
+  "body": "Basic dispel on cast.",
+  "ability": "alchemist_chemical_rage",
+  "current": [
+   "dispel",
+   "pick_asap",
+   "steroid",
+   "sustain_self"
+  ],
+  "proposed": [
+   "dispel_self"
+  ],
+  "remove": [
+   "dispel"
+  ],
+  "confidence": "high",
+  "wr": 0.5334510991,
+  "pick": 7.716324585015702
+ },
+ {
+  "id": "F-129",
+  "section": "F",
+  "kind": "map",
+  "title": "Kraken Shell",
+  "body": "Removes debuffs when damage crosses the threshold.",
+  "ability": "tidehunter_kraken_shell",
+  "current": [
+   "dispel",
+   "farm_tool",
+   "passive_value",
+   "sustain_self"
+  ],
+  "proposed": [
+   "dispel_self"
+  ],
+  "remove": [
+   "dispel"
+  ],
+  "confidence": "high",
+  "wr": 0.5584682149,
+  "pick": 19.6333274689186
+ },
+ {
+  "id": "F-130",
+  "section": "F",
+  "kind": "map",
+  "title": "Mirror Image",
+  "body": "Basic dispel on cast.",
+  "ability": "naga_siren_mirror_image",
+  "current": [
+   "dispel",
+   "farm_tool",
+   "steroid"
+  ],
+  "proposed": [
+   "dispel_self"
+  ],
+  "remove": [
+   "dispel"
+  ],
+  "confidence": "high",
+  "wr": 0.5394487692,
+  "pick": 19.970755312434253
+ },
+ {
+  "id": "F-131",
+  "section": "F",
+  "kind": "map",
+  "title": "Doppelganger",
+  "body": "Basic dispel on cast.",
+  "ability": "phantom_lancer_doppelwalk",
+  "current": [
+   "dispel",
+   "good_counter",
+   "mobility",
+   "sustain_self"
+  ],
+  "proposed": [
+   "dispel_self"
+  ],
+  "remove": [
+   "dispel"
+  ],
+  "confidence": "high",
+  "wr": 0.5295502638,
+  "pick": 24.537597234226446
+ },
+ {
+  "id": "F-132",
+  "section": "F",
+  "kind": "map",
+  "title": "Phantasm",
+  "body": "Basic dispel on cast. NEW carrier.",
+  "ability": "chaos_knight_phantasm",
+  "current": [
+   "farm_tool",
+   "good_aghanims",
+   "mana_hungry"
+  ],
+  "proposed": [
+   "dispel_self"
+  ],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.5227956785,
+  "pick": 31.04080727434021
+ },
+ {
+  "id": "F-133",
+  "section": "F",
+  "kind": "map",
+  "title": "Rage",
+  "body": "Basic dispel + debuff immunity. NEW carrier.",
+  "ability": "life_stealer_rage",
+  "current": [
+   "sustain_self"
+  ],
+  "proposed": [
+   "dispel_self"
+  ],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.5195423933,
+  "pick": 18.43969649736788
+ },
+ {
+  "id": "F-134",
+  "section": "F",
+  "kind": "map",
+  "title": "Blade Fury",
+  "body": "Strong dispel at the end of the spin (text). NEW carrier.",
+  "ability": "juggernaut_blade_fury",
+  "current": [
+   "aoe",
+   "farm_tool",
+   "sustain_self"
+  ],
+  "proposed": [
+   "dispel_self"
+  ],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.5518320058,
+  "pick": 11.679507603186098
+ },
+ {
+  "id": "F-135",
+  "section": "F",
+  "kind": "map",
+  "title": "Dark Pact",
+  "body": "Repeated strong dispel pulses. NEW carrier.",
+  "ability": "slark_dark_pact",
+  "current": [
+   "aoe",
+   "waveclear"
+  ],
+  "proposed": [
+   "dispel_self"
+  ],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.4836708817,
+  "pick": 35.8184435077619
+ },
+ {
+  "id": "F-136",
+  "section": "F",
+  "kind": "map",
+  "title": "Enrage",
+  "body": "Removes existing debuffs. NEW carrier.",
+  "ability": "ursa_enrage",
+  "current": [
+   "sustain_self"
+  ],
+  "proposed": [
+   "dispel_self"
+  ],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.5213455553,
+  "pick": 27.828493103743682
+ },
+ {
+  "id": "F-137",
+  "section": "F",
+  "kind": "map",
+  "title": "Battle Trance",
+  "body": "Applies a basic dispel (text). NEW carrier.",
+  "ability": "troll_warlord_battle_trance",
+  "current": [
+   "mana_hungry",
+   "steroid",
+   "sustain_self"
+  ],
+  "proposed": [
+   "dispel_self"
+  ],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.4992678498,
+  "pick": 27.642652140807122
+ },
+ {
+  "id": "F-138",
+  "section": "F",
+  "kind": "map",
+  "title": "Raptor Dance",
+  "body": "Receives a basic dispel at cast start (text). NEW carrier.",
+  "ability": "kez_raptor_dance",
+  "current": [
+   "aoe",
+   "mana_hungry",
+   "sustain_self"
+  ],
+  "proposed": [
+   "dispel_self"
+  ],
+  "remove": [],
+  "confidence": "medium",
+  "wr": 0.4713252667,
+  "pick": 36.95603923534045
+ },
+ {
+  "id": "F-139",
+  "section": "F",
+  "kind": "map",
+  "title": "Supernova",
+  "body": "Strong dispel on rebirth. NEW carrier.",
+  "ability": "phoenix_supernova",
+  "current": [
+   "aoe",
+   "hard_cc",
+   "mana_hungry",
+   "setup_cc",
+   "sustain_self",
+   "teamfight_ult"
+  ],
+  "proposed": [
+   "dispel_self"
+  ],
+  "remove": [],
+  "confidence": "medium",
+  "wr": 0.5133216616,
+  "pick": 30.918414770014323
+ },
+ {
+  "id": "F-140",
+  "section": "F",
+  "kind": "map",
+  "title": "Time Lapse",
+  "body": "dotaconstants lists DISPEL TYPE: Strong Dispel. I believe it dispels on cast; confirm.",
+  "ability": "weaver_time_lapse",
+  "current": [
+   "mana_hungry",
+   "sustain_self"
+  ],
+  "proposed": [
+   "dispel_self"
+  ],
+  "remove": [],
+  "confidence": "medium",
+  "wr": 0.4982583065,
+  "pick": 37.95846730975348
+ },
+ {
+  "id": "F-141",
+  "section": "F",
+  "kind": "map",
+  "title": "Rolling Thunder",
+  "body": "Rolling Thunder: debuff immune; I believe a basic dispel applies on cast; confirm.",
+  "ability": "pangolier_gyroshell",
+  "current": [
+   "aoe",
+   "hard_cc",
+   "initiation",
+   "mana_hungry",
+   "mobility",
+   "teamfight_ult"
+  ],
+  "proposed": [
+   "dispel_self"
+  ],
+  "remove": [],
+  "confidence": "medium",
+  "wr": 0.5041343959,
+  "pick": 34.35196617652561
+ },
+ {
+  "id": "F-142",
+  "section": "F",
+  "kind": "map",
+  "title": "Life Break",
+  "body": "Debuff immune while leaping; basic dispel on cast in the current patch? Confirm.",
+  "ability": "huskar_life_break",
+  "current": [
+   "initiation",
+   "nuke"
+  ],
+  "proposed": [
+   "dispel_self"
+  ],
+  "remove": [],
+  "confidence": "low",
+  "wr": 0.4935834156,
+  "pick": 34.67494006487097
+ },
+ {
+  "id": "F-143",
+  "section": "F",
+  "kind": "map",
+  "title": "Omnislash",
+  "body": "Your comment says the ability is marked basic dispel, your button said exclude. I have included it; flip to Disagree if the exclusion was intended.",
+  "ability": "juggernaut_omni_slash",
+  "current": [
+   "initiation",
+   "mana_hungry",
+   "steroid"
+  ],
+  "proposed": [
+   "dispel_self"
+  ],
+  "remove": [],
+  "confidence": "low",
+  "wr": 0.4764197151,
+  "pick": 18.61319936186291,
+  "round": 1
+ },
+ {
+  "id": "F-144",
+  "section": "F",
+  "kind": "map",
+  "title": "Infest",
+  "body": "Same as Omnislash: comment says basic dispel, button said exclude. Included for you to confirm.",
+  "ability": "life_stealer_infest",
+  "current": [
+   "aoe",
+   "mana_hungry",
+   "nuke",
+   "save_ally",
+   "sustain_self"
+  ],
+  "proposed": [
+   "dispel_self"
+  ],
+  "remove": [],
+  "confidence": "low",
+  "wr": 0.4884074052,
+  "pick": 21.681510249372188,
+  "round": 1
+ },
+ {
+  "id": "F-145",
+  "section": "F",
+  "kind": "map",
+  "title": "Demonic Purge",
+  "body": "Purges enemy buffs; Shard adds an ally cast.",
+  "ability": "shadow_demon_demonic_purge",
+  "current": [
+   "dispel",
+   "mana_hungry",
+   "nuke",
+   "soft_cc"
+  ],
+  "proposed": [
+   "purge_enemy",
+   "dispel_ally"
+  ],
+  "remove": [
+   "dispel"
+  ],
+  "confidence": "high",
+  "wr": 0.5000153069,
+  "pick": 32.71348538190724,
+  "round": 1,
+  "viaUpgrade": {
+   "dispel_ally": "shard"
+  }
+ },
+ {
+  "id": "F-146",
+  "section": "F",
+  "kind": "map",
+  "title": "Doom",
+  "body": "Dispels the enemy on cast. NEW carrier.",
+  "ability": "doom_bringer_doom",
+  "current": [
+   "hard_cc",
+   "initiation",
+   "mana_hungry",
+   "soft_cc"
+  ],
+  "proposed": [
+   "purge_enemy"
+  ],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.5059892137,
+  "pick": 25.239625319330116
+ },
+ {
+  "id": "F-147",
+  "section": "F",
+  "kind": "map",
+  "title": "Enchant",
+  "body": "Enemy hero is dispelled and slowed. NEW carrier.",
+  "ability": "enchantress_enchant",
+  "current": [
+   "good_aghanims",
+   "soft_cc",
+   "summon"
+  ],
+  "proposed": [
+   "purge_enemy"
+  ],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.4920477531,
+  "pick": 34.93305041050252
+ },
+ {
+  "id": "F-148",
+  "section": "F",
+  "kind": "map",
+  "title": "Winter's Curse",
+  "body": "Dispels then freezes. NEW carrier.",
+  "ability": "winter_wyvern_winters_curse",
+  "current": [
+   "aoe",
+   "damage_amp",
+   "hard_cc",
+   "initiation",
+   "mana_hungry",
+   "teamfight_ult"
+  ],
+  "proposed": [
+   "purge_enemy"
+  ],
+  "remove": [],
+  "confidence": "medium",
+  "wr": 0.5190068245,
+  "pick": 29.015129954987657
+ },
+ {
+  "id": "F-149",
+  "section": "F",
+  "kind": "map",
+  "title": "Glimpse",
+  "body": "No dispel of any kind (your ruling). Not in the dispel family; the illusion kill is not a purge.",
+  "ability": "disruptor_glimpse",
+  "current": [
+   "initiation",
+   "move_enemy",
+   "setup_cc"
+  ],
+  "proposed": [],
+  "remove": [],
+  "confidence": "high",
+  "wr": 0.5057235553,
+  "pick": 24.3166319784525,
+  "round": 1
+ },
+ {
+  "id": "F-150",
+  "section": "F",
+  "kind": "map",
+  "title": "Whirling Axes (Melee)",
+  "body": "Base ability has no dispel (community tag removed); Scepter adds a self dispel on the melee version. Tagged per the upgrade policy, marked 'with Scepter'.",
+  "ability": "troll_warlord_whirling_axes_melee",
+  "current": [
+   "aoe",
+   "dispel",
+   "soft_cc"
+  ],
+  "proposed": [
+   "dispel_self"
+  ],
+  "remove": [
+   "dispel"
+  ],
+  "confidence": "high",
+  "wr": 0.5133944954,
+  "pick": 36.16477064220184,
+  "round": 1,
+  "viaUpgrade": {
+   "dispel_self": "scepter"
+  }
+ },
+ {
+  "id": "G-151",
+  "section": "G",
+  "kind": "rule",
+  "title": "Accept the rest of the export as-is",
+  "body": "Besides the five tags: Borrowed Time gains roleMust [1, 3]; +4 good_shard, +4 good_aghanims, +2 steroid, +1 each nuke / mobility / teamfight_ult / soft_cc / mana_hungry / grants_ranged, -1 soft_cc. Import these unchanged."
+ },
+ {
+  "id": "G-152",
+  "section": "G",
+  "kind": "rule",
+  "title": "Build order",
+  "body": "1 plumbing + mechanical debuff tags; 2 reposition split and dispel split + demand boost; 3 damage-amp split + team demand; 4 good_deny + combos: relation; 5 pick_asap border + audit. Each step is its own PR with golden fixtures."
+ },
+ {
+  "id": "B-153",
+  "section": "B",
+  "kind": "rule",
+  "title": "knockback: descriptive only in v1",
+  "body": "No scoring term and no need credit for knockback in v1. Its real value (interrupting Charge of Darkness, Blast Off, Skewer, Rolling Thunder) belongs to the counters/combos machinery later: 'knockback counters tag:charge' once a charge tag exists. Gust keeps its soft_cc value regardless. Tell me if you want a small credit now instead.",
+  "round": 1
+ },
+ {
+  "id": "B-154",
+  "section": "B",
+  "kind": "rule",
+  "title": "Gap-close stays mobility + initiation (no new tag)",
+  "body": "Reality Rift, Grappling Claw, Blink Strike, Phantom Strike and friends already carry mobility + initiation, which is what the needs engine reads for a gap-closer. A dedicated gap_close tag would only split the same signal. Proposal: no new tag. Say so if you want it anyway and I will add it to the vocab round.",
+  "round": 1
+ },
+ {
+  "id": "B-155",
+  "section": "B",
+  "kind": "rule",
+  "title": "Shard / Scepter-granted effects: tagged, marked as upgrade-dependent (decided)",
+  "body": "Decision: effects granted by Shard are ALWAYS tagged (cheap, a standard buy with the right abilities); Scepter-granted effects are tagged too, and both carry a viaUpgrade marker so the tooltip says 'with Shard' / 'with Scepter'. The scorer counts them at full value. Ability dependencies (Nether Strike needs Greater Bash) stay a conditional with: entry, honored only when the dependency is drafted.",
+  "round": 1
+ },
+ {
+  "id": "F-156",
+  "section": "F",
+  "kind": "map",
+  "title": "Whirling Axes (Ranged)",
+  "ability": "troll_warlord_whirling_axes_ranged",
+  "body": "Scepter adds an enemy purge on the ranged version. Tagged per the upgrade policy, marked 'with Scepter'.",
+  "current": [
+   "aoe",
+   "soft_cc"
+  ],
+  "proposed": [
+   "purge_enemy"
+  ],
+  "remove": [],
+  "confidence": "high",
+  "viaUpgrade": {
+   "purge_enemy": "scepter"
+  },
+  "round": 1
+ }
+]
