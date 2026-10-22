@@ -36,7 +36,8 @@
   "amp_physical",
   "amp_magical",
   "amp_all",
-  "good_deny"
+  "good_deny",
+  "pick_asap"
  ],
  "mechanicalVocab": [
   "bkb_piercing",
@@ -129,6 +130,7 @@
   "alchemist_chemical_rage": {
    "tags": [
     "dispel_self",
+    "pick_asap",
     "steroid",
     "sustain_self"
    ]
@@ -183,7 +185,8 @@
   "antimage_blink": {
    "tags": [
     "initiation",
-    "mobility"
+    "mobility",
+    "pick_asap"
    ],
    "roleMust": [
     1,
@@ -744,6 +747,7 @@
   "dark_willow_shadow_realm": {
    "tags": [
     "nuke",
+    "pick_asap",
     "steroid"
    ]
   },
@@ -1031,7 +1035,8 @@
     "debuff_strong_only",
     "hard_cc",
     "initiation",
-    "passive_value"
+    "passive_value",
+    "pick_asap"
    ]
   },
   "earthshaker_echo_slam": {
@@ -1291,6 +1296,7 @@
    "tags": [
     "bkb_piercing",
     "farm_tool",
+    "pick_asap",
     "steroid"
    ],
    "roleMust": [
@@ -1356,6 +1362,7 @@
    "tags": [
     "good_shard",
     "passive_value",
+    "pick_asap",
     "steroid",
     "sustain_self"
    ],
@@ -1438,6 +1445,7 @@
    "tags": [
     "amp_physical",
     "farm_tool",
+    "pick_asap",
     "skill_point_sink",
     "summon"
    ]
@@ -1963,6 +1971,7 @@
     "bkb_piercing",
     "farm_tool",
     "passive_value",
+    "pick_asap",
     "steroid"
    ],
    "roleMust": [
@@ -2080,6 +2089,7 @@
    "tags": [
     "aoe",
     "mana_hungry",
+    "pick_asap",
     "steroid"
    ]
   },
@@ -2842,7 +2852,8 @@
   "queenofpain_blink": {
    "tags": [
     "initiation",
-    "mobility"
+    "mobility",
+    "pick_asap"
    ],
    "roleMust": [
     1,
@@ -3347,6 +3358,7 @@
    "tags": [
     "mobility",
     "passive_value",
+    "pick_asap",
     "sustain_self"
    ],
    "roleMust": [
@@ -3700,6 +3712,7 @@
    "tags": [
     "aoe",
     "farm_tool",
+    "pick_asap",
     "waveclear"
    ]
   },
@@ -3986,6 +3999,7 @@
    "tags": [
     "bkb_piercing",
     "passive_value",
+    "pick_asap",
     "steroid"
    ],
    "roleAvoid": [
@@ -4151,6 +4165,7 @@
     "initiation",
     "mobility",
     "nuke",
+    "pick_asap",
     "soft_cc"
    ],
    "roleMust": [
@@ -4224,6 +4239,7 @@
     "aoe",
     "good_shard",
     "mobility",
+    "pick_asap",
     "waveclear"
    ],
    "roleMust": [
@@ -4281,6 +4297,7 @@
     "good_aghanims",
     "grants_ranged",
     "mobility",
+    "pick_asap",
     "soft_cc",
     "steroid"
    ],

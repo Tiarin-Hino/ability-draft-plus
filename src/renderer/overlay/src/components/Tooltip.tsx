@@ -360,6 +360,16 @@ function AbilityTooltipContent({
           })}
         </div>
       )}
+      {/* Round-5 pick_asap: the community verdict with the live numbers next
+          to it, so a stale verdict is visible — never a score term */}
+      {slot.pickAsap && (
+        <div className="tooltip-stat tooltip-aghs">
+          {t('tooltip.pickAsap', {
+            wr: formatWinrate(slot.winrate),
+            pick: formatPickRate(slot.pickRate),
+          })}
+        </div>
+      )}
       {/* Round-5 combo deny: boosted reads as a recommendation, unboosted as
           a warning (the deny would be a weak pick for you) */}
       {slot.denyCombo && (

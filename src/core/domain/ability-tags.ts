@@ -75,6 +75,11 @@ export const TAG_VOCABULARY = [
   // Round 5 step 4: "playable on its own, so denying it is not a dead pick"
   // (community good_counter). The combo links live in the entry's `combos`.
   'good_deny',
+  // Round 5 step 5: the community's "never leave it to the enemy" verdict.
+  // VISUAL ONLY (border + tooltip with the live numbers) — never a score
+  // term: the stat score already ranks its carriers top-8 of 513, and the
+  // build script audits carriers whose live stats stop agreeing.
+  'pick_asap',
 ] as const
 
 export type AbilityTag = (typeof TAG_VOCABULARY)[number]

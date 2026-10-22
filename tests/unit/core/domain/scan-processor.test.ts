@@ -1814,6 +1814,60 @@ describe('role-aware suggestions', () => {
     })
   })
 
+  describe('pick_asap (round 5)', () => {
+    const withTag: NonNullable<ScanProcessorDeps['tags']> = {
+      ...mockTags,
+      getTags(name: string) {
+        return name === 'ice_blast'
+          ? (new Set(['pick_asap']) as ReturnType<NonNullable<ScanProcessorDeps['tags']>['getTags']>)
+          : undefined
+      },
+    }
+    const withoutTag: NonNullable<ScanProcessorDeps['tags']> = {
+      ...mockTags,
+      getTags() {
+        return undefined
+      },
+    }
+    function run(tags: NonNullable<ScanProcessorDeps['tags']>) {
+      const initial = processScanResults(makeInitialScanInput())
+      const state = initial.updatedState
+      state.mySelectedSpotDbId = 1
+      state.mySelectedSpotHeroOrder = 0
+      const input: ScanProcessorInput = {
+        rawResults: [makeScanResult('fireball', 3, 1, false)],
+        isInitialScan: false,
+        state,
+        deps: { ...depsWithRole('off'), tags },
+        modelCoords: [makeCoord(0), makeCoord(1)],
+        heroesCoords: [makeCoord(0), makeCoord(1)],
+        heroesParams: { width: 358, height: 170 },
+        targetResolution: '1920x1080',
+        scaleFactor: 1.0,
+      }
+      return processScanResults(input).overlayPayload
+    }
+
+    it('flags the slot for display and never moves the score', () => {
+      const tagged = run(withTag)
+      const plain = run(withoutTag)
+      const pool = (p: typeof tagged, n: string) => p.scanData!.standard.find((s) => s.name === n)!
+      expect(pool(tagged, 'ice_blast').pickAsap).toBe(true)
+      expect(pool(tagged, 'blink').pickAsap).toBeUndefined()
+      expect(pool(plain, 'ice_blast').pickAsap).toBeUndefined()
+      // A drafted ability is no longer a pool entity: nothing to flag there.
+      const picked = tagged.scanData!.selectedAbilities.find((s) => s.name === 'fireball')!
+      expect(picked.pickAsap).toBeUndefined()
+      // Scores are bit-identical with and without the tag.
+      expect(tagged.scanData!.standard.map((s) => s.consolidatedScore)).toEqual(
+        plain.scanData!.standard.map((s) => s.consolidatedScore),
+      )
+      expect(tagged.scanData!.standard.map((s) => s.isGeneralTopTier)).toEqual(
+        plain.scanData!.standard.map((s) => s.isGeneralTopTier),
+      )
+    })
+  })
+
   it('overrated abilities (early pick, low winrate) get damped and marked', () => {
     const initial = processScanResults(makeInitialScanInput())
     const state = initial.updatedState

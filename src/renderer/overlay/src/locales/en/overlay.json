@@ -123,7 +123,8 @@
     "ampDemand": "Damage amp — multiplies your team's {{names}}",
     "spellSteroid": "Spell amp — multiplies your {{names}}",
     "denyCombo": "Deny — completes the enemy's {{names}}",
-    "denyComboWeak": "Deny only — completes the enemy's {{names}}, but a weak pick for you"
+    "denyComboWeak": "Deny only — completes the enemy's {{names}}, but a weak pick for you",
+    "pickAsap": "Community: pick as soon as possible — wins {{wr}}, usually gone by pick {{pick}}"
   },
   "role": {
     "aria": "Role suggestions",

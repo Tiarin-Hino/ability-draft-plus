@@ -123,7 +123,8 @@
     "ampDemand": "增伤 — 放大己方的 {{names}}",
     "spellSteroid": "法术强化 — 放大你的 {{names}}",
     "denyCombo": "抢断 — 补全敌方的 {{names}}",
-    "denyComboWeak": "仅抢断 — 补全敌方的 {{names}}，但对你是弱选择"
+    "denyComboWeak": "仅抢断 — 补全敌方的 {{names}}，但对你是弱选择",
+    "pickAsap": "社区：尽早选 — 胜率 {{wr}}，通常在第 {{pick}} 手前被选走"
   },
   "role": {
     "aria": "分路推荐",

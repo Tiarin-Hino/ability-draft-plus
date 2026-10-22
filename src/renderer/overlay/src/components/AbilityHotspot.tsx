@@ -38,6 +38,11 @@ export function AbilityHotspot({
   } else if (slot.isGeneralTopTier) {
     className += ' shimmer-green'
   }
+  // Round-5 pick_asap: an outline that composes with any shimmer border
+  // (pool slots only). Display only — the tooltip carries the live numbers.
+  if (!isSelectedAbility && slot.pickAsap) {
+    className += ' pick-asap'
+  }
 
   const handleMouseEnter = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {

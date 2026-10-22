@@ -35,8 +35,15 @@ is still named tiarinhino.com — the old host 301-redirects there).
 Every layer defaults to a no-op: `roleMode: 'off'` (or missing shift data) is
 bit-identical to the pre-feature scorer — golden tests enforce this.
 
-**Round 5 (docs/proposals/community-tags-round5.md — agreed 2026-10-21; steps
-1-4 shipped 2026-10-22).** Step 4, **combo deny** (`good_deny` + the entry's
+**Round 5 (docs/proposals/community-tags-round5.md — agreed 2026-10-21; all
+five steps shipped 2026-10-22).** Step 5, **pick_asap**: the community's
+"never leave it to the enemy" verdict is DISPLAY ONLY — a gold dashed outline
+on the pool slot plus a tooltip line carrying the live winrate and average
+pick, never a score term (the stat score already ranks its carriers top-8 of
+513; a boost would only fight the greed taper and support accents). The build
+script's `audit_pick_asap` flags carriers whose live stats fall outside
+`wr >= 0.52 and avg pick <= 10` after every assemble, so a reworked ability
+surfaces as a Lab review item instead of a stale verdict. Step 4, **combo deny** (`good_deny` + the entry's
 curated `combos:` list, directional, may name `model:<hero>`): when the ENEMY
 holds a listed partner (ability on an enemy row, or a model picked on one)
 and still has ability turns, the candidate gets a red corner marker and a

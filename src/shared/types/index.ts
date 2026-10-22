@@ -224,6 +224,9 @@ export interface EnrichedScanSlot extends ScanResult {
   /** Round-5 combo deny (marker + tooltip): the enemy-held partners this pick
    * would complete for them; `boosted` = the deny boost was applied. */
   denyCombo?: { completes: string[]; boosted: boolean }
+  /** Round-5 pick_asap community verdict: own border + tooltip with the live
+   * numbers. Display only — the score never moves for it. */
+  pickAsap?: boolean
   /** Strong Shard / Scepter upgrade markers — only present when the
    * aghsMarkersEnabled setting is on (payload-gated; pool slots only). */
   goodShard?: boolean

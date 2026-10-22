@@ -123,7 +123,8 @@
     "ampDemand": "Amplificação de dano — multiplica {{names}} do seu time",
     "spellSteroid": "Amplificação de magias — multiplica suas {{names}}",
     "denyCombo": "Negar — completa {{names}} do inimigo",
-    "denyComboWeak": "Só negar — completa {{names}} do inimigo, mas é fraco para você"
+    "denyComboWeak": "Só negar — completa {{names}} do inimigo, mas é fraco para você",
+    "pickAsap": "Comunidade: pegue o quanto antes — vence {{wr}}, costuma sair até a escolha {{pick}}"
   },
   "role": {
     "aria": "Sugestões por função",

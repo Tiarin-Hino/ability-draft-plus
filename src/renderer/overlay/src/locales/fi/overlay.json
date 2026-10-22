@@ -123,7 +123,8 @@
     "ampDemand": "Vahingon vahvistus — kertoo tiimisi {{names}}",
     "spellSteroid": "Loitsuvahvistus — kertoo omat {{names}}",
     "denyCombo": "Esto — täydentää vihollisen {{names}}",
-    "denyComboWeak": "Vain esto — täydentää vihollisen {{names}}, mutta heikko valinta sinulle"
+    "denyComboWeak": "Vain esto — täydentää vihollisen {{names}}, mutta heikko valinta sinulle",
+    "pickAsap": "Yhteisö: ota heti — voittaa {{wr}}, yleensä poissa valintaan {{pick}} mennessä"
   },
   "role": {
     "aria": "Roolisuositukset",

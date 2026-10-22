@@ -1379,6 +1379,8 @@ function buildScoredEntities(
       dispelDemand,
       ampDemand,
       denyCombo,
+      // Round-5 pick_asap: display only (border + tooltip), never a score term.
+      pickAsap: hasTag('pick_asap') || undefined,
       pointSinkConflictWith,
       goodShard: (aghsMarkersEnabled && hasTag('good_shard')) || undefined,
       goodScepter: (aghsMarkersEnabled && hasTag('good_aghanims')) || undefined,
@@ -1669,6 +1671,7 @@ function enrichSlots(
       dispelDemand: scored?.dispelDemand,
       ampDemand: scored?.ampDemand,
       denyCombo: scored?.denyCombo,
+      pickAsap: scored?.pickAsap,
       goodShard: scored?.goodShard,
       goodScepter: scored?.goodScepter,
       isGeneralTopTier: topTier?.isGeneralTopTier ?? false,

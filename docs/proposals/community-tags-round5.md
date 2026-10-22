@@ -28,7 +28,12 @@ that had come from a CC tag the overrides remove). Step 4 (good_deny + curated
 combos, deny marker + boost with the pool-median guard, 16 seeded carriers with
 their partner lists from §3.3, Ball Lightning naming the OD model) shipped
 2026-10-22. "Enemy still has turns" = any enemy row short of four ability picks.
-Step 5 pending.
+Step 5 (pick_asap outline + tooltip with live numbers, no scoring; `audit_pick_asap`
+in the build script, gate wr >= 0.52 and avg pick <= 10; the community's 16
+carriers seeded as-is) shipped 2026-10-22. ALL FIVE STEPS SHIPPED. Remaining
+outside this repo: the Tag Lab catalog/tagDocs for the new names, superseding
+the five old `new_tag` proposals, and the Lab learning `combos` / `viaUpgrade`
+/ `with` (until then they live in tag_overrides.json only).
 Source: Tag Lab export version 2 (513 abilities, 30-tag vocab) vs the shipped
 version 1 (25 tags). The app currently DROPS the five new tags at load.
 
