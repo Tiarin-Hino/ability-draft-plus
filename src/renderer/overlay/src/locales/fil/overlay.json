@@ -94,7 +94,11 @@
       "reposition_enemy": "enemy reposition",
       "reposition_ally": "ally reposition",
       "dispel_self": "self dispel",
-      "dispel_ally": "ally dispel"
+      "dispel_ally": "ally dispel",
+      "spell_steroid": "spell steroid",
+      "amp_physical": "physical damage amp",
+      "amp_magical": "magic damage amp",
+      "amp_all": "damage amp"
     },
     "roleCovers": "Sinasagot ang kulang mong {{need}}",
     "rolePartial": "Bahagyang sinasagot ang kulang mong {{need}}",
@@ -115,7 +119,9 @@
     "pointSinkConflict": "Nag-aagawan ng skill points kasama ang {{names}} — isa sa kanila ang maiiwan sa level",
     "dispelDemand": "Dispel value — hawak ng kalaban ang {{names}}",
     "purgeDemand": "Purge value — tinatanggal ang {{names}} sa kalaban",
-    "dispelDemandPool": "Dispel value — {{n}} dispellable debuffs pa ang nasa pool"
+    "dispelDemandPool": "Dispel value — {{n}} dispellable debuffs pa ang nasa pool",
+    "ampDemand": "Damage amp — pinapalakas ang {{names}} ng team mo",
+    "spellSteroid": "Spell amp — pinapalakas ang iyong {{names}}"
   },
   "role": {
     "aria": "Mga role suggestion",

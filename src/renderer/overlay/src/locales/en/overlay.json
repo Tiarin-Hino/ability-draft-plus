@@ -94,7 +94,11 @@
       "reposition_enemy": "enemy reposition",
       "reposition_ally": "ally reposition",
       "dispel_self": "self dispel",
-      "dispel_ally": "ally dispel"
+      "dispel_ally": "ally dispel",
+      "spell_steroid": "spell steroid",
+      "amp_physical": "physical damage amp",
+      "amp_magical": "magic damage amp",
+      "amp_all": "damage amp"
     },
     "roleCovers": "Covers your missing {{need}}",
     "rolePartial": "Partially covers your missing {{need}}",
@@ -115,7 +119,9 @@
     "pointSinkConflict": "Competes for skill points with {{names}} — one of them stays under-levelled",
     "dispelDemand": "Dispel value — the enemy holds {{names}}",
     "purgeDemand": "Purge value — strips {{names}} off the enemy",
-    "dispelDemandPool": "Dispel value — {{n}} dispellable debuffs still in the pool"
+    "dispelDemandPool": "Dispel value — {{n}} dispellable debuffs still in the pool",
+    "ampDemand": "Damage amp — multiplies your team's {{names}}",
+    "spellSteroid": "Spell amp — multiplies your {{names}}"
   },
   "role": {
     "aria": "Role suggestions",

@@ -353,6 +353,13 @@ function AbilityTooltipContent({
             : t('tooltip.dispelDemandPool', { n: slot.dispelDemand.poolCount })}
         </div>
       )}
+      {slot.ampDemand && (
+        <div className="tooltip-stat tooltip-aghs">
+          {t(slot.ampDemand.kind === 'spell' ? 'tooltip.spellSteroid' : 'tooltip.ampDemand', {
+            names: slot.ampDemand.amplifies.join(', '),
+          })}
+        </div>
+      )}
       {slot.contestedSoon &&
         (slot.isGeneralTopTier || slot.isSynergySuggestionForMySpot) && (
           <div className="tooltip-stat tooltip-contested">

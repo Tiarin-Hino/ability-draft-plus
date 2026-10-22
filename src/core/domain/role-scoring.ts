@@ -98,6 +98,11 @@ export const POSITION_NEEDS: Readonly<Record<DraftPosition, RoleNeed[]>> = {
     { key: 'farm', anyOf: [['farm_tool'], ['waveclear']], priority: 0.75 },
     { key: 'survival', anyOf: [['mobility'], ['sustain_self'], ['dispel_self']], priority: 0.7 },
   ],
+  // spell_steroid (round 5 step 3) is deliberately NOT a nuke alternative: a
+  // needs boost fires on an UNCOVERED need, and spell amp is only worth
+  // anything once a nuke is already owned — so it rides as an own-pick
+  // complement boost in scan-processor (like Aghs stacking) plus the pos-2
+  // accent below.
   2: [
     { key: 'nuke', anyOf: [['nuke']], priority: 1.0 },
     { key: 'kill_ult', anyOf: [['teamfight_ult'], ['hard_cc']], priority: 0.75 },
@@ -155,17 +160,31 @@ export function allRoleNeeds(): RoleNeed[] {
 // of covering the save need — the "brings them to safety / strips the debuff,
 // stronger than a plain save" premium (user ruling 2026-10-21). No pos-1/2
 // minus for them: a swap is a fine core escape.
+// Step 3: spell_steroid is the pos-2 caster steroid; the team amps
+// (amp_physical / amp_magical / amp_all) are farm-free team actives — the
+// same reasoning that puts team_aura on the support lists.
 const POSITION_TAG_ACCENTS: Readonly<
   Record<DraftPosition, { plus: AbilityTag[]; minus: AbilityTag[] }>
 > = {
   1: { plus: ['passive_value', 'sustain_self'], minus: ['save_ally'] },
-  2: { plus: ['waveclear', 'sustain_self'], minus: ['passive_value'] },
+  2: { plus: ['waveclear', 'sustain_self', 'spell_steroid'], minus: ['passive_value'] },
   3: { plus: ['team_aura', 'teamfight_ult'], minus: [] },
   4: {
-    plus: ['setup_cc', 'initiation', 'reposition_ally', 'dispel_ally'],
+    plus: [
+      'setup_cc',
+      'initiation',
+      'reposition_ally',
+      'dispel_ally',
+      'amp_physical',
+      'amp_magical',
+      'amp_all',
+    ],
     minus: ['steroid', 'farm_tool'],
   },
-  5: { plus: ['team_aura', 'reposition_ally', 'dispel_ally'], minus: ['steroid', 'farm_tool'] },
+  5: {
+    plus: ['team_aura', 'reposition_ally', 'dispel_ally', 'amp_physical', 'amp_magical', 'amp_all'],
+    minus: ['steroid', 'farm_tool'],
+  },
 }
 
 export interface TeammateBuild {

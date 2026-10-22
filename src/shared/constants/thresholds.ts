@@ -253,6 +253,23 @@ export const DISPEL_DEMAND_WEIGHT = 0.06
 export const DISPEL_DEMAND_REF = 4
 export const DISPEL_DEMAND_POOL_WEIGHT = 0.5
 export const DISPEL_DEMAND_MAX = 1.5
+// Team damage-amp demand (tag round 5, 2026-10-22): an enemy debuff that
+// amplifies damage is worth the damage the TEAM already deals of that type.
+// demand(amp_physical) = steroid picks over my + teammates' picks,
+// demand(amp_magical) = nuke + teamfight_ult picks, amp_all counts both;
+// boost = AMP_TEAM_WEIGHT × clamp(demand / AMP_TEAM_DEMAND_REF, 0, 1). Zero
+// demand = zero boost (a Gush on a caster team stays a slow). Teammates DO
+// count here, unlike Aghs stacking: the amp lands on the enemy and everyone
+// hits it. Sized like the Aghs boost; REF 3 = three damage dealers already
+// committed. Role-independent (a board fact), outside the role cap.
+export const AMP_TEAM_WEIGHT = 0.06
+export const AMP_TEAM_DEMAND_REF = 3
+// spell_steroid is SELF spell amp: worth what MY OWN nukes / teamfight ults
+// deal, own picks only (a teammate's Laguna gains nothing from my Arcane
+// Supremacy). Same weight; two spells already make the amp a full slot. It
+// is NOT a needs-engine nuke alternative: a needs boost fires on an UNCOVERED
+// need and spell amp is only worth anything once a nuke is owned.
+export const SPELL_STEROID_DEMAND_REF = 2
 // Model reservation (Drow-for-pos-5 case, 2026-08-31): while core teammates
 // still need models, a body whose attr fit for positions 1-3 beats its 4-5
 // fit by more than the gap is damped for a support drafter — don't steal the

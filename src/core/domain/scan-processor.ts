@@ -69,6 +69,9 @@ import {
   DISPEL_DEMAND_REF,
   DISPEL_DEMAND_POOL_WEIGHT,
   DISPEL_DEMAND_MAX,
+  AMP_TEAM_WEIGHT,
+  AMP_TEAM_DEMAND_REF,
+  SPELL_STEROID_DEMAND_REF,
 } from '@shared/constants/thresholds'
 
 // @DEV-GUIDE: Central business logic — transforms raw ML scan results into a fully-enriched
@@ -414,6 +417,24 @@ export function processScanResults(
   }
   const enemyDispellablePicks = enemyPicksTagged('debuff_dispellable')
   const enemyPurgeablePicks = enemyPicksTagged('steroid', 'summon')
+  // Round-5 team-amp demand: display names of MY TEAM's picks (me + the four
+  // teammates) that an amp would multiply — right-click damage for
+  // amp_physical, spell damage for amp_magical. Empty without My Spot.
+  const teamPicksTagged = (...wanted: AbilityTag[]): string[] => {
+    if (deps.tags === undefined || state.mySelectedSpotHeroOrder === null) return []
+    const myHalf = state.mySelectedSpotHeroOrder < 5
+    const names = new Set<string>()
+    for (const s of selectedAbilities) {
+      if (!s.name || s.hero_order < 5 !== myHalf) continue
+      const t = deps.tags.getTags(s.name)
+      if (t !== undefined && wanted.some((w) => t.has(w))) names.add(s.name)
+    }
+    return [...names].map((n) => abilityDetailsMap.get(n)?.displayName ?? n)
+  }
+  const teamPhysicalPicks = teamPicksTagged('steroid')
+  const teamMagicalPicks = teamPicksTagged('nuke', 'teamfight_ult')
+  // spell_steroid is SELF amp: worth what MY OWN spells deal (own picks only).
+  const mySpellPicks = [...new Set([...myPicksTagged('nuke'), ...myPicksTagged('teamfight_ult')])]
   // Always-on Shard/Scepter markers are a user setting resolved HERE (the
   // overlay has no settings access) — payload-gated, applies on the next scan.
   const aghsMarkersEnabled = settings.aghsMarkersEnabled === true
@@ -702,6 +723,9 @@ export function processScanResults(
       myPointSinkPicks,
       enemyDispellablePicks,
       enemyPurgeablePicks,
+      teamPhysicalPicks,
+      teamMagicalPicks,
+      mySpellPicks,
       aghsMarkersEnabled,
     },
   )
@@ -941,6 +965,13 @@ interface RoleScoringInputs {
    * picks (purge_enemy value). Empty without My Spot. */
   enemyDispellablePicks: string[]
   enemyPurgeablePicks: string[]
+  /** Round-5 team-amp demand: display names of MY TEAM's steroid picks
+   * (amp_physical) and nuke / teamfight_ult picks (amp_magical); amp_all
+   * counts both. Empty without My Spot. */
+  teamPhysicalPicks: string[]
+  teamMagicalPicks: string[]
+  /** spell_steroid complement: display names of MY nuke / teamfight_ult picks. */
+  mySpellPicks: string[]
   /** Setting: always mark strong Shard/Scepter pool abilities (display only). */
   aghsMarkersEnabled: boolean
 }
@@ -996,8 +1027,48 @@ function buildScoredEntities(
     myPointSinkPicks,
     enemyDispellablePicks,
     enemyPurgeablePicks,
+    teamPhysicalPicks,
+    teamMagicalPicks,
+    mySpellPicks,
     aghsMarkersEnabled,
   } = role
+  // Round-5 amp demand, computed once per kind. Team amps are worth the
+  // TEAM's damage of their type; the self spell amp is worth MY OWN spells
+  // (two spells make it a full slot — SPELL_STEROID_DEMAND_REF).
+  const teamAllPicks = [...new Set([...teamPhysicalPicks, ...teamMagicalPicks])]
+  const ampBoostFor = (names: string[], ref: number): number =>
+    names.length > 0 ? AMP_TEAM_WEIGHT * Math.min(1, names.length / ref) : 0
+  const ampByKind: ReadonlyArray<{
+    tag: AbilityTag
+    kind: NonNullable<ScoredEntity['ampDemand']>['kind']
+    amplifies: string[]
+    boost: number
+  }> = [
+    {
+      tag: 'amp_physical',
+      kind: 'physical',
+      amplifies: teamPhysicalPicks,
+      boost: ampBoostFor(teamPhysicalPicks, AMP_TEAM_DEMAND_REF),
+    },
+    {
+      tag: 'amp_magical',
+      kind: 'magical',
+      amplifies: teamMagicalPicks,
+      boost: ampBoostFor(teamMagicalPicks, AMP_TEAM_DEMAND_REF),
+    },
+    {
+      tag: 'amp_all',
+      kind: 'all',
+      amplifies: teamAllPicks,
+      boost: ampBoostFor(teamAllPicks, AMP_TEAM_DEMAND_REF),
+    },
+    {
+      tag: 'spell_steroid',
+      kind: 'spell',
+      amplifies: mySpellPicks,
+      boost: ampBoostFor(mySpellPicks, SPELL_STEROID_DEMAND_REF),
+    },
+  ]
   // Round-5 dispel demand, computed once: enemy-held dispellable debuffs count
   // fully, unpicked ones half (they may yet land on the enemy). Purge demand
   // is the enemy's steroid/summon count (no pool term).
@@ -1139,13 +1210,26 @@ function buildScoredEntities(
             }
           : { kind: 'purge', against: enemyPurgeablePicks, poolCount: 0 }
         : undefined
+    // Round-5 amp demand (role mode or not): a team amp is worth the damage
+    // the team already deals of that type; a spell steroid is worth my own
+    // spells. An ability with several amp tags (Natural Order) takes the
+    // best-fed one; one tooltip line.
+    let ampDemand: ScoredEntity['ampDemand']
+    let ampBoost = 0
+    for (const amp of ampByKind) {
+      if (hasTag(amp.tag) && amp.boost > ampBoost) {
+        ampBoost = amp.boost
+        ampDemand = { kind: amp.kind, amplifies: amp.amplifies }
+      }
+    }
     const consolidatedScore =
       roleDelta !== undefined ||
       pairingDelta !== 0 ||
       overratedDamp !== 0 ||
       aghsBoost !== 0 ||
       pointSinkDamp !== 0 ||
-      dispelBoost !== 0
+      dispelBoost !== 0 ||
+      ampBoost !== 0
         ? Math.min(
             1,
             Math.max(
@@ -1156,7 +1240,8 @@ function buildScoredEntities(
                 overratedDamp +
                 aghsBoost -
                 pointSinkDamp +
-                dispelBoost,
+                dispelBoost +
+                ampBoost,
             ),
           )
         : scored.consolidatedScore
@@ -1197,6 +1282,7 @@ function buildScoredEntities(
       shardStackWith,
       scepterStackWith,
       dispelDemand,
+      ampDemand,
       pointSinkConflictWith,
       goodShard: (aghsMarkersEnabled && hasTag('good_shard')) || undefined,
       goodScepter: (aghsMarkersEnabled && hasTag('good_aghanims')) || undefined,
@@ -1485,6 +1571,7 @@ function enrichSlots(
       scepterStackWith: scored?.scepterStackWith,
       pointSinkConflictWith: scored?.pointSinkConflictWith,
       dispelDemand: scored?.dispelDemand,
+      ampDemand: scored?.ampDemand,
       goodShard: scored?.goodShard,
       goodScepter: scored?.goodScepter,
       isGeneralTopTier: topTier?.isGeneralTopTier ?? false,

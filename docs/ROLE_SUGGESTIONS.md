@@ -36,7 +36,17 @@ Every layer defaults to a no-op: `roleMode: 'off'` (or missing shift data) is
 bit-identical to the pre-feature scorer — golden tests enforce this.
 
 **Round 5 (docs/proposals/community-tags-round5.md — agreed 2026-10-21; steps
-1-2 shipped 2026-10-22).** Step 2 scoring: `reposition_enemy` is a pos-4
+1-3 shipped 2026-10-22).** Step 3 scoring: the **amp demand boost**
+(role-independent, `AMP_TEAM_*` / `SPELL_STEROID_DEMAND_REF`): a team amp
+(`amp_physical` / `amp_magical` / `amp_all`) is worth the TEAM's damage of its
+type — steroid picks for physical, nuke + teamfight_ult for magical, both for
+all, over my + teammates' picks; `boost = 0.06 × clamp(count / 3, 0, 1)`.
+`spell_steroid` is SELF amp: worth MY OWN nuke / teamfight_ult picks
+(`count / 2`). It is deliberately NOT a needs-engine nuke alternative (a needs
+boost fires on an UNCOVERED need; spell amp is only worth anything once a nuke
+is owned), so it rides as an own-pick complement boost like Aghs stacking, plus
+the pos-2 accent. Team amps carry the pos-4/5 accent like team_aura. One
+tooltip line names the picks amplified. Step 2 scoring: `reposition_enemy` is a pos-4
 `catch` need (own scarcity key; stacks with hard_cc) and a pos-3 initiation
 alternative; `reposition_ally` / `dispel_ally` cover the pos-5 save and are
 pos-4/5 plus accents; `dispel_self` is a pos-1 survival / pos-3 durability

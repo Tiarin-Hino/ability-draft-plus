@@ -31,7 +31,11 @@
   "knockback",
   "dispel_self",
   "dispel_ally",
-  "purge_enemy"
+  "purge_enemy",
+  "spell_steroid",
+  "amp_physical",
+  "amp_magical",
+  "amp_all"
  ],
  "mechanicalVocab": [
   "bkb_piercing",
@@ -103,6 +107,7 @@
   "abyssal_underlord_pit_of_malice": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "good_with_rearm",
     "setup_cc",
     "soft_cc"
@@ -115,6 +120,7 @@
   },
   "alchemist_acid_spray": {
    "tags": [
+    "amp_physical",
     "aoe",
     "farm_tool"
    ]
@@ -361,6 +367,7 @@
     "debuff_dispellable",
     "farm_tool",
     "nuke",
+    "spell_steroid",
     "waveclear"
    ]
   },
@@ -377,6 +384,7 @@
   "bloodseeker_bloodrage": {
    "tags": [
     "bkb_piercing",
+    "spell_steroid",
     "steroid"
    ]
   },
@@ -413,6 +421,7 @@
   },
   "bounty_hunter_track": {
    "tags": [
+    "amp_all",
     "bkb_piercing",
     "debuff_dispellable",
     "soft_cc"
@@ -471,6 +480,7 @@
   },
   "bristleback_viscous_nasal_goo": {
    "tags": [
+    "amp_physical",
     "debuff_dispellable",
     "soft_cc"
    ]
@@ -570,6 +580,7 @@
   },
   "chaos_knight_reality_rift": {
    "tags": [
+    "amp_physical",
     "debuff_dispellable",
     "initiation",
     "mobility"
@@ -986,7 +997,6 @@
    "tags": [
     "aoe",
     "bkb_piercing",
-    "debuff_dispellable",
     "nuke",
     "teamfight_ult"
    ]
@@ -1060,6 +1070,8 @@
   },
   "elder_titan_natural_order": {
    "tags": [
+    "amp_magical",
+    "amp_physical",
     "aoe",
     "good_shard",
     "passive_value"
@@ -1392,6 +1404,7 @@
   },
   "invoker_forge_spirit_ad": {
    "tags": [
+    "amp_physical",
     "farm_tool",
     "skill_point_sink",
     "summon"
@@ -1531,7 +1544,8 @@
   },
   "keeper_of_the_light_spirit_form": {
    "tags": [
-    "mana_hungry"
+    "mana_hungry",
+    "spell_steroid"
    ]
   },
   "kez_echo_slash": {
@@ -1643,7 +1657,9 @@
    ]
   },
   "largo_croak_of_genius": {
-   "tags": []
+   "tags": [
+    "spell_steroid"
+   ]
   },
   "largo_frogstomp": {
    "tags": [
@@ -1672,7 +1688,6 @@
   "legion_commander_overwhelming_odds": {
    "tags": [
     "aoe",
-    "debuff_dispellable",
     "nuke"
    ]
   },
@@ -1931,6 +1946,7 @@
   },
   "lycan_howl": {
    "tags": [
+    "amp_physical",
     "aoe",
     "debuff_dispellable",
     "soft_cc"
@@ -2093,6 +2109,7 @@
   },
   "medusa_stone_gaze": {
    "tags": [
+    "amp_physical",
     "aoe",
     "bkb_piercing",
     "hard_cc",
@@ -2103,6 +2120,7 @@
   "meepo_earthbind": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "soft_cc"
    ]
   },
@@ -2248,7 +2266,9 @@
   },
   "naga_siren_rip_tide": {
    "tags": [
+    "amp_physical",
     "aoe",
+    "debuff_dispellable",
     "farm_tool",
     "steroid"
    ]
@@ -2302,6 +2322,7 @@
   },
   "nevermore_dark_lord": {
    "tags": [
+    "amp_physical",
     "aoe",
     "bkb_piercing",
     "passive_value"
@@ -2529,6 +2550,7 @@
   },
   "pangolier_lucky_shot": {
    "tags": [
+    "amp_physical",
     "debuff_dispellable",
     "passive_value",
     "soft_cc"
@@ -2742,6 +2764,7 @@
   },
   "pugna_decrepify": {
    "tags": [
+    "amp_magical",
     "debuff_dispellable",
     "save_ally",
     "soft_cc"
@@ -2845,6 +2868,7 @@
   },
   "razor_eye_of_the_storm": {
    "tags": [
+    "amp_physical",
     "aoe",
     "bkb_piercing",
     "farm_tool",
@@ -2935,7 +2959,8 @@
   },
   "rubick_arcane_supremacy": {
    "tags": [
-    "passive_value"
+    "passive_value",
+    "spell_steroid"
    ],
    "roleMust": [
     2
@@ -3031,6 +3056,7 @@
   },
   "shadow_demon_disseminate": {
    "tags": [
+    "amp_all",
     "aoe"
    ]
   },
@@ -3183,6 +3209,7 @@
   },
   "skywrath_mage_ancient_seal": {
    "tags": [
+    "amp_magical",
     "debuff_dispellable",
     "soft_cc"
    ]
@@ -3209,6 +3236,7 @@
   },
   "slardar_amplify_damage": {
    "tags": [
+    "amp_physical",
     "bkb_piercing",
     "debuff_dispellable",
     "steroid"
@@ -3286,7 +3314,9 @@
    ]
   },
   "snapfire_lil_shredder": {
-   "tags": []
+   "tags": [
+    "amp_physical"
+   ]
   },
   "snapfire_mortimer_kisses": {
    "tags": [
@@ -3490,7 +3520,9 @@
   },
   "techies_land_mines": {
    "tags": [
+    "amp_magical",
     "aoe",
+    "debuff_dispellable",
     "mana_hungry",
     "nuke"
    ]
@@ -3527,6 +3559,7 @@
   },
   "templar_assassin_meld": {
    "tags": [
+    "amp_physical",
     "bkb_piercing",
     "steroid"
    ]
@@ -3594,13 +3627,13 @@
   "tidehunter_anchor_smash": {
    "tags": [
     "aoe",
-    "debuff_dispellable",
     "farm_tool",
     "waveclear"
    ]
   },
   "tidehunter_gush": {
    "tags": [
+    "amp_physical",
     "debuff_dispellable",
     "good_with_rearm",
     "nuke",
@@ -3918,6 +3951,7 @@
   },
   "vengefulspirit_wave_of_terror": {
    "tags": [
+    "amp_physical",
     "aoe",
     "debuff_dispellable",
     "soft_cc"
@@ -3972,6 +4006,7 @@
   },
   "viper_poison_attack": {
    "tags": [
+    "amp_magical",
     "debuff_dispellable",
     "good_shard",
     "soft_cc",
@@ -4054,6 +4089,7 @@
   },
   "warlock_fatal_bonds": {
    "tags": [
+    "amp_all",
     "aoe",
     "debuff_dispellable",
     "good_with_rearm",
@@ -4113,6 +4149,7 @@
   },
   "weaver_the_swarm": {
    "tags": [
+    "amp_physical",
     "aoe",
     "soft_cc"
    ]
@@ -4197,6 +4234,7 @@
   },
   "wisp_overcharge": {
    "tags": [
+    "spell_steroid",
     "steroid",
     "sustain_self"
    ]
@@ -4234,6 +4272,7 @@
   },
   "witch_doctor_maledict": {
    "tags": [
+    "amp_all",
     "aoe",
     "nuke"
    ]

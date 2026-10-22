@@ -94,7 +94,11 @@
       "reposition_enemy": "reposicionar inimigos",
       "reposition_ally": "reposicionar aliados",
       "dispel_self": "dissipação própria",
-      "dispel_ally": "dissipação de aliado"
+      "dispel_ally": "dissipação de aliado",
+      "spell_steroid": "steroid de magias",
+      "amp_physical": "amplificação de dano físico",
+      "amp_magical": "amplificação de dano mágico",
+      "amp_all": "amplificação de dano"
     },
     "roleCovers": "Cobre a falta de {{need}}",
     "rolePartial": "Cobre parcialmente a falta de {{need}}",
@@ -115,7 +119,9 @@
     "pointSinkConflict": "Compete por pontos de habilidade com {{names}} — uma das duas fica sem nível",
     "dispelDemand": "Valor de dissipação — o inimigo tem {{names}}",
     "purgeDemand": "Valor de purga — remove {{names}} do inimigo",
-    "dispelDemandPool": "Valor de dissipação — ainda há {{n}} debuffs dissipáveis no pool"
+    "dispelDemandPool": "Valor de dissipação — ainda há {{n}} debuffs dissipáveis no pool",
+    "ampDemand": "Amplificação de dano — multiplica {{names}} do seu time",
+    "spellSteroid": "Amplificação de magias — multiplica suas {{names}}"
   },
   "role": {
     "aria": "Sugestões por função",

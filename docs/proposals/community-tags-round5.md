@@ -15,7 +15,16 @@ reposition_enemy 26 (25 + Nether Strike's conditional), reposition_ally 14,
 knockback 5, dispel_self 19, dispel_ally 7, purge_enemy 8. The Lab's accepted
 `move_enemy` / `dispel` assignments are now SUPERSEDED_TAGS in the import script
 (ignored on import; the curated split wins) until the Lab catalog ships the new
-names. Steps 3-5 pending.
+names. Step 3 (amp split + team-amp demand boost, 31 seeded mappings from §3.2)
+shipped 2026-10-22; live counts amp_physical 17, amp_magical 5, amp_all 4,
+spell_steroid 6. DEVIATION from §2: spell_steroid is NOT a pos-2 nuke-need
+alternative — a needs boost fires on an UNCOVERED need and spell amp only
+matters once a nuke is owned, so the rule as written could never fire. It ships
+as an own-pick complement boost instead (0.06 × clamp(my nukes / 2, 0, 1),
+tooltip names my spells) plus the pos-2 accent. The amp family now also marks
+debuffs for the mechanical layer (debuff_dispellable 129 → 130: Rip Tide and
+Land Mines gained it; Magnetize, Overwhelming Odds and Anchor Smash lost a marker
+that had come from a CC tag the overrides remove). Steps 4-5 pending.
 Source: Tag Lab export version 2 (513 abilities, 30-tag vocab) vs the shipped
 version 1 (25 tags). The app currently DROPS the five new tags at load.
 

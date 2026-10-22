@@ -11,6 +11,9 @@ import {
   DISPEL_DEMAND_REF,
   DISPEL_DEMAND_POOL_WEIGHT,
   DISPEL_DEMAND_MAX,
+  AMP_TEAM_WEIGHT,
+  AMP_TEAM_DEMAND_REF,
+  SPELL_STEROID_DEMAND_REF,
 } from '@shared/constants/thresholds'
 import type {
   SynergyPartner,
@@ -1652,6 +1655,81 @@ describe('role-aware suggestions', () => {
 
     it('is role-independent: mode off and absent stay bit-identical', () => {
       expect(runWithPicks([['firestorm', 7]], 'off')).toEqual(runWithPicks([['firestorm', 7]]))
+    })
+  })
+
+  describe('team amp demand (round 5)', () => {
+    const ampTags: NonNullable<ScanProcessorDeps['tags']> = {
+      ...mockTags,
+      getTags(name: string) {
+        const table: Record<string, string[]> = {
+          ice_blast: ['amp_physical'],
+          blink: ['amp_magical', 'spell_steroid'],
+          firestorm: ['amp_all'],
+          fireball: ['steroid'],
+          laguna_blade: ['nuke'],
+        }
+        const tags = table[name]
+        return tags
+          ? (new Set(tags) as ReturnType<NonNullable<ScanProcessorDeps['tags']>['getTags']>)
+          : undefined
+      },
+    }
+    function runWithPicks(picks: Array<[string, number]>, roleMode?: string) {
+      const initial = processScanResults(makeInitialScanInput())
+      const state = initial.updatedState
+      state.mySelectedSpotDbId = 1
+      state.mySelectedSpotHeroOrder = 0
+      const base = roleMode === undefined ? mockDeps : depsWithRole(roleMode)
+      const input: ScanProcessorInput = {
+        rawResults: picks.map(([name, row], i) => makeScanResult(name, row, i + 1, false)),
+        isInitialScan: false,
+        state,
+        deps: { ...base, tags: ampTags },
+        modelCoords: [makeCoord(0), makeCoord(1)],
+        heroesCoords: [makeCoord(0), makeCoord(1)],
+        heroesParams: { width: 358, height: 170 },
+        targetResolution: '1920x1080',
+        scaleFactor: 1.0,
+      }
+      return processScanResults(input).overlayPayload
+    }
+    const slot = (payload: ReturnType<typeof runWithPicks>, name: string) =>
+      payload.scanData!.standard.find((s) => s.name === name)!
+
+    it('an amp is worth the team damage of its type: teammates count, enemies do not', () => {
+      const none = runWithPicks([], 'off')
+      const teammate = runWithPicks([['fireball', 3]], 'off')
+      const enemy = runWithPicks([['fireball', 8]], 'off')
+
+      expect(slot(none, 'ice_blast').ampDemand).toBeUndefined()
+      expect(slot(enemy, 'ice_blast').ampDemand).toBeUndefined()
+      const d = slot(teammate, 'ice_blast').ampDemand!
+      expect(d).toEqual({ kind: 'physical', amplifies: ['Fireball'] })
+      expect(slot(teammate, 'ice_blast').consolidatedScore - slot(none, 'ice_blast').consolidatedScore)
+        .toBeCloseTo(AMP_TEAM_WEIGHT * Math.min(1, 1 / AMP_TEAM_DEMAND_REF), 6)
+      // A steroid feeds physical and all, not magical.
+      expect(slot(teammate, 'firestorm').ampDemand).toEqual({ kind: 'all', amplifies: ['Fireball'] })
+      expect(slot(teammate, 'blink').ampDemand).toBeUndefined()
+    })
+
+    it('spell_steroid is worth MY OWN spells: own nuke counts, a teammate nuke only as team magic', () => {
+      const none = runWithPicks([], 'off')
+      const mine = runWithPicks([['laguna_blade', 0]], 'off')
+      const teammate = runWithPicks([['laguna_blade', 4]], 'off')
+
+      expect(slot(none, 'blink').ampDemand).toBeUndefined()
+      // Own nuke: the self amp (ref 2) outweighs the team magic amp (ref 3)
+      // on the same candidate, so the tooltip names my spell.
+      expect(slot(mine, 'blink').ampDemand).toEqual({ kind: 'spell', amplifies: ['Laguna Blade'] })
+      expect(slot(mine, 'blink').consolidatedScore - slot(none, 'blink').consolidatedScore)
+        .toBeCloseTo(AMP_TEAM_WEIGHT * Math.min(1, 1 / SPELL_STEROID_DEMAND_REF), 6)
+      // Teammate's nuke: only the team magic amp fires.
+      expect(slot(teammate, 'blink').ampDemand).toEqual({ kind: 'magical', amplifies: ['Laguna Blade'] })
+    })
+
+    it('is role-independent: mode off and absent stay bit-identical', () => {
+      expect(runWithPicks([['fireball', 3]], 'off')).toEqual(runWithPicks([['fireball', 3]]))
     })
   })
 

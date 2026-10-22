@@ -114,8 +114,8 @@ describe('parseAbilityTagsDataset', () => {
   })
 
   it('vocabulary matches the build script contract (25 tags)', () => {
-    expect(TAG_VOCABULARY).toHaveLength(34)
-    expect(new Set(TAG_VOCABULARY).size).toBe(34)
+    expect(TAG_VOCABULARY).toHaveLength(38)
+    expect(new Set(TAG_VOCABULARY).size).toBe(38)
   })
 })
 

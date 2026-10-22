@@ -85,6 +85,10 @@ export interface ScoredEntity {
    * (dispellable debuffs for 'dispel', steroids/summons for 'purge');
    * `poolCount`: unpicked dispellable debuffs still in the pool (dispel only). */
   dispelDemand?: { kind: 'dispel' | 'purge'; against: string[]; poolCount: number }
+  /** Round-5 amp demand — present means the boost was applied. `amplifies`:
+   * display names of the picks the amp multiplies — MY TEAM's for the three
+   * team amps, MY OWN spells for 'spell' (spell_steroid). */
+  ampDemand?: { kind: 'physical' | 'magical' | 'all' | 'spell'; amplifies: string[] }
   /** Display-only facts, set ONLY when the aghsMarkersEnabled setting is on
    * (the overlay has no settings access — payload-gated): strong Shard /
    * Scepter upgrade → corner marker + tooltip note. */

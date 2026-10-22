@@ -65,6 +65,13 @@ export const TAG_VOCABULARY = [
   'dispel_self',
   'dispel_ally',
   'purge_enemy',
+  // Round 5 step 3: the damage-amp split (community damage_amp). spell_steroid
+  // is SELF spell amp (the caster's steroid); the amp_* three are enemy
+  // debuffs the whole team benefits from, split by damage type.
+  'spell_steroid',
+  'amp_physical',
+  'amp_magical',
+  'amp_all',
 ] as const
 
 export type AbilityTag = (typeof TAG_VOCABULARY)[number]

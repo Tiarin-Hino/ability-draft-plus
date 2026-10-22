@@ -464,6 +464,36 @@ describe('computeRoleScore with tags (needs engine)', () => {
     expect(pos3.reasons).toContain('covers:initiation:reposition_enemy')
   })
 
+  it('round 5: spell_steroid is a pos-2 accent, never nuke coverage or a nuke alternative', () => {
+    const ctxPos2: RoleContext = { ...ctxPos5, effectivePositions: [2] }
+    const amp = computeRoleScore(axes(0.2), ctxPos2, {
+      candidateTags: tags('spell_steroid'),
+      myPickTags: [],
+    })!
+    const plain = computeRoleScore(axes(0.2), ctxPos2, { candidateTags: tags(), myPickTags: [] })!
+    expect(amp.reasons.some((r) => r.startsWith('covers:nuke'))).toBe(false)
+    expect(amp.delta).toBeGreaterThan(plain.delta)
+    // A drafted spell steroid does NOT count as nuke coverage: a nuke
+    // candidate still covers the open need.
+    const nukeAfterAmp = computeRoleScore(axes(0.2), ctxPos2, {
+      candidateTags: tags('nuke'),
+      myPickTags: [tags('spell_steroid')],
+    })!
+    expect(nukeAfterAmp.reasons).toContain('covers:nuke')
+  })
+
+  it('round 5: team amps carry the pos-4/5 accent like team_aura', () => {
+    const aura = computeRoleScore(axes(-0.4), ctxPos5, {
+      candidateTags: tags('team_aura'),
+      myPickTags: [],
+    })!
+    const amp = computeRoleScore(axes(-0.4), ctxPos5, {
+      candidateTags: tags('amp_physical'),
+      myPickTags: [],
+    })!
+    expect(amp.delta).toBeCloseTo(aura.delta, 6)
+  })
+
   it('untagged candidates skip needs and accents entirely', () => {
     const bare = computeRoleScore(axes(-0.3), ctxPos5)!
     const untagged = computeRoleScore(axes(-0.3), ctxPos5, {

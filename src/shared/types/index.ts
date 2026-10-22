@@ -218,6 +218,9 @@ export interface EnrichedScanSlot extends ScanResult {
    * holds that this dispel / purge answers, and how many dispellable debuffs
    * are still unpicked. */
   dispelDemand?: { kind: 'dispel' | 'purge'; against: string[]; poolCount: number }
+  /** Round-5 amp demand (boost applied, tooltip explains): the picks this amp
+   * multiplies — the team's for team amps, the user's own spells for 'spell'. */
+  ampDemand?: { kind: 'physical' | 'magical' | 'all' | 'spell'; amplifies: string[] }
   /** Strong Shard / Scepter upgrade markers — only present when the
    * aghsMarkersEnabled setting is on (payload-gated; pool slots only). */
   goodShard?: boolean

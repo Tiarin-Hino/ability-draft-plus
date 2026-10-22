@@ -94,7 +94,11 @@
       "reposition_enemy": "位移敌人",
       "reposition_ally": "位移队友",
       "dispel_self": "自我驱散",
-      "dispel_ally": "驱散队友"
+      "dispel_ally": "驱散队友",
+      "spell_steroid": "法术强化",
+      "amp_physical": "物理增伤",
+      "amp_magical": "魔法增伤",
+      "amp_all": "全伤害增幅"
     },
     "roleCovers": "补足你缺少的{{need}}",
     "rolePartial": "部分补足你缺少的{{need}}",
@@ -115,7 +119,9 @@
     "pointSinkConflict": "与 {{names}} 争夺技能点——其中一个会长期等级不足",
     "dispelDemand": "驱散价值 — 敌方持有 {{names}}",
     "purgeDemand": "净化价值 — 可清除敌方的 {{names}}",
-    "dispelDemandPool": "驱散价值 — 池中仍有 {{n}} 个可驱散的负面效果"
+    "dispelDemandPool": "驱散价值 — 池中仍有 {{n}} 个可驱散的负面效果",
+    "ampDemand": "增伤 — 放大己方的 {{names}}",
+    "spellSteroid": "法术强化 — 放大你的 {{names}}"
   },
   "role": {
     "aria": "分路推荐",
