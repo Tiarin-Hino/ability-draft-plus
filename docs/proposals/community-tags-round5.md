@@ -3,7 +3,13 @@
 Status: AGREED 2026-10-21 after two review rounds (152 + 55 items, every one
 settled; answers archived in `community-tags-round5-review1.json`, the item list in
 `community-tags-round5-items.json`, the review page at
-https://claude.ai/artifact/MeccZyzu1WiTbTQXhcTD8W). Nothing implemented yet.
+https://claude.ai/artifact/MeccZyzu1WiTbTQXhcTD8W). Implementation status:
+step 1 (board tag profile, `combos` / `viaUpgrade` / `with` parsing, mechanical
+debuff tags) shipped 2026-10-22 — measured on the live dataset:
+debuff_dispellable 129, debuff_strong_only 46, bkb_piercing 131 (the rule needs
+an enemy target OR a CC tag, so target-less DoTs such as Fury Swipes or Firestorm
+are missed until the amp_* family joins DEBUFF_MARKER_TAGS in step 3). Steps 2-5
+pending.
 Source: Tag Lab export version 2 (513 abilities, 30-tag vocab) vs the shipped
 version 1 (25 tags). The app currently DROPS the five new tags at load.
 

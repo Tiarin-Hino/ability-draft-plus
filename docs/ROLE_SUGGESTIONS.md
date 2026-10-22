@@ -9,7 +9,7 @@ play. Built 2026-08-28/30; design spec + research trail in the session artifacts
 | Source | What | Where it lands |
 |---|---|---|
 | Windrun `GET /ability-shifts` (undocumented; provider-approved 2026-08-28) | Per-ability AND per-hero-model (negative ids) average deviation of drafters' kills/deaths/KA/gpm/xpm/dmg/healing. Units undocumented — treated as ORDERING ONLY. | 7 nullable shift columns on `Abilities` and `Heroes`, applied by `windrun_id` during phase-1 scrape (non-fatal on failure, never wipes) |
-| `resources/data/ability_tags.json` | 513 abilities × 25-tag closed vocabulary (community-curated via the website Tag Lab) | Loaded once at startup (`ability-tags-service`); absent/invalid = tags feature off |
+| `resources/data/ability_tags.json` | 513 abilities × 28-tag closed vocabulary: 25 community-curated via the website Tag Lab + 3 MECHANICAL (`debuff_dispellable`, `debuff_strong_only`, `bkb_piercing`, built from dotaconstants in `assemble`, hidden from the Lab — `MECHANICAL_TAGS`). Entries may also carry `roleMust`, `roleAvoid`, `requires`, and the round-5 fields `combos` / `viaUpgrade` / `with` | Loaded once at startup (`ability-tags-service`); absent/invalid = tags feature off |
 | `resources/data/hero_meta.json` | Hero attack type, primary attribute, base stats + gains (dotaconstants) | Same loader; drives model fit + inert filter |
 
 Both JSON files are GENERATED — never hand-edit. Pipeline:
@@ -34,6 +34,21 @@ is still named tiarinhino.com — the old host 301-redirects there).
 
 Every layer defaults to a no-op: `roleMode: 'off'` (or missing shift data) is
 bit-identical to the pre-feature scorer — golden tests enforce this.
+
+**Round 5 (docs/proposals/community-tags-round5.md — agreed 2026-10-21, step 1
+shipped: plumbing only, no scoring change yet).** `core/domain/board-tag-
+profile.ts` computes ONE per-scan **board tag profile**: tag counts over my
+picks / my teammates' / the enemy five's / everything drafted / the unpicked
+pool (rows 0-4 vs 5-9, same split as role-scoring; team halves empty without
+My Spot). Conditional tags (`with: {tag: [abilities]}`) resolve per OWNER
+there (a pick's tag counts only if the same player drafted a dependency; a
+pool ability's only if the USER holds it); upgrade-granted tags (`viaUpgrade:
+{tag: shard|scepter}`) count at full value. The pool gates (`requires` tag:
+entries, soft-CC suppression) already read the profile; the dispel-demand,
+team-amp and deny verdicts of steps 2-4 will too. `combos: [...]` (curated
+deny partners, directional, may name `model:<hero>`) is parsed and exposed
+(`getCombos`) but unused until step 4. All three new lookup methods are
+optional on `AbilityTagsLookup` so older stubs keep compiling.
 
 Key mechanics in `core/domain/role-scoring.ts`:
 

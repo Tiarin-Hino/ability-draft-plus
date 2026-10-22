@@ -27,6 +27,11 @@
   "good_aghanims",
   "skill_point_sink"
  ],
+ "mechanicalVocab": [
+  "bkb_piercing",
+  "debuff_dispellable",
+  "debuff_strong_only"
+ ],
  "heroVocab": [
   "rc_talents",
   "caster_talents",
@@ -60,6 +65,7 @@
   },
   "abaddon_frostmourne": {
    "tags": [
+    "debuff_dispellable",
     "passive_value",
     "soft_cc",
     "steroid"
@@ -120,6 +126,7 @@
   "alchemist_unstable_concoction": {
    "tags": [
     "channeled",
+    "debuff_strong_only",
     "hard_cc",
     "initiation",
     "nuke",
@@ -128,12 +135,14 @@
   },
   "ancient_apparition_chilling_touch": {
    "tags": [
+    "debuff_dispellable",
     "soft_cc",
     "steroid"
    ]
   },
   "ancient_apparition_cold_feet": {
    "tags": [
+    "debuff_dispellable",
     "hard_cc",
     "setup_cc"
    ]
@@ -141,6 +150,7 @@
   "ancient_apparition_ice_blast": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "mana_hungry",
     "nuke",
     "setup_cc",
@@ -187,12 +197,14 @@
   },
   "arc_warden_flux": {
    "tags": [
+    "debuff_dispellable",
     "soft_cc"
    ]
   },
   "arc_warden_magnetic_field": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "save_ally",
     "steroid"
    ]
@@ -207,12 +219,14 @@
   },
   "axe_battle_hunger": {
    "tags": [
+    "debuff_dispellable",
     "soft_cc"
    ]
   },
   "axe_berserkers_call": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "good_shard",
     "hard_cc",
     "initiation"
@@ -221,17 +235,21 @@
   "axe_counter_helix": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "farm_tool",
     "passive_value"
    ]
   },
   "axe_culling_blade": {
    "tags": [
+    "bkb_piercing",
+    "debuff_dispellable",
     "mana_hungry"
    ]
   },
   "bane_brain_sap": {
    "tags": [
+    "bkb_piercing",
     "mana_hungry",
     "nuke",
     "sustain_self"
@@ -239,12 +257,15 @@
   },
   "bane_enfeeble": {
    "tags": [
+    "debuff_dispellable",
     "soft_cc"
    ]
   },
   "bane_fiends_grip": {
    "tags": [
+    "bkb_piercing",
     "channeled",
+    "debuff_strong_only",
     "hard_cc",
     "initiation",
     "mana_hungry"
@@ -256,6 +277,7 @@
   },
   "bane_nightmare": {
    "tags": [
+    "debuff_dispellable",
     "hard_cc",
     "mana_hungry",
     "save_ally",
@@ -273,6 +295,7 @@
   "batrider_flamebreak": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "nuke",
     "setup_cc",
     "soft_cc"
@@ -280,6 +303,8 @@
   },
   "batrider_flaming_lasso": {
    "tags": [
+    "bkb_piercing",
+    "debuff_strong_only",
     "hard_cc",
     "initiation",
     "mana_hungry"
@@ -288,11 +313,14 @@
   "batrider_sticky_napalm": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "soft_cc"
    ]
   },
   "beastmaster_primal_roar": {
    "tags": [
+    "bkb_piercing",
+    "debuff_strong_only",
     "hard_cc",
     "initiation",
     "mana_hungry",
@@ -316,6 +344,7 @@
   "beastmaster_wild_axes": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "farm_tool",
     "nuke",
     "waveclear"
@@ -324,6 +353,7 @@
   "bloodseeker_blood_bath": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "nuke",
     "setup_cc",
     "soft_cc",
@@ -332,11 +362,13 @@
   },
   "bloodseeker_bloodrage": {
    "tags": [
+    "bkb_piercing",
     "steroid"
    ]
   },
   "bloodseeker_rupture": {
    "tags": [
+    "bkb_piercing",
     "initiation",
     "mana_hungry",
     "nuke"
@@ -344,12 +376,14 @@
   },
   "bloodseeker_thirst": {
    "tags": [
+    "bkb_piercing",
     "mobility",
     "passive_value"
    ]
   },
   "bounty_hunter_jinada": {
    "tags": [
+    "bkb_piercing",
     "passive_value",
     "skill_point_sink",
     "steroid"
@@ -365,6 +399,8 @@
   },
   "bounty_hunter_track": {
    "tags": [
+    "bkb_piercing",
+    "debuff_dispellable",
     "soft_cc"
    ]
   },
@@ -378,6 +414,7 @@
   "brewmaster_cinder_brew": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "soft_cc"
    ]
   },
@@ -400,6 +437,7 @@
   "brewmaster_thunder_clap": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "nuke",
     "soft_cc"
    ]
@@ -413,11 +451,13 @@
   "bristleback_quill_spray": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "farm_tool"
    ]
   },
   "bristleback_viscous_nasal_goo": {
    "tags": [
+    "debuff_dispellable",
     "soft_cc"
    ]
   },
@@ -429,6 +469,7 @@
   },
   "broodmother_incapacitating_bite": {
    "tags": [
+    "debuff_dispellable",
     "passive_value",
     "soft_cc",
     "steroid"
@@ -443,6 +484,7 @@
   },
   "broodmother_spawn_spiderlings": {
    "tags": [
+    "debuff_dispellable",
     "farm_tool",
     "nuke",
     "soft_cc",
@@ -467,12 +509,14 @@
   "centaur_hoof_stomp": {
    "tags": [
     "aoe",
+    "debuff_strong_only",
     "hard_cc",
     "initiation"
    ]
   },
   "centaur_return": {
    "tags": [
+    "bkb_piercing",
     "farm_tool",
     "passive_value"
    ]
@@ -490,11 +534,13 @@
   },
   "chaos_knight_chaos_bolt": {
    "tags": [
+    "debuff_strong_only",
     "hard_cc"
    ]
   },
   "chaos_knight_chaos_strike": {
    "tags": [
+    "bkb_piercing",
     "passive_value",
     "steroid",
     "sustain_self"
@@ -509,18 +555,21 @@
   },
   "chaos_knight_reality_rift": {
    "tags": [
+    "debuff_dispellable",
     "initiation",
     "mobility"
    ]
   },
   "chen_divine_favor": {
    "tags": [
+    "bkb_piercing",
     "passive_value",
     "team_aura"
    ]
   },
   "chen_hand_of_god": {
    "tags": [
+    "bkb_piercing",
     "mana_hungry",
     "save_ally",
     "sustain_self"
@@ -528,6 +577,7 @@
   },
   "chen_holy_persuasion": {
    "tags": [
+    "bkb_piercing",
     "mana_hungry",
     "skill_point_sink",
     "summon"
@@ -535,6 +585,7 @@
   },
   "chen_penitence": {
    "tags": [
+    "debuff_dispellable",
     "soft_cc",
     "steroid"
    ]
@@ -547,11 +598,14 @@
   },
   "clinkz_searing_arrows": {
    "tags": [
+    "bkb_piercing",
     "steroid"
    ]
   },
   "clinkz_strafe": {
    "tags": [
+    "bkb_piercing",
+    "debuff_dispellable",
     "steroid"
    ]
   },
@@ -565,6 +619,7 @@
   "crystal_maiden_crystal_nova": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "mana_hungry",
     "nuke",
     "soft_cc",
@@ -581,6 +636,7 @@
   },
   "crystal_maiden_frostbite": {
    "tags": [
+    "debuff_dispellable",
     "farm_tool",
     "mana_hungry",
     "nuke",
@@ -594,12 +650,14 @@
   "dark_seer_ion_shell": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "farm_tool",
     "skill_point_sink"
    ]
   },
   "dark_seer_surge": {
    "tags": [
+    "bkb_piercing",
     "initiation",
     "mobility",
     "save_ally"
@@ -608,6 +666,7 @@
   "dark_seer_vacuum": {
    "tags": [
     "aoe",
+    "debuff_strong_only",
     "hard_cc",
     "initiation",
     "mana_hungry",
@@ -617,6 +676,7 @@
   "dark_seer_wall_of_replica": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "initiation",
     "mana_hungry",
     "soft_cc",
@@ -626,6 +686,7 @@
   "dark_willow_bramble_maze": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "mana_hungry",
     "setup_cc"
    ]
@@ -633,6 +694,7 @@
   "dark_willow_cursed_crown": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "hard_cc",
     "setup_cc"
    ]
@@ -646,6 +708,7 @@
   "dark_willow_terrorize": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "mana_hungry",
     "setup_cc",
     "soft_cc",
@@ -655,6 +718,7 @@
   "dawnbreaker_celestial_hammer": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "initiation",
     "mobility",
     "nuke",
@@ -664,6 +728,7 @@
   "dawnbreaker_fire_wreath": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "farm_tool",
     "hard_cc",
     "initiation"
@@ -672,6 +737,7 @@
   "dawnbreaker_luminosity": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "passive_value",
     "steroid",
     "sustain_self"
@@ -680,6 +746,7 @@
   "dawnbreaker_solar_guardian": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "channeled",
     "good_aghanims",
     "hard_cc",
@@ -697,12 +764,14 @@
   "dazzle_poison_touch": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "soft_cc"
    ]
   },
   "dazzle_shadow_wave": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "nuke",
     "save_ally",
     "sustain_self"
@@ -710,6 +779,7 @@
   },
   "dazzle_shallow_grave": {
    "tags": [
+    "bkb_piercing",
     "save_ally"
    ]
   },
@@ -724,6 +794,7 @@
   "death_prophet_exorcism": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "mana_hungry",
     "sustain_self",
     "teamfight_ult"
@@ -732,6 +803,7 @@
   "death_prophet_silence": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "soft_cc"
    ]
   },
@@ -769,6 +841,7 @@
   },
   "disruptor_thunder_strike": {
    "tags": [
+    "debuff_dispellable",
     "nuke",
     "soft_cc"
    ]
@@ -783,6 +856,7 @@
   },
   "doom_bringer_doom": {
    "tags": [
+    "bkb_piercing",
     "hard_cc",
     "initiation",
     "mana_hungry",
@@ -791,6 +865,7 @@
   },
   "doom_bringer_infernal_blade": {
    "tags": [
+    "debuff_dispellable",
     "hard_cc"
    ]
   },
@@ -805,12 +880,14 @@
   "dragon_knight_breathe_fire": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "nuke",
     "waveclear"
    ]
   },
   "dragon_knight_dragon_tail": {
    "tags": [
+    "debuff_strong_only",
     "hard_cc",
     "initiation"
    ]
@@ -818,6 +895,7 @@
   "dragon_knight_elder_dragon_form": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "farm_tool",
     "good_aghanims",
     "grants_ranged",
@@ -833,12 +911,14 @@
   },
   "drow_ranger_frost_arrows": {
    "tags": [
+    "debuff_dispellable",
     "soft_cc",
     "steroid"
    ]
   },
   "drow_ranger_marksmanship": {
    "tags": [
+    "bkb_piercing",
     "passive_value",
     "ranged_only",
     "steroid"
@@ -850,6 +930,7 @@
   "drow_ranger_multishot": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "channeled",
     "farm_tool",
     "nuke",
@@ -859,12 +940,14 @@
   "drow_ranger_wave_of_silence": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "soft_cc"
    ]
   },
   "earth_spirit_boulder_smash": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "nuke",
     "save_ally",
     "soft_cc"
@@ -880,6 +963,8 @@
   "earth_spirit_magnetize": {
    "tags": [
     "aoe",
+    "bkb_piercing",
+    "debuff_dispellable",
     "nuke",
     "teamfight_ult"
    ]
@@ -887,6 +972,7 @@
   "earth_spirit_rolling_boulder": {
    "tags": [
     "aoe",
+    "debuff_strong_only",
     "hard_cc",
     "initiation",
     "mobility"
@@ -895,6 +981,7 @@
   "earthshaker_aftershock": {
    "tags": [
     "aoe",
+    "debuff_strong_only",
     "hard_cc",
     "initiation",
     "passive_value"
@@ -909,12 +996,14 @@
   },
   "earthshaker_enchant_totem": {
    "tags": [
+    "debuff_dispellable",
     "steroid"
    ]
   },
   "earthshaker_fissure": {
    "tags": [
     "aoe",
+    "debuff_strong_only",
     "hard_cc",
     "initiation",
     "nuke"
@@ -922,12 +1011,15 @@
   },
   "elder_titan_ancestral_spirit": {
    "tags": [
+    "bkb_piercing",
     "steroid"
    ]
   },
   "elder_titan_earth_splitter": {
    "tags": [
     "aoe",
+    "bkb_piercing",
+    "debuff_dispellable",
     "mana_hungry",
     "nuke",
     "setup_cc",
@@ -939,6 +1031,7 @@
    "tags": [
     "aoe",
     "channeled",
+    "debuff_strong_only",
     "hard_cc",
     "setup_cc"
    ]
@@ -967,18 +1060,21 @@
   "ember_spirit_searing_chains": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "soft_cc"
    ]
   },
   "ember_spirit_sleight_of_fist": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "farm_tool",
     "waveclear"
    ]
   },
   "enchantress_enchant": {
    "tags": [
+    "debuff_dispellable",
     "soft_cc",
     "summon"
    ]
@@ -992,12 +1088,15 @@
   "enchantress_natures_attendants": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "save_ally",
     "sustain_self"
    ]
   },
   "enchantress_untouchable": {
    "tags": [
+    "bkb_piercing",
+    "debuff_dispellable",
     "passive_value",
     "soft_cc",
     "sustain_self"
@@ -1006,6 +1105,7 @@
   "enigma_black_hole": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "channeled",
     "hard_cc",
     "initiation",
@@ -1024,18 +1124,21 @@
   },
   "enigma_malefice": {
    "tags": [
+    "debuff_dispellable",
     "hard_cc",
     "setup_cc"
    ]
   },
   "enigma_midnight_pulse": {
    "tags": [
-    "aoe"
+    "aoe",
+    "bkb_piercing"
    ]
   },
   "faceless_void_chronosphere": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "hard_cc",
     "initiation",
     "mana_hungry",
@@ -1045,11 +1148,14 @@
   "faceless_void_time_dilation": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "soft_cc"
    ]
   },
   "faceless_void_time_lock": {
    "tags": [
+    "bkb_piercing",
+    "debuff_strong_only",
     "hard_cc",
     "passive_value",
     "steroid"
@@ -1057,6 +1163,7 @@
   },
   "faceless_void_time_walk": {
    "tags": [
+    "bkb_piercing",
     "initiation",
     "mobility",
     "sustain_self"
@@ -1082,6 +1189,7 @@
   },
   "furion_wrath_of_nature": {
    "tags": [
+    "debuff_dispellable",
     "farm_tool",
     "mana_hungry",
     "nuke",
@@ -1091,6 +1199,7 @@
   "grimstroke_dark_artistry": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "nuke",
     "soft_cc",
     "waveclear"
@@ -1103,6 +1212,7 @@
   },
   "grimstroke_soul_chain": {
    "tags": [
+    "bkb_piercing",
     "mana_hungry",
     "setup_cc",
     "soft_cc"
@@ -1120,6 +1230,7 @@
   "gyrocopter_call_down": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "mana_hungry",
     "nuke",
     "soft_cc",
@@ -1128,6 +1239,7 @@
   },
   "gyrocopter_flak_cannon": {
    "tags": [
+    "bkb_piercing",
     "farm_tool",
     "steroid"
    ],
@@ -1138,6 +1250,7 @@
   },
   "gyrocopter_homing_missile": {
    "tags": [
+    "debuff_strong_only",
     "hard_cc",
     "initiation",
     "mana_hungry",
@@ -1160,6 +1273,7 @@
   "hoodwink_bushwhack": {
    "tags": [
     "aoe",
+    "debuff_strong_only",
     "hard_cc",
     "initiation",
     "setup_cc"
@@ -1172,6 +1286,7 @@
   },
   "hoodwink_sharpshooter": {
    "tags": [
+    "debuff_dispellable",
     "mana_hungry",
     "nuke",
     "soft_cc"
@@ -1198,18 +1313,22 @@
   "huskar_inner_fire": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "nuke",
     "soft_cc"
    ]
   },
   "huskar_life_break": {
    "tags": [
+    "bkb_piercing",
+    "debuff_dispellable",
     "initiation",
     "nuke"
    ]
   },
   "invoker_alacrity_ad": {
    "tags": [
+    "bkb_piercing",
     "steroid"
    ]
   },
@@ -1224,6 +1343,7 @@
   },
   "invoker_cold_snap_ad": {
    "tags": [
+    "debuff_dispellable",
     "hard_cc",
     "setup_cc"
    ]
@@ -1269,6 +1389,7 @@
   "invoker_sun_strike_ad": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "good_with_rearm",
     "mana_hungry",
     "nuke"
@@ -1277,6 +1398,7 @@
   "invoker_tornado_ad": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "good_with_rearm",
     "hard_cc",
     "initiation",
@@ -1286,6 +1408,7 @@
   "jakiro_dual_breath": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "mana_hungry",
     "nuke",
     "soft_cc",
@@ -1295,6 +1418,7 @@
   "jakiro_ice_path": {
    "tags": [
     "aoe",
+    "debuff_strong_only",
     "hard_cc",
     "setup_cc"
    ]
@@ -1302,11 +1426,13 @@
   "jakiro_liquid_fire": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "soft_cc"
    ]
   },
   "jakiro_liquid_ice": {
    "tags": [
+    "debuff_dispellable",
     "soft_cc"
    ]
   },
@@ -1334,6 +1460,7 @@
   "juggernaut_healing_ward": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "save_ally",
     "sustain_self",
     "team_aura"
@@ -1341,6 +1468,7 @@
   },
   "juggernaut_omni_slash": {
    "tags": [
+    "bkb_piercing",
     "initiation",
     "mana_hungry",
     "steroid"
@@ -1349,6 +1477,7 @@
   "keeper_of_the_light_blinding_light": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "mana_hungry",
     "nuke",
     "soft_cc"
@@ -1356,6 +1485,7 @@
   },
   "keeper_of_the_light_chakra_magic": {
    "tags": [
+    "bkb_piercing",
     "save_ally",
     "sustain_self"
    ]
@@ -1397,12 +1527,15 @@
   },
   "kez_kazurai_katana": {
    "tags": [
+    "bkb_piercing",
+    "debuff_dispellable",
     "steroid"
    ]
   },
   "kez_raptor_dance": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "mana_hungry",
     "sustain_self"
    ]
@@ -1445,6 +1578,7 @@
   "kunkka_torrent": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "good_with_rearm",
     "hard_cc",
     "setup_cc",
@@ -1485,6 +1619,7 @@
   },
   "legion_commander_duel": {
    "tags": [
+    "bkb_piercing",
     "good_aghanims",
     "hard_cc",
     "initiation",
@@ -1501,6 +1636,7 @@
   "legion_commander_overwhelming_odds": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "nuke"
    ]
   },
@@ -1514,6 +1650,7 @@
   "leshrac_diabolic_edict": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "mana_hungry",
     "nuke"
    ]
@@ -1521,6 +1658,7 @@
   "leshrac_lightning_storm": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "nuke",
     "soft_cc"
    ]
@@ -1535,6 +1673,7 @@
   "leshrac_split_earth": {
    "tags": [
     "aoe",
+    "debuff_strong_only",
     "good_with_rearm",
     "hard_cc",
     "setup_cc"
@@ -1543,6 +1682,7 @@
   "lich_chain_frost": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "mana_hungry",
     "nuke",
     "soft_cc",
@@ -1552,6 +1692,7 @@
   "lich_frost_nova": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "nuke",
     "skill_point_sink",
     "soft_cc",
@@ -1569,11 +1710,13 @@
   "lich_sinister_gaze": {
    "tags": [
     "channeled",
+    "debuff_dispellable",
     "hard_cc"
    ]
   },
   "life_stealer_feast": {
    "tags": [
+    "bkb_piercing",
     "passive_value",
     "steroid",
     "sustain_self"
@@ -1582,6 +1725,7 @@
   "life_stealer_infest": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "mana_hungry",
     "nuke",
     "save_ally",
@@ -1590,6 +1734,7 @@
   },
   "life_stealer_open_wounds": {
    "tags": [
+    "debuff_dispellable",
     "soft_cc",
     "sustain_self"
    ]
@@ -1621,6 +1766,7 @@
   "lina_light_strike_array": {
    "tags": [
     "aoe",
+    "debuff_strong_only",
     "hard_cc",
     "nuke",
     "setup_cc"
@@ -1637,6 +1783,7 @@
   "lion_impale": {
    "tags": [
     "aoe",
+    "debuff_strong_only",
     "hard_cc",
     "initiation",
     "mana_hungry",
@@ -1656,6 +1803,7 @@
   },
   "lion_voodoo": {
    "tags": [
+    "debuff_strong_only",
     "good_with_rearm",
     "hard_cc",
     "initiation",
@@ -1669,6 +1817,7 @@
   "lone_druid_entangle": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "setup_cc",
     "soft_cc"
    ]
@@ -1676,6 +1825,7 @@
   "lone_druid_savage_roar": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "soft_cc"
    ]
   },
@@ -1703,6 +1853,7 @@
   },
   "luna_lucent_beam": {
    "tags": [
+    "debuff_strong_only",
     "nuke",
     "skill_point_sink",
     "soft_cc"
@@ -1711,6 +1862,7 @@
   "luna_lunar_orbit": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "farm_tool",
     "good_shard",
     "sustain_self"
@@ -1718,6 +1870,7 @@
   },
   "luna_moon_glaive": {
    "tags": [
+    "bkb_piercing",
     "farm_tool",
     "passive_value",
     "steroid"
@@ -1740,6 +1893,7 @@
   "lycan_howl": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "soft_cc"
    ]
   },
@@ -1758,6 +1912,7 @@
   },
   "magnataur_empower": {
    "tags": [
+    "bkb_piercing",
     "farm_tool",
     "steroid"
    ],
@@ -1768,6 +1923,8 @@
   "magnataur_reverse_polarity": {
    "tags": [
     "aoe",
+    "bkb_piercing",
+    "debuff_strong_only",
     "hard_cc",
     "initiation",
     "mana_hungry",
@@ -1786,6 +1943,7 @@
   "magnataur_skewer": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "hard_cc",
     "initiation",
     "mobility",
@@ -1794,6 +1952,7 @@
   },
   "marci_bodyguard": {
    "tags": [
+    "bkb_piercing",
     "passive_value",
     "steroid",
     "sustain_self"
@@ -1811,6 +1970,7 @@
   "marci_grapple": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "nuke",
     "save_ally",
     "soft_cc"
@@ -1850,6 +2010,7 @@
   "mars_spear": {
    "tags": [
     "aoe",
+    "debuff_strong_only",
     "hard_cc",
     "initiation",
     "nuke",
@@ -1875,6 +2036,7 @@
   "medusa_split_shot": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "farm_tool",
     "steroid"
    ]
@@ -1882,6 +2044,7 @@
   "medusa_stone_gaze": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "hard_cc",
     "mana_hungry",
     "teamfight_ult"
@@ -1899,7 +2062,9 @@
    ]
   },
   "meepo_ransack": {
-   "tags": [],
+   "tags": [
+    "bkb_piercing"
+   ],
    "roleAvoid": [
     1,
     2,
@@ -1910,6 +2075,7 @@
   },
   "mirana_arrow": {
    "tags": [
+    "debuff_strong_only",
     "good_with_rearm",
     "hard_cc",
     "initiation",
@@ -1919,6 +2085,7 @@
   },
   "mirana_invis": {
    "tags": [
+    "bkb_piercing",
     "initiation",
     "mobility",
     "save_ally"
@@ -1941,6 +2108,7 @@
   "monkey_king_boundless_strike": {
    "tags": [
     "aoe",
+    "debuff_strong_only",
     "hard_cc",
     "initiation",
     "mobility",
@@ -1949,6 +2117,7 @@
   },
   "monkey_king_jingu_mastery": {
    "tags": [
+    "bkb_piercing",
     "passive_value",
     "steroid",
     "sustain_self"
@@ -1985,6 +2154,7 @@
   "muerta_dead_shot": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "mana_hungry",
     "nuke",
     "soft_cc"
@@ -2006,6 +2176,7 @@
   "muerta_the_calling": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "good_with_rearm",
     "mana_hungry",
     "soft_cc"
@@ -2013,6 +2184,7 @@
   },
   "naga_siren_ensnare": {
    "tags": [
+    "debuff_dispellable",
     "soft_cc"
    ]
   },
@@ -2052,6 +2224,7 @@
   "necrolyte_ghost_shroud": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "soft_cc",
     "sustain_self"
    ]
@@ -2059,6 +2232,7 @@
   "necrolyte_heartstopper_aura": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "good_aghanims",
     "passive_value"
    ],
@@ -2077,6 +2251,7 @@
   "nevermore_dark_lord": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "passive_value"
    ]
   },
@@ -2088,6 +2263,7 @@
   "nevermore_requiem": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "mana_hungry",
     "nuke",
     "soft_cc",
@@ -2127,6 +2303,7 @@
   },
   "night_stalker_void": {
    "tags": [
+    "debuff_dispellable",
     "nuke",
     "soft_cc"
    ]
@@ -2134,6 +2311,7 @@
   "nyx_assassin_impale": {
    "tags": [
     "aoe",
+    "debuff_strong_only",
     "hard_cc",
     "initiation",
     "nuke"
@@ -2156,6 +2334,7 @@
   },
   "nyx_assassin_vendetta": {
    "tags": [
+    "bkb_piercing",
     "initiation",
     "mana_hungry",
     "mobility"
@@ -2192,17 +2371,20 @@
   },
   "ogre_magi_bloodlust": {
    "tags": [
+    "bkb_piercing",
     "steroid"
    ]
   },
   "ogre_magi_fireblast": {
    "tags": [
+    "debuff_strong_only",
     "hard_cc"
    ]
   },
   "ogre_magi_ignite": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "nuke",
     "soft_cc"
    ]
@@ -2210,6 +2392,7 @@
   "omniknight_guardian_angel": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "mana_hungry",
     "save_ally",
     "teamfight_ult"
@@ -2217,11 +2400,14 @@
   },
   "omniknight_hammer_of_purity": {
    "tags": [
+    "bkb_piercing",
+    "debuff_dispellable",
     "steroid"
    ]
   },
   "omniknight_martyr": {
    "tags": [
+    "bkb_piercing",
     "save_ally",
     "sustain_self"
    ]
@@ -2229,6 +2415,7 @@
   "omniknight_purification": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "nuke",
     "save_ally",
     "sustain_self"
@@ -2236,6 +2423,7 @@
   },
   "oracle_false_promise": {
    "tags": [
+    "bkb_piercing",
     "mana_hungry",
     "save_ally",
     "sustain_self"
@@ -2243,6 +2431,7 @@
   },
   "oracle_fates_edict": {
    "tags": [
+    "debuff_dispellable",
     "save_ally",
     "soft_cc"
    ]
@@ -2251,6 +2440,7 @@
    "tags": [
     "aoe",
     "channeled",
+    "debuff_dispellable",
     "nuke",
     "save_ally",
     "setup_cc",
@@ -2263,6 +2453,7 @@
   },
   "oracle_purifying_flames": {
    "tags": [
+    "debuff_dispellable",
     "nuke",
     "save_ally",
     "sustain_self"
@@ -2280,6 +2471,7 @@
   },
   "pangolier_lucky_shot": {
    "tags": [
+    "debuff_dispellable",
     "passive_value",
     "soft_cc"
    ]
@@ -2294,6 +2486,7 @@
   "pangolier_swashbuckle": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "initiation",
     "mobility",
     "soft_cc"
@@ -2301,6 +2494,7 @@
   },
   "phantom_assassin_coup_de_grace": {
    "tags": [
+    "bkb_piercing",
     "passive_value",
     "steroid"
    ]
@@ -2313,6 +2507,7 @@
   },
   "phantom_assassin_phantom_strike": {
    "tags": [
+    "bkb_piercing",
     "initiation",
     "mobility",
     "steroid"
@@ -2320,6 +2515,7 @@
   },
   "phantom_assassin_stifling_dagger": {
    "tags": [
+    "debuff_dispellable",
     "nuke",
     "soft_cc"
    ]
@@ -2343,6 +2539,7 @@
   },
   "phantom_lancer_spirit_lance": {
    "tags": [
+    "debuff_dispellable",
     "nuke",
     "soft_cc"
    ]
@@ -2350,6 +2547,7 @@
   "phoenix_fire_spirits": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "farm_tool",
     "skill_point_sink",
     "soft_cc",
@@ -2359,6 +2557,7 @@
   "phoenix_icarus_dive": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "initiation",
     "mobility",
     "soft_cc"
@@ -2373,6 +2572,7 @@
   "phoenix_supernova": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "hard_cc",
     "mana_hungry",
     "setup_cc",
@@ -2383,6 +2583,7 @@
   "primal_beast_onslaught": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "hard_cc",
     "initiation",
     "mobility"
@@ -2391,6 +2592,7 @@
   "primal_beast_pulverize": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "channeled",
     "hard_cc",
     "teamfight_ult",
@@ -2439,6 +2641,7 @@
   "puck_waning_rift": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "mobility",
     "nuke",
     "soft_cc"
@@ -2446,7 +2649,9 @@
   },
   "pudge_dismember": {
    "tags": [
+    "bkb_piercing",
     "channeled",
+    "debuff_strong_only",
     "hard_cc",
     "initiation",
     "mana_hungry",
@@ -2460,6 +2665,7 @@
   },
   "pudge_meat_hook": {
    "tags": [
+    "bkb_piercing",
     "hard_cc",
     "initiation",
     "nuke"
@@ -2473,6 +2679,7 @@
   },
   "pugna_decrepify": {
    "tags": [
+    "debuff_dispellable",
     "save_ally",
     "soft_cc"
    ]
@@ -2523,12 +2730,14 @@
   },
   "queenofpain_shadow_strike": {
    "tags": [
+    "debuff_dispellable",
     "soft_cc"
    ]
   },
   "queenofpain_sonic_wave": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "mana_hungry",
     "nuke",
     "teamfight_ult"
@@ -2543,6 +2752,8 @@
   "rattletrap_hookshot": {
    "tags": [
     "aoe",
+    "bkb_piercing",
+    "debuff_strong_only",
     "hard_cc",
     "initiation",
     "mana_hungry",
@@ -2552,6 +2763,7 @@
   "rattletrap_power_cogs": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "initiation",
     "nuke",
     "setup_cc",
@@ -2569,6 +2781,7 @@
   "razor_eye_of_the_storm": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "farm_tool",
     "mana_hungry",
     "teamfight_ult"
@@ -2577,6 +2790,7 @@
   "razor_plasma_field": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "nuke",
     "soft_cc",
     "waveclear"
@@ -2584,6 +2798,7 @@
   },
   "razor_static_link": {
    "tags": [
+    "bkb_piercing",
     "steroid"
    ]
   },
@@ -2596,12 +2811,14 @@
   },
   "riki_backstab": {
    "tags": [
+    "bkb_piercing",
     "initiation",
     "passive_value"
    ]
   },
   "riki_blink_strike": {
    "tags": [
+    "bkb_piercing",
     "initiation",
     "mobility",
     "soft_cc"
@@ -2617,11 +2834,13 @@
   "riki_tricks_of_the_trade": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "channeled"
    ]
   },
   "ringmaster_impalement": {
    "tags": [
+    "debuff_dispellable",
     "nuke",
     "soft_cc"
    ]
@@ -2630,6 +2849,7 @@
    "tags": [
     "aoe",
     "channeled",
+    "debuff_dispellable",
     "hard_cc",
     "nuke"
    ]
@@ -2659,6 +2879,7 @@
   "rubick_fade_bolt": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "mana_hungry",
     "nuke",
     "waveclear"
@@ -2667,6 +2888,7 @@
   "rubick_telekinesis": {
    "tags": [
     "aoe",
+    "debuff_strong_only",
     "hard_cc",
     "setup_cc"
    ]
@@ -2674,6 +2896,7 @@
   "sandking_burrowstrike": {
    "tags": [
     "aoe",
+    "debuff_strong_only",
     "hard_cc",
     "initiation",
     "mobility",
@@ -2713,6 +2936,7 @@
   },
   "shadow_demon_demonic_purge": {
    "tags": [
+    "bkb_piercing",
     "mana_hungry",
     "nuke",
     "soft_cc"
@@ -2753,6 +2977,7 @@
   "shadow_shaman_mass_serpent_ward": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "mana_hungry",
     "summon"
    ]
@@ -2760,6 +2985,7 @@
   "shadow_shaman_shackles": {
    "tags": [
     "channeled",
+    "debuff_strong_only",
     "hard_cc",
     "initiation",
     "mana_hungry",
@@ -2772,6 +2998,7 @@
   },
   "shadow_shaman_voodoo": {
    "tags": [
+    "debuff_strong_only",
     "good_with_rearm",
     "hard_cc",
     "initiation",
@@ -2816,6 +3043,7 @@
   "silencer_curse_of_the_silent": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "mana_hungry",
     "nuke",
     "soft_cc"
@@ -2830,6 +3058,8 @@
   "silencer_global_silence": {
    "tags": [
     "aoe",
+    "bkb_piercing",
+    "debuff_dispellable",
     "mana_hungry",
     "soft_cc",
     "teamfight_ult"
@@ -2837,18 +3067,21 @@
   },
   "silencer_last_word": {
    "tags": [
+    "debuff_dispellable",
     "nuke",
     "soft_cc"
    ]
   },
   "skeleton_king_bone_guard": {
    "tags": [
+    "bkb_piercing",
     "farm_tool",
     "summon"
    ]
   },
   "skeleton_king_hellfire_blast": {
    "tags": [
+    "debuff_strong_only",
     "hard_cc",
     "nuke",
     "soft_cc"
@@ -2856,6 +3089,7 @@
   },
   "skeleton_king_mortal_strike": {
    "tags": [
+    "bkb_piercing",
     "steroid"
    ]
   },
@@ -2874,6 +3108,7 @@
   },
   "skywrath_mage_ancient_seal": {
    "tags": [
+    "debuff_dispellable",
     "soft_cc"
    ]
   },
@@ -2885,6 +3120,7 @@
   "skywrath_mage_concussive_shot": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "nuke",
     "soft_cc"
    ]
@@ -2898,11 +3134,15 @@
   },
   "slardar_amplify_damage": {
    "tags": [
+    "bkb_piercing",
+    "debuff_dispellable",
     "steroid"
    ]
   },
   "slardar_bash": {
    "tags": [
+    "bkb_piercing",
+    "debuff_strong_only",
     "hard_cc",
     "passive_value",
     "steroid"
@@ -2911,6 +3151,7 @@
   "slardar_slithereen_crush": {
    "tags": [
     "aoe",
+    "debuff_strong_only",
     "hard_cc",
     "initiation",
     "nuke",
@@ -2937,6 +3178,7 @@
   },
   "slark_saltwater_shiv": {
    "tags": [
+    "debuff_dispellable",
     "soft_cc",
     "sustain_self"
    ]
@@ -2971,6 +3213,7 @@
   "snapfire_mortimer_kisses": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "mana_hungry",
     "nuke",
     "teamfight_ult"
@@ -2979,6 +3222,7 @@
   "snapfire_scatterblast": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "nuke",
     "soft_cc",
     "waveclear"
@@ -3007,6 +3251,7 @@
   },
   "sniper_take_aim": {
    "tags": [
+    "debuff_dispellable",
     "grants_ranged",
     "passive_value",
     "steroid"
@@ -3015,6 +3260,7 @@
   "spectre_dispersion": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "good_shard",
     "passive_value",
     "sustain_self"
@@ -3026,6 +3272,7 @@
   "spectre_haunt": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "good_aghanims",
     "initiation",
     "mana_hungry"
@@ -3033,12 +3280,14 @@
   },
   "spectre_shadow_step": {
    "tags": [
+    "bkb_piercing",
     "initiation"
    ]
   },
   "spectre_spectral_dagger": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "mobility",
     "nuke",
     "soft_cc",
@@ -3065,6 +3314,8 @@
   },
   "spirit_breaker_greater_bash": {
    "tags": [
+    "bkb_piercing",
+    "debuff_strong_only",
     "hard_cc",
     "passive_value",
     "steroid"
@@ -3072,6 +3323,8 @@
   },
   "spirit_breaker_nether_strike": {
    "tags": [
+    "bkb_piercing",
+    "debuff_strong_only",
     "hard_cc",
     "initiation",
     "mana_hungry",
@@ -3089,6 +3342,7 @@
   },
   "storm_spirit_electric_vortex": {
    "tags": [
+    "debuff_strong_only",
     "hard_cc",
     "setup_cc"
    ]
@@ -3096,6 +3350,7 @@
   "storm_spirit_overload": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "passive_value",
     "soft_cc",
     "steroid"
@@ -3119,6 +3374,7 @@
   "sven_great_cleave": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "farm_tool",
     "steroid"
    ],
@@ -3129,6 +3385,7 @@
   "sven_storm_bolt": {
    "tags": [
     "aoe",
+    "debuff_strong_only",
     "good_aghanims",
     "hard_cc",
     "initiation",
@@ -3142,6 +3399,7 @@
   "sven_warcry": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "save_ally",
     "team_aura"
    ]
@@ -3163,6 +3421,7 @@
   "techies_sticky_bomb": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "nuke",
     "setup_cc",
     "skill_point_sink",
@@ -3173,6 +3432,7 @@
   "techies_suicide": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "hard_cc",
     "initiation",
     "mana_hungry",
@@ -3182,11 +3442,13 @@
   },
   "templar_assassin_meld": {
    "tags": [
+    "bkb_piercing",
     "steroid"
    ]
   },
   "templar_assassin_psi_blades": {
    "tags": [
+    "bkb_piercing",
     "farm_tool",
     "grants_ranged",
     "steroid"
@@ -3198,6 +3460,7 @@
   "templar_assassin_psionic_trap": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "nuke",
     "setup_cc",
     "soft_cc"
@@ -3205,6 +3468,7 @@
   },
   "templar_assassin_refraction": {
    "tags": [
+    "bkb_piercing",
     "good_shard",
     "steroid",
     "sustain_self"
@@ -3228,6 +3492,7 @@
   "terrorblade_reflection": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "soft_cc"
    ],
    "roleMust": [
@@ -3244,12 +3509,14 @@
   "tidehunter_anchor_smash": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "farm_tool",
     "waveclear"
    ]
   },
   "tidehunter_gush": {
    "tags": [
+    "debuff_dispellable",
     "good_with_rearm",
     "nuke",
     "soft_cc"
@@ -3270,6 +3537,7 @@
   "tidehunter_ravage": {
    "tags": [
     "aoe",
+    "debuff_strong_only",
     "hard_cc",
     "initiation",
     "mana_hungry",
@@ -3285,6 +3553,7 @@
   },
   "tinker_laser": {
    "tags": [
+    "debuff_dispellable",
     "nuke",
     "soft_cc"
    ]
@@ -3310,6 +3579,7 @@
   "tiny_avalanche": {
    "tags": [
     "aoe",
+    "debuff_strong_only",
     "hard_cc",
     "initiation",
     "mana_hungry",
@@ -3342,12 +3612,14 @@
   },
   "tiny_tree_grab": {
    "tags": [
+    "bkb_piercing",
     "farm_tool",
     "steroid"
    ]
   },
   "treant_leech_seed": {
    "tags": [
+    "debuff_dispellable",
     "soft_cc",
     "steroid",
     "sustain_self"
@@ -3355,6 +3627,7 @@
   },
   "treant_living_armor": {
    "tags": [
+    "bkb_piercing",
     "save_ally",
     "sustain_self"
    ]
@@ -3370,6 +3643,8 @@
   "treant_overgrowth": {
    "tags": [
     "aoe",
+    "bkb_piercing",
+    "debuff_dispellable",
     "good_aghanims",
     "mana_hungry",
     "soft_cc",
@@ -3385,6 +3660,7 @@
   },
   "troll_warlord_berserkers_rage": {
    "tags": [
+    "bkb_piercing",
     "soft_cc",
     "steroid"
    ]
@@ -3398,12 +3674,14 @@
   "troll_warlord_whirling_axes_melee": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "soft_cc"
    ]
   },
   "troll_warlord_whirling_axes_ranged": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "soft_cc"
    ]
   },
@@ -3440,6 +3718,8 @@
   },
   "tusk_walrus_punch": {
    "tags": [
+    "bkb_piercing",
+    "debuff_dispellable",
     "hard_cc",
     "initiation",
     "steroid"
@@ -3482,6 +3762,7 @@
   "ursa_earthshock": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "mobility",
     "nuke",
     "soft_cc"
@@ -3489,11 +3770,13 @@
   },
   "ursa_enrage": {
    "tags": [
+    "bkb_piercing",
     "sustain_self"
    ]
   },
   "ursa_fury_swipes": {
    "tags": [
+    "bkb_piercing",
     "passive_value",
     "steroid"
    ],
@@ -3509,6 +3792,7 @@
   },
   "vengefulspirit_command_aura": {
    "tags": [
+    "bkb_piercing",
     "passive_value",
     "steroid",
     "team_aura"
@@ -3516,12 +3800,14 @@
   },
   "vengefulspirit_magic_missile": {
    "tags": [
+    "debuff_strong_only",
     "hard_cc",
     "nuke"
    ]
   },
   "vengefulspirit_nether_swap": {
    "tags": [
+    "bkb_piercing",
     "initiation",
     "mana_hungry",
     "mobility",
@@ -3532,6 +3818,7 @@
   "vengefulspirit_wave_of_terror": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "soft_cc"
    ]
   },
@@ -3545,12 +3832,14 @@
   },
   "venomancer_plague_ward": {
    "tags": [
+    "bkb_piercing",
     "farm_tool",
     "summon"
    ]
   },
   "venomancer_snakebite": {
    "tags": [
+    "debuff_dispellable",
     "nuke",
     "soft_cc"
    ]
@@ -3558,6 +3847,7 @@
   "venomancer_venomous_gale": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "nuke",
     "soft_cc"
    ]
@@ -3565,6 +3855,7 @@
   "viper_corrosive_skin": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "good_aghanims",
     "passive_value",
     "soft_cc"
@@ -3580,6 +3871,7 @@
   },
   "viper_poison_attack": {
    "tags": [
+    "debuff_dispellable",
     "good_shard",
     "soft_cc",
     "steroid"
@@ -3587,6 +3879,7 @@
   },
   "viper_viper_strike": {
    "tags": [
+    "bkb_piercing",
     "mana_hungry",
     "nuke",
     "soft_cc"
@@ -3594,6 +3887,7 @@
   },
   "visage_grave_chill": {
    "tags": [
+    "debuff_dispellable",
     "soft_cc"
    ]
   },
@@ -3619,6 +3913,7 @@
   "void_spirit_aether_remnant": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "good_with_rearm",
     "nuke",
     "setup_cc",
@@ -3628,6 +3923,7 @@
   "void_spirit_astral_step": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "initiation",
     "mobility",
     "nuke",
@@ -3657,6 +3953,7 @@
   "warlock_fatal_bonds": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "good_with_rearm",
     "mana_hungry"
    ]
@@ -3664,6 +3961,8 @@
   "warlock_rain_of_chaos": {
    "tags": [
     "aoe",
+    "bkb_piercing",
+    "debuff_strong_only",
     "hard_cc",
     "initiation",
     "mana_hungry",
@@ -3674,6 +3973,7 @@
   "warlock_shadow_word": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "save_ally",
     "sustain_self"
    ]
@@ -3682,12 +3982,14 @@
    "tags": [
     "aoe",
     "channeled",
+    "debuff_dispellable",
     "setup_cc",
     "soft_cc"
    ]
   },
   "weaver_geminate_attack": {
    "tags": [
+    "bkb_piercing",
     "passive_value",
     "steroid"
    ]
@@ -3721,6 +4023,7 @@
   },
   "windrunner_focusfire": {
    "tags": [
+    "bkb_piercing",
     "steroid"
    ]
   },
@@ -3736,6 +4039,7 @@
   },
   "windrunner_shackleshot": {
    "tags": [
+    "debuff_strong_only",
     "hard_cc",
     "setup_cc"
    ]
@@ -3763,6 +4067,7 @@
   },
   "winter_wyvern_cold_embrace": {
    "tags": [
+    "bkb_piercing",
     "save_ally",
     "sustain_self"
    ]
@@ -3770,6 +4075,7 @@
   "winter_wyvern_splinter_blast": {
    "tags": [
     "aoe",
+    "debuff_dispellable",
     "nuke",
     "soft_cc",
     "waveclear"
@@ -3778,6 +4084,7 @@
   "winter_wyvern_winters_curse": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "hard_cc",
     "initiation",
     "mana_hungry",
@@ -3806,6 +4113,7 @@
   },
   "wisp_tether": {
    "tags": [
+    "bkb_piercing",
     "good_shard",
     "mobility",
     "save_ally"
@@ -3813,6 +4121,7 @@
   },
   "witch_doctor_death_ward": {
    "tags": [
+    "bkb_piercing",
     "channeled",
     "mana_hungry",
     "teamfight_ult"
@@ -3827,6 +4136,7 @@
   "witch_doctor_paralyzing_cask": {
    "tags": [
     "aoe",
+    "debuff_strong_only",
     "hard_cc",
     "nuke"
    ]
@@ -3834,6 +4144,7 @@
   "witch_doctor_voodoo_restoration": {
    "tags": [
     "aoe",
+    "bkb_piercing",
     "save_ally",
     "sustain_self",
     "team_aura"
@@ -3849,6 +4160,7 @@
   },
   "zuus_heavenly_jump": {
    "tags": [
+    "debuff_dispellable",
     "mobility",
     "nuke",
     "soft_cc"

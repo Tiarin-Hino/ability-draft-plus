@@ -32,6 +32,7 @@ import {
   type ModelStatPercentiles,
 } from './role-scoring'
 import { isInertOnModel, type AbilityTag, type HeroMeta } from './ability-tags'
+import { computeBoardTagProfile, type BoardTagProfile } from './board-tag-profile'
 import { identifyHeroModels } from './hero-identification'
 import {
   getAbilitySynergySplit,
@@ -87,7 +88,12 @@ import {
 //     with a role mode active, abilities get the capped role delta on top — role-scoring.ts;
 //     role-INDEPENDENT own-pick verdicts ride outside the cap: Aghanim's stacking
 //     boost (good_shard/good_aghanims shared with my picks) and the
-//     skill-point-sink damp (a second skill_point_sink) — tag round 4)
+//     skill-point-sink damp (a second skill_point_sink) — tag round 4).
+//     Board-aware inputs come from ONE per-scan board tag profile
+//     (board-tag-profile.ts: tag counts over my / team / enemy / drafted /
+//     pool, conditional `with:` tags resolved per owner) — the pool gates
+//     (requires tag: entries, soft-CC suppression) already read it; the
+//     round-5 demand/deny verdicts will too
 // 11. Check if My Spot already picked an ultimate
 // 12. Determine top-tier entities (max 10, synergy suggestions prioritized)
 // 13. Enrich scan slots with all computed data for overlay display
@@ -410,12 +416,20 @@ export function processScanResults(
   // the enabler goes first, so pool presence keeps it suggestible). Stats
   // stay fully visible; the tooltip explains. Unknown spot/model counts as
   // unsatisfied.
-  const poolHasTag = (tag: string): boolean => {
-    for (const poolName of uniquePoolNames) {
-      if (deps.tags?.getTags(poolName)?.has(tag as AbilityTag)) return true
-    }
-    return false
-  }
+  // Board tag profile (round 5 shared plumbing): tag counts over my / team /
+  // enemy / drafted / pool, computed ONCE per scan. Every board-aware verdict
+  // reads these counts; the pool gates below are the first consumers.
+  const boardTags: BoardTagProfile | undefined =
+    deps.tags !== undefined
+      ? computeBoardTagProfile({
+          selectedAbilities,
+          poolNames: uniquePoolNames,
+          myHeroOrder: state.mySelectedSpotHeroOrder,
+          tags: deps.tags,
+        })
+      : undefined
+  const poolHasTag = (tag: string): boolean =>
+    (boardTags?.pool.get(tag as AbilityTag) ?? 0) > 0
   const unmetRequirementOf = (
     name: string,
   ): { kind: 'ability' | 'model' | 'tag'; displayName: string } | undefined => {
@@ -657,6 +671,7 @@ export function processScanResults(
       myHeroOrder: state.mySelectedSpotHeroOrder,
       ownerHeroIdOf: (name) => deps.heroes.getByAbilityName(name)?.heroId ?? null,
       unmetRequirementOf,
+      boardTags,
       needScarcity,
       myPickCount,
       myModelPicked: state.mySelectedModelDbHeroId !== null,
@@ -885,6 +900,8 @@ interface RoleScoringInputs {
   unmetRequirementOf: (
     abilityName: string,
   ) => { kind: 'ability' | 'model' | 'tag'; displayName: string } | undefined
+  /** Round-5 board tag profile (undefined without the tags dep). */
+  boardTags: BoardTagProfile | undefined
   needScarcity: ReadonlyMap<string, number>
   myPickCount: number
   myModelPicked: boolean
@@ -941,6 +958,7 @@ function buildScoredEntities(
     myHeroOrder,
     ownerHeroIdOf,
     unmetRequirementOf,
+    boardTags,
     needScarcity,
     myPickCount,
     myModelPicked,
@@ -956,12 +974,9 @@ function buildScoredEntities(
   const picksGrantRanged = myPickTags.some((t) => t.has('grants_ranged'))
 
   // Soft-CC suppression input: while a real stun remains in the pool, slows
-  // must not surface as disable coverage (Shadow Strike ruling).
-  const poolHasHardCc =
-    tags !== undefined &&
-    [...ultimates, ...standard].some(
-      (slot) => slot.name !== null && tags.getTags(slot.name)?.has('hard_cc'),
-    )
+  // must not surface as disable coverage (Shadow Strike ruling). Read off the
+  // board tag profile (the pool half covers exactly these slots).
+  const poolHasHardCc = (boardTags?.pool.get('hard_cc') ?? 0) > 0
 
   // Forward-pairing profile of the PICKED model (Layer C): chassis
   // percentiles among ALL board models — the remaining-only percentiles

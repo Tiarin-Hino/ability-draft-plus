@@ -49,6 +49,9 @@ export function loadAbilityTags(): AbilityTagsLookup | undefined {
   logger.info('Ability tags loaded', {
     abilities: parsed.tagsByAbility.size,
     curated: parsed.roleMustByAbility.size,
+    combos: parsed.combosByAbility.size,
+    viaUpgrade: parsed.viaUpgradeByAbility.size,
+    conditional: parsed.withByAbility.size,
     heroes: heroMeta.size,
   })
 
@@ -57,6 +60,9 @@ export function loadAbilityTags(): AbilityTagsLookup | undefined {
     getRoleMust: (name) => parsed.roleMustByAbility.get(name),
     getRoleAvoid: (name) => parsed.roleAvoidByAbility.get(name),
     getRequires: (name) => parsed.requiresByAbility.get(name),
+    getCombos: (name) => parsed.combosByAbility.get(name),
+    getViaUpgrade: (name) => parsed.viaUpgradeByAbility.get(name),
+    getWith: (name) => parsed.withByAbility.get(name),
     getHeroAttackType: (heroName) => heroMeta.get(heroName)?.attackType,
     getHeroMeta: (heroName) => heroMeta.get(heroName),
   }
