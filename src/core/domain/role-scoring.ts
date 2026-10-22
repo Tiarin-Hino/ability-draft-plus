@@ -87,10 +87,16 @@ export const POSITION_NEEDS: Readonly<Record<DraftPosition, RoleNeed[]>> = {
   // Survival raised from 0.5 (sim finding: experts pay real opportunity cost
   // for durability — Kraken Shell-class picks deep-ranked by us 4x — so
   // survivability is less itemizable-away than the original theory assumed).
+  // Round 5 (2026-10-22): dispel_self is a survival/durability alternative;
+  // reposition_enemy covers initiation and is its own pos-4 `catch` need
+  // (own scarcity key — a pool with one Hook and no stuns rates it like the
+  // last stun; it STACKS with hard_cc when an ability carries both, which is
+  // the "breaks formation, stronger than plain CC" premium); reposition_ally
+  // and dispel_ally cover the pos-5 save.
   1: [
     { key: 'steroid', anyOf: [['steroid']], priority: 1.0 },
     { key: 'farm', anyOf: [['farm_tool'], ['waveclear']], priority: 0.75 },
-    { key: 'survival', anyOf: [['mobility'], ['sustain_self']], priority: 0.7 },
+    { key: 'survival', anyOf: [['mobility'], ['sustain_self'], ['dispel_self']], priority: 0.7 },
   ],
   2: [
     { key: 'nuke', anyOf: [['nuke']], priority: 1.0 },
@@ -101,13 +107,18 @@ export const POSITION_NEEDS: Readonly<Record<DraftPosition, RoleNeed[]>> = {
   // without AoE-CC or initiation — the checklist is aspirational, not law).
   3: [
     { key: 'aoe_cc', anyOf: [['hard_cc', 'aoe']], priority: 0.75 },
-    { key: 'initiation', anyOf: [['initiation']], priority: 0.6 },
-    { key: 'durability', anyOf: [['sustain_self'], ['passive_value']], priority: 0.4 },
+    { key: 'initiation', anyOf: [['initiation'], ['reposition_enemy']], priority: 0.6 },
+    {
+      key: 'durability',
+      anyOf: [['sustain_self'], ['passive_value'], ['dispel_self']],
+      priority: 0.4,
+    },
   ],
   4: [
     { key: 'hard_cc', anyOf: [['hard_cc']], priority: 1.0 },
     { key: 'waveclear', anyOf: [['waveclear'], ['nuke']], priority: 0.75 },
     { key: 'mobility', anyOf: [['mobility']], priority: 0.5 },
+    { key: 'catch', anyOf: [['reposition_enemy']], priority: 0.5 },
   ],
   // Pos-5 reordered per corpus: waveclear|nuke coverage is near-universal
   // (~90%) among expert supports while a save appears in only ~36-40% of
@@ -115,7 +126,7 @@ export const POSITION_NEEDS: Readonly<Record<DraftPosition, RoleNeed[]>> = {
   5: [
     { key: 'hard_cc', anyOf: [['hard_cc']], priority: 1.0 },
     { key: 'waveclear', anyOf: [['waveclear'], ['nuke']], priority: 0.75 },
-    { key: 'save', anyOf: [['save_ally']], priority: 0.5 },
+    { key: 'save', anyOf: [['save_ally'], ['reposition_ally'], ['dispel_ally']], priority: 0.5 },
   ],
 }
 
@@ -140,14 +151,21 @@ export function allRoleNeeds(): RoleNeed[] {
 // Heartstopper case): supports want farm-free ACTIVES — most value passives
 // need farm to come online, and the empirical greed axis of passive_value
 // picks skews core; the accent was cancelling that penalty.
+// Round 5: reposition_ally and dispel_ally are plus accents for pos 4/5 on top
+// of covering the save need — the "brings them to safety / strips the debuff,
+// stronger than a plain save" premium (user ruling 2026-10-21). No pos-1/2
+// minus for them: a swap is a fine core escape.
 const POSITION_TAG_ACCENTS: Readonly<
   Record<DraftPosition, { plus: AbilityTag[]; minus: AbilityTag[] }>
 > = {
   1: { plus: ['passive_value', 'sustain_self'], minus: ['save_ally'] },
   2: { plus: ['waveclear', 'sustain_self'], minus: ['passive_value'] },
   3: { plus: ['team_aura', 'teamfight_ult'], minus: [] },
-  4: { plus: ['setup_cc', 'initiation'], minus: ['steroid', 'farm_tool'] },
-  5: { plus: ['team_aura'], minus: ['steroid', 'farm_tool'] },
+  4: {
+    plus: ['setup_cc', 'initiation', 'reposition_ally', 'dispel_ally'],
+    minus: ['steroid', 'farm_tool'],
+  },
+  5: { plus: ['team_aura', 'reposition_ally', 'dispel_ally'], minus: ['steroid', 'farm_tool'] },
 }
 
 export interface TeammateBuild {

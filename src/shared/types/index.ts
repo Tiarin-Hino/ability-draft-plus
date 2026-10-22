@@ -214,6 +214,10 @@ export interface EnrichedScanSlot extends ScanResult {
   /** Skill-point-sink conflict: the user's drafted skill_point_sink picks this
    * candidate would compete with (damped, tooltip explains). */
   pointSinkConflictWith?: string[]
+  /** Round-5 dispel demand (boost applied, tooltip explains): what the enemy
+   * holds that this dispel / purge answers, and how many dispellable debuffs
+   * are still unpicked. */
+  dispelDemand?: { kind: 'dispel' | 'purge'; against: string[]; poolCount: number }
   /** Strong Shard / Scepter upgrade markers — only present when the
    * aghsMarkersEnabled setting is on (payload-gated; pool slots only). */
   goodShard?: boolean

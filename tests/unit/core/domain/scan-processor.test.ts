@@ -4,7 +4,14 @@ import type { ScanProcessorInput } from '@core/domain/scan-processor'
 import type { ScanResult, AbilityDetail, SlotCoordinate } from '@shared/types'
 import type { InitialScanResults } from '@shared/types/ml'
 import type { DraftSessionState, ScanProcessorDeps } from '@core/domain/types'
-import { AGHS_STACK_BOOST, POINT_SINK_DAMP } from '@shared/constants/thresholds'
+import {
+  AGHS_STACK_BOOST,
+  POINT_SINK_DAMP,
+  DISPEL_DEMAND_WEIGHT,
+  DISPEL_DEMAND_REF,
+  DISPEL_DEMAND_POOL_WEIGHT,
+  DISPEL_DEMAND_MAX,
+} from '@shared/constants/thresholds'
 import type {
   SynergyPartner,
   AbilitySynergyPair,
@@ -1555,6 +1562,96 @@ describe('role-aware suggestions', () => {
       const absent = runWithPicks([['fireball', 0]])
       expect(off).toEqual(absent)
       expect(slot(absent, 'ice_blast').shardStackWith).toEqual(['Fireball'])
+    })
+  })
+
+  describe('dispel demand (round 5)', () => {
+    const dispelTags: NonNullable<ScanProcessorDeps['tags']> = {
+      ...mockTags,
+      getTags(name: string) {
+        const table: Record<string, string[]> = {
+          ice_blast: ['dispel_ally'],
+          blink: ['purge_enemy'],
+          firestorm: ['debuff_dispellable'],
+          fireball: ['steroid'],
+          laguna_blade: ['nuke'],
+        }
+        const tags = table[name]
+        return tags
+          ? (new Set(tags) as ReturnType<NonNullable<ScanProcessorDeps['tags']>['getTags']>)
+          : undefined
+      },
+    }
+    function runWithPicks(picks: Array<[string, number]>, roleMode?: string) {
+      const initial = processScanResults(makeInitialScanInput())
+      const state = initial.updatedState
+      state.mySelectedSpotDbId = 1
+      state.mySelectedSpotHeroOrder = 0
+      const base = roleMode === undefined ? mockDeps : depsWithRole(roleMode)
+      const input: ScanProcessorInput = {
+        rawResults: picks.map(([name, row], i) => makeScanResult(name, row, i + 1, false)),
+        isInitialScan: false,
+        state,
+        deps: { ...base, tags: dispelTags },
+        modelCoords: [makeCoord(0), makeCoord(1)],
+        heroesCoords: [makeCoord(0), makeCoord(1)],
+        heroesParams: { width: 358, height: 170 },
+        targetResolution: '1920x1080',
+        scaleFactor: 1.0,
+      }
+      return processScanResults(input).overlayPayload
+    }
+    const slot = (payload: ReturnType<typeof runWithPicks>, name: string) =>
+      payload.scanData!.standard.find((s) => s.name === name)!
+    const expectedBoost = (d: { against: string[]; poolCount: number }) =>
+      DISPEL_DEMAND_WEIGHT *
+      Math.min(
+        DISPEL_DEMAND_MAX,
+        (d.against.length + DISPEL_DEMAND_POOL_WEIGHT * d.poolCount) / DISPEL_DEMAND_REF,
+      )
+
+    it('a dispel is worth the enemy-held dispellable debuffs plus half of the unpicked ones', () => {
+      const none = runWithPicks([], 'off')
+      const enemy = runWithPicks([['firestorm', 7]], 'off')
+      const teammate = runWithPicks([['firestorm', 1]], 'off')
+
+      // Pool-only demand: Firestorm is still unpicked, nobody holds it.
+      expect(slot(none, 'ice_blast').dispelDemand).toEqual({
+        kind: 'dispel',
+        against: [],
+        poolCount: 1,
+      })
+      // Enemy holds it: named in the tooltip, full weight.
+      const enemyDemand = slot(enemy, 'ice_blast').dispelDemand!
+      expect(enemyDemand.kind).toBe('dispel')
+      expect(enemyDemand.against).toEqual(['Firestorm'])
+      expect(slot(enemy, 'ice_blast').consolidatedScore - slot(none, 'ice_blast').consolidatedScore)
+        .toBeCloseTo(expectedBoost(enemyDemand) - expectedBoost({ against: [], poolCount: 1 }), 6)
+      // A teammate's debuff creates no demand: it left the pool and the enemy
+      // does not hold it, so the boost disappears entirely.
+      expect(slot(teammate, 'ice_blast').dispelDemand).toBeUndefined()
+      expect(slot(teammate, 'ice_blast').consolidatedScore).toBeCloseTo(
+        slot(none, 'ice_blast').consolidatedScore - expectedBoost({ against: [], poolCount: 1 }),
+        6,
+      )
+      // Non-dispel candidates are untouched.
+      expect(slot(none, 'fireball').dispelDemand).toBeUndefined()
+    })
+
+    it('purge_enemy answers enemy steroids/summons only — no pool term', () => {
+      const none = runWithPicks([], 'off')
+      const enemy = runWithPicks([['fireball', 8]], 'off')
+      const teammate = runWithPicks([['fireball', 2]], 'off')
+      expect(slot(none, 'blink').dispelDemand).toBeUndefined()
+      expect(slot(teammate, 'blink').dispelDemand).toBeUndefined()
+      const d = slot(enemy, 'blink').dispelDemand!
+      expect(d).toEqual({ kind: 'purge', against: ['Fireball'], poolCount: 0 })
+      expect(slot(enemy, 'blink').consolidatedScore - slot(none, 'blink').consolidatedScore)
+        .toBeCloseTo(expectedBoost(d), 6)
+    })
+
+    it('is role-independent: mode off and absent stay bit-identical', () => {
+      expect(runWithPicks([['firestorm', 7]], 'off')).toEqual(runWithPicks([['firestorm', 7]]))
     })
   })
 

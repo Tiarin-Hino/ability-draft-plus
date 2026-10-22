@@ -237,6 +237,22 @@ export const AGHS_STACK_BOOST = 0.06
 // Future counterpart (roadmap): a `value_point` tag for level-1-value abilities
 // that can wait — a natural partner for a sink, not a conflict.
 export const POINT_SINK_DAMP = 0.2
+// Dispel demand (tag round 5, 2026-10-22): a dispel is worth what the board
+// gives it to dispel. demand = enemy-held debuff_dispellable abilities +
+// DISPEL_DEMAND_POOL_WEIGHT × those still unpicked (they may yet land on the
+// enemy); boost = DISPEL_DEMAND_WEIGHT × clamp(demand / DISPEL_DEMAND_REF, 0,
+// DISPEL_DEMAND_MAX) on dispel_ally / dispel_self candidates. Zero demand =
+// zero boost — the carriers then fall back to the save_ally / sustain_self
+// they already carry (user ruling: "otherwise treat it as a common save").
+// Weight sized like the Aghs boost (a real but situational edge); REF 4 is a
+// typical enemy line-up with a few debuffs; MAX 1.5 lets a debuff-heavy board
+// (6+) exceed one full weight. purge_enemy rides the same curve against the
+// ENEMY's steroid + summon count (no pool term — steroids are never scarce).
+// Role-independent (a board fact), outside the role cap.
+export const DISPEL_DEMAND_WEIGHT = 0.06
+export const DISPEL_DEMAND_REF = 4
+export const DISPEL_DEMAND_POOL_WEIGHT = 0.5
+export const DISPEL_DEMAND_MAX = 1.5
 // Model reservation (Drow-for-pos-5 case, 2026-08-31): while core teammates
 // still need models, a body whose attr fit for positions 1-3 beats its 4-5
 // fit by more than the gap is damped for a support drafter — don't steal the

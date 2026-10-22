@@ -57,6 +57,14 @@ export const TAG_VOCABULARY = [
   'debuff_dispellable',
   'debuff_strong_only',
   'bkb_piercing',
+  // Round 5 step 2: the reposition split (community move_enemy) and the
+  // dispel split (community dispel). knockback is descriptive only in v1.
+  'reposition_enemy',
+  'reposition_ally',
+  'knockback',
+  'dispel_self',
+  'dispel_ally',
+  'purge_enemy',
 ] as const
 
 export type AbilityTag = (typeof TAG_VOCABULARY)[number]

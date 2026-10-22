@@ -8,8 +8,14 @@ step 1 (board tag profile, `combos` / `viaUpgrade` / `with` parsing, mechanical
 debuff tags) shipped 2026-10-22 — measured on the live dataset:
 debuff_dispellable 129, debuff_strong_only 46, bkb_piercing 131 (the rule needs
 an enemy target OR a CC tag, so target-less DoTs such as Fury Swipes or Firestorm
-are missed until the amp_* family joins DEBUFF_MARKER_TAGS in step 3). Steps 2-5
-pending.
+are missed until the amp_* family joins DEBUFF_MARKER_TAGS in step 3). Step 2
+(reposition split + knockback, dispel split + demand boost, override seeds for
+the 66 agreed mappings in §3.1/§3.4) shipped 2026-10-22; live counts:
+reposition_enemy 26 (25 + Nether Strike's conditional), reposition_ally 14,
+knockback 5, dispel_self 19, dispel_ally 7, purge_enemy 8. The Lab's accepted
+`move_enemy` / `dispel` assignments are now SUPERSEDED_TAGS in the import script
+(ignored on import; the curated split wins) until the Lab catalog ships the new
+names. Steps 3-5 pending.
 Source: Tag Lab export version 2 (513 abilities, 30-tag vocab) vs the shipped
 version 1 (25 tags). The app currently DROPS the five new tags at load.
 

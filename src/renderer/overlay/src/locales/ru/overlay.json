@@ -89,7 +89,12 @@
       "sustain_self": "самоподдержка",
       "teamfight_ult": "командный ульт",
       "passive_value": "пассивка",
-      "save_ally": "сейв союзника"
+      "save_ally": "сейв союзника",
+      "catch": "ловля",
+      "reposition_enemy": "перемещение врага",
+      "reposition_ally": "перемещение союзника",
+      "dispel_self": "самодиспел",
+      "dispel_ally": "диспел союзника"
     },
     "roleCovers": "Закрывает недостающее: {{need}}",
     "rolePartial": "Частично закрывает недостающее: {{need}}",
@@ -107,7 +112,10 @@
     "scepterStack": "Сильный апгрейд от Scepter — один Scepter усилит и {{names}}",
     "goodShard": "Сильный апгрейд от Aghanim's Shard",
     "goodScepter": "Сильный апгрейд от Aghanim's Scepter",
-    "pointSinkConflict": "Конкурирует за очки навыков с {{names}} — одна из них останется недокачанной"
+    "pointSinkConflict": "Конкурирует за очки навыков с {{names}} — одна из них останется недокачанной",
+    "dispelDemand": "Ценность диспела — у врага {{names}}",
+    "purgeDemand": "Ценность пурджа — снимает с врага {{names}}",
+    "dispelDemandPool": "Ценность диспела — в пуле ещё {{n}} снимаемых дебаффов"
   },
   "role": {
     "aria": "Подсказки по ролям",

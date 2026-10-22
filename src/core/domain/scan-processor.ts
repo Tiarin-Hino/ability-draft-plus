@@ -65,6 +65,10 @@ import {
   MODEL_RESERVATION_DAMP,
   ULT_SUPPLY_SLACK,
   CONTESTED_SOON_WINDOW,
+  DISPEL_DEMAND_WEIGHT,
+  DISPEL_DEMAND_REF,
+  DISPEL_DEMAND_POOL_WEIGHT,
+  DISPEL_DEMAND_MAX,
 } from '@shared/constants/thresholds'
 
 // @DEV-GUIDE: Central business logic — transforms raw ML scan results into a fully-enriched
@@ -394,6 +398,22 @@ export function processScanResults(
   const myShardPicks = myPicksTagged('good_shard')
   const myScepterPicks = myPicksTagged('good_aghanims')
   const myPointSinkPicks = myPicksTagged('skill_point_sink')
+  // Round-5 dispel demand: display names of ENEMY-held picks carrying a tag
+  // (the other team half; rows 0-4 vs 5-9). Empty without the tags dep or an
+  // unknown My Spot — the pool half of the demand still counts then.
+  const enemyPicksTagged = (...wanted: AbilityTag[]): string[] => {
+    if (deps.tags === undefined || state.mySelectedSpotHeroOrder === null) return []
+    const myHalf = state.mySelectedSpotHeroOrder < 5
+    const names = new Set<string>()
+    for (const s of selectedAbilities) {
+      if (!s.name || s.hero_order < 5 === myHalf) continue
+      const t = deps.tags.getTags(s.name)
+      if (t !== undefined && wanted.some((w) => t.has(w))) names.add(s.name)
+    }
+    return [...names].map((n) => abilityDetailsMap.get(n)?.displayName ?? n)
+  }
+  const enemyDispellablePicks = enemyPicksTagged('debuff_dispellable')
+  const enemyPurgeablePicks = enemyPicksTagged('steroid', 'summon')
   // Always-on Shard/Scepter markers are a user setting resolved HERE (the
   // overlay has no settings access) — payload-gated, applies on the next scan.
   const aghsMarkersEnabled = settings.aghsMarkersEnabled === true
@@ -680,6 +700,8 @@ export function processScanResults(
       myShardPicks,
       myScepterPicks,
       myPointSinkPicks,
+      enemyDispellablePicks,
+      enemyPurgeablePicks,
       aghsMarkersEnabled,
     },
   )
@@ -914,6 +936,11 @@ interface RoleScoringInputs {
   myShardPicks: string[]
   myScepterPicks: string[]
   myPointSinkPicks: string[]
+  /** Round-5 dispel demand: display names of ENEMY-held debuff_dispellable
+   * picks (dispel_ally / dispel_self value) and of enemy steroid / summon
+   * picks (purge_enemy value). Empty without My Spot. */
+  enemyDispellablePicks: string[]
+  enemyPurgeablePicks: string[]
   /** Setting: always mark strong Shard/Scepter pool abilities (display only). */
   aghsMarkersEnabled: boolean
 }
@@ -967,8 +994,24 @@ function buildScoredEntities(
     myShardPicks,
     myScepterPicks,
     myPointSinkPicks,
+    enemyDispellablePicks,
+    enemyPurgeablePicks,
     aghsMarkersEnabled,
   } = role
+  // Round-5 dispel demand, computed once: enemy-held dispellable debuffs count
+  // fully, unpicked ones half (they may yet land on the enemy). Purge demand
+  // is the enemy's steroid/summon count (no pool term).
+  const dispelDemandRaw =
+    enemyDispellablePicks.length +
+    DISPEL_DEMAND_POOL_WEIGHT * (boardTags?.pool.get('debuff_dispellable') ?? 0)
+  const purgeDemandRaw = enemyPurgeablePicks.length
+  const demandBoost = (raw: number): number =>
+    raw > 0
+      ? DISPEL_DEMAND_WEIGHT *
+        Math.min(DISPEL_DEMAND_MAX, Math.max(0, raw / DISPEL_DEMAND_REF))
+      : 0
+  const dispelBoostValue = demandBoost(dispelDemandRaw)
+  const purgeBoostValue = demandBoost(purgeDemandRaw)
   // A drafted range-granting ability (Psi Blades, Take Aim) waives the
   // ranged_only inert filter for the rest of the draft.
   const picksGrantRanged = myPickTags.some((t) => t.has('grants_ranged'))
@@ -1078,12 +1121,31 @@ function buildScoredEntities(
     const pointSinkConflictWith =
       hasTag('skill_point_sink') && myPointSinkPicks.length > 0 ? myPointSinkPicks : undefined
     const pointSinkDamp = pointSinkConflictWith !== undefined ? POINT_SINK_DAMP : 0
+    // Round-5 dispel demand (role mode or not): a dispel is worth what the
+    // board gives it to dispel. An ability that both dispels allies and purges
+    // enemies (Fortune's End) takes the larger of the two; one tooltip line.
+    const dispelCandidate = hasTag('dispel_ally') || hasTag('dispel_self')
+    const purgeCandidate = hasTag('purge_enemy')
+    const dispelPick = dispelCandidate ? dispelBoostValue : 0
+    const purgePick = purgeCandidate ? purgeBoostValue : 0
+    const dispelBoost = Math.max(dispelPick, purgePick)
+    const dispelDemand: ScoredEntity['dispelDemand'] =
+      dispelBoost > 0
+        ? dispelPick >= purgePick
+          ? {
+              kind: 'dispel',
+              against: enemyDispellablePicks,
+              poolCount: boardTags?.pool.get('debuff_dispellable') ?? 0,
+            }
+          : { kind: 'purge', against: enemyPurgeablePicks, poolCount: 0 }
+        : undefined
     const consolidatedScore =
       roleDelta !== undefined ||
       pairingDelta !== 0 ||
       overratedDamp !== 0 ||
       aghsBoost !== 0 ||
-      pointSinkDamp !== 0
+      pointSinkDamp !== 0 ||
+      dispelBoost !== 0
         ? Math.min(
             1,
             Math.max(
@@ -1093,7 +1155,8 @@ function buildScoredEntities(
                 pairingDelta -
                 overratedDamp +
                 aghsBoost -
-                pointSinkDamp,
+                pointSinkDamp +
+                dispelBoost,
             ),
           )
         : scored.consolidatedScore
@@ -1133,6 +1196,7 @@ function buildScoredEntities(
       overrated: overrated || undefined,
       shardStackWith,
       scepterStackWith,
+      dispelDemand,
       pointSinkConflictWith,
       goodShard: (aghsMarkersEnabled && hasTag('good_shard')) || undefined,
       goodScepter: (aghsMarkersEnabled && hasTag('good_aghanims')) || undefined,
@@ -1420,6 +1484,7 @@ function enrichSlots(
       shardStackWith: scored?.shardStackWith,
       scepterStackWith: scored?.scepterStackWith,
       pointSinkConflictWith: scored?.pointSinkConflictWith,
+      dispelDemand: scored?.dispelDemand,
       goodShard: scored?.goodShard,
       goodScepter: scored?.goodScepter,
       isGeneralTopTier: topTier?.isGeneralTopTier ?? false,

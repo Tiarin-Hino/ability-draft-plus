@@ -89,7 +89,12 @@
       "sustain_self": "sustain propio",
       "teamfight_ult": "ultimate de teamfight",
       "passive_value": "pasiva de valor",
-      "save_ally": "salvación de aliados"
+      "save_ally": "salvación de aliados",
+      "catch": "captura",
+      "reposition_enemy": "reposicionar enemigos",
+      "reposition_ally": "reposicionar aliados",
+      "dispel_self": "disipación propia",
+      "dispel_ally": "disipación de aliados"
     },
     "roleCovers": "Cubre tu carencia de {{need}}",
     "rolePartial": "Cubre parcialmente tu carencia de {{need}}",
@@ -107,7 +112,10 @@
     "scepterStack": "Gran mejora de Scepter — un solo Scepter también potencia {{names}}",
     "goodShard": "Gran mejora con Aghanim's Shard",
     "goodScepter": "Gran mejora con Aghanim's Scepter",
-    "pointSinkConflict": "Compite por puntos de habilidad con {{names}} — una de las dos quedará sin subir"
+    "pointSinkConflict": "Compite por puntos de habilidad con {{names}} — una de las dos quedará sin subir",
+    "dispelDemand": "Valor de disipación — el enemigo tiene {{names}}",
+    "purgeDemand": "Valor de purga — elimina {{names}} del enemigo",
+    "dispelDemandPool": "Valor de disipación — quedan {{n}} debuffs disipables en el pool"
   },
   "role": {
     "aria": "Sugerencias según rol",

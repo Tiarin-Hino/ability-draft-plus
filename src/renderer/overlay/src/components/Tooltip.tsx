@@ -339,6 +339,20 @@ function AbilityTooltipContent({
           {t('tooltip.pointSinkConflict', { names: slot.pointSinkConflictWith.join(', ') })}
         </div>
       )}
+      {/* Round-5 dispel demand: names what the enemy holds, or how many
+          dispellable debuffs are still in the pool when the enemy holds none */}
+      {slot.dispelDemand && (
+        <div className="tooltip-stat tooltip-aghs">
+          {slot.dispelDemand.against.length > 0
+            ? t(
+                slot.dispelDemand.kind === 'purge'
+                  ? 'tooltip.purgeDemand'
+                  : 'tooltip.dispelDemand',
+                { names: slot.dispelDemand.against.join(', ') },
+              )
+            : t('tooltip.dispelDemandPool', { n: slot.dispelDemand.poolCount })}
+        </div>
+      )}
       {slot.contestedSoon &&
         (slot.isGeneralTopTier || slot.isSynergySuggestionForMySpot) && (
           <div className="tooltip-stat tooltip-contested">

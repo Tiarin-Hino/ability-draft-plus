@@ -89,7 +89,12 @@
       "sustain_self": "oma sustain",
       "teamfight_ult": "teamfight-ultimaatti",
       "passive_value": "arvokas passiivi",
-      "save_ally": "liittolaisen pelastus"
+      "save_ally": "liittolaisen pelastus",
+      "catch": "nappaus",
+      "reposition_enemy": "vihollisen siirto",
+      "reposition_ally": "liittolaisen siirto",
+      "dispel_self": "oma dispel",
+      "dispel_ally": "liittolaisen dispel"
     },
     "roleCovers": "Kattaa puuttuvan tarpeesi: {{need}}",
     "rolePartial": "Kattaa osittain puuttuvan tarpeesi: {{need}}",
@@ -107,7 +112,10 @@
     "scepterStack": "Vahva Scepter-päivitys — yksi Scepter vahvistaa myös {{names}}",
     "goodShard": "Vahva Aghanim's Shard -päivitys",
     "goodScepter": "Vahva Aghanim's Scepter -päivitys",
-    "pointSinkConflict": "Kilpailee taitopisteistä {{names}} kanssa — toinen jää alitasoiseksi"
+    "pointSinkConflict": "Kilpailee taitopisteistä {{names}} kanssa — toinen jää alitasoiseksi",
+    "dispelDemand": "Dispel-arvo — vihollisella on {{names}}",
+    "purgeDemand": "Purge-arvo — riisuu viholliselta {{names}}",
+    "dispelDemandPool": "Dispel-arvo — poolissa on vielä {{n}} poistettavaa debuffia"
   },
   "role": {
     "aria": "Roolisuositukset",

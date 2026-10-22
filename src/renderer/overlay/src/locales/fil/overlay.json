@@ -89,7 +89,12 @@
       "sustain_self": "self sustain",
       "teamfight_ult": "teamfight ult",
       "passive_value": "value passive",
-      "save_ally": "ally save"
+      "save_ally": "ally save",
+      "catch": "catch",
+      "reposition_enemy": "enemy reposition",
+      "reposition_ally": "ally reposition",
+      "dispel_self": "self dispel",
+      "dispel_ally": "ally dispel"
     },
     "roleCovers": "Sinasagot ang kulang mong {{need}}",
     "rolePartial": "Bahagyang sinasagot ang kulang mong {{need}}",
@@ -107,7 +112,10 @@
     "scepterStack": "Malakas na Scepter upgrade — isang Scepter ang magpapalakas din sa {{names}}",
     "goodShard": "Malakas na Aghanim's Shard upgrade",
     "goodScepter": "Malakas na Aghanim's Scepter upgrade",
-    "pointSinkConflict": "Nag-aagawan ng skill points kasama ang {{names}} — isa sa kanila ang maiiwan sa level"
+    "pointSinkConflict": "Nag-aagawan ng skill points kasama ang {{names}} — isa sa kanila ang maiiwan sa level",
+    "dispelDemand": "Dispel value — hawak ng kalaban ang {{names}}",
+    "purgeDemand": "Purge value — tinatanggal ang {{names}} sa kalaban",
+    "dispelDemandPool": "Dispel value — {{n}} dispellable debuffs pa ang nasa pool"
   },
   "role": {
     "aria": "Mga role suggestion",

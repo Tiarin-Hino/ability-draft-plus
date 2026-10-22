@@ -35,8 +35,18 @@ is still named tiarinhino.com — the old host 301-redirects there).
 Every layer defaults to a no-op: `roleMode: 'off'` (or missing shift data) is
 bit-identical to the pre-feature scorer — golden tests enforce this.
 
-**Round 5 (docs/proposals/community-tags-round5.md — agreed 2026-10-21, step 1
-shipped: plumbing only, no scoring change yet).** `core/domain/board-tag-
+**Round 5 (docs/proposals/community-tags-round5.md — agreed 2026-10-21; steps
+1-2 shipped 2026-10-22).** Step 2 scoring: `reposition_enemy` is a pos-4
+`catch` need (own scarcity key; stacks with hard_cc) and a pos-3 initiation
+alternative; `reposition_ally` / `dispel_ally` cover the pos-5 save and are
+pos-4/5 plus accents; `dispel_self` is a pos-1 survival / pos-3 durability
+alternative; `knockback` is descriptive only. The **dispel demand boost**
+(role-independent, outside the cap, `DISPEL_DEMAND_*` in thresholds.ts):
+`demand = enemy-held debuff_dispellable + 0.5 × unpicked ones`, `boost =
+0.06 × clamp(demand / 4, 0, 1.5)` on dispel_ally / dispel_self candidates;
+purge_enemy rides the same curve against the enemy's steroid + summon count
+(no pool term). Zero demand = zero boost. Tooltip line names the enemy picks
+(or the pool count). `core/domain/board-tag-
 profile.ts` computes ONE per-scan **board tag profile**: tag counts over my
 picks / my teammates' / the enemy five's / everything drafted / the unpicked
 pool (rows 0-4 vs 5-9, same split as role-scoring; team halves empty without

@@ -25,7 +25,13 @@
   "channeled",
   "good_shard",
   "good_aghanims",
-  "skill_point_sink"
+  "skill_point_sink",
+  "reposition_enemy",
+  "reposition_ally",
+  "knockback",
+  "dispel_self",
+  "dispel_ally",
+  "purge_enemy"
  ],
  "mechanicalVocab": [
   "bkb_piercing",
@@ -46,12 +52,14 @@
   "abaddon_aphotic_shield": {
    "tags": [
     "aoe",
+    "dispel_ally",
     "save_ally",
     "sustain_self"
    ]
   },
   "abaddon_borrowed_time": {
    "tags": [
+    "dispel_self",
     "good_aghanims",
     "passive_value",
     "sustain_self",
@@ -113,6 +121,7 @@
   },
   "alchemist_chemical_rage": {
    "tags": [
+    "dispel_self",
     "steroid",
     "sustain_self"
    ]
@@ -280,6 +289,8 @@
     "debuff_dispellable",
     "hard_cc",
     "mana_hungry",
+    "reposition_ally",
+    "reposition_enemy",
     "save_ally",
     "setup_cc"
    ]
@@ -297,6 +308,7 @@
     "aoe",
     "debuff_dispellable",
     "nuke",
+    "reposition_enemy",
     "setup_cc",
     "soft_cc"
    ]
@@ -307,7 +319,8 @@
     "debuff_strong_only",
     "hard_cc",
     "initiation",
-    "mana_hungry"
+    "mana_hungry",
+    "reposition_enemy"
    ]
   },
   "batrider_sticky_napalm": {
@@ -324,6 +337,7 @@
     "hard_cc",
     "initiation",
     "mana_hungry",
+    "reposition_enemy",
     "soft_cc"
    ]
   },
@@ -548,6 +562,7 @@
   },
   "chaos_knight_phantasm": {
    "tags": [
+    "dispel_self",
     "farm_tool",
     "good_aghanims",
     "mana_hungry"
@@ -670,6 +685,7 @@
     "hard_cc",
     "initiation",
     "mana_hungry",
+    "reposition_enemy",
     "setup_cc"
    ]
   },
@@ -815,6 +831,7 @@
   "disruptor_glimpse": {
    "tags": [
     "initiation",
+    "reposition_enemy",
     "setup_cc"
    ],
    "roleMust": [
@@ -860,6 +877,7 @@
     "hard_cc",
     "initiation",
     "mana_hungry",
+    "purge_enemy",
     "soft_cc"
    ]
   },
@@ -941,6 +959,7 @@
    "tags": [
     "aoe",
     "debuff_dispellable",
+    "knockback",
     "soft_cc"
    ]
   },
@@ -949,6 +968,8 @@
     "aoe",
     "debuff_dispellable",
     "nuke",
+    "reposition_ally",
+    "reposition_enemy",
     "save_ally",
     "soft_cc"
    ]
@@ -956,6 +977,7 @@
   "earth_spirit_geomagnetic_grip": {
    "tags": [
     "aoe",
+    "reposition_ally",
     "save_ally",
     "soft_cc"
    ]
@@ -1075,6 +1097,7 @@
   "enchantress_enchant": {
    "tags": [
     "debuff_dispellable",
+    "purge_enemy",
     "soft_cc",
     "summon"
    ]
@@ -1314,6 +1337,7 @@
    "tags": [
     "aoe",
     "debuff_dispellable",
+    "knockback",
     "nuke",
     "soft_cc"
    ]
@@ -1322,6 +1346,7 @@
    "tags": [
     "bkb_piercing",
     "debuff_dispellable",
+    "dispel_self",
     "initiation",
     "nuke"
    ]
@@ -1353,6 +1378,7 @@
     "aoe",
     "mana_hungry",
     "nuke",
+    "reposition_enemy",
     "soft_cc"
    ]
   },
@@ -1453,6 +1479,7 @@
   "juggernaut_blade_fury": {
    "tags": [
     "aoe",
+    "dispel_self",
     "farm_tool",
     "sustain_self"
    ]
@@ -1469,6 +1496,7 @@
   "juggernaut_omni_slash": {
    "tags": [
     "bkb_piercing",
+    "dispel_self",
     "initiation",
     "mana_hungry",
     "steroid"
@@ -1480,6 +1508,7 @@
     "debuff_dispellable",
     "mana_hungry",
     "nuke",
+    "reposition_enemy",
     "soft_cc"
    ]
   },
@@ -1536,6 +1565,7 @@
    "tags": [
     "aoe",
     "bkb_piercing",
+    "dispel_self",
     "mana_hungry",
     "sustain_self"
    ]
@@ -1588,6 +1618,8 @@
   "kunkka_x_marks_the_spot": {
    "tags": [
     "initiation",
+    "reposition_ally",
+    "reposition_enemy",
     "setup_cc"
    ]
   },
@@ -1602,7 +1634,11 @@
   },
   "largo_catchy_lick": {
    "tags": [
+    "dispel_ally",
     "nuke",
+    "purge_enemy",
+    "reposition_ally",
+    "reposition_enemy",
     "save_ally"
    ]
   },
@@ -1642,6 +1678,7 @@
   },
   "legion_commander_press_the_attack": {
    "tags": [
+    "dispel_ally",
     "good_aghanims",
     "save_ally",
     "sustain_self"
@@ -1726,6 +1763,7 @@
    "tags": [
     "aoe",
     "bkb_piercing",
+    "dispel_self",
     "mana_hungry",
     "nuke",
     "save_ally",
@@ -1741,6 +1779,7 @@
   },
   "life_stealer_rage": {
    "tags": [
+    "dispel_self",
     "sustain_self"
    ]
   },
@@ -1928,12 +1967,14 @@
     "hard_cc",
     "initiation",
     "mana_hungry",
+    "reposition_enemy",
     "teamfight_ult"
    ]
   },
   "magnataur_shockwave": {
    "tags": [
     "aoe",
+    "knockback",
     "nuke",
     "skill_point_sink",
     "soft_cc",
@@ -1947,6 +1988,7 @@
     "hard_cc",
     "initiation",
     "mobility",
+    "reposition_enemy",
     "soft_cc"
    ]
   },
@@ -1964,14 +2006,20 @@
     "hard_cc",
     "initiation",
     "mobility",
+    "reposition_ally",
     "save_ally"
-   ]
+   ],
+   "viaUpgrade": {
+    "reposition_ally": "shard"
+   }
   },
   "marci_grapple": {
    "tags": [
     "aoe",
     "debuff_dispellable",
     "nuke",
+    "reposition_ally",
+    "reposition_enemy",
     "save_ally",
     "soft_cc"
    ]
@@ -2003,6 +2051,7 @@
   "mars_gods_rebuke": {
    "tags": [
     "aoe",
+    "knockback",
     "nuke",
     "soft_cc"
    ]
@@ -2014,6 +2063,7 @@
     "hard_cc",
     "initiation",
     "nuke",
+    "reposition_enemy",
     "setup_cc",
     "waveclear"
    ]
@@ -2140,6 +2190,7 @@
   "morphling_adaptive_strike_agi": {
    "tags": [
     "hard_cc",
+    "knockback",
     "nuke"
    ]
   },
@@ -2190,6 +2241,7 @@
   },
   "naga_siren_mirror_image": {
    "tags": [
+    "dispel_self",
     "farm_tool",
     "steroid"
    ]
@@ -2408,6 +2460,7 @@
   "omniknight_martyr": {
    "tags": [
     "bkb_piercing",
+    "dispel_ally",
     "save_ally",
     "sustain_self"
    ]
@@ -2424,6 +2477,7 @@
   "oracle_false_promise": {
    "tags": [
     "bkb_piercing",
+    "dispel_ally",
     "mana_hungry",
     "save_ally",
     "sustain_self"
@@ -2441,7 +2495,9 @@
     "aoe",
     "channeled",
     "debuff_dispellable",
+    "dispel_ally",
     "nuke",
+    "purge_enemy",
     "save_ally",
     "setup_cc",
     "soft_cc"
@@ -2462,10 +2518,12 @@
   "pangolier_gyroshell": {
    "tags": [
     "aoe",
+    "dispel_self",
     "hard_cc",
     "initiation",
     "mana_hungry",
     "mobility",
+    "reposition_enemy",
     "teamfight_ult"
    ]
   },
@@ -2522,6 +2580,7 @@
   },
   "phantom_lancer_doppelwalk": {
    "tags": [
+    "dispel_self",
     "mobility",
     "sustain_self"
    ]
@@ -2573,6 +2632,7 @@
    "tags": [
     "aoe",
     "bkb_piercing",
+    "dispel_self",
     "hard_cc",
     "mana_hungry",
     "setup_cc",
@@ -2586,7 +2646,8 @@
     "debuff_dispellable",
     "hard_cc",
     "initiation",
-    "mobility"
+    "mobility",
+    "reposition_enemy"
    ]
   },
   "primal_beast_pulverize": {
@@ -2668,7 +2729,9 @@
     "bkb_piercing",
     "hard_cc",
     "initiation",
-    "nuke"
+    "nuke",
+    "reposition_ally",
+    "reposition_enemy"
    ]
   },
   "pudge_rot": {
@@ -2740,6 +2803,7 @@
     "bkb_piercing",
     "mana_hungry",
     "nuke",
+    "reposition_enemy",
     "teamfight_ult"
    ]
   },
@@ -2766,6 +2830,7 @@
     "bkb_piercing",
     "initiation",
     "nuke",
+    "reposition_enemy",
     "setup_cc",
     "soft_cc"
    ]
@@ -2890,8 +2955,13 @@
     "aoe",
     "debuff_strong_only",
     "hard_cc",
+    "reposition_ally",
+    "reposition_enemy",
     "setup_cc"
-   ]
+   ],
+   "viaUpgrade": {
+    "reposition_ally": "shard"
+   }
   },
   "sandking_burrowstrike": {
    "tags": [
@@ -2937,10 +3007,15 @@
   "shadow_demon_demonic_purge": {
    "tags": [
     "bkb_piercing",
+    "dispel_ally",
     "mana_hungry",
     "nuke",
+    "purge_enemy",
     "soft_cc"
-   ]
+   ],
+   "viaUpgrade": {
+    "dispel_ally": "shard"
+   }
   },
   "shadow_demon_disruption": {
    "tags": [
@@ -3166,6 +3241,7 @@
   "slark_dark_pact": {
    "tags": [
     "aoe",
+    "dispel_self",
     "waveclear"
    ]
   },
@@ -3203,6 +3279,8 @@
     "hard_cc",
     "initiation",
     "mobility",
+    "reposition_ally",
+    "reposition_enemy",
     "save_ally",
     "setup_cc"
    ]
@@ -3329,8 +3407,14 @@
     "initiation",
     "mana_hungry",
     "mobility",
-    "nuke"
-   ]
+    "nuke",
+    "reposition_enemy"
+   ],
+   "with": {
+    "reposition_enemy": [
+     "spirit_breaker_greater_bash"
+    ]
+   }
   },
   "storm_spirit_ball_lightning": {
    "tags": [
@@ -3414,6 +3498,7 @@
   "techies_reactive_tazer": {
    "tags": [
     "aoe",
+    "purge_enemy",
     "save_ally",
     "soft_cc"
    ]
@@ -3524,6 +3609,7 @@
   },
   "tidehunter_kraken_shell": {
    "tags": [
+    "dispel_self",
     "farm_tool",
     "passive_value",
     "sustain_self"
@@ -3607,6 +3693,8 @@
     "hard_cc",
     "initiation",
     "nuke",
+    "reposition_ally",
+    "reposition_enemy",
     "setup_cc"
    ]
   },
@@ -3653,6 +3741,7 @@
   },
   "troll_warlord_battle_trance": {
    "tags": [
+    "dispel_self",
     "mana_hungry",
     "steroid",
     "sustain_self"
@@ -3675,15 +3764,23 @@
    "tags": [
     "aoe",
     "debuff_dispellable",
+    "dispel_self",
     "soft_cc"
-   ]
+   ],
+   "viaUpgrade": {
+    "dispel_self": "scepter"
+   }
   },
   "troll_warlord_whirling_axes_ranged": {
    "tags": [
     "aoe",
     "debuff_dispellable",
+    "purge_enemy",
     "soft_cc"
-   ]
+   ],
+   "viaUpgrade": {
+    "purge_enemy": "scepter"
+   }
   },
   "tusk_ice_shards": {
    "tags": [
@@ -3699,6 +3796,7 @@
     "initiation",
     "mobility",
     "nuke",
+    "reposition_ally",
     "save_ally"
    ],
    "roleMust": [
@@ -3771,6 +3869,7 @@
   "ursa_enrage": {
    "tags": [
     "bkb_piercing",
+    "dispel_self",
     "sustain_self"
    ]
   },
@@ -3811,6 +3910,8 @@
     "initiation",
     "mana_hungry",
     "mobility",
+    "reposition_ally",
+    "reposition_enemy",
     "save_ally",
     "setup_cc"
    ]
@@ -3916,6 +4017,7 @@
     "debuff_dispellable",
     "good_with_rearm",
     "nuke",
+    "reposition_enemy",
     "setup_cc",
     "soft_cc"
    ]
@@ -4017,6 +4119,7 @@
   },
   "weaver_time_lapse": {
    "tags": [
+    "dispel_self",
     "mana_hungry",
     "sustain_self"
    ]
@@ -4088,6 +4191,7 @@
     "hard_cc",
     "initiation",
     "mana_hungry",
+    "purge_enemy",
     "teamfight_ult"
    ]
   },
@@ -4101,7 +4205,8 @@
    "tags": [
     "initiation",
     "mana_hungry",
-    "mobility"
+    "mobility",
+    "reposition_ally"
    ]
   },
   "wisp_spirits": {
