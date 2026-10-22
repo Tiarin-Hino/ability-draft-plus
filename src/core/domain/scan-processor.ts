@@ -72,6 +72,7 @@ import {
   AMP_TEAM_WEIGHT,
   AMP_TEAM_DEMAND_REF,
   SPELL_STEROID_DEMAND_REF,
+  DENY_BOOST,
 } from '@shared/constants/thresholds'
 
 // @DEV-GUIDE: Central business logic — transforms raw ML scan results into a fully-enriched
@@ -435,6 +436,35 @@ export function processScanResults(
   const teamMagicalPicks = teamPicksTagged('nuke', 'teamfight_ult')
   // spell_steroid is SELF amp: worth what MY OWN spells deal (own picks only).
   const mySpellPicks = [...new Set([...myPicksTagged('nuke'), ...myPicksTagged('teamfight_ult')])]
+  // Round-5 combo deny: what the ENEMY holds (abilities by internal name,
+  // picked models by hero name) and whether they still have ability turns
+  // (any enemy row short of its four picks). Undefined without My Spot.
+  const enemyHeld: EnemyHeld | undefined = (() => {
+    if (deps.tags === undefined || state.mySelectedSpotHeroOrder === null) return undefined
+    const myHalf = state.mySelectedSpotHeroOrder < 5
+    const isEnemyRow = (row: number): boolean => row < 5 !== myHalf
+    const abilities = new Set<string>()
+    const picksPerRow = new Map<number, number>()
+    for (const s of selectedAbilities) {
+      if (!s.name || !isEnemyRow(s.hero_order)) continue
+      abilities.add(s.name)
+      picksPerRow.set(s.hero_order, (picksPerRow.get(s.hero_order) ?? 0) + 1)
+    }
+    const models = new Set<string>()
+    for (const m of state.identifiedHeroModelsCache) {
+      if (isEnemyRow(m.heroOrder) && state.pickedModelHeroOrders.includes(m.heroOrder)) {
+        models.add(m.heroName)
+      }
+    }
+    const enemyRows = [0, 1, 2, 3, 4].map((r) => (myHalf ? r + 5 : r))
+    const turnsLeft = enemyRows.some((r) => (picksPerRow.get(r) ?? 0) < PICKS_PER_PLAYER)
+    return { abilities, models, turnsLeft }
+  })()
+  const partnerDisplayName = (partner: string): string =>
+    partner.startsWith('model:')
+      ? (state.identifiedHeroModelsCache.find((m) => m.heroName === partner.slice('model:'.length))
+          ?.heroDisplayName ?? partner.slice('model:'.length))
+      : (abilityDetailsMap.get(partner)?.displayName ?? partner)
   // Always-on Shard/Scepter markers are a user setting resolved HERE (the
   // overlay has no settings access) — payload-gated, applies on the next scan.
   const aghsMarkersEnabled = settings.aghsMarkersEnabled === true
@@ -726,6 +756,8 @@ export function processScanResults(
       teamPhysicalPicks,
       teamMagicalPicks,
       mySpellPicks,
+      enemyHeld,
+      partnerDisplayName,
       aghsMarkersEnabled,
     },
   )
@@ -972,9 +1004,26 @@ interface RoleScoringInputs {
   teamMagicalPicks: string[]
   /** spell_steroid complement: display names of MY nuke / teamfight_ult picks. */
   mySpellPicks: string[]
+  /** Round-5 combo deny: what the enemy holds; undefined without My Spot. */
+  enemyHeld: EnemyHeld | undefined
+  /** Display name of a combos: partner ('model:<hero>' or an ability name). */
+  partnerDisplayName: (partner: string) => string
   /** Setting: always mark strong Shard/Scepter pool abilities (display only). */
   aghsMarkersEnabled: boolean
 }
+
+/** Enemy-held picks for the combo-deny verdict (round 5 step 4). */
+interface EnemyHeld {
+  /** Internal names of abilities drafted on enemy rows. */
+  abilities: ReadonlySet<string>
+  /** Hero internal names of models picked on enemy rows. */
+  models: ReadonlySet<string>
+  /** True while any enemy row still has ability picks to make. */
+  turnsLeft: boolean
+}
+
+/** Ability picks per player in a full draft. */
+const PICKS_PER_PLAYER = 4
 
 /** Percentile ranks [0,1] with average-rank ties; undefined values -> 0.5. */
 function pctRanks(entries: Array<{ name: string; value: number | undefined }>): Map<string, number> {
@@ -1030,8 +1079,33 @@ function buildScoredEntities(
     teamPhysicalPicks,
     teamMagicalPicks,
     mySpellPicks,
+    enemyHeld,
+    partnerDisplayName,
     aghsMarkersEnabled,
   } = role
+  // Round-5 deny guard: the median consolidated score of the pool's abilities
+  // (pre-role, personal-blended). A deny only ever boosts a candidate at or
+  // above it; below, the marker still shows but the score is untouched.
+  const poolMedianScore = (() => {
+    const scores: number[] = []
+    const counted = new Set<string>()
+    for (const s of [...ultimates, ...standard]) {
+      if (!s.name || counted.has(s.name)) continue
+      counted.add(s.name)
+      const d = abilityDetailsMap.get(s.name)
+      scores.push(
+        calculatePersonalizedScore(
+          d?.winrate ?? null,
+          d?.pickRate ?? null,
+          personalAbilityStats.get(s.name),
+        ).consolidatedScore,
+      )
+    }
+    if (scores.length === 0) return 0
+    scores.sort((a, b) => a - b)
+    const mid = Math.floor(scores.length / 2)
+    return scores.length % 2 === 1 ? scores[mid] : (scores[mid - 1] + scores[mid]) / 2
+  })()
   // Round-5 amp demand, computed once per kind. Team amps are worth the
   // TEAM's damage of their type; the self spell amp is worth MY OWN spells
   // (two spells make it a full slot — SPELL_STEROID_DEMAND_REF).
@@ -1222,6 +1296,25 @@ function buildScoredEntities(
         ampDemand = { kind: amp.kind, amplifies: amp.amplifies }
       }
     }
+    // Round-5 combo deny (role mode or not): the enemy holds a curated combos:
+    // partner of this good_deny candidate and still has turns — leaving it in
+    // the pool completes their combo. Boost only at/above the pool median
+    // (never a dead pick for me); the marker shows either way.
+    let denyCombo: ScoredEntity['denyCombo']
+    let denyBoost = 0
+    const combos = hasTag('good_deny') ? tags?.getCombos?.(slot.name) : undefined
+    if (combos !== undefined && enemyHeld !== undefined && enemyHeld.turnsLeft) {
+      const held = combos.filter((p) =>
+        p.startsWith('model:')
+          ? enemyHeld.models.has(p.slice('model:'.length))
+          : enemyHeld.abilities.has(p),
+      )
+      if (held.length > 0) {
+        const boosted = scored.consolidatedScore >= poolMedianScore
+        denyBoost = boosted ? DENY_BOOST : 0
+        denyCombo = { completes: held.map(partnerDisplayName), boosted }
+      }
+    }
     const consolidatedScore =
       roleDelta !== undefined ||
       pairingDelta !== 0 ||
@@ -1229,7 +1322,8 @@ function buildScoredEntities(
       aghsBoost !== 0 ||
       pointSinkDamp !== 0 ||
       dispelBoost !== 0 ||
-      ampBoost !== 0
+      ampBoost !== 0 ||
+      denyBoost !== 0
         ? Math.min(
             1,
             Math.max(
@@ -1241,7 +1335,8 @@ function buildScoredEntities(
                 aghsBoost -
                 pointSinkDamp +
                 dispelBoost +
-                ampBoost,
+                ampBoost +
+                denyBoost,
             ),
           )
         : scored.consolidatedScore
@@ -1283,6 +1378,7 @@ function buildScoredEntities(
       scepterStackWith,
       dispelDemand,
       ampDemand,
+      denyCombo,
       pointSinkConflictWith,
       goodShard: (aghsMarkersEnabled && hasTag('good_shard')) || undefined,
       goodScepter: (aghsMarkersEnabled && hasTag('good_aghanims')) || undefined,
@@ -1572,6 +1668,7 @@ function enrichSlots(
       pointSinkConflictWith: scored?.pointSinkConflictWith,
       dispelDemand: scored?.dispelDemand,
       ampDemand: scored?.ampDemand,
+      denyCombo: scored?.denyCombo,
       goodShard: scored?.goodShard,
       goodScepter: scored?.goodScepter,
       isGeneralTopTier: topTier?.isGeneralTopTier ?? false,

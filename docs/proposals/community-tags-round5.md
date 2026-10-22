@@ -24,7 +24,11 @@ as an own-pick complement boost instead (0.06 × clamp(my nukes / 2, 0, 1),
 tooltip names my spells) plus the pos-2 accent. The amp family now also marks
 debuffs for the mechanical layer (debuff_dispellable 129 → 130: Rip Tide and
 Land Mines gained it; Magnetize, Overwhelming Odds and Anchor Smash lost a marker
-that had come from a CC tag the overrides remove). Steps 4-5 pending.
+that had come from a CC tag the overrides remove). Step 4 (good_deny + curated
+combos, deny marker + boost with the pool-median guard, 16 seeded carriers with
+their partner lists from §3.3, Ball Lightning naming the OD model) shipped
+2026-10-22. "Enemy still has turns" = any enemy row short of four ability picks.
+Step 5 pending.
 Source: Tag Lab export version 2 (513 abilities, 30-tag vocab) vs the shipped
 version 1 (25 tags). The app currently DROPS the five new tags at load.
 

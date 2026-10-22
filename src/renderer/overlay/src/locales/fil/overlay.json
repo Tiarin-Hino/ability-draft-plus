@@ -121,7 +121,9 @@
     "purgeDemand": "Purge value — tinatanggal ang {{names}} sa kalaban",
     "dispelDemandPool": "Dispel value — {{n}} dispellable debuffs pa ang nasa pool",
     "ampDemand": "Damage amp — pinapalakas ang {{names}} ng team mo",
-    "spellSteroid": "Spell amp — pinapalakas ang iyong {{names}}"
+    "spellSteroid": "Spell amp — pinapalakas ang iyong {{names}}",
+    "denyCombo": "Deny — kinukumpleto ang {{names}} ng kalaban",
+    "denyComboWeak": "Deny lang — kinukumpleto ang {{names}} ng kalaban, pero mahina para sa iyo"
   },
   "role": {
     "aria": "Mga role suggestion",

@@ -121,7 +121,9 @@
     "purgeDemand": "Valor de purga — remove {{names}} do inimigo",
     "dispelDemandPool": "Valor de dissipação — ainda há {{n}} debuffs dissipáveis no pool",
     "ampDemand": "Amplificação de dano — multiplica {{names}} do seu time",
-    "spellSteroid": "Amplificação de magias — multiplica suas {{names}}"
+    "spellSteroid": "Amplificação de magias — multiplica suas {{names}}",
+    "denyCombo": "Negar — completa {{names}} do inimigo",
+    "denyComboWeak": "Só negar — completa {{names}} do inimigo, mas é fraco para você"
   },
   "role": {
     "aria": "Sugestões por função",

@@ -121,7 +121,9 @@
     "purgeDemand": "净化价值 — 可清除敌方的 {{names}}",
     "dispelDemandPool": "驱散价值 — 池中仍有 {{n}} 个可驱散的负面效果",
     "ampDemand": "增伤 — 放大己方的 {{names}}",
-    "spellSteroid": "法术强化 — 放大你的 {{names}}"
+    "spellSteroid": "法术强化 — 放大你的 {{names}}",
+    "denyCombo": "抢断 — 补全敌方的 {{names}}",
+    "denyComboWeak": "仅抢断 — 补全敌方的 {{names}}，但对你是弱选择"
   },
   "role": {
     "aria": "分路推荐",

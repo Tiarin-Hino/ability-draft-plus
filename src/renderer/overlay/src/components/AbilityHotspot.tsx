@@ -67,6 +67,9 @@ export function AbilityHotspot({
       {!isSelectedAbility && slot.goodScepter && (
         <span className="aghs-marker aghs-marker-scepter" />
       )}
+      {/* Round-5 combo deny: the enemy holds a partner of this ability —
+          red triangle top-right (pool slots only, hidden in capture mode) */}
+      {!isSelectedAbility && slot.denyCombo && <span className="deny-marker" />}
     </div>
   )
 }

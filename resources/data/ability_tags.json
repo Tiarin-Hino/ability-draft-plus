@@ -35,7 +35,8 @@
   "spell_steroid",
   "amp_physical",
   "amp_magical",
-  "amp_all"
+  "amp_all",
+  "good_deny"
  ],
  "mechanicalVocab": [
   "bkb_piercing",
@@ -242,9 +243,15 @@
    "tags": [
     "aoe",
     "bkb_piercing",
+    "good_deny",
     "good_shard",
     "hard_cc",
     "initiation"
+   ],
+   "combos": [
+    "axe_counter_helix",
+    "centaur_return",
+    "spectre_dispersion"
    ]
   },
   "axe_counter_helix": {
@@ -252,7 +259,11 @@
     "aoe",
     "bkb_piercing",
     "farm_tool",
+    "good_deny",
     "passive_value"
+   ],
+   "combos": [
+    "axe_berserkers_call"
    ]
   },
   "axe_culling_blade": {
@@ -475,7 +486,11 @@
    "tags": [
     "aoe",
     "bkb_piercing",
-    "farm_tool"
+    "farm_tool",
+    "good_deny"
+   ],
+   "combos": [
+    "earthshaker_aftershock"
    ]
   },
   "bristleback_viscous_nasal_goo": {
@@ -1286,15 +1301,25 @@
   "gyrocopter_homing_missile": {
    "tags": [
     "debuff_strong_only",
+    "good_deny",
     "hard_cc",
     "initiation",
     "mana_hungry",
     "setup_cc"
+   ],
+   "combos": [
+    "gyrocopter_rocket_barrage"
    ]
   },
   "gyrocopter_rocket_barrage": {
    "tags": [
+    "good_deny",
     "skill_point_sink"
+   ],
+   "combos": [
+    "batrider_sticky_napalm",
+    "earthshaker_aftershock",
+    "gyrocopter_homing_missile"
    ]
   },
   "hoodwink_acorn_shot": {
@@ -1342,7 +1367,14 @@
   },
   "huskar_burning_spear": {
    "tags": [
+    "good_deny",
     "steroid"
+   ],
+   "combos": [
+    "alchemist_chemical_rage",
+    "batrider_sticky_napalm",
+    "huskar_berserkers_blood",
+    "jakiro_liquid_ice"
    ]
   },
   "huskar_inner_fire": {
@@ -1908,9 +1940,13 @@
   "luna_lucent_beam": {
    "tags": [
     "debuff_strong_only",
+    "good_deny",
     "nuke",
     "skill_point_sink",
     "soft_cc"
+   ],
+   "combos": [
+    "luna_eclipse"
    ]
   },
   "luna_lunar_orbit": {
@@ -2358,7 +2394,12 @@
   "night_stalker_crippling_fear": {
    "tags": [
     "aoe",
+    "good_deny",
     "soft_cc"
+   ],
+   "combos": [
+    "batrider_sticky_napalm",
+    "jakiro_liquid_ice"
    ]
   },
   "night_stalker_darkness": {
@@ -2603,8 +2644,13 @@
   "phantom_lancer_doppelwalk": {
    "tags": [
     "dispel_self",
+    "good_deny",
     "mobility",
     "sustain_self"
+   ],
+   "combos": [
+    "luna_moon_glaive",
+    "phantom_lancer_juxtapose"
    ]
   },
   "phantom_lancer_juxtapose": {
@@ -2810,14 +2856,24 @@
    "tags": [
     "aoe",
     "farm_tool",
+    "good_deny",
     "nuke",
     "waveclear"
+   ],
+   "combos": [
+    "earthshaker_aftershock",
+    "queenofpain_shadow_strike"
    ]
   },
   "queenofpain_shadow_strike": {
    "tags": [
     "debuff_dispellable",
+    "good_deny",
     "soft_cc"
+   ],
+   "combos": [
+    "earthshaker_aftershock",
+    "queenofpain_scream_of_pain"
    ]
   },
   "queenofpain_sonic_wave": {
@@ -3315,7 +3371,18 @@
   },
   "snapfire_lil_shredder": {
    "tags": [
-    "amp_physical"
+    "amp_physical",
+    "good_deny"
+   ],
+   "combos": [
+    "antimage_mana_break",
+    "drow_ranger_frost_arrows",
+    "enchantress_impetus",
+    "huskar_burning_spear",
+    "silencer_glaives_of_wisdom",
+    "spectre_haunt",
+    "ursa_fury_swipes",
+    "viper_poison_attack"
    ]
   },
   "snapfire_mortimer_kisses": {
@@ -3448,10 +3515,15 @@
   },
   "storm_spirit_ball_lightning": {
    "tags": [
+    "good_deny",
     "initiation",
     "mana_hungry",
     "mobility",
     "nuke"
+   ],
+   "combos": [
+    "earthshaker_aftershock",
+    "model:obsidiandestroyer"
    ]
   },
   "storm_spirit_electric_vortex": {
@@ -3881,6 +3953,7 @@
   "undying_tombstone": {
    "tags": [
     "aoe",
+    "good_deny",
     "good_with_rearm",
     "summon",
     "teamfight_ult"
@@ -3888,6 +3961,9 @@
    "roleMust": [
     4,
     5
+   ],
+   "combos": [
+    "undying_flesh_golem"
    ]
   },
   "ursa_earthshock": {
@@ -3919,7 +3995,18 @@
   },
   "ursa_overpower": {
    "tags": [
+    "good_deny",
     "steroid"
+   ],
+   "combos": [
+    "antimage_mana_break",
+    "drow_ranger_frost_arrows",
+    "enchantress_impetus",
+    "huskar_burning_spear",
+    "silencer_glaives_of_wisdom",
+    "spectre_haunt",
+    "ursa_fury_swipes",
+    "viper_poison_attack"
    ]
   },
   "vengefulspirit_command_aura": {
@@ -4312,12 +4399,16 @@
   },
   "zuus_lightning_bolt": {
    "tags": [
+    "good_deny",
     "nuke",
     "soft_cc"
    ],
    "roleMust": [
     4,
     5
+   ],
+   "combos": [
+    "zuus_thundergods_wrath"
    ]
   },
   "zuus_thundergods_wrath": {

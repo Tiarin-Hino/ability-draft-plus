@@ -36,7 +36,15 @@ Every layer defaults to a no-op: `roleMode: 'off'` (or missing shift data) is
 bit-identical to the pre-feature scorer — golden tests enforce this.
 
 **Round 5 (docs/proposals/community-tags-round5.md — agreed 2026-10-21; steps
-1-3 shipped 2026-10-22).** Step 3 scoring: the **amp demand boost**
+1-4 shipped 2026-10-22).** Step 4, **combo deny** (`good_deny` + the entry's
+curated `combos:` list, directional, may name `model:<hero>`): when the ENEMY
+holds a listed partner (ability on an enemy row, or a model picked on one)
+and still has ability turns, the candidate gets a red corner marker and a
+tooltip naming the partners; `DENY_BOOST` (0.05) applies only when the
+candidate's own pre-role score is at or above the pool median (otherwise the
+tooltip says "weak pick for you"). Combo links are CURATED ONLY — the user's
+partner lists overrode the synergy table in 14 of 16 carriers; never trigger
+on AbilitySynergies. Role-independent, outside the cap. Step 3 scoring: the **amp demand boost**
 (role-independent, `AMP_TEAM_*` / `SPELL_STEROID_DEMAND_REF`): a team amp
 (`amp_physical` / `amp_magical` / `amp_all`) is worth the TEAM's damage of its
 type — steroid picks for physical, nuke + teamfight_ult for magical, both for

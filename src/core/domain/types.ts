@@ -89,6 +89,10 @@ export interface ScoredEntity {
    * display names of the picks the amp multiplies — MY TEAM's for the three
    * team amps, MY OWN spells for 'spell' (spell_steroid). */
   ampDemand?: { kind: 'physical' | 'magical' | 'all' | 'spell'; amplifies: string[] }
+  /** Round-5 combo deny — the enemy holds a curated combos: partner of this
+   * good_deny candidate. `completes`: display names of those partners;
+   * `boosted`: DENY_BOOST applied (candidate at/above the pool median). */
+  denyCombo?: { completes: string[]; boosted: boolean }
   /** Display-only facts, set ONLY when the aghsMarkersEnabled setting is on
    * (the overlay has no settings access — payload-gated): strong Shard /
    * Scepter upgrade → corner marker + tooltip note. */

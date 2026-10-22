@@ -337,6 +337,19 @@ body {
   box-shadow: 0 0 4px rgba(150, 110, 235, 0.9);
 }
 
+/* Round-5 combo deny marker: red triangle in the top-right corner */
+.deny-marker {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-top: 11px solid rgba(235, 80, 80, 0.95);
+  border-left: 11px solid transparent;
+  filter: drop-shadow(0 0 3px rgba(235, 80, 80, 0.9));
+  pointer-events: none;
+}
+
 /* User's selected ability - teal */
 .my-spot-selected {
   border: 3px solid rgba(var(--color-my-spot), 1) !important;
@@ -373,7 +386,8 @@ body {
    don't hide it, and a leftover dot inside an icon crop would contaminate the
    scan exactly like a border would. */
 .capture-mode .personal-marker,
-.capture-mode .aghs-marker {
+.capture-mode .aghs-marker,
+.capture-mode .deny-marker {
   display: none !important;
 }
 

@@ -270,6 +270,16 @@ export const AMP_TEAM_DEMAND_REF = 3
 // is NOT a needs-engine nuke alternative: a needs boost fires on an UNCOVERED
 // need and spell amp is only worth anything once a nuke is owned.
 export const SPELL_STEROID_DEMAND_REF = 2
+// Combo deny (tag round 5 step 4, 2026-10-22): a `good_deny` candidate whose
+// curated `combos:` partner the ENEMY already holds completes their combo if
+// left in the pool. Curated links only (the user's partner lists overrode the
+// synergy table in 14 of 16 carriers); fires only while the enemy still has
+// ability turns. Guard: the boost applies only when the candidate's own
+// consolidated score sits at or above the pool median — a 0.44-winrate
+// ability is never pushed by a deny alone; below it the marker and tooltip
+// still show. Smaller than the demand boosts: the deny is a tie-breaker
+// between picks you would take anyway. Role-independent, outside the cap.
+export const DENY_BOOST = 0.05
 // Model reservation (Drow-for-pos-5 case, 2026-08-31): while core teammates
 // still need models, a body whose attr fit for positions 1-3 beats its 4-5
 // fit by more than the gap is damped for a support drafter — don't steal the

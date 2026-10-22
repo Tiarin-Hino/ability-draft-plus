@@ -221,6 +221,9 @@ export interface EnrichedScanSlot extends ScanResult {
   /** Round-5 amp demand (boost applied, tooltip explains): the picks this amp
    * multiplies — the team's for team amps, the user's own spells for 'spell'. */
   ampDemand?: { kind: 'physical' | 'magical' | 'all' | 'spell'; amplifies: string[] }
+  /** Round-5 combo deny (marker + tooltip): the enemy-held partners this pick
+   * would complete for them; `boosted` = the deny boost was applied. */
+  denyCombo?: { completes: string[]; boosted: boolean }
   /** Strong Shard / Scepter upgrade markers — only present when the
    * aghsMarkersEnabled setting is on (payload-gated; pool slots only). */
   goodShard?: boolean

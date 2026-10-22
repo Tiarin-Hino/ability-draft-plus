@@ -72,6 +72,9 @@ export const TAG_VOCABULARY = [
   'amp_physical',
   'amp_magical',
   'amp_all',
+  // Round 5 step 4: "playable on its own, so denying it is not a dead pick"
+  // (community good_counter). The combo links live in the entry's `combos`.
+  'good_deny',
 ] as const
 
 export type AbilityTag = (typeof TAG_VOCABULARY)[number]

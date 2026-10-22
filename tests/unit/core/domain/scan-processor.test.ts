@@ -14,6 +14,7 @@ import {
   AMP_TEAM_WEIGHT,
   AMP_TEAM_DEMAND_REF,
   SPELL_STEROID_DEMAND_REF,
+  DENY_BOOST,
 } from '@shared/constants/thresholds'
 import type {
   SynergyPartner,
@@ -1730,6 +1731,86 @@ describe('role-aware suggestions', () => {
 
     it('is role-independent: mode off and absent stay bit-identical', () => {
       expect(runWithPicks([['fireball', 3]], 'off')).toEqual(runWithPicks([['fireball', 3]]))
+    })
+  })
+
+  describe('combo deny (round 5)', () => {
+    // ice_blast is the deny-worthy half of two combos: with Fireball (an
+    // ability) and with the Anti-Mage model. blink carries combos but is NOT
+    // good_deny; fireball is good_deny with no combos.
+    const denyTags: NonNullable<ScanProcessorDeps['tags']> = {
+      ...mockTags,
+      getTags(name: string) {
+        const table: Record<string, string[]> = {
+          ice_blast: ['good_deny', 'hard_cc'],
+          blink: ['mobility'],
+          fireball: ['good_deny', 'steroid'],
+          firestorm: ['waveclear'],
+        }
+        const tags = table[name]
+        return tags
+          ? (new Set(tags) as ReturnType<NonNullable<ScanProcessorDeps['tags']>['getTags']>)
+          : undefined
+      },
+      getCombos(name: string) {
+        const table: Record<string, string[]> = {
+          ice_blast: ['fireball', 'model:antimage'],
+          blink: ['fireball'],
+        }
+        return table[name]
+      },
+    }
+    function run(
+      picks: Array<[string, number]>,
+      opts: { mySpot?: number; pickedModels?: number[]; roleMode?: string } = {},
+    ) {
+      const initial = processScanResults(makeInitialScanInput())
+      const state = initial.updatedState
+      state.mySelectedSpotDbId = 1
+      state.mySelectedSpotHeroOrder = opts.mySpot ?? 0
+      state.pickedModelHeroOrders = opts.pickedModels ?? []
+      const base = opts.roleMode === undefined ? mockDeps : depsWithRole(opts.roleMode)
+      const input: ScanProcessorInput = {
+        rawResults: picks.map(([name, row], i) => makeScanResult(name, row, i + 1, false)),
+        isInitialScan: false,
+        state,
+        deps: { ...base, tags: denyTags },
+        modelCoords: [makeCoord(0), makeCoord(1)],
+        heroesCoords: [makeCoord(0), makeCoord(1)],
+        heroesParams: { width: 358, height: 170 },
+        targetResolution: '1920x1080',
+        scaleFactor: 1.0,
+      }
+      return processScanResults(input).overlayPayload
+    }
+    const slot = (payload: ReturnType<typeof run>, name: string) =>
+      payload.scanData!.standard.find((s) => s.name === name)!
+
+    it('marks and boosts a good_deny candidate whose partner the ENEMY holds', () => {
+      const none = run([], { roleMode: 'off' })
+      const enemy = run([['fireball', 7]], { roleMode: 'off' })
+      const teammate = run([['fireball', 2]], { roleMode: 'off' })
+
+      expect(slot(none, 'ice_blast').denyCombo).toBeUndefined()
+      expect(slot(teammate, 'ice_blast').denyCombo).toBeUndefined()
+      const d = slot(enemy, 'ice_blast').denyCombo!
+      expect(d).toEqual({ completes: ['Fireball'], boosted: true })
+      expect(slot(enemy, 'ice_blast').consolidatedScore - slot(none, 'ice_blast').consolidatedScore)
+        .toBeCloseTo(DENY_BOOST, 6)
+      // combos without good_deny never fire; good_deny without combos neither.
+      expect(slot(enemy, 'blink').denyCombo).toBeUndefined()
+    })
+
+    it('a partner can be a MODEL the enemy picked', () => {
+      // My Spot on the lower half makes rows 0-4 the enemy; row 1 is Anti-Mage.
+      const notPicked = run([], { mySpot: 7, roleMode: 'off' })
+      const picked = run([], { mySpot: 7, pickedModels: [1], roleMode: 'off' })
+      expect(slot(notPicked, 'ice_blast').denyCombo).toBeUndefined()
+      expect(slot(picked, 'ice_blast').denyCombo).toEqual({ completes: ['Anti-Mage'], boosted: true })
+    })
+
+    it('is role-independent: mode off and absent stay bit-identical', () => {
+      expect(run([['fireball', 7]], { roleMode: 'off' })).toEqual(run([['fireball', 7]]))
     })
   })
 

@@ -360,6 +360,15 @@ function AbilityTooltipContent({
           })}
         </div>
       )}
+      {/* Round-5 combo deny: boosted reads as a recommendation, unboosted as
+          a warning (the deny would be a weak pick for you) */}
+      {slot.denyCombo && (
+        <div className={`tooltip-stat ${slot.denyCombo.boosted ? 'tooltip-aghs' : 'tooltip-inert'}`}>
+          {t(slot.denyCombo.boosted ? 'tooltip.denyCombo' : 'tooltip.denyComboWeak', {
+            names: slot.denyCombo.completes.join(', '),
+          })}
+        </div>
+      )}
       {slot.contestedSoon &&
         (slot.isGeneralTopTier || slot.isSynergySuggestionForMySpot) && (
           <div className="tooltip-stat tooltip-contested">
