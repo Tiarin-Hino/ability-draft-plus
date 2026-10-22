@@ -237,6 +237,49 @@ export const AGHS_STACK_BOOST = 0.06
 // Future counterpart (roadmap): a `value_point` tag for level-1-value abilities
 // that can wait — a natural partner for a sink, not a conflict.
 export const POINT_SINK_DAMP = 0.2
+// Dispel demand (tag round 5, 2026-10-22): a dispel is worth what the board
+// gives it to dispel. demand = enemy-held debuff_dispellable abilities +
+// DISPEL_DEMAND_POOL_WEIGHT × those still unpicked (they may yet land on the
+// enemy); boost = DISPEL_DEMAND_WEIGHT × clamp(demand / DISPEL_DEMAND_REF, 0,
+// DISPEL_DEMAND_MAX) on dispel_ally / dispel_self candidates. Zero demand =
+// zero boost — the carriers then fall back to the save_ally / sustain_self
+// they already carry (user ruling: "otherwise treat it as a common save").
+// Weight sized like the Aghs boost (a real but situational edge); REF 4 is a
+// typical enemy line-up with a few debuffs; MAX 1.5 lets a debuff-heavy board
+// (6+) exceed one full weight. purge_enemy rides the same curve against the
+// ENEMY's steroid + summon count (no pool term — steroids are never scarce).
+// Role-independent (a board fact), outside the role cap.
+export const DISPEL_DEMAND_WEIGHT = 0.06
+export const DISPEL_DEMAND_REF = 4
+export const DISPEL_DEMAND_POOL_WEIGHT = 0.5
+export const DISPEL_DEMAND_MAX = 1.5
+// Team damage-amp demand (tag round 5, 2026-10-22): an enemy debuff that
+// amplifies damage is worth the damage the TEAM already deals of that type.
+// demand(amp_physical) = steroid picks over my + teammates' picks,
+// demand(amp_magical) = nuke + teamfight_ult picks, amp_all counts both;
+// boost = AMP_TEAM_WEIGHT × clamp(demand / AMP_TEAM_DEMAND_REF, 0, 1). Zero
+// demand = zero boost (a Gush on a caster team stays a slow). Teammates DO
+// count here, unlike Aghs stacking: the amp lands on the enemy and everyone
+// hits it. Sized like the Aghs boost; REF 3 = three damage dealers already
+// committed. Role-independent (a board fact), outside the role cap.
+export const AMP_TEAM_WEIGHT = 0.06
+export const AMP_TEAM_DEMAND_REF = 3
+// spell_steroid is SELF spell amp: worth what MY OWN nukes / teamfight ults
+// deal, own picks only (a teammate's Laguna gains nothing from my Arcane
+// Supremacy). Same weight; two spells already make the amp a full slot. It
+// is NOT a needs-engine nuke alternative: a needs boost fires on an UNCOVERED
+// need and spell amp is only worth anything once a nuke is owned.
+export const SPELL_STEROID_DEMAND_REF = 2
+// Combo deny (tag round 5 step 4, 2026-10-22): a `good_deny` candidate whose
+// curated `combos:` partner the ENEMY already holds completes their combo if
+// left in the pool. Curated links only (the user's partner lists overrode the
+// synergy table in 14 of 16 carriers); fires only while the enemy still has
+// ability turns. Guard: the boost applies only when the candidate's own
+// consolidated score sits at or above the pool median — a 0.44-winrate
+// ability is never pushed by a deny alone; below it the marker and tooltip
+// still show. Smaller than the demand boosts: the deny is a tie-breaker
+// between picks you would take anyway. Role-independent, outside the cap.
+export const DENY_BOOST = 0.05
 // Model reservation (Drow-for-pos-5 case, 2026-08-31): while core teammates
 // still need models, a body whose attr fit for positions 1-3 beats its 4-5
 // fit by more than the gap is damped for a support drafter — don't steal the

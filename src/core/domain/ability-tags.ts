@@ -17,6 +17,12 @@
 // Reserved for abilities whose value the stats systematically miss (e.g.
 // Glimpse for supports); it guarantees a top-tier slot when the user's active
 // role matches (top-tier.ts) on top of a role-layer boost (role-scoring.ts).
+// Round 5 (docs/proposals/community-tags-round5.md) adds three MECHANICAL tags
+// derived by the build script from dotaconstants (never voted on, hidden from
+// the Tag Lab composer — MECHANICAL_TAGS) and three entry fields beside
+// `requires`: `combos` (curated deny partners), `viaUpgrade` (a tag granted by
+// Shard/Scepter — counted at full value, tooltip says so) and `with` (a tag
+// that holds only while the same player has drafted a listed ability).
 
 export const TAG_VOCABULARY = [
   'hard_cc',
@@ -45,9 +51,50 @@ export const TAG_VOCABULARY = [
   'good_shard',
   'good_aghanims',
   'skill_point_sink',
+  // Round 5 mechanical layer (dotaconstants `dispellable` / `bkbpierce`):
+  // the DEMAND side of dispels and the target side of counters. Built by the
+  // script, not curated; an override may still remove a wrong one.
+  'debuff_dispellable',
+  'debuff_strong_only',
+  'bkb_piercing',
+  // Round 5 step 2: the reposition split (community move_enemy) and the
+  // dispel split (community dispel). knockback is descriptive only in v1.
+  'reposition_enemy',
+  'reposition_ally',
+  'knockback',
+  'dispel_self',
+  'dispel_ally',
+  'purge_enemy',
+  // Round 5 step 3: the damage-amp split (community damage_amp). spell_steroid
+  // is SELF spell amp (the caster's steroid); the amp_* three are enemy
+  // debuffs the whole team benefits from, split by damage type.
+  'spell_steroid',
+  'amp_physical',
+  'amp_magical',
+  'amp_all',
+  // Round 5 step 4: "playable on its own, so denying it is not a dead pick"
+  // (community good_counter). The combo links live in the entry's `combos`.
+  'good_deny',
+  // Round 5 step 5: the community's "never leave it to the enemy" verdict.
+  // VISUAL ONLY (border + tooltip with the live numbers) — never a score
+  // term: the stat score already ranks its carriers top-8 of 513, and the
+  // build script audits carriers whose live stats stop agreeing.
+  'pick_asap',
 ] as const
 
 export type AbilityTag = (typeof TAG_VOCABULARY)[number]
+
+/** Tags the build script derives mechanically; hidden from the Tag Lab
+ * composer and from reason chips (they describe what OTHER abilities do to
+ * you, not what a candidate offers). */
+export const MECHANICAL_TAGS: ReadonlySet<AbilityTag> = new Set<AbilityTag>([
+  'debuff_dispellable',
+  'debuff_strong_only',
+  'bkb_piercing',
+])
+
+/** Item upgrade that grants a `viaUpgrade` tag. */
+export type UpgradeKind = 'shard' | 'scepter'
 
 const VOCAB_SET: ReadonlySet<string> = new Set(TAG_VOCABULARY)
 
@@ -124,6 +171,17 @@ export interface AbilityTagsLookup {
    * innate feeds it; Rearm -> a good_with_rearm ability drafted or still in
    * the pool — the enabler goes first, so pool presence counts). */
   getRequires(abilityName: string): readonly string[] | undefined
+  /** Curated deny partners (round 5): ability internal names or 'model:<hero>'.
+   * Directional — the candidate lists what the ENEMY must hold for taking the
+   * candidate to be a worthwhile deny. Optional: older lookups/stubs omit it. */
+  getCombos?(abilityName: string): readonly string[] | undefined
+  /** Tags the ability only has through an item upgrade (round 5). Counted at
+   * full value; the tooltip names the upgrade. */
+  getViaUpgrade?(abilityName: string): ReadonlyMap<AbilityTag, UpgradeKind> | undefined
+  /** Conditional tags (round 5): the tag holds only while the SAME player has
+   * drafted one of the listed abilities (Nether Strike's knockback needs
+   * Greater Bash). */
+  getWith?(abilityName: string): ReadonlyMap<AbilityTag, readonly string[]> | undefined
   /** Attack type of a hero internal name (hero_meta.json); undefined when unknown. */
   getHeroAttackType(heroName: string): HeroAttackType | undefined
   /** Full hero metadata (attributes/gains) for model role-fit; undefined when unknown. */
@@ -140,6 +198,9 @@ export function parseAbilityTagsDataset(json: unknown): {
   roleMustByAbility: Map<string, ReadonlySet<RoleMustPosition>>
   roleAvoidByAbility: Map<string, ReadonlySet<RoleMustPosition>>
   requiresByAbility: Map<string, readonly string[]>
+  combosByAbility: Map<string, readonly string[]>
+  viaUpgradeByAbility: Map<string, ReadonlyMap<AbilityTag, UpgradeKind>>
+  withByAbility: Map<string, ReadonlyMap<AbilityTag, readonly string[]>>
   droppedTags: string[]
 } | null {
   if (typeof json !== 'object' || json === null) return null
@@ -150,7 +211,15 @@ export function parseAbilityTagsDataset(json: unknown): {
   const roleMustByAbility = new Map<string, ReadonlySet<RoleMustPosition>>()
   const roleAvoidByAbility = new Map<string, ReadonlySet<RoleMustPosition>>()
   const requiresByAbility = new Map<string, readonly string[]>()
+  const combosByAbility = new Map<string, readonly string[]>()
+  const viaUpgradeByAbility = new Map<string, ReadonlyMap<AbilityTag, UpgradeKind>>()
+  const withByAbility = new Map<string, ReadonlyMap<AbilityTag, readonly string[]>>()
   const dropped = new Set<string>()
+  /** Non-empty, deduped strings; null when the field is not a list. */
+  const parseNames = (raw: unknown): string[] | null =>
+    Array.isArray(raw)
+      ? [...new Set(raw.filter((r): r is string => typeof r === 'string' && r.length > 0))]
+      : null
   const parsePositions = (raw: unknown): Set<RoleMustPosition> | null => {
     if (!Array.isArray(raw)) return null
     const positions = new Set<RoleMustPosition>()
@@ -183,14 +252,39 @@ export function parseAbilityTagsDataset(json: unknown): {
     if (avoid !== null && avoid.size > 0) roleAvoidByAbility.set(name, avoid)
 
     // Dependency gates: non-empty strings only, deduped; empty lists omitted.
-    const rawRequires = (entry as { requires?: unknown })?.requires
-    if (Array.isArray(rawRequires)) {
-      const reqs = [
-        ...new Set(
-          rawRequires.filter((r): r is string => typeof r === 'string' && r.length > 0),
-        ),
-      ]
-      if (reqs.length > 0) requiresByAbility.set(name, reqs)
+    const reqs = parseNames((entry as { requires?: unknown })?.requires)
+    if (reqs !== null && reqs.length > 0) requiresByAbility.set(name, reqs)
+
+    // Deny partners (round 5): same shape as requires, same validation.
+    const combos = parseNames((entry as { combos?: unknown })?.combos)
+    if (combos !== null && combos.length > 0) combosByAbility.set(name, combos)
+
+    // Upgrade-granted tags: {tag: 'shard' | 'scepter'}. The tag must be in the
+    // vocabulary AND on the entry's tag list (the field only annotates how the
+    // tag is obtained); anything else is dropped silently.
+    const rawVia = (entry as { viaUpgrade?: unknown })?.viaUpgrade
+    if (typeof rawVia === 'object' && rawVia !== null && !Array.isArray(rawVia)) {
+      const via = new Map<AbilityTag, UpgradeKind>()
+      for (const [tag, kind] of Object.entries(rawVia)) {
+        if (tags.has(tag as AbilityTag) && (kind === 'shard' || kind === 'scepter')) {
+          via.set(tag as AbilityTag, kind)
+        }
+      }
+      if (via.size > 0) viaUpgradeByAbility.set(name, via)
+    }
+
+    // Conditional tags: {tag: [ability names]} — tag must be on the entry's
+    // list, the dependency list non-empty after validation.
+    const rawWith = (entry as { with?: unknown })?.with
+    if (typeof rawWith === 'object' && rawWith !== null && !Array.isArray(rawWith)) {
+      const cond = new Map<AbilityTag, readonly string[]>()
+      for (const [tag, deps] of Object.entries(rawWith)) {
+        const names = parseNames(deps)
+        if (tags.has(tag as AbilityTag) && names !== null && names.length > 0) {
+          cond.set(tag as AbilityTag, names)
+        }
+      }
+      if (cond.size > 0) withByAbility.set(name, cond)
     }
   }
   return {
@@ -198,6 +292,9 @@ export function parseAbilityTagsDataset(json: unknown): {
     roleMustByAbility,
     roleAvoidByAbility,
     requiresByAbility,
+    combosByAbility,
+    viaUpgradeByAbility,
+    withByAbility,
     droppedTags: [...dropped],
   }
 }

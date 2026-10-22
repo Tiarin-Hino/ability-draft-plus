@@ -80,6 +80,21 @@ export interface ScoredEntity {
   /** Skill-point-sink conflict: my drafted skill_point_sink picks — present
    * means POINT_SINK_DAMP was applied (one of the two stays under-levelled). */
   pointSinkConflictWith?: string[]
+  /** Round-5 dispel demand — present means the demand boost was applied.
+   * `against`: display names of the enemy-held picks that create the demand
+   * (dispellable debuffs for 'dispel', steroids/summons for 'purge');
+   * `poolCount`: unpicked dispellable debuffs still in the pool (dispel only). */
+  dispelDemand?: { kind: 'dispel' | 'purge'; against: string[]; poolCount: number }
+  /** Round-5 amp demand — present means the boost was applied. `amplifies`:
+   * display names of the picks the amp multiplies — MY TEAM's for the three
+   * team amps, MY OWN spells for 'spell' (spell_steroid). */
+  ampDemand?: { kind: 'physical' | 'magical' | 'all' | 'spell'; amplifies: string[] }
+  /** Round-5 combo deny — the enemy holds a curated combos: partner of this
+   * good_deny candidate. `completes`: display names of those partners;
+   * `boosted`: DENY_BOOST applied (candidate at/above the pool median). */
+  denyCombo?: { completes: string[]; boosted: boolean }
+  /** Round-5 pick_asap community verdict — display only, never scored. */
+  pickAsap?: boolean
   /** Display-only facts, set ONLY when the aghsMarkersEnabled setting is on
    * (the overlay has no settings access — payload-gated): strong Shard /
    * Scepter upgrade → corner marker + tooltip note. */

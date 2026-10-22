@@ -32,6 +32,7 @@ import {
   type ModelStatPercentiles,
 } from './role-scoring'
 import { isInertOnModel, type AbilityTag, type HeroMeta } from './ability-tags'
+import { computeBoardTagProfile, type BoardTagProfile } from './board-tag-profile'
 import { identifyHeroModels } from './hero-identification'
 import {
   getAbilitySynergySplit,
@@ -64,6 +65,14 @@ import {
   MODEL_RESERVATION_DAMP,
   ULT_SUPPLY_SLACK,
   CONTESTED_SOON_WINDOW,
+  DISPEL_DEMAND_WEIGHT,
+  DISPEL_DEMAND_REF,
+  DISPEL_DEMAND_POOL_WEIGHT,
+  DISPEL_DEMAND_MAX,
+  AMP_TEAM_WEIGHT,
+  AMP_TEAM_DEMAND_REF,
+  SPELL_STEROID_DEMAND_REF,
+  DENY_BOOST,
 } from '@shared/constants/thresholds'
 
 // @DEV-GUIDE: Central business logic — transforms raw ML scan results into a fully-enriched
@@ -87,7 +96,12 @@ import {
 //     with a role mode active, abilities get the capped role delta on top — role-scoring.ts;
 //     role-INDEPENDENT own-pick verdicts ride outside the cap: Aghanim's stacking
 //     boost (good_shard/good_aghanims shared with my picks) and the
-//     skill-point-sink damp (a second skill_point_sink) — tag round 4)
+//     skill-point-sink damp (a second skill_point_sink) — tag round 4).
+//     Board-aware inputs come from ONE per-scan board tag profile
+//     (board-tag-profile.ts: tag counts over my / team / enemy / drafted /
+//     pool, conditional `with:` tags resolved per owner) — the pool gates
+//     (requires tag: entries, soft-CC suppression) already read it; the
+//     round-5 demand/deny verdicts will too
 // 11. Check if My Spot already picked an ultimate
 // 12. Determine top-tier entities (max 10, synergy suggestions prioritized)
 // 13. Enrich scan slots with all computed data for overlay display
@@ -388,6 +402,69 @@ export function processScanResults(
   const myShardPicks = myPicksTagged('good_shard')
   const myScepterPicks = myPicksTagged('good_aghanims')
   const myPointSinkPicks = myPicksTagged('skill_point_sink')
+  // Round-5 dispel demand: display names of ENEMY-held picks carrying a tag
+  // (the other team half; rows 0-4 vs 5-9). Empty without the tags dep or an
+  // unknown My Spot — the pool half of the demand still counts then.
+  const enemyPicksTagged = (...wanted: AbilityTag[]): string[] => {
+    if (deps.tags === undefined || state.mySelectedSpotHeroOrder === null) return []
+    const myHalf = state.mySelectedSpotHeroOrder < 5
+    const names = new Set<string>()
+    for (const s of selectedAbilities) {
+      if (!s.name || s.hero_order < 5 === myHalf) continue
+      const t = deps.tags.getTags(s.name)
+      if (t !== undefined && wanted.some((w) => t.has(w))) names.add(s.name)
+    }
+    return [...names].map((n) => abilityDetailsMap.get(n)?.displayName ?? n)
+  }
+  const enemyDispellablePicks = enemyPicksTagged('debuff_dispellable')
+  const enemyPurgeablePicks = enemyPicksTagged('steroid', 'summon')
+  // Round-5 team-amp demand: display names of MY TEAM's picks (me + the four
+  // teammates) that an amp would multiply — right-click damage for
+  // amp_physical, spell damage for amp_magical. Empty without My Spot.
+  const teamPicksTagged = (...wanted: AbilityTag[]): string[] => {
+    if (deps.tags === undefined || state.mySelectedSpotHeroOrder === null) return []
+    const myHalf = state.mySelectedSpotHeroOrder < 5
+    const names = new Set<string>()
+    for (const s of selectedAbilities) {
+      if (!s.name || s.hero_order < 5 !== myHalf) continue
+      const t = deps.tags.getTags(s.name)
+      if (t !== undefined && wanted.some((w) => t.has(w))) names.add(s.name)
+    }
+    return [...names].map((n) => abilityDetailsMap.get(n)?.displayName ?? n)
+  }
+  const teamPhysicalPicks = teamPicksTagged('steroid')
+  const teamMagicalPicks = teamPicksTagged('nuke', 'teamfight_ult')
+  // spell_steroid is SELF amp: worth what MY OWN spells deal (own picks only).
+  const mySpellPicks = [...new Set([...myPicksTagged('nuke'), ...myPicksTagged('teamfight_ult')])]
+  // Round-5 combo deny: what the ENEMY holds (abilities by internal name,
+  // picked models by hero name) and whether they still have ability turns
+  // (any enemy row short of its four picks). Undefined without My Spot.
+  const enemyHeld: EnemyHeld | undefined = (() => {
+    if (deps.tags === undefined || state.mySelectedSpotHeroOrder === null) return undefined
+    const myHalf = state.mySelectedSpotHeroOrder < 5
+    const isEnemyRow = (row: number): boolean => row < 5 !== myHalf
+    const abilities = new Set<string>()
+    const picksPerRow = new Map<number, number>()
+    for (const s of selectedAbilities) {
+      if (!s.name || !isEnemyRow(s.hero_order)) continue
+      abilities.add(s.name)
+      picksPerRow.set(s.hero_order, (picksPerRow.get(s.hero_order) ?? 0) + 1)
+    }
+    const models = new Set<string>()
+    for (const m of state.identifiedHeroModelsCache) {
+      if (isEnemyRow(m.heroOrder) && state.pickedModelHeroOrders.includes(m.heroOrder)) {
+        models.add(m.heroName)
+      }
+    }
+    const enemyRows = [0, 1, 2, 3, 4].map((r) => (myHalf ? r + 5 : r))
+    const turnsLeft = enemyRows.some((r) => (picksPerRow.get(r) ?? 0) < PICKS_PER_PLAYER)
+    return { abilities, models, turnsLeft }
+  })()
+  const partnerDisplayName = (partner: string): string =>
+    partner.startsWith('model:')
+      ? (state.identifiedHeroModelsCache.find((m) => m.heroName === partner.slice('model:'.length))
+          ?.heroDisplayName ?? partner.slice('model:'.length))
+      : (abilityDetailsMap.get(partner)?.displayName ?? partner)
   // Always-on Shard/Scepter markers are a user setting resolved HERE (the
   // overlay has no settings access) — payload-gated, applies on the next scan.
   const aghsMarkersEnabled = settings.aghsMarkersEnabled === true
@@ -410,12 +487,20 @@ export function processScanResults(
   // the enabler goes first, so pool presence keeps it suggestible). Stats
   // stay fully visible; the tooltip explains. Unknown spot/model counts as
   // unsatisfied.
-  const poolHasTag = (tag: string): boolean => {
-    for (const poolName of uniquePoolNames) {
-      if (deps.tags?.getTags(poolName)?.has(tag as AbilityTag)) return true
-    }
-    return false
-  }
+  // Board tag profile (round 5 shared plumbing): tag counts over my / team /
+  // enemy / drafted / pool, computed ONCE per scan. Every board-aware verdict
+  // reads these counts; the pool gates below are the first consumers.
+  const boardTags: BoardTagProfile | undefined =
+    deps.tags !== undefined
+      ? computeBoardTagProfile({
+          selectedAbilities,
+          poolNames: uniquePoolNames,
+          myHeroOrder: state.mySelectedSpotHeroOrder,
+          tags: deps.tags,
+        })
+      : undefined
+  const poolHasTag = (tag: string): boolean =>
+    (boardTags?.pool.get(tag as AbilityTag) ?? 0) > 0
   const unmetRequirementOf = (
     name: string,
   ): { kind: 'ability' | 'model' | 'tag'; displayName: string } | undefined => {
@@ -657,6 +742,7 @@ export function processScanResults(
       myHeroOrder: state.mySelectedSpotHeroOrder,
       ownerHeroIdOf: (name) => deps.heroes.getByAbilityName(name)?.heroId ?? null,
       unmetRequirementOf,
+      boardTags,
       needScarcity,
       myPickCount,
       myModelPicked: state.mySelectedModelDbHeroId !== null,
@@ -665,6 +751,13 @@ export function processScanResults(
       myShardPicks,
       myScepterPicks,
       myPointSinkPicks,
+      enemyDispellablePicks,
+      enemyPurgeablePicks,
+      teamPhysicalPicks,
+      teamMagicalPicks,
+      mySpellPicks,
+      enemyHeld,
+      partnerDisplayName,
       aghsMarkersEnabled,
     },
   )
@@ -885,6 +978,8 @@ interface RoleScoringInputs {
   unmetRequirementOf: (
     abilityName: string,
   ) => { kind: 'ability' | 'model' | 'tag'; displayName: string } | undefined
+  /** Round-5 board tag profile (undefined without the tags dep). */
+  boardTags: BoardTagProfile | undefined
   needScarcity: ReadonlyMap<string, number>
   myPickCount: number
   myModelPicked: boolean
@@ -897,9 +992,38 @@ interface RoleScoringInputs {
   myShardPicks: string[]
   myScepterPicks: string[]
   myPointSinkPicks: string[]
+  /** Round-5 dispel demand: display names of ENEMY-held debuff_dispellable
+   * picks (dispel_ally / dispel_self value) and of enemy steroid / summon
+   * picks (purge_enemy value). Empty without My Spot. */
+  enemyDispellablePicks: string[]
+  enemyPurgeablePicks: string[]
+  /** Round-5 team-amp demand: display names of MY TEAM's steroid picks
+   * (amp_physical) and nuke / teamfight_ult picks (amp_magical); amp_all
+   * counts both. Empty without My Spot. */
+  teamPhysicalPicks: string[]
+  teamMagicalPicks: string[]
+  /** spell_steroid complement: display names of MY nuke / teamfight_ult picks. */
+  mySpellPicks: string[]
+  /** Round-5 combo deny: what the enemy holds; undefined without My Spot. */
+  enemyHeld: EnemyHeld | undefined
+  /** Display name of a combos: partner ('model:<hero>' or an ability name). */
+  partnerDisplayName: (partner: string) => string
   /** Setting: always mark strong Shard/Scepter pool abilities (display only). */
   aghsMarkersEnabled: boolean
 }
+
+/** Enemy-held picks for the combo-deny verdict (round 5 step 4). */
+interface EnemyHeld {
+  /** Internal names of abilities drafted on enemy rows. */
+  abilities: ReadonlySet<string>
+  /** Hero internal names of models picked on enemy rows. */
+  models: ReadonlySet<string>
+  /** True while any enemy row still has ability picks to make. */
+  turnsLeft: boolean
+}
+
+/** Ability picks per player in a full draft. */
+const PICKS_PER_PLAYER = 4
 
 /** Percentile ranks [0,1] with average-rank ties; undefined values -> 0.5. */
 function pctRanks(entries: Array<{ name: string; value: number | undefined }>): Map<string, number> {
@@ -941,6 +1065,7 @@ function buildScoredEntities(
     myHeroOrder,
     ownerHeroIdOf,
     unmetRequirementOf,
+    boardTags,
     needScarcity,
     myPickCount,
     myModelPicked,
@@ -949,19 +1074,97 @@ function buildScoredEntities(
     myShardPicks,
     myScepterPicks,
     myPointSinkPicks,
+    enemyDispellablePicks,
+    enemyPurgeablePicks,
+    teamPhysicalPicks,
+    teamMagicalPicks,
+    mySpellPicks,
+    enemyHeld,
+    partnerDisplayName,
     aghsMarkersEnabled,
   } = role
+  // Round-5 deny guard: the median consolidated score of the pool's abilities
+  // (pre-role, personal-blended). A deny only ever boosts a candidate at or
+  // above it; below, the marker still shows but the score is untouched.
+  const poolMedianScore = (() => {
+    const scores: number[] = []
+    const counted = new Set<string>()
+    for (const s of [...ultimates, ...standard]) {
+      if (!s.name || counted.has(s.name)) continue
+      counted.add(s.name)
+      const d = abilityDetailsMap.get(s.name)
+      scores.push(
+        calculatePersonalizedScore(
+          d?.winrate ?? null,
+          d?.pickRate ?? null,
+          personalAbilityStats.get(s.name),
+        ).consolidatedScore,
+      )
+    }
+    if (scores.length === 0) return 0
+    scores.sort((a, b) => a - b)
+    const mid = Math.floor(scores.length / 2)
+    return scores.length % 2 === 1 ? scores[mid] : (scores[mid - 1] + scores[mid]) / 2
+  })()
+  // Round-5 amp demand, computed once per kind. Team amps are worth the
+  // TEAM's damage of their type; the self spell amp is worth MY OWN spells
+  // (two spells make it a full slot — SPELL_STEROID_DEMAND_REF).
+  const teamAllPicks = [...new Set([...teamPhysicalPicks, ...teamMagicalPicks])]
+  const ampBoostFor = (names: string[], ref: number): number =>
+    names.length > 0 ? AMP_TEAM_WEIGHT * Math.min(1, names.length / ref) : 0
+  const ampByKind: ReadonlyArray<{
+    tag: AbilityTag
+    kind: NonNullable<ScoredEntity['ampDemand']>['kind']
+    amplifies: string[]
+    boost: number
+  }> = [
+    {
+      tag: 'amp_physical',
+      kind: 'physical',
+      amplifies: teamPhysicalPicks,
+      boost: ampBoostFor(teamPhysicalPicks, AMP_TEAM_DEMAND_REF),
+    },
+    {
+      tag: 'amp_magical',
+      kind: 'magical',
+      amplifies: teamMagicalPicks,
+      boost: ampBoostFor(teamMagicalPicks, AMP_TEAM_DEMAND_REF),
+    },
+    {
+      tag: 'amp_all',
+      kind: 'all',
+      amplifies: teamAllPicks,
+      boost: ampBoostFor(teamAllPicks, AMP_TEAM_DEMAND_REF),
+    },
+    {
+      tag: 'spell_steroid',
+      kind: 'spell',
+      amplifies: mySpellPicks,
+      boost: ampBoostFor(mySpellPicks, SPELL_STEROID_DEMAND_REF),
+    },
+  ]
+  // Round-5 dispel demand, computed once: enemy-held dispellable debuffs count
+  // fully, unpicked ones half (they may yet land on the enemy). Purge demand
+  // is the enemy's steroid/summon count (no pool term).
+  const dispelDemandRaw =
+    enemyDispellablePicks.length +
+    DISPEL_DEMAND_POOL_WEIGHT * (boardTags?.pool.get('debuff_dispellable') ?? 0)
+  const purgeDemandRaw = enemyPurgeablePicks.length
+  const demandBoost = (raw: number): number =>
+    raw > 0
+      ? DISPEL_DEMAND_WEIGHT *
+        Math.min(DISPEL_DEMAND_MAX, Math.max(0, raw / DISPEL_DEMAND_REF))
+      : 0
+  const dispelBoostValue = demandBoost(dispelDemandRaw)
+  const purgeBoostValue = demandBoost(purgeDemandRaw)
   // A drafted range-granting ability (Psi Blades, Take Aim) waives the
   // ranged_only inert filter for the rest of the draft.
   const picksGrantRanged = myPickTags.some((t) => t.has('grants_ranged'))
 
   // Soft-CC suppression input: while a real stun remains in the pool, slows
-  // must not surface as disable coverage (Shadow Strike ruling).
-  const poolHasHardCc =
-    tags !== undefined &&
-    [...ultimates, ...standard].some(
-      (slot) => slot.name !== null && tags.getTags(slot.name)?.has('hard_cc'),
-    )
+  // must not surface as disable coverage (Shadow Strike ruling). Read off the
+  // board tag profile (the pool half covers exactly these slots).
+  const poolHasHardCc = (boardTags?.pool.get('hard_cc') ?? 0) > 0
 
   // Forward-pairing profile of the PICKED model (Layer C): chassis
   // percentiles among ALL board models — the remaining-only percentiles
@@ -1063,12 +1266,64 @@ function buildScoredEntities(
     const pointSinkConflictWith =
       hasTag('skill_point_sink') && myPointSinkPicks.length > 0 ? myPointSinkPicks : undefined
     const pointSinkDamp = pointSinkConflictWith !== undefined ? POINT_SINK_DAMP : 0
+    // Round-5 dispel demand (role mode or not): a dispel is worth what the
+    // board gives it to dispel. An ability that both dispels allies and purges
+    // enemies (Fortune's End) takes the larger of the two; one tooltip line.
+    const dispelCandidate = hasTag('dispel_ally') || hasTag('dispel_self')
+    const purgeCandidate = hasTag('purge_enemy')
+    const dispelPick = dispelCandidate ? dispelBoostValue : 0
+    const purgePick = purgeCandidate ? purgeBoostValue : 0
+    const dispelBoost = Math.max(dispelPick, purgePick)
+    const dispelDemand: ScoredEntity['dispelDemand'] =
+      dispelBoost > 0
+        ? dispelPick >= purgePick
+          ? {
+              kind: 'dispel',
+              against: enemyDispellablePicks,
+              poolCount: boardTags?.pool.get('debuff_dispellable') ?? 0,
+            }
+          : { kind: 'purge', against: enemyPurgeablePicks, poolCount: 0 }
+        : undefined
+    // Round-5 amp demand (role mode or not): a team amp is worth the damage
+    // the team already deals of that type; a spell steroid is worth my own
+    // spells. An ability with several amp tags (Natural Order) takes the
+    // best-fed one; one tooltip line.
+    let ampDemand: ScoredEntity['ampDemand']
+    let ampBoost = 0
+    for (const amp of ampByKind) {
+      if (hasTag(amp.tag) && amp.boost > ampBoost) {
+        ampBoost = amp.boost
+        ampDemand = { kind: amp.kind, amplifies: amp.amplifies }
+      }
+    }
+    // Round-5 combo deny (role mode or not): the enemy holds a curated combos:
+    // partner of this good_deny candidate and still has turns — leaving it in
+    // the pool completes their combo. Boost only at/above the pool median
+    // (never a dead pick for me); the marker shows either way.
+    let denyCombo: ScoredEntity['denyCombo']
+    let denyBoost = 0
+    const combos = hasTag('good_deny') ? tags?.getCombos?.(slot.name) : undefined
+    if (combos !== undefined && enemyHeld !== undefined && enemyHeld.turnsLeft) {
+      const held = combos.filter((p) =>
+        p.startsWith('model:')
+          ? enemyHeld.models.has(p.slice('model:'.length))
+          : enemyHeld.abilities.has(p),
+      )
+      if (held.length > 0) {
+        const boosted = scored.consolidatedScore >= poolMedianScore
+        denyBoost = boosted ? DENY_BOOST : 0
+        denyCombo = { completes: held.map(partnerDisplayName), boosted }
+      }
+    }
     const consolidatedScore =
       roleDelta !== undefined ||
       pairingDelta !== 0 ||
       overratedDamp !== 0 ||
       aghsBoost !== 0 ||
-      pointSinkDamp !== 0
+      pointSinkDamp !== 0 ||
+      dispelBoost !== 0 ||
+      ampBoost !== 0 ||
+      denyBoost !== 0
         ? Math.min(
             1,
             Math.max(
@@ -1078,7 +1333,10 @@ function buildScoredEntities(
                 pairingDelta -
                 overratedDamp +
                 aghsBoost -
-                pointSinkDamp,
+                pointSinkDamp +
+                dispelBoost +
+                ampBoost +
+                denyBoost,
             ),
           )
         : scored.consolidatedScore
@@ -1118,6 +1376,11 @@ function buildScoredEntities(
       overrated: overrated || undefined,
       shardStackWith,
       scepterStackWith,
+      dispelDemand,
+      ampDemand,
+      denyCombo,
+      // Round-5 pick_asap: display only (border + tooltip), never a score term.
+      pickAsap: hasTag('pick_asap') || undefined,
       pointSinkConflictWith,
       goodShard: (aghsMarkersEnabled && hasTag('good_shard')) || undefined,
       goodScepter: (aghsMarkersEnabled && hasTag('good_aghanims')) || undefined,
@@ -1405,6 +1668,10 @@ function enrichSlots(
       shardStackWith: scored?.shardStackWith,
       scepterStackWith: scored?.scepterStackWith,
       pointSinkConflictWith: scored?.pointSinkConflictWith,
+      dispelDemand: scored?.dispelDemand,
+      ampDemand: scored?.ampDemand,
+      denyCombo: scored?.denyCombo,
+      pickAsap: scored?.pickAsap,
       goodShard: scored?.goodShard,
       goodScepter: scored?.goodScepter,
       isGeneralTopTier: topTier?.isGeneralTopTier ?? false,

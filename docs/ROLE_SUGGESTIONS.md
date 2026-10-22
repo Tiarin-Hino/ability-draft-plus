@@ -9,7 +9,7 @@ play. Built 2026-08-28/30; design spec + research trail in the session artifacts
 | Source | What | Where it lands |
 |---|---|---|
 | Windrun `GET /ability-shifts` (undocumented; provider-approved 2026-08-28) | Per-ability AND per-hero-model (negative ids) average deviation of drafters' kills/deaths/KA/gpm/xpm/dmg/healing. Units undocumented — treated as ORDERING ONLY. | 7 nullable shift columns on `Abilities` and `Heroes`, applied by `windrun_id` during phase-1 scrape (non-fatal on failure, never wipes) |
-| `resources/data/ability_tags.json` | 513 abilities × 25-tag closed vocabulary (community-curated via the website Tag Lab) | Loaded once at startup (`ability-tags-service`); absent/invalid = tags feature off |
+| `resources/data/ability_tags.json` | 513 abilities × 28-tag closed vocabulary: 25 community-curated via the website Tag Lab + 3 MECHANICAL (`debuff_dispellable`, `debuff_strong_only`, `bkb_piercing`, built from dotaconstants in `assemble`, hidden from the Lab — `MECHANICAL_TAGS`). Entries may also carry `roleMust`, `roleAvoid`, `requires`, and the round-5 fields `combos` / `viaUpgrade` / `with` | Loaded once at startup (`ability-tags-service`); absent/invalid = tags feature off |
 | `resources/data/hero_meta.json` | Hero attack type, primary attribute, base stats + gains (dotaconstants) | Same loader; drives model fit + inert filter |
 
 Both JSON files are GENERATED — never hand-edit. Pipeline:
@@ -34,6 +34,56 @@ is still named tiarinhino.com — the old host 301-redirects there).
 
 Every layer defaults to a no-op: `roleMode: 'off'` (or missing shift data) is
 bit-identical to the pre-feature scorer — golden tests enforce this.
+
+**Round 5 (docs/proposals/community-tags-round5.md — agreed 2026-10-21; all
+five steps shipped 2026-10-22).** Step 5, **pick_asap**: the community's
+"never leave it to the enemy" verdict is DISPLAY ONLY — a gold dashed outline
+on the pool slot plus a tooltip line carrying the live winrate and average
+pick, never a score term (the stat score already ranks its carriers top-8 of
+513; a boost would only fight the greed taper and support accents). The build
+script's `audit_pick_asap` flags carriers whose live stats fall outside
+`wr >= 0.52 and avg pick <= 10` after every assemble, so a reworked ability
+surfaces as a Lab review item instead of a stale verdict. Step 4, **combo deny** (`good_deny` + the entry's
+curated `combos:` list, directional, may name `model:<hero>`): when the ENEMY
+holds a listed partner (ability on an enemy row, or a model picked on one)
+and still has ability turns, the candidate gets a red corner marker and a
+tooltip naming the partners; `DENY_BOOST` (0.05) applies only when the
+candidate's own pre-role score is at or above the pool median (otherwise the
+tooltip says "weak pick for you"). Combo links are CURATED ONLY — the user's
+partner lists overrode the synergy table in 14 of 16 carriers; never trigger
+on AbilitySynergies. Role-independent, outside the cap. Step 3 scoring: the **amp demand boost**
+(role-independent, `AMP_TEAM_*` / `SPELL_STEROID_DEMAND_REF`): a team amp
+(`amp_physical` / `amp_magical` / `amp_all`) is worth the TEAM's damage of its
+type — steroid picks for physical, nuke + teamfight_ult for magical, both for
+all, over my + teammates' picks; `boost = 0.06 × clamp(count / 3, 0, 1)`.
+`spell_steroid` is SELF amp: worth MY OWN nuke / teamfight_ult picks
+(`count / 2`). It is deliberately NOT a needs-engine nuke alternative (a needs
+boost fires on an UNCOVERED need; spell amp is only worth anything once a nuke
+is owned), so it rides as an own-pick complement boost like Aghs stacking, plus
+the pos-2 accent. Team amps carry the pos-4/5 accent like team_aura. One
+tooltip line names the picks amplified. Step 2 scoring: `reposition_enemy` is a pos-4
+`catch` need (own scarcity key; stacks with hard_cc) and a pos-3 initiation
+alternative; `reposition_ally` / `dispel_ally` cover the pos-5 save and are
+pos-4/5 plus accents; `dispel_self` is a pos-1 survival / pos-3 durability
+alternative; `knockback` is descriptive only. The **dispel demand boost**
+(role-independent, outside the cap, `DISPEL_DEMAND_*` in thresholds.ts):
+`demand = enemy-held debuff_dispellable + 0.5 × unpicked ones`, `boost =
+0.06 × clamp(demand / 4, 0, 1.5)` on dispel_ally / dispel_self candidates;
+purge_enemy rides the same curve against the enemy's steroid + summon count
+(no pool term). Zero demand = zero boost. Tooltip line names the enemy picks
+(or the pool count). `core/domain/board-tag-
+profile.ts` computes ONE per-scan **board tag profile**: tag counts over my
+picks / my teammates' / the enemy five's / everything drafted / the unpicked
+pool (rows 0-4 vs 5-9, same split as role-scoring; team halves empty without
+My Spot). Conditional tags (`with: {tag: [abilities]}`) resolve per OWNER
+there (a pick's tag counts only if the same player drafted a dependency; a
+pool ability's only if the USER holds it); upgrade-granted tags (`viaUpgrade:
+{tag: shard|scepter}`) count at full value. The pool gates (`requires` tag:
+entries, soft-CC suppression) already read the profile; the dispel-demand,
+team-amp and deny verdicts of steps 2-4 will too. `combos: [...]` (curated
+deny partners, directional, may name `model:<hero>`) is parsed and exposed
+(`getCombos`) but unused until step 4. All three new lookup methods are
+optional on `AbilityTagsLookup` so older stubs keep compiling.
 
 Key mechanics in `core/domain/role-scoring.ts`:
 

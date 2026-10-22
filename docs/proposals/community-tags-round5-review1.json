@@ -1,0 +1,762 @@
+{
+ "A-001": {
+  "comment": "",
+  "updatedAt": "2026-10-21T15:34:40.589Z",
+  "verdict": "agree"
+ },
+ "B-002": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:26:26.229Z",
+  "verdict": "agree"
+ },
+ "B-003": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:26:47.585Z",
+  "verdict": "agree"
+ },
+ "B-004": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:26:54.611Z",
+  "verdict": "agree"
+ },
+ "B-005": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:27:00.269Z",
+  "verdict": "agree"
+ },
+ "B-006": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:27:04.585Z",
+  "verdict": "agree"
+ },
+ "B-007": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:27:08.097Z",
+  "verdict": "agree"
+ },
+ "B-008": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:27:10.379Z",
+  "verdict": "agree"
+ },
+ "B-009": {
+  "comment": "It does reposition, but more as a knockback. Not sure if it fits into scoring. Although spell is good on any role as it additionally silences and can stop some movement based abilities like charge, blast off or skewer.",
+  "updatedAt": "2026-10-21T18:29:29.053Z",
+  "verdict": "unsure"
+ },
+ "B-010": {
+  "comment": "it does pulls into tree, but it is more of stun mechanic then reposition as it's low distance and unlike nightmare cannot do off cliff moivements unless in some perfect condition.",
+  "updatedAt": "2026-10-21T18:28:30.194Z",
+  "verdict": "unsure"
+ },
+ "B-011": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:29:31.090Z",
+  "verdict": "agree"
+ },
+ "B-012": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:29:33.066Z",
+  "verdict": "agree"
+ },
+ "B-013": {
+  "comment": "same logic as for gust, but also reposition is less and no soft_cc. But it still stops same spells",
+  "updatedAt": "2026-10-21T18:30:16.024Z",
+  "verdict": "unsure"
+ },
+ "B-014": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:30:17.994Z",
+  "verdict": "agree"
+ },
+ "B-015": {
+  "comment": "can be cast on allies too. so should carry both tags",
+  "updatedAt": "2026-10-21T18:30:43.891Z",
+  "verdict": "agree"
+ },
+ "B-016": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:30:49.913Z",
+  "verdict": "agree"
+ },
+ "B-017": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:30:52.673Z",
+  "verdict": "agree"
+ },
+ "B-018": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:30:56.053Z",
+  "verdict": "agree"
+ },
+ "B-019": {
+  "comment": "can be cast on allies with shard so should carry both tags.",
+  "updatedAt": "2026-10-21T18:31:12.535Z",
+  "verdict": "agree"
+ },
+ "B-020": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:31:15.979Z",
+  "verdict": "agree"
+ },
+ "B-021": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:31:17.702Z",
+  "verdict": "agree"
+ },
+ "B-022": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:31:19.647Z",
+  "verdict": "agree"
+ },
+ "B-023": {
+  "comment": "less reposition, more like cc with small reposition as side effect",
+  "updatedAt": "2026-10-21T18:31:46.133Z",
+  "verdict": "disagree"
+ },
+ "B-024": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:31:49.755Z",
+  "verdict": "agree"
+ },
+ "B-025": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:31:51.171Z",
+  "verdict": "agree"
+ },
+ "B-026": {
+  "comment": "feels more like gap close, then reposition, which might need it's own tag honestly",
+  "updatedAt": "2026-10-21T18:32:17.414Z",
+  "verdict": "disagree"
+ },
+ "B-027": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:32:28.271Z",
+  "verdict": "agree"
+ },
+ "B-028": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:32:29.839Z",
+  "verdict": "agree"
+ },
+ "B-029": {
+  "comment": "same logic as with shockwave and gust",
+  "updatedAt": "2026-10-21T18:32:46.164Z",
+  "verdict": "unsure"
+ },
+ "B-030": {
+  "comment": "not really fitting asit is close range and only slight knockback. Shockwave and gust are at least range",
+  "updatedAt": "2026-10-21T18:33:19.807Z",
+  "verdict": "disagree"
+ },
+ "B-031": {
+  "comment": "same as rebuke. Maybe knockbak would be correct additional tag?",
+  "updatedAt": "2026-10-21T18:33:46.438Z",
+  "verdict": "unsure"
+ },
+ "B-032": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:33:48.760Z",
+  "verdict": "agree"
+ },
+ "B-033": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:33:53.271Z",
+  "verdict": "agree"
+ },
+ "B-034": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:33:54.672Z",
+  "verdict": "agree"
+ },
+ "B-035": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:33:56.269Z",
+  "verdict": "agree"
+ },
+ "B-036": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:33:57.610Z",
+  "verdict": "agree"
+ },
+ "B-037": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:34:00.473Z",
+  "verdict": "agree"
+ },
+ "B-038": {
+  "comment": "not a reposition, just global mobility, as enemy or ally need to click on it to work",
+  "updatedAt": "2026-10-21T18:34:27.095Z",
+  "verdict": "disagree"
+ },
+ "B-039": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:34:29.387Z",
+  "verdict": "agree"
+ },
+ "B-040": {
+  "comment": "it's sort of stun, you stayt where ytou are",
+  "updatedAt": "2026-10-21T18:34:49.920Z",
+  "verdict": "disagree"
+ },
+ "B-041": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:34:56.646Z",
+  "verdict": "agree"
+ },
+ "B-042": {
+  "comment": "containmnt is correct",
+  "updatedAt": "2026-10-21T18:35:13.659Z",
+  "verdict": "disagree"
+ },
+ "B-043": {
+  "comment": "with caveat that it only should count as reposition if greater bash is picked, otherwise it is not working",
+  "updatedAt": "2026-10-21T18:35:47.743Z",
+  "verdict": "agree"
+ },
+ "B-044": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:35:54.801Z",
+  "verdict": "disagree"
+ },
+ "B-045": {
+  "comment": "it doesn't pull, just slows",
+  "updatedAt": "2026-10-21T18:36:11.796Z",
+  "verdict": "disagree"
+ },
+ "B-046": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:36:14.920Z",
+  "verdict": "agree"
+ },
+ "B-047": {
+  "comment": "same as rigt, gap close and mobility, not reposition",
+  "updatedAt": "2026-10-21T18:36:33.532Z",
+  "verdict": "disagree"
+ },
+ "B-048": {
+  "comment": "self reposition is jsut mobility",
+  "updatedAt": "2026-10-21T18:36:51.493Z",
+  "verdict": "disagree"
+ },
+ "B-049": {
+  "comment": "ally can be picked up with shard",
+  "updatedAt": "2026-10-21T18:37:06.425Z",
+  "verdict": "agree"
+ },
+ "B-050": {
+  "comment": "cc, not reposition",
+  "updatedAt": "2026-10-21T18:37:16.262Z",
+  "verdict": "disagree"
+ },
+ "C-051": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:37:21.912Z",
+  "verdict": "agree"
+ },
+ "C-052": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:37:41.565Z",
+  "verdict": "agree"
+ },
+ "C-053": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:37:54.457Z",
+  "verdict": "agree"
+ },
+ "C-054": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:38:00.824Z",
+  "verdict": "agree"
+ },
+ "C-055": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:38:04.488Z",
+  "verdict": "agree"
+ },
+ "C-056": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:38:13.295Z",
+  "verdict": "agree"
+ },
+ "C-057": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:38:16.419Z",
+  "verdict": "agree"
+ },
+ "C-058": {
+  "comment": "it fits, but requires specific abilities to be amped. So probably better solved with specific combinations rather than pure amp",
+  "updatedAt": "2026-10-21T18:38:58.440Z",
+  "verdict": "unsure"
+ },
+ "C-059": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:39:00.100Z",
+  "verdict": "agree"
+ },
+ "C-060": {
+  "comment": "same as sticky",
+  "updatedAt": "2026-10-21T18:39:07.701Z",
+  "verdict": "unsure"
+ },
+ "C-061": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:39:09.960Z",
+  "verdict": "agree"
+ },
+ "C-062": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:39:11.491Z",
+  "verdict": "agree"
+ },
+ "C-063": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:39:13.941Z",
+  "verdict": "agree"
+ },
+ "C-064": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:39:15.275Z",
+  "verdict": "agree"
+ },
+ "C-065": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:39:16.532Z",
+  "verdict": "agree"
+ },
+ "C-066": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:39:17.585Z",
+  "verdict": "agree"
+ },
+ "C-067": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:39:18.772Z",
+  "verdict": "agree"
+ },
+ "C-068": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:39:21.224Z",
+  "verdict": "agree"
+ },
+ "C-069": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:39:22.636Z",
+  "verdict": "agree"
+ },
+ "C-070": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:39:25.985Z",
+  "verdict": "agree"
+ },
+ "C-071": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:39:31.281Z",
+  "verdict": "agree"
+ },
+ "C-072": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:39:33.125Z",
+  "verdict": "agree"
+ },
+ "C-073": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:39:34.110Z",
+  "verdict": "agree"
+ },
+ "C-074": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:39:35.075Z",
+  "verdict": "agree"
+ },
+ "C-075": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:39:37.393Z",
+  "verdict": "agree"
+ },
+ "C-076": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:39:38.599Z",
+  "verdict": "agree"
+ },
+ "C-077": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:39:43.967Z",
+  "verdict": "agree"
+ },
+ "C-078": {
+  "comment": "it only amps your own damage, so should be picke only by carries as additional steroid. Probably better to just leave it as steroid, or add amp_self?",
+  "updatedAt": "2026-10-21T18:40:51.401Z",
+  "verdict": "unsure"
+ },
+ "C-079": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:40:54.049Z",
+  "verdict": "agree"
+ },
+ "C-080": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:40:55.643Z",
+  "verdict": "agree"
+ },
+ "C-081": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:40:58.402Z",
+  "verdict": "agree"
+ },
+ "C-082": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:41:02.279Z",
+  "verdict": "agree"
+ },
+ "C-083": {
+  "comment": "also works onyl on sf, so not worth tag",
+  "updatedAt": "2026-10-21T18:41:28.274Z",
+  "verdict": "disagree"
+ },
+ "C-084": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:42:37.387Z",
+  "verdict": "agree"
+ },
+ "C-085": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:41:54.292Z",
+  "verdict": "agree"
+ },
+ "C-086": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:41:59.480Z",
+  "verdict": "agree"
+ },
+ "C-087": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:42:00.496Z",
+  "verdict": "agree"
+ },
+ "C-088": {
+  "comment": "spell amp that can be self cast or on alliues",
+  "updatedAt": "2026-10-21T18:42:16.479Z",
+  "verdict": "agree"
+ },
+ "C-089": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:42:45.799Z",
+  "verdict": "agree"
+ },
+ "C-090": {
+  "comment": "it doesn't amp damage but it amps cast range, so i think it can be damage amp for casters",
+  "updatedAt": "2026-10-21T18:43:10.474Z",
+  "verdict": "unsure"
+ },
+ "C-091": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:43:16.832Z",
+  "verdict": "agree"
+ },
+ "D-092": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:43:28.152Z",
+  "verdict": "agree"
+ },
+ "D-093": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:43:34.334Z",
+  "verdict": "agree"
+ },
+ "D-094": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:43:41.128Z",
+  "verdict": "agree"
+ },
+ "D-095": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:43:42.401Z",
+  "verdict": "agree"
+ },
+ "D-096": {
+  "comment": "counter helix, retaliate. From your list i would only keeop dispersion - the rest is good but not deny worthy",
+  "updatedAt": "2026-10-21T18:55:48.999Z",
+  "verdict": "agree"
+ },
+ "D-097": {
+  "comment": "only worth denying if enemy picked berserker's call. The rest are good combos but not deny worthy",
+  "updatedAt": "2026-10-21T18:55:12.875Z",
+  "verdict": "agree"
+ },
+ "D-098": {
+  "comment": "only aftershock",
+  "updatedAt": "2026-10-21T18:56:01.607Z",
+  "verdict": "agree"
+ },
+ "D-099": {
+  "comment": "time lock is never a good deny",
+  "updatedAt": "2026-10-21T18:56:37.300Z",
+  "verdict": "disagree"
+ },
+ "D-100": {
+  "comment": "it is a good spell bit not a good deny. Maybe only for someone with time lock to remove aghanim combo",
+  "updatedAt": "2026-10-21T18:57:10.948Z",
+  "verdict": "disagree"
+ },
+ "D-101": {
+  "comment": "rocket barrage. the rest are just good pairs, not a deny maetrial",
+  "updatedAt": "2026-10-21T18:57:40.910Z",
+  "verdict": "agree"
+ },
+ "D-102": {
+  "comment": "Aftershock, Sticky Napalm, Homing Missile",
+  "updatedAt": "2026-10-21T18:57:58.724Z",
+  "verdict": "agree"
+ },
+ "D-103": {
+  "comment": "Chem Rage, Sticky, Berserkers Blood, Liquid Frost",
+  "updatedAt": "2026-10-21T18:59:08.295Z",
+  "verdict": "agree"
+ },
+ "D-104": {
+  "comment": "ONLY if someone was dumb enough to take eclipse first, otherwise not a deny ,material",
+  "updatedAt": "2026-10-21T18:58:59.542Z",
+  "verdict": "agree"
+ },
+ "D-105": {
+  "comment": "Liquid Frost, Sticky",
+  "updatedAt": "2026-10-21T18:59:16.818Z",
+  "verdict": "agree"
+ },
+ "D-106": {
+  "comment": "Moon Glaives, Juxtapose",
+  "updatedAt": "2026-10-21T18:59:40.391Z",
+  "verdict": "agree"
+ },
+ "D-107": {
+  "comment": "Aftershock, Shadow Strike",
+  "updatedAt": "2026-10-21T19:00:02.713Z",
+  "verdict": "agree"
+ },
+ "D-108": {
+  "comment": "Aftershock, Scream of Pain",
+  "updatedAt": "2026-10-21T19:00:15.257Z",
+  "verdict": "agree"
+ },
+ "D-109": {
+  "comment": "The ones you mentioned plus Burning spear, Fury Swipes and Frost Arrow",
+  "updatedAt": "2026-10-21T19:01:59.230Z",
+  "verdict": "agree"
+ },
+ "D-110": {
+  "comment": "Aftershock and OD Model.",
+  "updatedAt": "2026-10-21T19:01:23.308Z",
+  "verdict": "agree"
+ },
+ "D-111": {
+  "comment": "Only worth denying from someone with Flesh Golem",
+  "updatedAt": "2026-10-21T19:01:40.015Z",
+  "verdict": "agree"
+ },
+ "D-112": {
+  "comment": "Same list as lil shredder",
+  "updatedAt": "2026-10-21T19:02:10.275Z",
+  "verdict": "agree"
+ },
+ "D-113": {
+  "comment": "Only worth denying from Thundergod's Wrath",
+  "updatedAt": "2026-10-21T19:02:36.029Z",
+  "verdict": "agree"
+ },
+ "E-114": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:44:06.031Z",
+  "verdict": "agree"
+ },
+ "E-115": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:44:10.107Z",
+  "verdict": "agree"
+ },
+ "F-116": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:44:14.754Z",
+  "verdict": "agree"
+ },
+ "F-117": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:44:18.738Z",
+  "verdict": "agree"
+ },
+ "F-118": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:44:23.474Z",
+  "verdict": "agree"
+ },
+ "F-119": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:44:33.381Z",
+  "verdict": "agree"
+ },
+ "F-120": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:44:35.834Z",
+  "verdict": "agree"
+ },
+ "F-121": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:44:37.398Z",
+  "verdict": "agree"
+ },
+ "F-122": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:44:40.228Z",
+  "verdict": "agree"
+ },
+ "F-123": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:44:50.898Z",
+  "verdict": "agree"
+ },
+ "F-124": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:44:55.273Z",
+  "verdict": "agree"
+ },
+ "F-125": {
+  "comment": "it purges enemy on hit, not an ally. so it is purge enemy and not dipel ally.",
+  "updatedAt": "2026-10-21T18:48:28.252Z",
+  "verdict": "disagree"
+ },
+ "F-126": {
+  "comment": "yes it is not debuff per se but debuff immunity for the duration can be count as dispel for this purpose",
+  "updatedAt": "2026-10-21T18:49:29.588Z",
+  "verdict": "agree"
+ },
+ "F-127": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:49:32.953Z",
+  "verdict": "agree"
+ },
+ "F-128": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:49:34.526Z",
+  "verdict": "agree"
+ },
+ "F-129": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:49:36.042Z",
+  "verdict": "agree"
+ },
+ "F-130": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:49:38.337Z",
+  "verdict": "agree"
+ },
+ "F-131": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:49:39.399Z",
+  "verdict": "agree"
+ },
+ "F-132": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:49:42.381Z",
+  "verdict": "agree"
+ },
+ "F-133": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:49:44.000Z",
+  "verdict": "agree"
+ },
+ "F-134": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:49:45.231Z",
+  "verdict": "agree"
+ },
+ "F-135": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:49:46.258Z",
+  "verdict": "agree"
+ },
+ "F-136": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:49:48.054Z",
+  "verdict": "agree"
+ },
+ "F-137": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:49:50.727Z",
+  "verdict": "agree"
+ },
+ "F-138": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:50:07.930Z",
+  "verdict": "agree"
+ },
+ "F-139": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:50:11.818Z",
+  "verdict": "agree"
+ },
+ "F-140": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:50:13.836Z",
+  "verdict": "agree"
+ },
+ "F-141": {
+  "comment": "same as with omniknight - nt a dispel by definition but counts as one for this purpose",
+  "updatedAt": "2026-10-21T18:51:01.650Z",
+  "verdict": "agree"
+ },
+ "F-142": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:51:25.932Z",
+  "verdict": "agree"
+ },
+ "F-143": {
+  "comment": "it makred as basic dispel on the ability",
+  "updatedAt": "2026-10-21T18:51:51.145Z",
+  "verdict": "agree"
+ },
+ "F-144": {
+  "comment": "basic dispel",
+  "updatedAt": "2026-10-21T18:52:05.478Z",
+  "verdict": "agree"
+ },
+ "F-145": {
+  "comment": "shard als adds dispel ally",
+  "updatedAt": "2026-10-21T18:52:20.175Z",
+  "verdict": "agree"
+ },
+ "F-146": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:52:35.542Z",
+  "verdict": "agree"
+ },
+ "F-147": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:52:39.305Z",
+  "verdict": "agree"
+ },
+ "F-148": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:52:42.504Z",
+  "verdict": "agree"
+ },
+ "F-149": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:52:47.474Z",
+  "verdict": "disagree"
+ },
+ "F-150": {
+  "comment": "aghanim adds dispel slef on melee version and purge enemy on ranged one",
+  "updatedAt": "2026-10-21T18:53:33.405Z",
+  "verdict": "agree"
+ },
+ "G-151": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:53:38.750Z",
+  "verdict": "agree"
+ },
+ "G-152": {
+  "comment": "",
+  "updatedAt": "2026-10-21T18:53:41.004Z",
+  "verdict": "agree"
+ }
+}

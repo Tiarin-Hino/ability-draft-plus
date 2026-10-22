@@ -38,6 +38,11 @@ export function AbilityHotspot({
   } else if (slot.isGeneralTopTier) {
     className += ' shimmer-green'
   }
+  // Round-5 pick_asap: an outline that composes with any shimmer border
+  // (pool slots only). Display only — the tooltip carries the live numbers.
+  if (!isSelectedAbility && slot.pickAsap) {
+    className += ' pick-asap'
+  }
 
   const handleMouseEnter = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
@@ -67,6 +72,9 @@ export function AbilityHotspot({
       {!isSelectedAbility && slot.goodScepter && (
         <span className="aghs-marker aghs-marker-scepter" />
       )}
+      {/* Round-5 combo deny: the enemy holds a partner of this ability —
+          red triangle top-right (pool slots only, hidden in capture mode) */}
+      {!isSelectedAbility && slot.denyCombo && <span className="deny-marker" />}
     </div>
   )
 }

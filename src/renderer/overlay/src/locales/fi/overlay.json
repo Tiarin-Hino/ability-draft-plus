@@ -89,7 +89,16 @@
       "sustain_self": "oma sustain",
       "teamfight_ult": "teamfight-ultimaatti",
       "passive_value": "arvokas passiivi",
-      "save_ally": "liittolaisen pelastus"
+      "save_ally": "liittolaisen pelastus",
+      "catch": "nappaus",
+      "reposition_enemy": "vihollisen siirto",
+      "reposition_ally": "liittolaisen siirto",
+      "dispel_self": "oma dispel",
+      "dispel_ally": "liittolaisen dispel",
+      "spell_steroid": "loitsusteroidi",
+      "amp_physical": "fyysisen vahingon vahvistus",
+      "amp_magical": "taikavahingon vahvistus",
+      "amp_all": "vahingon vahvistus"
     },
     "roleCovers": "Kattaa puuttuvan tarpeesi: {{need}}",
     "rolePartial": "Kattaa osittain puuttuvan tarpeesi: {{need}}",
@@ -107,7 +116,15 @@
     "scepterStack": "Vahva Scepter-päivitys — yksi Scepter vahvistaa myös {{names}}",
     "goodShard": "Vahva Aghanim's Shard -päivitys",
     "goodScepter": "Vahva Aghanim's Scepter -päivitys",
-    "pointSinkConflict": "Kilpailee taitopisteistä {{names}} kanssa — toinen jää alitasoiseksi"
+    "pointSinkConflict": "Kilpailee taitopisteistä {{names}} kanssa — toinen jää alitasoiseksi",
+    "dispelDemand": "Dispel-arvo — vihollisella on {{names}}",
+    "purgeDemand": "Purge-arvo — riisuu viholliselta {{names}}",
+    "dispelDemandPool": "Dispel-arvo — poolissa on vielä {{n}} poistettavaa debuffia",
+    "ampDemand": "Vahingon vahvistus — kertoo tiimisi {{names}}",
+    "spellSteroid": "Loitsuvahvistus — kertoo omat {{names}}",
+    "denyCombo": "Esto — täydentää vihollisen {{names}}",
+    "denyComboWeak": "Vain esto — täydentää vihollisen {{names}}, mutta heikko valinta sinulle",
+    "pickAsap": "Yhteisö: ota heti — voittaa {{wr}}, yleensä poissa valintaan {{pick}} mennessä"
   },
   "role": {
     "aria": "Roolisuositukset",

@@ -89,7 +89,16 @@
       "sustain_self": "自我续航",
       "teamfight_ult": "团战型终极技能",
       "passive_value": "高价值被动",
-      "save_ally": "救援队友"
+      "save_ally": "救援队友",
+      "catch": "抓人",
+      "reposition_enemy": "位移敌人",
+      "reposition_ally": "位移队友",
+      "dispel_self": "自我驱散",
+      "dispel_ally": "驱散队友",
+      "spell_steroid": "法术强化",
+      "amp_physical": "物理增伤",
+      "amp_magical": "魔法增伤",
+      "amp_all": "全伤害增幅"
     },
     "roleCovers": "补足你缺少的{{need}}",
     "rolePartial": "部分补足你缺少的{{need}}",
@@ -107,7 +116,15 @@
     "scepterStack": "强力神杖升级——一个神杖同时强化 {{names}}",
     "goodShard": "强力阿哈利姆魔晶升级",
     "goodScepter": "强力阿哈利姆神杖升级",
-    "pointSinkConflict": "与 {{names}} 争夺技能点——其中一个会长期等级不足"
+    "pointSinkConflict": "与 {{names}} 争夺技能点——其中一个会长期等级不足",
+    "dispelDemand": "驱散价值 — 敌方持有 {{names}}",
+    "purgeDemand": "净化价值 — 可清除敌方的 {{names}}",
+    "dispelDemandPool": "驱散价值 — 池中仍有 {{n}} 个可驱散的负面效果",
+    "ampDemand": "增伤 — 放大己方的 {{names}}",
+    "spellSteroid": "法术强化 — 放大你的 {{names}}",
+    "denyCombo": "抢断 — 补全敌方的 {{names}}",
+    "denyComboWeak": "仅抢断 — 补全敌方的 {{names}}，但对你是弱选择",
+    "pickAsap": "社区：尽早选 — 胜率 {{wr}}，通常在第 {{pick}} 手前被选走"
   },
   "role": {
     "aria": "分路推荐",

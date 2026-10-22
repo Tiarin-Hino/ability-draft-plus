@@ -57,6 +57,32 @@ describe('parseAbilityTagsDataset', () => {
     expect(parsed.requiresByAbility.has('empty')).toBe(false)
   })
 
+  it('parses round-5 fields: combos like requires, viaUpgrade and with validated against the entry tags', () => {
+    const parsed = parseAbilityTagsDataset({
+      abilities: {
+        axe_counter_helix: { tags: ['aoe'], combos: ['axe_berserkers_call', '', 7, 'axe_berserkers_call'] },
+        rubick_telekinesis: {
+          tags: ['hard_cc', 'save_ally'],
+          viaUpgrade: { save_ally: 'shard', hard_cc: 'talent', nuke: 'scepter' },
+        },
+        spirit_breaker_nether_strike: {
+          tags: ['hard_cc', 'mobility'],
+          with: { hard_cc: ['spirit_breaker_greater_bash', ''], mobility: [], nuke: ['x'] },
+        },
+        plain: { tags: ['nuke'], combos: [], viaUpgrade: [], with: 'nope' },
+      },
+    })!
+
+    expect(parsed.combosByAbility.get('axe_counter_helix')).toEqual(['axe_berserkers_call'])
+    expect(parsed.combosByAbility.has('plain')).toBe(false)
+    const via = parsed.viaUpgradeByAbility.get('rubick_telekinesis')!
+    expect([...via]).toEqual([['save_ally', 'shard']])
+    expect(parsed.viaUpgradeByAbility.has('plain')).toBe(false)
+    const cond = parsed.withByAbility.get('spirit_breaker_nether_strike')!
+    expect([...cond]).toEqual([['hard_cc', ['spirit_breaker_greater_bash']]])
+    expect(parsed.withByAbility.has('plain')).toBe(false)
+  })
+
   it('parses roleAvoid never-recommend positions like roleMust', () => {
     const parsed = parseAbilityTagsDataset({
       abilities: {
@@ -88,8 +114,8 @@ describe('parseAbilityTagsDataset', () => {
   })
 
   it('vocabulary matches the build script contract (25 tags)', () => {
-    expect(TAG_VOCABULARY).toHaveLength(25)
-    expect(new Set(TAG_VOCABULARY).size).toBe(25)
+    expect(TAG_VOCABULARY).toHaveLength(40)
+    expect(new Set(TAG_VOCABULARY).size).toBe(40)
   })
 })
 

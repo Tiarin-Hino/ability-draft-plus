@@ -202,7 +202,14 @@ maintenance spec — the authoritative map of what IS, not a build plan.
 - `resources/data/ability_tags.json` + `hero_meta.json` are GENERATED (community Tag
   Lab on abilitydraftplus.com + ../ad_data_gather_script/build_ability_tags.py; the durable
   source of truth is that repo's tag_overrides.json) — never hand-edit, and keep
-  TAG_VOCABULARY (core/domain/ability-tags.ts) in lockstep with the script's VOCAB
+  TAG_VOCABULARY (core/domain/ability-tags.ts) in lockstep with the script's VOCAB.
+  Three tags are MECHANICAL (`MECHANICAL_TAGS`: debuff_dispellable / debuff_strong_only /
+  bkb_piercing, from dotaconstants in `assemble`, hidden from the Lab catalog and from
+  reason chips). Round-5 entry fields `combos` / `viaUpgrade` / `with` are curated in
+  tag_overrides.json like `requires`. Tag COUNTS over my / team / enemy / drafted / pool
+  come from ONE per-scan board tag profile (core/domain/board-tag-profile.ts, resolves
+  `with:` per owner) — never re-walk selectedAbilities for a new board-aware verdict.
+  Spec + per-ability mappings: docs/proposals/community-tags-round5.md
 - Role weights in thresholds.ts carry their empirical rationale (expert-draft corpus +
   simulation) as comments — read them before retuning
 - Dependency gates: `requires: ["ability" | "model:hero" | "tag:tag"]` on a

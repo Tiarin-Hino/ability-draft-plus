@@ -214,6 +214,19 @@ export interface EnrichedScanSlot extends ScanResult {
   /** Skill-point-sink conflict: the user's drafted skill_point_sink picks this
    * candidate would compete with (damped, tooltip explains). */
   pointSinkConflictWith?: string[]
+  /** Round-5 dispel demand (boost applied, tooltip explains): what the enemy
+   * holds that this dispel / purge answers, and how many dispellable debuffs
+   * are still unpicked. */
+  dispelDemand?: { kind: 'dispel' | 'purge'; against: string[]; poolCount: number }
+  /** Round-5 amp demand (boost applied, tooltip explains): the picks this amp
+   * multiplies — the team's for team amps, the user's own spells for 'spell'. */
+  ampDemand?: { kind: 'physical' | 'magical' | 'all' | 'spell'; amplifies: string[] }
+  /** Round-5 combo deny (marker + tooltip): the enemy-held partners this pick
+   * would complete for them; `boosted` = the deny boost was applied. */
+  denyCombo?: { completes: string[]; boosted: boolean }
+  /** Round-5 pick_asap community verdict: own border + tooltip with the live
+   * numbers. Display only — the score never moves for it. */
+  pickAsap?: boolean
   /** Strong Shard / Scepter upgrade markers — only present when the
    * aghsMarkersEnabled setting is on (payload-gated; pool slots only). */
   goodShard?: boolean

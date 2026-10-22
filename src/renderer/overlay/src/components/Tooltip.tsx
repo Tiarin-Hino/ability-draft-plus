@@ -339,6 +339,46 @@ function AbilityTooltipContent({
           {t('tooltip.pointSinkConflict', { names: slot.pointSinkConflictWith.join(', ') })}
         </div>
       )}
+      {/* Round-5 dispel demand: names what the enemy holds, or how many
+          dispellable debuffs are still in the pool when the enemy holds none */}
+      {slot.dispelDemand && (
+        <div className="tooltip-stat tooltip-aghs">
+          {slot.dispelDemand.against.length > 0
+            ? t(
+                slot.dispelDemand.kind === 'purge'
+                  ? 'tooltip.purgeDemand'
+                  : 'tooltip.dispelDemand',
+                { names: slot.dispelDemand.against.join(', ') },
+              )
+            : t('tooltip.dispelDemandPool', { n: slot.dispelDemand.poolCount })}
+        </div>
+      )}
+      {slot.ampDemand && (
+        <div className="tooltip-stat tooltip-aghs">
+          {t(slot.ampDemand.kind === 'spell' ? 'tooltip.spellSteroid' : 'tooltip.ampDemand', {
+            names: slot.ampDemand.amplifies.join(', '),
+          })}
+        </div>
+      )}
+      {/* Round-5 pick_asap: the community verdict with the live numbers next
+          to it, so a stale verdict is visible — never a score term */}
+      {slot.pickAsap && (
+        <div className="tooltip-stat tooltip-aghs">
+          {t('tooltip.pickAsap', {
+            wr: formatWinrate(slot.winrate),
+            pick: formatPickRate(slot.pickRate),
+          })}
+        </div>
+      )}
+      {/* Round-5 combo deny: boosted reads as a recommendation, unboosted as
+          a warning (the deny would be a weak pick for you) */}
+      {slot.denyCombo && (
+        <div className={`tooltip-stat ${slot.denyCombo.boosted ? 'tooltip-aghs' : 'tooltip-inert'}`}>
+          {t(slot.denyCombo.boosted ? 'tooltip.denyCombo' : 'tooltip.denyComboWeak', {
+            names: slot.denyCombo.completes.join(', '),
+          })}
+        </div>
+      )}
       {slot.contestedSoon &&
         (slot.isGeneralTopTier || slot.isSynergySuggestionForMySpot) && (
           <div className="tooltip-stat tooltip-contested">

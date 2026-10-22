@@ -413,6 +413,87 @@ describe('computeRoleScore with tags (needs engine)', () => {
     expect(stStun.reasons).not.toContain('covers:aoe_cc')
   })
 
+  it('round 5: reposition_ally and dispel_ally cover the pos-5 save and add the accent', () => {
+    const plainSave = computeRoleScore(axes(-0.5), ctxPos5, {
+      candidateTags: tags('save_ally'),
+      myPickTags: [],
+    })!
+    const swap = computeRoleScore(axes(-0.5), ctxPos5, {
+      candidateTags: tags('reposition_ally'),
+      myPickTags: [],
+    })!
+    const dispel = computeRoleScore(axes(-0.5), ctxPos5, {
+      candidateTags: tags('dispel_ally'),
+      myPickTags: [],
+    })!
+    expect(plainSave.reasons).toContain('covers:save:save_ally')
+    expect(swap.reasons).toContain('covers:save:reposition_ally')
+    expect(dispel.reasons).toContain('covers:save:dispel_ally')
+    // Same need credit, plus the pos-5 accent: the premium over a plain save.
+    expect(swap.delta).toBeGreaterThan(plainSave.delta)
+    expect(dispel.delta).toBeCloseTo(swap.delta, 6)
+  })
+
+  it('round 5: reposition_enemy is a pos-4 catch need that stacks with hard_cc', () => {
+    const ctxPos4: RoleContext = { ...ctxPos5, effectivePositions: [4] }
+    const stun = computeRoleScore(axes(-0.3), ctxPos4, {
+      candidateTags: tags('hard_cc'),
+      myPickTags: [],
+    })!
+    const hook = computeRoleScore(axes(-0.3), ctxPos4, {
+      candidateTags: tags('hard_cc', 'reposition_enemy'),
+      myPickTags: [],
+    })!
+    // The chip names the matched tag (covers:<need>:<viaTag>) when it differs
+    // from the need key — same convention as the Shadow Realm ruling.
+    expect(hook.reasons).toContain('covers:catch:reposition_enemy')
+    expect(hook.reasons).toContain('covers:hard_cc')
+    expect(hook.delta).toBeGreaterThan(stun.delta)
+  })
+
+  it('round 5: dispel_self covers pos-1 survival; reposition_enemy covers pos-3 initiation', () => {
+    const pos1 = computeRoleScore(axes(0.5), { ...ctxPos5, effectivePositions: [1] }, {
+      candidateTags: tags('dispel_self'),
+      myPickTags: [],
+    })!
+    expect(pos1.reasons).toContain('covers:survival:dispel_self')
+    const pos3 = computeRoleScore(axes(0.1), { ...ctxPos5, effectivePositions: [3] }, {
+      candidateTags: tags('reposition_enemy'),
+      myPickTags: [],
+    })!
+    expect(pos3.reasons).toContain('covers:initiation:reposition_enemy')
+  })
+
+  it('round 5: spell_steroid is a pos-2 accent, never nuke coverage or a nuke alternative', () => {
+    const ctxPos2: RoleContext = { ...ctxPos5, effectivePositions: [2] }
+    const amp = computeRoleScore(axes(0.2), ctxPos2, {
+      candidateTags: tags('spell_steroid'),
+      myPickTags: [],
+    })!
+    const plain = computeRoleScore(axes(0.2), ctxPos2, { candidateTags: tags(), myPickTags: [] })!
+    expect(amp.reasons.some((r) => r.startsWith('covers:nuke'))).toBe(false)
+    expect(amp.delta).toBeGreaterThan(plain.delta)
+    // A drafted spell steroid does NOT count as nuke coverage: a nuke
+    // candidate still covers the open need.
+    const nukeAfterAmp = computeRoleScore(axes(0.2), ctxPos2, {
+      candidateTags: tags('nuke'),
+      myPickTags: [tags('spell_steroid')],
+    })!
+    expect(nukeAfterAmp.reasons).toContain('covers:nuke')
+  })
+
+  it('round 5: team amps carry the pos-4/5 accent like team_aura', () => {
+    const aura = computeRoleScore(axes(-0.4), ctxPos5, {
+      candidateTags: tags('team_aura'),
+      myPickTags: [],
+    })!
+    const amp = computeRoleScore(axes(-0.4), ctxPos5, {
+      candidateTags: tags('amp_physical'),
+      myPickTags: [],
+    })!
+    expect(amp.delta).toBeCloseTo(aura.delta, 6)
+  })
+
   it('untagged candidates skip needs and accents entirely', () => {
     const bare = computeRoleScore(axes(-0.3), ctxPos5)!
     const untagged = computeRoleScore(axes(-0.3), ctxPos5, {
