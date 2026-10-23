@@ -9,7 +9,7 @@
  *  - Tag names (hard_cc, waveclear, must/avoid chips) are dataset identifiers
  *    and stay in English by design; only their explanations localize.
  *  - Terminology follows the in-app zh-CN localization (硬控制 / 清线 /
- *    救援队友 / 号位 / 先天能力 / 天赋).
+ *    救援队友 / 号位 / 先天技能 / 天赋).
  */
 
 import type { TagDoc } from './tagDocs';
@@ -48,12 +48,12 @@ export const TAG_DOCS_ZH: Record<string, TagDoc> = {
     },
     farm_tool: {
         label: '发育手段',
-        meaning: '把发育速度提到一波兵线之外：打野或速刷手段（Devour、顺劈、幻象）。',
+        meaning: '把发育速度提到一波兵线之外：打野或速刷手段（Devour、分裂攻击、幻象）。',
         effect: '1 号位的第二优先需求；在 4–5 号位受罚（贪婪选择侧重）。',
     },
     steroid: {
         label: '攻击强化',
-        meaning: '强化你自己的普攻：攻速、攻击力、暴击、重击、顺劈、攻击特效。',
+        meaning: '强化你自己的普攻：攻速、攻击力、暴击、重击、分裂攻击、攻击特效。',
         effect: '1 号位的定义性需求（最高优先）；在 4–5 号位受罚。',
     },
     sustain_self: {
@@ -114,7 +114,7 @@ export const TAG_DOCS_ZH: Record<string, TagDoc> = {
     good_with_rearm: {
         label: '适配 Rearm',
         meaning: '短循环反复施放仍保持全部价值、且没有每次施放限制——值得围绕 Rearm 构建征召的技能（Torrent 一类）。',
-        effect: '为 Rearm 设关卡：只有当 good_with_rearm 技能已被选走或仍在池中时，才会推荐 Rearm。',
+        effect: '为 Rearm 设关卡：只有当你已选到带有 good_with_rearm 标签的技能，或技能池中仍有此类技能可选时，才会推荐 Rearm。',
     },
     mana_hungry: {
         label: '高耗蓝',
@@ -151,28 +151,28 @@ export const HERO_TAG_DOCS_ZH: Record<string, TagDoc> = {
     },
     innate_offense: {
         label: '进攻型先天',
-        meaning: '先天能力在任何征召下都能提升输出（SF 灵魂、Sniper 距离增伤、Ursa 的 Maul）。',
+        meaning: '先天技能在任何征召下都能提升输出（SF 灵魂、Sniper 距离增伤、Ursa 的 Maul）。',
         effect: '1–2 号位的模型适配加成；强化与普攻类技能的搭配。',
     },
     innate_tank: {
         label: '防御型先天',
-        meaning: '先天能力偏防御（Medusa 魔法护盾、Bristleback、Dragon Blood、Flesh Heap）。',
+        meaning: '先天技能偏防御（Medusa 的魔法盾、Dragon Knight 的 Dragon Blood）。',
         effect: '3 号位的模型适配加成；强化与先手开团/持续施法技能的搭配。',
     },
     innate_team: {
         label: '团队型先天',
-        meaning: '先天能力服务于队友（Luna/Drow 光环、Dazzle 的 Weave、Underlord 的传送增益）。',
+        meaning: '先天技能服务于队友（Luna/Drow 光环、Dazzle 的 Weave、Underlord 的传送增益）。',
         effect: '4–5 号位的模型适配加成。',
     },
 };
 
 export const ZH: LabDict = {
     positionLabels: {
-        1: '核心',
+        1: '优势路核心',
         2: '中单',
-        3: '劣单',
-        4: '软辅',
-        5: '硬辅',
+        3: '劣势路',
+        4: '辅助',
+        5: '纯辅助',
     },
     loading: '正在加载标签目录…',
     loadFailed: (message) => `标签目录加载失败：${message}`,
@@ -207,12 +207,12 @@ export const ZH: LabDict = {
     avoidChipTitleAll: '精选排除：任何位置都不推荐',
     avoidChipTitle: (positions) => `不向 ${positions} 推荐`,
     modelsIntro:
-        '模型标签描述的是你征召到的那具「身体」——它的通用天赋和先天能力——而不是技能。它们决定应用按位置推荐哪些模型，以及技能如何与你已选的模型搭配。必选标记的是应用应当始终向某个位置推荐的模型。',
+        '模型标签描述的是你征召到的那具「身体」——它的通用天赋和先天技能——而不是技能。它们决定应用按位置推荐哪些模型，以及技能如何与你已选的模型搭配。必选标记的是应用应当始终向某个位置推荐的模型。',
     searchHeroPlaceholder: '搜索英雄…',
     searchHeroAria: '搜索英雄模型',
     heroComposerTitle: (name) => `提议模型标签：${name}`,
     heroComposerIntro:
-        '勾选这个模型应当拥有的标签。模型标签描述身体——通用天赋和先天能力——绝不包括它的技能（技能会被征召走）。',
+        '勾选这个模型应当拥有的标签。模型标签描述身体——通用天赋和先天技能——绝不包括它的技能（技能会被征召走）。',
     abilityComposerTitle: (name) => `提议标签：${name}`,
     abilityComposerIntro:
         '勾选这个技能应当拥有的标签。标签是应用会给出的建议（「补足你缺少的清线」）——只有当这条建议正确时才保留它。',
@@ -289,7 +289,7 @@ export const ZH: LabDict = {
     guideCommunityTag: '社区标签——推荐尚未使用它。',
     guideModelTagsHeading: '模型标签',
     guideModelTagsIntro:
-        '英雄模型有自己的标签：身体的通用天赋和先天能力——技能会被征召走，所以强化特定技能的天赋毫无价值。模型标签决定按位置的模型推荐，以及已征召技能与所选模型的搭配。',
+        '英雄模型有自己的标签：身体的通用天赋和先天技能——技能会被征召走，所以强化特定技能的天赋毫无价值。模型标签决定按位置的模型推荐，以及已征召技能与所选模型的搭配。',
     tagDocs: TAG_DOCS_ZH,
     heroTagDocs: HERO_TAG_DOCS_ZH,
 };
