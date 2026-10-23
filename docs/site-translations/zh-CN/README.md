@@ -18,8 +18,8 @@ moves into the website repo and this folder is deleted.
 - Until this review lands, Chinese visitors picking 中文 on the site get the
   chrome in Chinese and these two surfaces in English (deliberate fallback).
 - Terminology follows the in-app zh-CN localization from #133/#134
-  (覆盖层 / 征召 / 技能池 / 号位 / 胜率 / 选取率 / 硬控制 / 清线 / 我的席位 /
-  我的模型 / 先天能力). If a term reads wrong, flag it — the glossary should
+  (覆盖层 / 征召 / 技能池 / 号位 / 胜率 / 平均选取顺位 / 硬控制 / 清线 / 我的席位 /
+  我的模型 / 先天技能). If a term reads wrong, flag it — the glossary should
   stay consistent between app and site.
 - Tag names (`hard_cc`, `waveclear`, `must:` / `avoid:` chips) are dataset
   identifiers and deliberately stay in English everywhere; only their

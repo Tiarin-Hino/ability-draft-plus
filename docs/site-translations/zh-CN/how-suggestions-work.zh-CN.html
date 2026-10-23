@@ -6,8 +6,8 @@
 
   Review notes:
   - Terminology follows the in-app zh-CN localization (覆盖层 / 征召 / 技能池 /
-    号位 / 胜率 / 选取率 / 硬控制 / 清线 / 我的席位 / 我的模型).
-  - "greed axis" is rendered 贪度轴, "needs" 需求, curated verdicts 人工裁定.
+    号位 / 胜率 / 平均选取顺位 / 硬控制 / 清线 / 我的席位 / 我的模型).
+  - "greed axis" is rendered 发育倾向轴, "needs" 需求, curated verdicts 人工裁定.
   - Ability names stay in English (the game client and the overlay show them
     in English on the draft board).
   - SVG <text> elements are diagram labels — please check wording, not layout.
@@ -66,7 +66,7 @@
 
                 <text x="186" y="34" text-anchor="middle" opacity="0.6" font-size="11">胜率 + 选取顺序</text>
                 <text x="322" y="34" text-anchor="middle" opacity="0.6" font-size="11">关联的个人档案</text>
-                <text x="458" y="34" text-anchor="middle" opacity="0.6" font-size="11">贪度 · 需求 · 裁定</text>
+                <text x="458" y="34" text-anchor="middle" opacity="0.6" font-size="11">发育倾向 · 需求 · 裁定</text>
                 <text x="186" y="124" text-anchor="middle" opacity="0.6" font-size="11">所有人可见</text>
                 <text x="458" y="124" text-anchor="middle" opacity="0.6" font-size="11">仅在设定位置时生效</text>
                 <text x="582" y="124" text-anchor="middle" opacity="0.6" font-size="11">彻底</text>
@@ -94,7 +94,7 @@
         <div class="tooltip-demo">
             <div class="t-title">Rearm</div>
             <div class="t-row">胜率：45.7%</div>
-            <div class="t-row">选取率：8.8</div>
+            <div class="t-row">平均选取顺位：8.8</div>
             <div class="t-row t-warn">通常较早被选，但胜率仅为 45.7%——可能被高估</div>
         </div>
         <details class="hood">
@@ -114,12 +114,12 @@
     <!-- ── 02 ── -->
     <section>
         <div class="kicker">
-            <span class="n">02</span><span class="layer">贪度轴</span>
+            <span class="n">02</span><span class="layer">发育倾向轴</span>
         </div>
         <h2>发育优先级是测出来的，不是猜出来的</h2>
         <p>
             位置感知背后的核心问题：<strong>这是发育型技能，还是辅助型技能？</strong>没有人坐在键盘前拍板。对每个技能，Windrun
-            追踪选它的人的数据如何<em>偏移</em>——拿了它的人最终比平均更富，还是更穷？这个测量就是<strong>贪度轴</strong>。
+            追踪选它的人的数据如何<em>偏移</em>——拿了它的人最终比平均更富，还是更穷？这个测量就是<strong>发育倾向轴</strong>。
         </p>
         <p>
             每个号位在轴上都有一个「锚点」，从高手征召中学得。靠近你号位锚点的推荐获得加成；离得远的丢分：
@@ -129,7 +129,7 @@
             <svg
                 viewBox="0 0 720 190"
                 role="img"
-                aria-label="贪度轴从偏辅助的负一到偏核心的正一，标出五个号位锚点，以及三个真实技能的实测位置。"
+                aria-label="发育倾向轴从偏辅助的负一到偏核心的正一，标出五个号位锚点，以及三个真实技能的实测位置。"
             >
                 <g font-family="ui-monospace, Consolas, monospace" font-size="12" fill="currentColor">
                     <line x1="40" y1="95" x2="680" y2="95" class="stroke-axis" stroke-width="2"></line>
@@ -172,9 +172,9 @@
             <div class="inner">
                 <p>
                     原始偏移列的单位没有文档，所以应用只用它们的<em>顺序</em>——每条轴都换算成当前技能池内的百分位排名，再拉伸到
-                    [−1, +1]。金钱与经验偏移共同构成贪度轴。号位锚点：1号位 = +0.7，2号位 =
+                    [−1, +1]。金钱与经验偏移共同构成发育倾向轴。号位锚点：1号位 = +0.7，2号位 =
                     +0.4，3号位 = +0.1，4号位 = −0.35，5号位 =
-                    −0.6。贪度加成随你的征召推进而衰减（每手权重 1.0 → 0.85 → 0.6 →
+                    −0.6。发育倾向加成随你的征召推进而衰减（每手权重 1.0 → 0.85 → 0.6 →
                     0.4）——高手先抢发育引擎，之后再补功能性，所以后面的选择更多按你的组合还缺什么来评。次级轴（2号位的击杀收割、4号位的游走开团、5号位的治疗）在其上叠加小幅加成。
                 </p>
             </div>
@@ -192,20 +192,20 @@
             <span class="tag">waveclear</span>
             <span class="tag">steroid</span>
             <span class="tag">save_ally</span>
-            等等。标签是机制事实：这是眩晕，这能清线。它们由社区在<a href="/ability-tags.html">标签实验室</a>中维护。有了标签，应用才能把你的整套阵容当成整体来推理，而不是一个个孤立打分。
+            等等。标签是机制事实：这是眩晕，这能清线。它们由社区在<a href="/ability-tags.html">标签实验室</a>中维护。有了标签，应用才能综合评估你的整套技能组合，而不是一个个孤立打分。
         </p>
         <p>
-            每个号位都有一张简短的清单，列着这个位置的真实征召想要什么。随着你选人，应用追踪你的组合已经覆盖了什么。能补上缺口的候选者获得加成，工具提示会点名那个缺口：
+            每个号位都有一张简短的清单，列着这个位置的真实征召想要什么。随着你选择技能，应用追踪你的组合已经覆盖了什么。能补上缺口的候选者获得加成，工具提示会点名那个缺口：
         </p>
 
         <div class="table-scroll">
             <table class="needs">
                 <tr><th>号位</th><th>第一优先</th><th>第二</th><th>第三</th></tr>
-                <tr><td><span class="pos">1 · 核心</span></td><td>攻击强化</td><td>发育手段 <small>或清线</small></td><td>机动 <small>或自我续航</small></td></tr>
+                <tr><td><span class="pos">1 · 优势路核心</span></td><td>攻击强化</td><td>发育手段 <small>或清线</small></td><td>机动 <small>或自我续航</small></td></tr>
                 <tr><td><span class="pos">2 · 中单</span></td><td>爆发伤害</td><td>团战大招 <small>或硬控</small></td><td>机动</td></tr>
-                <tr><td><span class="pos">3 · 劣单</span></td><td>范围控制</td><td>先手开团</td><td>承伤</td></tr>
-                <tr><td><span class="pos">4 · 软辅</span></td><td>硬控</td><td>清线 <small>或爆发</small></td><td>机动</td></tr>
-                <tr><td><span class="pos">5 · 硬辅</span></td><td>硬控</td><td>清线 <small>或爆发</small></td><td>救援队友</td></tr>
+                <tr><td><span class="pos">3 · 劣势路</span></td><td>范围控制</td><td>先手开团</td><td>承伤</td></tr>
+                <tr><td><span class="pos">4 · 辅助</span></td><td>硬控</td><td>清线 <small>或爆发</small></td><td>机动</td></tr>
+                <tr><td><span class="pos">5 · 纯辅助</span></td><td>硬控</td><td>清线 <small>或爆发</small></td><td>救援队友</td></tr>
             </table>
         </div>
         <p class="mutedline">
@@ -215,7 +215,7 @@
         <div class="tooltip-demo">
             <div class="t-badge">✦ 位置推荐</div>
             <div class="t-title">Torrent</div>
-            <div class="t-row">胜率：52.1% &nbsp;·&nbsp; 选取率：18.4</div>
+            <div class="t-row">胜率：52.1% &nbsp;·&nbsp; 平均选取顺位：18.4</div>
             <div class="t-row t-role">位置适配：5 号位 <span class="up">▲</span></div>
             <div class="chips">
                 <span class="chip">补足你缺少的硬控制</span>
@@ -264,8 +264,8 @@
                 <p>
                     有些技能没有搭档等于报废。<em>Eclipse</em> 离开 Lucent Beam
                     什么都不是。<em>Requiem</em> 需要 Shadow Fiend
-                    的身体，因为它吞噬的灵魂是他的先天能力。<em>Rearm</em> 只有当值得
-                    Rearm 的技能已被选走或仍在池中时才会出现。
+                    的身体，因为它吞噬的灵魂是他的先天技能。<em>Rearm</em> 只有当值得
+                    Rearm 的技能已被你选到，或仍在技能池中可选时才会出现。
                 </p>
             </div>
             <div class="card">
@@ -296,19 +296,19 @@
         </div>
         <h2>身体也是征召的一部分</h2>
         <p>
-            在技能征召里，英雄模型只是一具身体：基础属性、攻速、天赋和一个先天能力。应用按你的位置评估身体真正带来的东西：
+            在技能征召里，英雄模型只是一具身体：基础属性、攻速、天赋和一个先天技能。应用按你的位置评估身体真正带来的东西：
         </p>
         <ul>
             <li>
-                <strong>属性适配</strong>——核心看敏捷成长和攻击节奏，劣单看纯粹的坦度，辅助看蓝量和移速。永远与面板上实际剩下的模型比较，而不是对着某张全局梯度表。
+                <strong>属性适配</strong>——核心看敏捷成长和攻击节奏，劣势路看纯粹的坦度，辅助看蓝量和移速。永远与面板上实际剩下的模型比较，而不是对着某张全局梯度表。
             </li>
             <li>
                 <strong>能活过征召的天赋</strong>——大多数天赋强化英雄自己的技能，而那些技能你不会有。只有通用天赋（+攻速、+生命、+技能增强……）才算数，而且比你想的少：平均每个英雄约
                 1.3 个。
             </li>
             <li>
-                <strong>先天能力</strong>——Shadow Fiend 的灵魂配任何技能组都有用，Medusa
-                的魔法护盾同理。Luna 和 Drow 带来团队光环。全部像其他数据一样打标签、由社区维护。
+                <strong>先天技能</strong>——Shadow Fiend 的灵魂配任何技能组都有用，Medusa
+                的魔法盾同理。Luna 和 Drow 带来团队光环。全部像其他数据一样打标签、由社区维护。
             </li>
             <li>
                 <strong>双向搭配</strong>——选了攻速快的身体？攻击强化技能获得推力。先征召了两个右键输出技能？攻速快的身体会在你的模型列表里上浮。
@@ -326,9 +326,9 @@
             <summary>深入原理</summary>
             <div class="inner">
                 <p>
-                    对数据爱好者的诚实说明：应用曾像对待技能一样为模型混入贪度轴，后来我们砍掉了它。它的信号被选择效应污染——辅助<em>为了光环</em>去选
+                    对数据爱好者的诚实说明：应用曾像对待技能一样为模型混入发育倾向轴，后来我们砍掉了它。它的信号被选择效应污染——辅助<em>为了光环</em>去选
                     Drow 和
-                    Luna，把这些模型的实测「贪度」拖到最低百分位，进而错误地压低了它们的核心评分。模型的位置适配现在完全基于属性、机体数值（攻击间隔、有效生命、速度）、天赋与先天标签，以及人工裁定。
+                    Luna，把这些模型的实测「发育倾向」拖到最低百分位，进而错误地压低了它们的核心评分。模型的位置适配现在完全基于属性、机体数值（攻击间隔、有效生命、速度）、天赋与先天标签，以及人工裁定。
                 </p>
             </div>
         </details>
@@ -341,14 +341,14 @@
         </div>
         <h2>或者，让应用替你读队伍</h2>
         <p>
-            不想声明位置？设为<strong>自动</strong>，应用会转而解读你的队伍。每个队友的选择在同一条贪度轴上累积成一条发育轨迹——有人在囤顺劈和攻击强化，无论他宣布与否，都是在打核心。应用把轨迹与号位匹配，然后为剩下的位置推荐：
+            不想声明位置？设为<strong>自动</strong>，应用会转而解读你的队伍。每个队友的选择在同一条发育倾向轴上累积成一条发育轨迹——有人在囤分裂攻击和攻击强化，无论他宣布与否，都是在打核心。应用把轨迹与号位匹配，然后为剩下的位置推荐：
         </p>
 
         <figure>
             <svg
                 viewBox="0 0 720 240"
                 role="img"
-                aria-label="四名队友已征召的贪度条按序匹配到五个号位；唯一无人认领的 4 号位被高亮为推荐给你的位置。"
+                aria-label="四名队友已征召的发育倾向条按序匹配到五个号位；唯一无人认领的 4 号位被高亮为推荐给你的位置。"
             >
                 <defs>
                     <marker id="arr2-zh" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
@@ -356,7 +356,7 @@
                     </marker>
                 </defs>
                 <g font-family="ui-monospace, Consolas, monospace" font-size="12" fill="currentColor">
-                    <text x="10" y="22" opacity="0.7" font-size="11">队友，按已征召贪度排序</text>
+                    <text x="10" y="22" opacity="0.7" font-size="11">队友，按已征召发育倾向排序</text>
                     <g class="fill-axis">
                         <rect x="70" y="40" width="200" height="14" rx="4" opacity="0.9"></rect>
                         <rect x="70" y="70" width="150" height="14" rx="4" opacity="0.75"></rect>
@@ -394,7 +394,7 @@
             <summary>深入原理</summary>
             <div class="inner">
                 <p>
-                    匹配是把各组合（按平均已征召贪度排序）保序分配到号位锚点上——在一维轴上可证明最优，无需重型机器。数据充分性关卡让「自动」在至少两名队友各有两个已识别选择之前保持沉默；在此之前轨迹只是噪声，评分保持中性。另有一个独立的队伍平衡项在两种模式下都运行：在过度偏发育的队伍里，贪婪候选者小幅丢分，辅助型候选者获益。
+                    匹配是把各组合（按平均已征召发育倾向排序）保序分配到号位锚点上——在一维轴上可证明最优，无需重型机器。数据充分性关卡让「自动」在至少两名队友各有两个已识别选择之前保持沉默；在此之前轨迹只是噪声，评分保持中性。另有一个独立的队伍平衡项在两种模式下都运行：在过度偏发育的队伍里，贪婪候选者小幅丢分，辅助型候选者获益。
                 </p>
             </div>
         </details>
@@ -408,7 +408,7 @@
         <h2>护栏：这一切如何保持诚实</h2>
         <ul>
             <li>
-                <strong>位置层有上限。</strong>贪度、需求和搭配的全部数学加在一起，也只能把分数挪动有限的幅度。位置适配重排技能池；它无法把烂技能变成好技能。
+                <strong>位置层有上限。</strong>发育倾向、需求和搭配的全部数学加在一起，也只能把分数挪动有限的幅度。位置适配重排技能池；它无法把烂技能变成好技能。
             </li>
             <li>
                 <strong>关了就是关了。</strong>关闭位置推荐，你就回到纯统计引擎。唯一保留的是与位置无关的事实：身体检查、依赖关卡、高估标记，以及「任何位置都不推荐」的裁定。
