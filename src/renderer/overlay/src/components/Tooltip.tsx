@@ -158,7 +158,9 @@ function RoleReasonChips({
             className={`tooltip-role-chip${kind === 'duplicate' ? ' tooltip-role-chip-dup' : ''}`}
           >
             {kind === 'duplicate'
-              ? t('tooltip.roleDuplicate', { need })
+              ? key === 'mana_budget'
+                ? t('tooltip.manaBudgetWarning')
+                : t('tooltip.roleDuplicate', { need })
               : kind === 'partial'
                 ? t('tooltip.rolePartial', { need: t(`tooltip.roleNeeds.${key}`) })
                 : t('tooltip.roleCovers', { need })}

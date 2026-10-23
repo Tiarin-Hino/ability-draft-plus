@@ -103,6 +103,7 @@
     "roleCovers": "Kattaa puuttuvan tarpeesi: {{need}}",
     "rolePartial": "Kattaa osittain puuttuvan tarpeesi: {{need}}",
     "roleDuplicate": "Jo katettu: {{need}}",
+    "manaBudgetWarning": "Liikaa paljon manaa kuluttavia kykyjä",
     "roleCurated": "Kuratoitu pick tälle roolille",
     "curatedPick": "Roolipick — kuratoitu pakkohankinnaksi roolillesi",
     "inertOnModel": "Ei toimi mallillasi (melee/ranged-ristiriita)",
