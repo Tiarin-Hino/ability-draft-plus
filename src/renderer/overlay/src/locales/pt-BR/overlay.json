@@ -103,6 +103,7 @@
     "roleCovers": "Cobre a falta de {{need}}",
     "rolePartial": "Cobre parcialmente a falta de {{need}}",
     "roleDuplicate": "Já coberto: {{need}}",
+    "manaBudgetWarning": "Habilidades demais com alto custo de mana",
     "roleCurated": "Pick curado para esta função",
     "curatedPick": "Pick de função — curado como obrigatório para a sua função",
     "inertOnModel": "Não funciona no seu modelo (incompatibilidade corpo a corpo/à distância)",

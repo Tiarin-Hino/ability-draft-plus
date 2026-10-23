@@ -229,7 +229,9 @@ rationale as comments (greed taper, team balance, ult security, etc. come from
   Fill for team). Overlay: quick panel (click position = fixed, Auto = dynamic;
   status line reflects the LAST PROCESSED scan — role changes apply on the next
   scan, same contract as My Spot). Tooltips: role-fit line + reason chips +
-  inert/contested notes + Aghanim's stacking / point-sink lines. Appearance
+  inert/contested notes + Aghanim's stacking / point-sink lines. The
+  `duplicate:mana_budget` reason uses a dedicated localized mana-pressure
+  warning instead of the generic already-covered chip. Appearance
   card: the always-on Shard/Scepter markers toggle. All app languages.
 
 ## Research & validation tooling (../ad_data_gather_script)
