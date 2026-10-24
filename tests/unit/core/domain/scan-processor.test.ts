@@ -497,6 +497,23 @@ describe('processScanResults', () => {
         expect(poolNames).not.toContain('ice_blast')
       })
 
+      it('never caches one ability in two pick boxes (keeps the stronger read)', () => {
+        // Mid-draft join: a box holding an already-drafted ability matched the
+        // nearest pool icon, which another player had genuinely picked
+        const first = acceptedFirstRescan()
+        const next = rescanWith(first.updatedState, [
+          makeScanResult('fireball', 0, 1, false, 0.95),
+          makeScanResult('fireball', 1, 1, false, 0.6),
+        ])
+        expect(next.rescanRejected).toBe(false)
+        const cache = next.updatedState.selectedAbilitiesCache
+        expect(cache.filter((s) => s.name === 'fireball')).toHaveLength(1)
+        expect(cache.find((s) => s.name === 'fireball')?.hero_order).toBe(0)
+        expect(
+          next.overlayPayload.scanData!.selectedAbilities.filter((s) => s.name === 'fireball'),
+        ).toHaveLength(1)
+      })
+
       it('accepts a slot changing to a different confident name (misread correction)', () => {
         const first = acceptedFirstRescan()
         const corrected = rescanWith(first.updatedState, [

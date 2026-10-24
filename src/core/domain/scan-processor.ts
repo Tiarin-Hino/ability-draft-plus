@@ -196,6 +196,30 @@ function mergeSelectedSlots(
 }
 
 /**
+ * An ability is drafted ONCE, so a name may hold at most one pick box. Two boxes
+ * reading the same name means one is a misread (template matching scores each
+ * box alone — 2026-10-24 mid-draft join: Overwhelming Odds on two players,
+ * Venomous Gale on two boxes of one card). The higher-confidence read keeps the
+ * name (earlier slot on a tie); the others become Unknown, which the pick
+ * tracker treats as an unreadable box (flagged, never guessed).
+ */
+export function dedupeSelectedNames(slots: ScanResult[]): ScanResult[] {
+  const winner = new Map<string, number>()
+  slots.forEach((s, i) => {
+    if (s.name === null) return
+    const held = winner.get(s.name)
+    if (held === undefined || s.confidence > slots[held].confidence) {
+      winner.set(s.name, i)
+    }
+  })
+  return slots.map((s, i) =>
+    s.name !== null && winner.get(s.name) !== i
+      ? { ...s, name: null, confidence: 0 }
+      : s,
+  )
+}
+
+/**
  * Main orchestration function. Transforms raw ML scan results into a fully-enriched
  * OverlayDataPayload. Pure TypeScript — zero Electron imports.
  */
@@ -279,9 +303,8 @@ export function processScanResults(
       // Clean scan, or the rejection cap was hit — accept and re-baseline.
       rescanRebaselined = contaminated
       state.rescanRejectionStreak = 0
-      state.selectedAbilitiesCache = mergeSelectedSlots(
-        state.selectedAbilitiesCache,
-        scannedSlots,
+      state.selectedAbilitiesCache = dedupeSelectedNames(
+        mergeSelectedSlots(state.selectedAbilitiesCache, scannedSlots),
       )
       selectedAbilities = state.selectedAbilitiesCache
 
