@@ -673,6 +673,43 @@ describe('processScanResults', () => {
   })
 
   describe('selected state forwarding', () => {
+    it.each([0, 1, 5])(
+      'only row 0 owns the personal synergy, not another player in row %i',
+      (owner) => {
+        const original = makeInitialScanInput()
+        const state = processScanResults(original).updatedState
+        state.mySelectedSpotHeroOrder = 0
+        state.mySelectedSpotDbId = 1
+        const result = processScanResults({
+          ...original,
+          isInitialScan: false,
+          state,
+          rawResults: [makeScanResult('fireball', owner, 0, false)],
+        })
+        const remaining = result.overlayPayload.scanData!.standard.find(
+          (slot) => slot.name === 'ice_blast',
+        )!
+        expect(remaining.isSynergySuggestionForMySpot).toBe(owner === 0)
+      },
+    )
+
+    it('uses the selected player row even before that player has a known hero model', () => {
+      const original = makeInitialScanInput()
+      const state = processScanResults(original).updatedState
+      state.mySelectedSpotHeroOrder = 0
+      state.mySelectedSpotDbId = null
+      const result = processScanResults({
+        ...original,
+        isInitialScan: false,
+        state,
+        rawResults: [makeScanResult('fireball', 0, 0, false)],
+      })
+      const remaining = result.overlayPayload.scanData!.standard.find(
+        (slot) => slot.name === 'ice_blast',
+      )!
+      expect(remaining.isSynergySuggestionForMySpot).toBe(true)
+    })
+
     it('forwards mySelectedSpotDbId to overlay payload', () => {
       const input = makeInitialScanInput()
       // After initial scan resets selections, they should be null
