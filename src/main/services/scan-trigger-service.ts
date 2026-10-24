@@ -22,6 +22,7 @@ import {
   mergeRetriedPoolSlots,
   unresolvedPoolSlots,
 } from '@core/domain/pool-retry'
+import { addPoolHeroAbilities } from '@core/domain/pick-candidates'
 import { POOL_RETRY_MAX_ATTEMPTS } from '@shared/constants/thresholds'
 import type { InitialScanResults, PickCandidates } from '@shared/types/ml'
 
@@ -43,6 +44,10 @@ import type { InitialScanResults, PickCandidates } from '@shared/types/ml'
 // stays Unknown all draft AND its pick box becomes unmatchable (scoping). Every
 // rescan therefore re-reads the still-Unknown pool slots (bounded by
 // POOL_RETRY_MAX_ATTEMPTS) and merges whatever resolves — see core/domain/pool-retry.ts.
+// Pool heroes: every hero known for the draft (model tiles, hero-defining pool
+// slots, card OCR) adds ALL its abilities to the pick candidates — a mid-draft
+// join's pool scan no longer shows the abilities already drafted, and without
+// them their pick boxes matched the nearest WRONG pool icon (core/domain/pick-candidates.ts).
 
 const logger = log.scope('scan-trigger')
 
@@ -94,6 +99,45 @@ export function createScanTriggerService(
   const candidateStandard = new Set<string>()
   const candidateUltimates = new Set<string>()
 
+  // Pool heroes whose abilities already joined the candidates this draft, and
+  // a per-hero DB read cache (refreshed per draft — a scrape can change lists)
+  const candidateHeroes = new Set<string>()
+  const heroAbilitiesCache = new Map<string, { name: string; isUltimate: boolean }[]>()
+
+  function abilitiesForHero(heroName: string): { name: string; isUltimate: boolean }[] {
+    const cached = heroAbilitiesCache.get(heroName)
+    if (cached) return cached
+    const hero = dbService.heroes.getByName(heroName)
+    const list = hero
+      ? dbService.abilities
+          .getByHeroId(hero.heroId)
+          .map((a) => ({ name: a.name, isUltimate: a.isUltimate }))
+      : []
+    heroAbilitiesCache.set(heroName, list)
+    return list
+  }
+
+  /** Adds newly known pool heroes' abilities to the candidates; warms their icons. */
+  function addCandidateHeroes(heroNames: Iterable<string>): void {
+    const fresh: string[] = []
+    for (const raw of heroNames) {
+      // DB hero names drop underscores (legioncommander); tile/OCR names keep them
+      const name = raw.replace(/_/g, '')
+      if (candidateHeroes.has(name)) continue
+      candidateHeroes.add(name)
+      fresh.push(name)
+    }
+    if (fresh.length === 0) return
+    const added = addPoolHeroAbilities(
+      { standard: candidateStandard, ultimates: candidateUltimates },
+      fresh,
+      abilitiesForHero,
+    )
+    if (added.length > 0) {
+      void iconCache.prefetchAbilities(added).catch(() => undefined)
+    }
+  }
+
   // Pool slots that read Unknown are re-classified on later scans (pool art is
   // static until drafted). Attempts are counted per slot so an unreadable slot
   // cannot re-crop for the whole draft.
@@ -132,6 +176,10 @@ export function createScanTriggerService(
 
   function getPickCandidates(): PickCandidates {
     const state = draftStore.getState()
+    addCandidateHeroes([
+      ...state.identifiedHeroModelsCache.map((m) => m.heroName),
+      ...Object.values(state.ocrHeroNamesByRow).map((h) => h.name),
+    ])
     for (const slot of state.initialPoolAbilitiesCache.ultimates) {
       if (slot.name) candidateUltimates.add(slot.name)
     }
@@ -182,6 +230,8 @@ export function createScanTriggerService(
         if (isInitialScan) {
           candidateStandard.clear()
           candidateUltimates.clear()
+          candidateHeroes.clear()
+          heroAbilitiesCache.clear()
           poolRetryAttempts.clear()
         }
         // Read resolution from app store (set at overlay activation)
@@ -286,6 +336,7 @@ export function createScanTriggerService(
                 (m) => `${m.heroOrder}:${m.name} (${m.score.toFixed(3)})`,
               ),
             })
+            addCandidateHeroes(resolved.flatMap((m) => (m.name ? [m.name] : [])))
           }
         }
 
