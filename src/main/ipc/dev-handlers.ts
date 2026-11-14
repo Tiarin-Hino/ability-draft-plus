@@ -134,16 +134,10 @@ function launchInConsole(exe: string, args: string[], cwd: string): void {
   child.unref()
 }
 
-export function registerDevHandlers(
-  appStore: AppStore,
-  dbService: DatabaseService,
-): void {
+export function registerDevHandlers(appStore: AppStore, dbService: DatabaseService): void {
   ipcMain.handle(
     'dev:runGatherScript',
-    async (
-      _event,
-      data: { dryRun: boolean; heroes?: string[]; purgeExisting?: boolean },
-    ) => {
+    async (_event, data: { dryRun: boolean; heroes?: string[]; purgeExisting?: boolean }) => {
       if (app.isPackaged) return { success: false, error: 'dev-only' }
 
       const gatherDir = getGatherDir()
@@ -204,9 +198,7 @@ export function registerDevHandlers(
                 })
                 resolvePromise({
                   success: false,
-                  error: error.killed
-                    ? 'Dry run timed out after 10 minutes'
-                    : error.message,
+                  error: error.killed ? 'Dry run timed out after 10 minutes' : error.message,
                   output,
                 })
               } else {
@@ -242,10 +234,13 @@ export function registerDevHandlers(
 
       const args = [
         GATHER_SCRIPT,
-        '--mode', 'models',
-        '--sets', String(sets),
+        '--mode',
+        'models',
+        '--sets',
+        String(sets),
         // Mirror crops straight into the reference library the ML worker reads
-        '--models-export-dir', join(app.getPath('userData'), 'model-tiles'),
+        '--models-export-dir',
+        join(app.getPath('userData'), 'model-tiles'),
       ]
 
       if (data.dryRun) {
@@ -266,10 +261,7 @@ export function registerDevHandlers(
 
   ipcMain.handle(
     'dev:runDiagnosticCycle',
-    async (
-      _event,
-      data: { dryRun: boolean; iterations?: number; pickTimeS?: number },
-    ) => {
+    async (_event, data: { dryRun: boolean; iterations?: number; pickTimeS?: number }) => {
       if (app.isPackaged) return { success: false, error: 'dev-only' }
 
       const gatherDir = getGatherDir()
@@ -303,8 +295,10 @@ export function registerDevHandlers(
 
       const args = [
         DIAGNOSTIC_SCRIPT,
-        '--iterations', String(iterations),
-        '--pick-time', String(pickTimeS),
+        '--iterations',
+        String(iterations),
+        '--pick-time',
+        String(pickTimeS),
       ]
       if (data.dryRun) {
         return captureRun(getPython(gatherDir), [...args, '--dry-run'], gatherDir, 60_000)
@@ -381,9 +375,13 @@ export function registerDevHandlers(
         execFile(
           'gh',
           [
-            'workflow', 'run', 'train-model.yml',
-            '-f', `dataset_version=${version}`,
-            '-f', `fine_tune=${data.fineTune}`,
+            'workflow',
+            'run',
+            'train-model.yml',
+            '-f',
+            `dataset_version=${version}`,
+            '-f',
+            `fine_tune=${data.fineTune}`,
           ],
           { cwd: app.getAppPath(), timeout: 30_000 },
           (error, stdout, stderr) => {

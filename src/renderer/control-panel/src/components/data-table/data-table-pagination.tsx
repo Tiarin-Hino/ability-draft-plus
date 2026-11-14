@@ -6,9 +6,7 @@ interface DataTablePaginationProps<TData> {
   table: Table<TData>
 }
 
-export function DataTablePagination<TData>({
-  table,
-}: DataTablePaginationProps<TData>) {
+export function DataTablePagination<TData>({ table }: DataTablePaginationProps<TData>) {
   return (
     <div className="flex items-center justify-between px-2">
       <div className="text-sm text-muted-foreground">
@@ -16,8 +14,7 @@ export function DataTablePagination<TData>({
       </div>
       <div className="flex items-center gap-2">
         <span className="text-sm text-muted-foreground">
-          Page {table.getState().pagination.pageIndex + 1} of{' '}
-          {table.getPageCount()}
+          Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
         </span>
         <div className="flex items-center gap-1">
           <Button

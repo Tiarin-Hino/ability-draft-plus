@@ -64,11 +64,7 @@ function deriveOwnerHero(
   heroesByNameLength: WindrunStaticHero[],
 ): WindrunStaticHero | null {
   const flatName = abilityShortName.replace(/_/g, '').toLowerCase()
-  return (
-    heroesByNameLength.find((h) =>
-      flatName.startsWith(h.shortName.toLowerCase()),
-    ) ?? null
-  )
+  return heroesByNameLength.find((h) => flatName.startsWith(h.shortName.toLowerCase())) ?? null
 }
 
 export function transformAbilitiesAndHeroes(
@@ -269,11 +265,7 @@ export function transformTriplets(
       const synergyIncrease = winrate - (wr1 + wr2 + wr3) / 3
 
       // Sort names for consistent ordering
-      const names = [
-        staticAbil1.shortName,
-        staticAbil2.shortName,
-        staticAbil3.shortName,
-      ].sort()
+      const names = [staticAbil1.shortName, staticAbil2.shortName, staticAbil3.shortName].sort()
 
       abilityTriplets.push({
         ability1Name: names[0],

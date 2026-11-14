@@ -1,8 +1,4 @@
-import type {
-  EnrichedScanSlot,
-  OverlayDataPayload,
-  SynergyPairDisplay,
-} from '@shared/types'
+import type { EnrichedScanSlot, OverlayDataPayload, SynergyPairDisplay } from '@shared/types'
 import type {
   PickEvent,
   StreamAbilitySlot,
@@ -20,14 +16,8 @@ import {
   STREAM_PICK_FEED_LENGTH,
 } from '@shared/constants/thresholds'
 import { abilityIconPath, heroIconPath } from '../stream/icon-urls'
-import {
-  deriveHeroCdnName,
-  heroCdnNameFromDisplayName,
-} from '../stream/hero-cdn-names'
-import {
-  calculatePlayerDraftScore,
-  type PairSynergyInput,
-} from './player-draft-score'
+import { deriveHeroCdnName, heroCdnNameFromDisplayName } from '../stream/hero-cdn-names'
+import { calculatePlayerDraftScore, type PairSynergyInput } from './player-draft-score'
 
 // @DEV-GUIDE: Pure assembly of the streamer-view board state from overlay payloads.
 // Two payloads on purpose:
@@ -76,10 +66,7 @@ const EMPTY_GSI: StreamGsiInfo = {
   playerModels: [],
 }
 
-function toStreamSlot(
-  slot: EnrichedScanSlot,
-  pickedNames: ReadonlySet<string>,
-): StreamAbilitySlot {
+function toStreamSlot(slot: EnrichedScanSlot, pickedNames: ReadonlySet<string>): StreamAbilitySlot {
   return {
     name: slot.name,
     displayName: slot.displayName,
@@ -109,26 +96,19 @@ function buildHeroRows(
       .sort((a, b) => a.ability_order - b.ability_order)
     const rowUltimate = ultimates.find((s) => s.hero_order === heroOrder) ?? null
 
-    const model = initialPayload.heroModels.find(
-      (m) => m.heroOrder === heroOrder,
-    )
-    const heroDisplayName =
-      model && model.dbHeroId !== null ? model.heroDisplayName : null
+    const model = initialPayload.heroModels.find((m) => m.heroOrder === heroOrder)
+    const heroDisplayName = model && model.dbHeroId !== null ? model.heroDisplayName : null
 
     // Picked-model state updates on RESCANS (card OCR, applied by auto-rescan),
     // so it must come from the latest payload, not the frozen initial one
-    const latestModel = latestPayload?.heroModels.find(
-      (m) => m.heroOrder === heroOrder,
-    )
+    const latestModel = latestPayload?.heroModels.find((m) => m.heroOrder === heroOrder)
 
     // Ability-prefix derivation first; when too few row tiles were recognized
     // for it, fall back to the identified hero's display name (npc-divergent
     // names mapped in DISPLAY_SLUG_CDN_OVERRIDES)
     const cdnName =
-      deriveHeroCdnName([
-        ...rowStandard.map((s) => s.name),
-        rowUltimate?.name ?? null,
-      ]) ?? (heroDisplayName ? heroCdnNameFromDisplayName(heroDisplayName) : null)
+      deriveHeroCdnName([...rowStandard.map((s) => s.name), rowUltimate?.name ?? null]) ??
+      (heroDisplayName ? heroCdnNameFromDisplayName(heroDisplayName) : null)
 
     rows.push({
       heroOrder,
@@ -167,15 +147,12 @@ function buildPlayerRows(
   const assignedByPlayer = new Map<number, StreamPlayerModel>()
   for (const assignment of modelAssignments) {
     const heroRow = heroRows.find((h) => h.heroOrder === assignment.poolHeroOrder)
-    const model = initialPayload.heroModels.find(
-      (m) => m.heroOrder === assignment.poolHeroOrder,
-    )
+    const model = initialPayload.heroModels.find((m) => m.heroOrder === assignment.poolHeroOrder)
     if (!heroRow || !model || model.dbHeroId === null) continue
     // Portrait: the row's ability-prefix derivation when available; otherwise
     // the display-name -> CDN mapping (handles npc-divergent names like
     // "Outworld Destroyer" -> obsidian_destroyer)
-    const cdnName =
-      heroRow.cdnName ?? heroCdnNameFromDisplayName(model.heroDisplayName)
+    const cdnName = heroRow.cdnName ?? heroCdnNameFromDisplayName(model.heroDisplayName)
     assignedByPlayer.set(assignment.playerIndex, {
       npcName: model.heroName,
       displayName: model.heroDisplayName,
@@ -262,9 +239,7 @@ function buildPanels(
 
   // Latest payload's pool arrays already exclude picked abilities (scan-processor
   // subtracts them on rescan), so these panels are naturally "still available".
-  const knownSlots = poolSlots.filter(
-    (s) => s.name !== null && s.isUnknown !== true,
-  )
+  const knownSlots = poolSlots.filter((s) => s.name !== null && s.isUnknown !== true)
 
   const topWinrateInPool = [...knownSlots]
     .filter((s) => s.winrate !== null)
@@ -294,9 +269,7 @@ function buildPanels(
  * Assemble the full stream board snapshot. Pure and deterministic — safe to call on
  * every scan/GSI update.
  */
-export function buildStreamBoardState(
-  input: StreamBoardBuildInput,
-): StreamBoardState {
+export function buildStreamBoardState(input: StreamBoardBuildInput): StreamBoardState {
   const gsi = input.gsi ?? EMPTY_GSI
   const initialPayload = input.initialPayload
   const latestPayload = input.latestPayload ?? initialPayload

@@ -25,16 +25,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   overlayBackgroundMode: false,
 }
 
-export const SUPPORTED_LANGUAGES = [
-  'en',
-  'ru',
-  'zh-CN',
-  'es',
-  'pt-BR',
-  'uk',
-  'fil',
-  'fi',
-] as const
+export const SUPPORTED_LANGUAGES = ['en', 'ru', 'zh-CN', 'es', 'pt-BR', 'uk', 'fil', 'fi'] as const
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number]
 
 /** Display data for language pickers: `short` for compact triggers, `autonym`

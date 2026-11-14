@@ -8,13 +8,7 @@ import { StepSave } from './step-save'
 
 export type WizardMode = 'user' | 'dev'
 
-type WizardStep =
-  | 'capture'
-  | 'auto-detect'
-  | 'anchor-calibration'
-  | 'verify'
-  | 'save'
-  | 'done'
+type WizardStep = 'capture' | 'auto-detect' | 'anchor-calibration' | 'verify' | 'save' | 'done'
 
 interface WizardState {
   step: WizardStep
@@ -116,9 +110,7 @@ export function MapperWizard({ mode, onDone }: MapperWizardProps) {
           screenshotWidth={state.imageWidth}
           screenshotHeight={state.imageHeight}
           imageBase64={state.imageBase64!}
-          onUseLayout={(layout, method) =>
-            dispatch({ type: 'USE_LAYOUT', layout, method })
-          }
+          onUseLayout={(layout, method) => dispatch({ type: 'USE_LAYOUT', layout, method })}
           onCalibrate={() => dispatch({ type: 'GO_ANCHOR' })}
           onReportSubmitted={() => dispatch({ type: 'REPORT_SUBMITTED' })}
         />
@@ -130,9 +122,7 @@ export function MapperWizard({ mode, onDone }: MapperWizardProps) {
           imageBase64={state.imageBase64!}
           imageWidth={state.imageWidth}
           imageHeight={state.imageHeight}
-          onComplete={(layout) =>
-            dispatch({ type: 'CALIBRATION_DONE', layout })
-          }
+          onComplete={(layout) => dispatch({ type: 'CALIBRATION_DONE', layout })}
           onBack={() => dispatch({ type: 'REDO_CALIBRATION' })}
         />
       )

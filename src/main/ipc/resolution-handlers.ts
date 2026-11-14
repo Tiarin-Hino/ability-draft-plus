@@ -40,9 +40,7 @@ export function registerResolutionHandlers(
   windowManager: WindowManager,
   apiConfig: ApiConfig | null,
 ): void {
-  ipcMain.handle('resolution:getAll', () =>
-    layoutService.getAllResolutionsWithSources(),
-  )
+  ipcMain.handle('resolution:getAll', () => layoutService.getAllResolutionsWithSources())
 
   ipcMain.handle('resolution:getLayout', (_event, data: { resolution: string }) => {
     const layout = layoutService.getLayout(data.resolution)

@@ -73,22 +73,17 @@ function loadBindings(): typeof bindings {
     const HWND = koffi.pointer('WTS_HWND', koffi.opaque())
 
     // Define functions using array-style API to avoid string interpolation issues
-    const FindWindowW = user32.func('__stdcall', 'FindWindowW', HWND, [
-      'str16',
-      'str16',
-    ])
+    const FindWindowW = user32.func('__stdcall', 'FindWindowW', HWND, ['str16', 'str16'])
 
     const GetClientRect = user32.func('__stdcall', 'GetClientRect', 'bool', [
       HWND,
       koffi.out(koffi.pointer(RECT)),
     ])
 
-    const ClientToScreen = user32.func(
-      '__stdcall',
-      'ClientToScreen',
-      'bool',
-      [HWND, koffi.inout(koffi.pointer(POINT))],
-    )
+    const ClientToScreen = user32.func('__stdcall', 'ClientToScreen', 'bool', [
+      HWND,
+      koffi.inout(koffi.pointer(POINT)),
+    ])
 
     bindings = { FindWindowW, GetClientRect, ClientToScreen }
 
@@ -172,10 +167,7 @@ function queryGameWindow(): RawGameWindowBounds | null {
   }
 }
 
-function boundsEqual(
-  a: GameWindowBounds | null,
-  b: GameWindowBounds | null,
-): boolean {
+function boundsEqual(a: GameWindowBounds | null, b: GameWindowBounds | null): boolean {
   if (a === null && b === null) return true
   if (a === null || b === null) return false
   return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height

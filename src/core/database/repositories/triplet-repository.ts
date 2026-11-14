@@ -51,9 +51,7 @@ export interface TripletRepository {
     heroNameToIdMap: Map<string, number>,
   ): number
 
-  getThirdAbilitiesForPairs(
-    pairKeys: { a: number; b: number }[],
-  ): Map<string, ThirdAbilityInfo[]>
+  getThirdAbilitiesForPairs(pairKeys: { a: number; b: number }[]): Map<string, ThirdAbilityInfo[]>
 }
 
 export function createTripletRepository(db: SQLJsDatabase): TripletRepository {
@@ -85,7 +83,11 @@ export function createTripletRepository(db: SQLJsDatabase): TripletRepository {
             isOp: t.isOp,
           })
           .onConflictDoUpdate({
-            target: [abilityTriplets.abilityIdOne, abilityTriplets.abilityIdTwo, abilityTriplets.abilityIdThree],
+            target: [
+              abilityTriplets.abilityIdOne,
+              abilityTriplets.abilityIdTwo,
+              abilityTriplets.abilityIdThree,
+            ],
             set: {
               synergyWinrate: sql`excluded.synergy_winrate`,
               synergyIncrease: sql`excluded.synergy_increase`,
@@ -126,7 +128,11 @@ export function createTripletRepository(db: SQLJsDatabase): TripletRepository {
             isOp: t.isOp,
           })
           .onConflictDoUpdate({
-            target: [heroAbilityTriplets.heroId, heroAbilityTriplets.abilityIdOne, heroAbilityTriplets.abilityIdTwo],
+            target: [
+              heroAbilityTriplets.heroId,
+              heroAbilityTriplets.abilityIdOne,
+              heroAbilityTriplets.abilityIdTwo,
+            ],
             set: {
               synergyWinrate: sql`excluded.synergy_winrate`,
               synergyIncrease: sql`excluded.synergy_increase`,

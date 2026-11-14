@@ -30,11 +30,7 @@ export interface ModelTileMatch {
   margin: number | null
 }
 
-function nccScore(
-  vec: Uint8Array,
-  stats: { mean: number; std: number },
-  t: IconTemplate,
-): number {
+function nccScore(vec: Uint8Array, stats: { mean: number; std: number }, t: IconTemplate): number {
   let dot = 0
   for (let i = 0; i < vec.length; i++) {
     dot += (vec[i] - stats.mean) * (t.vec[i] - t.mean)
@@ -88,9 +84,7 @@ export function matchModelTile(
     return { name: null, score: 0, bestName: null, secondName: null, margin: null }
   }
 
-  const accepted =
-    best >= MODEL_TILE_MATCH_MIN_NCC &&
-    best - second >= MODEL_TILE_MATCH_MIN_MARGIN
+  const accepted = best >= MODEL_TILE_MATCH_MIN_NCC && best - second >= MODEL_TILE_MATCH_MIN_MARGIN
   return {
     name: accepted ? bestName : null,
     score: best,

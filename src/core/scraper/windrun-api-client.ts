@@ -71,11 +71,13 @@ export function createWindrunApiClient(
     fetchStaticHeroes: () => fetchJson<WindrunStaticHeroesResponse>('static/heroes'),
     fetchPatches: () => fetchJson<WindrunPatchesResponse>('static/patches'),
     fetchAbilities: (patch?) => fetchJson<WindrunAbilitiesResponse>('abilities', patch),
-    fetchAbilityHighSkill: (patch?) => fetchJson<WindrunHighSkillResponse>('ability-high-skill', patch),
+    fetchAbilityHighSkill: (patch?) =>
+      fetchJson<WindrunHighSkillResponse>('ability-high-skill', patch),
     fetchHeroes: (patch?) => fetchJson<WindrunHeroesResponse>('heroes', patch),
     fetchAbilityPairs: (patch?) => fetchJson<WindrunPairsResponse>('ability-pairs', patch),
     fetchAbilityTriplets: (patch?) => fetchJson<WindrunTripletsResponse>('ability-triplets', patch),
-    fetchAbilityShifts: (patch?) => fetchJson<WindrunAbilityShiftsResponse>('ability-shifts', patch),
+    fetchAbilityShifts: (patch?) =>
+      fetchJson<WindrunAbilityShiftsResponse>('ability-shifts', patch),
     fetchPlayerProfile: (playerId) =>
       fetchJson<WindrunPlayerProfileResponse>(`players/${playerId}`),
     fetchPlayerStats: (playerId) =>

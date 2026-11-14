@@ -35,19 +35,21 @@ export function StepAutoDetect({
   const [layout, setLayout] = useState<ResolutionLayout | null>(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
-  const [submitResult, setSubmitResult] = useState<{ success: boolean; message: string } | null>(null)
+  const [submitResult, setSubmitResult] = useState<{ success: boolean; message: string } | null>(
+    null,
+  )
 
   useEffect(() => {
     let cancelled = false
-    window.electronApi
-      .invoke('resolution:getLayout', { resolution })
-      .then((result) => {
-        if (cancelled) return
-        setSource(result.source)
-        setLayout(result.layout)
-        setLoading(false)
-      })
-    return () => { cancelled = true }
+    window.electronApi.invoke('resolution:getLayout', { resolution }).then((result) => {
+      if (cancelled) return
+      setSource(result.source)
+      setLayout(result.layout)
+      setLoading(false)
+    })
+    return () => {
+      cancelled = true
+    }
   }, [resolution])
 
   const handleSubmitScreenshot = async () => {
@@ -121,9 +123,7 @@ export function StepAutoDetect({
             <p className="font-medium text-yellow-700 dark:text-yellow-400">
               {t('mapper.autoDetect.autoScaleWarningTitle')}
             </p>
-            <p className="text-muted-foreground">
-              {t('mapper.autoDetect.autoScaleWarningDetail')}
-            </p>
+            <p className="text-muted-foreground">{t('mapper.autoDetect.autoScaleWarningDetail')}</p>
           </div>
         </div>
       )}

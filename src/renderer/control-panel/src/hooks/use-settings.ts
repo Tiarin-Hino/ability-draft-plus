@@ -5,10 +5,7 @@ interface UseSettingsReturn {
   settings: AppSettings | null
   loading: boolean
   error: string | null
-  updateSetting: <K extends keyof AppSettings>(
-    key: K,
-    value: AppSettings[K],
-  ) => Promise<void>
+  updateSetting: <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => Promise<void>
 }
 
 export function useSettings(): UseSettingsReturn {

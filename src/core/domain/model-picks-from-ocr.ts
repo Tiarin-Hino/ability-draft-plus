@@ -50,9 +50,7 @@ export interface ResolveModelAssignmentsInput {
 }
 
 /** Current model assignments implied by the card reads, sorted by pool order. */
-export function resolveModelAssignments(
-  input: ResolveModelAssignmentsInput,
-): ModelAssignment[] {
+export function resolveModelAssignments(input: ResolveModelAssignmentsInput): ModelAssignment[] {
   const orderByToken = new Map<string, number | null>()
   for (const model of input.poolModels) {
     if (model.heroName === null || isUnidentifiedModel(model.heroName)) continue

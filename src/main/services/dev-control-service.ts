@@ -28,10 +28,7 @@ export interface DevControlHooks {
   isAutoDraftTrackingEnabled(): boolean
 }
 
-export function startDevControlServer(
-  appStore: AppStore,
-  hooks: DevControlHooks,
-): Server | null {
+export function startDevControlServer(appStore: AppStore, hooks: DevControlHooks): Server | null {
   if (app.isPackaged) return null
 
   const server = createServer(async (req, res) => {

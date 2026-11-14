@@ -15,9 +15,7 @@ export function DevMapperPage({ onNavigate }: PageProps) {
             <Map className="h-5 w-5" />
             {t('mapper.devTitle')}
           </CardTitle>
-          <CardDescription>
-            {t('mapper.description')}
-          </CardDescription>
+          <CardDescription>{t('mapper.description')}</CardDescription>
         </CardHeader>
         <CardContent>
           <MapperWizard mode="dev" onDone={() => onNavigate?.('settings')} />

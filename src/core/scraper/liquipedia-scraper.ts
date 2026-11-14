@@ -132,9 +132,7 @@ export async function enrichFromLiquipedia(
     const heroName = heroNames[i]
     const pageTitle = heroNameToPageTitle(heroName)
 
-    onProgress(
-      `[${i + 1}/${heroNames.length}] Fetching Liquipedia data for "${pageTitle}"...`,
-    )
+    onProgress(`[${i + 1}/${heroNames.length}] Fetching Liquipedia data for "${pageTitle}"...`)
 
     try {
       const updates = await fetchHeroAbilities(pageTitle)

@@ -7,8 +7,7 @@
 // path convention. Renamed abilities whose legacy class name survives in our data get an
 // entry in ABILITY_ICON_NAME_OVERRIDES (grown from icon-cache 404 logs — see Phase 3).
 
-const VALVE_CDN_BASE =
-  'https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react'
+const VALVE_CDN_BASE = 'https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react'
 
 /**
  * Legacy/renamed ability class name → current Valve CDN file name (without extension).

@@ -83,20 +83,14 @@ export interface HeroSynergyClearInsertData {
 }
 
 export interface SynergyRepository {
-  getHighWinrateCombinations(
-    baseAbilityName: string,
-    draftPoolNames: string[],
-  ): SynergyPartner[]
+  getHighWinrateCombinations(baseAbilityName: string, draftPoolNames: string[]): SynergyPartner[]
 
   getHighWinrateCombinationsBatch(
     baseAbilityNames: string[],
     draftPoolNames: string[],
   ): Map<string, SynergyPartner[]>
 
-  getOPCombinationsInPool(
-    draftPoolNames: string[],
-    threshold: number,
-  ): SynergyPairDisplay[]
+  getOPCombinationsInPool(draftPoolNames: string[], threshold: number): SynergyPairDisplay[]
 
   getAllOPCombinations(threshold: number): AbilitySynergyPair[]
 
@@ -104,10 +98,7 @@ export interface SynergyRepository {
 
   getAllHeroAbilitySynergiesUnfiltered(): HeroAbilitySynergyRow[]
 
-  getHeroSynergiesInPool(
-    draftPoolNames: string[],
-    threshold: number,
-  ): HeroSynergyDisplay[]
+  getHeroSynergiesInPool(draftPoolNames: string[], threshold: number): HeroSynergyDisplay[]
 
   getAllTrapCombinations(threshold: number): AbilitySynergyPair[]
 
@@ -124,10 +115,7 @@ export interface SynergyRepository {
    * form, e.g. "sandking") and ability names, own-kit pairs excluded. Feeds the
    * Twitch projection's pool-internal hero synergy graph.
    */
-  getHeroSynergiesAmong(
-    heroNames: string[],
-    abilityNames: string[],
-  ): HeroPairSynergyAmongRow[]
+  getHeroSynergiesAmong(heroNames: string[], abilityNames: string[]): HeroPairSynergyAmongRow[]
 
   clearAndInsertAbilitySynergies(
     pairs: SynergyClearInsertData[],
@@ -153,9 +141,7 @@ export function createSynergyRepository(db: SQLJsDatabase): SynergyRepository {
     const conditions = []
 
     // Exclude hero's own abilities (built-in kit synergies are uninformative)
-    conditions.push(
-      or(isNull(abilities.heroId), ne(heroAbilitySynergies.heroId, abilities.heroId)),
-    )
+    conditions.push(or(isNull(abilities.heroId), ne(heroAbilitySynergies.heroId, abilities.heroId)))
 
     if (thresholdFilter) {
       const { direction, value } = thresholdFilter
@@ -182,10 +168,7 @@ export function createSynergyRepository(db: SQLJsDatabase): SynergyRepository {
       .innerJoin(heroes, eq(heroAbilitySynergies.heroId, heroes.heroId))
       .innerJoin(abilities, eq(heroAbilitySynergies.abilityId, abilities.abilityId))
 
-    const rows =
-      conditions.length > 0
-        ? query.where(and(...conditions)).all()
-        : query.all()
+    const rows = conditions.length > 0 ? query.where(and(...conditions)).all() : query.all()
 
     return rows.map((row) => ({
       heroInternalName: row.heroInternalName,
@@ -350,10 +333,7 @@ export function createSynergyRepository(db: SQLJsDatabase): SynergyRepository {
       return resultsByBase
     },
 
-    getOPCombinationsInPool(
-      draftPoolNames: string[],
-      threshold: number,
-    ): SynergyPairDisplay[] {
+    getOPCombinationsInPool(draftPoolNames: string[], threshold: number): SynergyPairDisplay[] {
       if (draftPoolNames.length < 2) return []
 
       const rows = db
@@ -422,15 +402,9 @@ export function createSynergyRepository(db: SQLJsDatabase): SynergyRepository {
       return queryHeroAbilitySynergies()
     },
 
-    getHeroSynergiesInPool(
-      draftPoolNames: string[],
-      threshold: number,
-    ): HeroSynergyDisplay[] {
+    getHeroSynergiesInPool(draftPoolNames: string[], threshold: number): HeroSynergyDisplay[] {
       if (draftPoolNames.length === 0) return []
-      const rows = queryHeroAbilitySynergies(
-        { direction: 'gte', value: threshold },
-        draftPoolNames,
-      )
+      const rows = queryHeroAbilitySynergies({ direction: 'gte', value: threshold }, draftPoolNames)
       return rows.map((row) => ({
         heroDisplayName: row.heroDisplayName,
         abilityDisplayName: row.abilityDisplayName,
@@ -495,10 +469,7 @@ export function createSynergyRepository(db: SQLJsDatabase): SynergyRepository {
       return rows
     },
 
-    getHeroSynergiesAmong(
-      heroNames: string[],
-      abilityNames: string[],
-    ): HeroPairSynergyAmongRow[] {
+    getHeroSynergiesAmong(heroNames: string[], abilityNames: string[]): HeroPairSynergyAmongRow[] {
       if (heroNames.length === 0 || abilityNames.length === 0) return []
 
       return db

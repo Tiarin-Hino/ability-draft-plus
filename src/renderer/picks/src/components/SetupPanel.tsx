@@ -176,9 +176,7 @@ export function SetupPanel() {
                   { value: 'chroma', label: t('setup.bg.chroma') },
                   { value: 'dark', label: t('setup.bg.dark') },
                 ]}
-                onChange={(bg) =>
-                  setSetup((s) => ({ ...s, bg: bg === 'auto' ? null : bg }))
-                }
+                onChange={(bg) => setSetup((s) => ({ ...s, bg: bg === 'auto' ? null : bg }))}
               />
             </div>
             <div className="control-row">
@@ -238,18 +236,12 @@ export function SetupPanel() {
                   min={SPACING_LIMITS[key].min}
                   max={SPACING_LIMITS[key].max}
                   value={setup[key]}
-                  onChange={(e) =>
-                    setSetup((s) => ({ ...s, [key]: parseInt(e.target.value, 10) }))
-                  }
+                  onChange={(e) => setSetup((s) => ({ ...s, [key]: parseInt(e.target.value, 10) }))}
                 />
                 <span className="slider-value">{setup[key]}</span>
               </div>
             ))}
-            <button
-              type="button"
-              className="setup-reset"
-              onClick={() => setSetup(SETUP_DEFAULTS)}
-            >
+            <button type="button" className="setup-reset" onClick={() => setSetup(SETUP_DEFAULTS)}>
               {t('setup.reset')}
             </button>
           </div>

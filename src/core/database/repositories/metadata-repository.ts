@@ -59,35 +59,23 @@ export function createMetadataRepository(db: SQLJsDatabase): MetadataRepository 
       const overlayBackgroundMode = getVal('overlay_background_mode')
 
       return {
-        opThreshold:
-          opThreshold !== null
-            ? parseFloat(opThreshold)
-            : DEFAULT_SETTINGS.opThreshold,
+        opThreshold: opThreshold !== null ? parseFloat(opThreshold) : DEFAULT_SETTINGS.opThreshold,
         trapThreshold:
-          trapThreshold !== null
-            ? parseFloat(trapThreshold)
-            : DEFAULT_SETTINGS.trapThreshold,
+          trapThreshold !== null ? parseFloat(trapThreshold) : DEFAULT_SETTINGS.trapThreshold,
         language: language ?? DEFAULT_SETTINGS.language,
         themeMode:
           themeMode === 'light' || themeMode === 'dark' || themeMode === 'system'
             ? themeMode
             : DEFAULT_SETTINGS.themeMode,
         overlayOpacity:
-          overlayOpacity !== null
-            ? parseFloat(overlayOpacity)
-            : DEFAULT_SETTINGS.overlayOpacity,
+          overlayOpacity !== null ? parseFloat(overlayOpacity) : DEFAULT_SETTINGS.overlayOpacity,
         overlayAnchor:
           overlayAnchor === 'left' || overlayAnchor === 'right'
             ? overlayAnchor
             : DEFAULT_SETTINGS.overlayAnchor,
-        streamPort:
-          streamPort !== null
-            ? parseInt(streamPort, 10)
-            : DEFAULT_SETTINGS.streamPort,
+        streamPort: streamPort !== null ? parseInt(streamPort, 10) : DEFAULT_SETTINGS.streamPort,
         streamAutostart:
-          streamAutostart !== null
-            ? streamAutostart === 'true'
-            : DEFAULT_SETTINGS.streamAutostart,
+          streamAutostart !== null ? streamAutostart === 'true' : DEFAULT_SETTINGS.streamAutostart,
         experimentalAutoDraftTracking:
           autoDraftTracking !== null
             ? autoDraftTracking === 'true'
@@ -153,10 +141,7 @@ export function createMetadataRepository(db: SQLJsDatabase): MetadataRepository 
         set('stream_autostart', String(settings.streamAutostart))
       }
       if (settings.experimentalAutoDraftTracking !== undefined) {
-        set(
-          'experimental_auto_draft_tracking',
-          String(settings.experimentalAutoDraftTracking),
-        )
+        set('experimental_auto_draft_tracking', String(settings.experimentalAutoDraftTracking))
       }
       if (settings.overlayAutoCloseEnabled !== undefined) {
         set('overlay_auto_close', String(settings.overlayAutoCloseEnabled))

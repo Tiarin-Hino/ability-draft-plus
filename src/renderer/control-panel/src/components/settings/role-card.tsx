@@ -1,12 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import type { AppSettings } from '@shared/types'
 
@@ -68,9 +62,7 @@ export function RoleCard() {
           ))}
         </div>
 
-        <p className="text-xs text-muted-foreground">
-          {t(`roleSuggestions.hint.${mode}`)}
-        </p>
+        <p className="text-xs text-muted-foreground">{t(`roleSuggestions.hint.${mode}`)}</p>
 
         {mode === 'fixed' && (
           <div className="space-y-2">

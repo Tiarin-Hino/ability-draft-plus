@@ -66,12 +66,7 @@ export function makeIconTemplate(name: string, vec: Uint8Array): IconTemplate {
   return { name, vec, mean, std }
 }
 
-function ncc(
-  a: Uint8Array,
-  aStats: PixelStats,
-  b: Uint8Array,
-  bStats: PixelStats,
-): number {
+function ncc(a: Uint8Array, aStats: PixelStats, b: Uint8Array, bStats: PixelStats): number {
   let dot = 0
   for (let i = 0; i < a.length; i++) {
     dot += (a[i] - aStats.mean) * (b[i] - bStats.mean)
@@ -167,11 +162,7 @@ export function matchPickSlot(
     if (filtered.length > 0) scoped = filtered
   }
 
-  const { best, bestName, second, secondName } = scoreTemplates(
-    vec,
-    stats,
-    scoped,
-  )
+  const { best, bestName, second, secondName } = scoreTemplates(vec, stats, scoped)
 
   if (bestName === null) {
     return {
@@ -186,8 +177,7 @@ export function matchPickSlot(
   }
 
   // A single-template scope has no runner-up; -Infinity second passes margin
-  const accepted =
-    best >= PICK_TEMPLATE_MIN_NCC && best - second >= PICK_TEMPLATE_MIN_MARGIN
+  const accepted = best >= PICK_TEMPLATE_MIN_NCC && best - second >= PICK_TEMPLATE_MIN_MARGIN
   return {
     name: accepted ? bestName : null,
     score: best,

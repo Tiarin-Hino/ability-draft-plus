@@ -64,11 +64,7 @@ export function nextOverlayLifecycle(
   if (phase === null) return { action: null, state: next }
 
   // Draft just ended (transition out of HERO_SELECTION into the match)
-  if (
-    overlayActive &&
-    state.lastPhase === HERO_SELECTION &&
-    GSI_POST_DRAFT_PHASES.has(phase)
-  ) {
+  if (overlayActive && state.lastPhase === HERO_SELECTION && GSI_POST_DRAFT_PHASES.has(phase)) {
     next.autoClosedMatchId = snapshot.matchId
     next.autoClosedUnknownMatch = snapshot.matchId === null
     return { action: 'close', state: next }

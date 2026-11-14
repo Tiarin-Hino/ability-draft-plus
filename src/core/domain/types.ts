@@ -188,10 +188,7 @@ export interface AbilityShiftsLookup {
 }
 
 export interface SynergyLookup {
-  getHighWinrateCombinations(
-    baseAbilityName: string,
-    draftPoolNames: string[],
-  ): SynergyPartner[]
+  getHighWinrateCombinations(baseAbilityName: string, draftPoolNames: string[]): SynergyPartner[]
   getHighWinrateCombinationsBatch?(
     baseAbilityNames: string[],
     draftPoolNames: string[],
@@ -204,9 +201,15 @@ export interface SynergyLookup {
 }
 
 export interface TripletLookup {
-  getThirdAbilitiesForPairs(
-    pairKeys: { a: number; b: number }[],
-  ): Map<string, { thirdAbilityName: string; thirdAbilityDisplayName: string; tripletWinrate: number; tripletPicks: number }[]>
+  getThirdAbilitiesForPairs(pairKeys: { a: number; b: number }[]): Map<
+    string,
+    {
+      thirdAbilityName: string
+      thirdAbilityDisplayName: string
+      tripletWinrate: number
+      tripletPicks: number
+    }[]
+  >
 }
 
 export interface AbilityIdLookup {

@@ -164,10 +164,7 @@ function slotKey(slot: ScanResult): string {
  * Rescans may be PARTIAL (targeted auto-rescan); only slots present in the
  * scan are judged — unscanned baseline slots carry no evidence either way.
  */
-function isRescanContaminated(
-  previous: ScanResult[],
-  scanned: ScanResult[],
-): boolean {
+function isRescanContaminated(previous: ScanResult[], scanned: ScanResult[]): boolean {
   const prevByCoord = new Map(previous.map((s) => [slotKey(s), s]))
   for (const next of scanned) {
     const prev = prevByCoord.get(slotKey(next))
@@ -183,10 +180,7 @@ function isRescanContaminated(
  * slot coordinate: scanned slots replace their baseline entries, unscanned
  * baseline entries are kept, never-seen slots are appended in scan order.
  */
-function mergeSelectedSlots(
-  previous: ScanResult[],
-  scanned: ScanResult[],
-): ScanResult[] {
+function mergeSelectedSlots(previous: ScanResult[], scanned: ScanResult[]): ScanResult[] {
   const scannedByCoord = new Map(scanned.map((s) => [slotKey(s), s]))
   const merged = previous.map((p) => scannedByCoord.get(slotKey(p)) ?? p)
   const prevKeys = new Set(previous.map(slotKey))
@@ -214,9 +208,7 @@ export function dedupeSelectedNames(slots: ScanResult[]): ScanResult[] {
     }
   })
   return slots.map((s, i) =>
-    s.name !== null && winner.get(s.name) !== i
-      ? { ...s, name: null, confidence: 0 }
-      : s,
+    s.name !== null && winner.get(s.name) !== i ? { ...s, name: null, confidence: 0 } : s,
   )
 }
 
@@ -224,10 +216,17 @@ export function dedupeSelectedNames(slots: ScanResult[]): ScanResult[] {
  * Main orchestration function. Transforms raw ML scan results into a fully-enriched
  * OverlayDataPayload. Pure TypeScript — zero Electron imports.
  */
-export function processScanResults(
-  input: ScanProcessorInput,
-): ScanProcessorOutput {
-  const { rawResults, isInitialScan, deps, modelCoords, heroesCoords, heroesParams, targetResolution, scaleFactor } = input
+export function processScanResults(input: ScanProcessorInput): ScanProcessorOutput {
+  const {
+    rawResults,
+    isInitialScan,
+    deps,
+    modelCoords,
+    heroesCoords,
+    heroesParams,
+    targetResolution,
+    scaleFactor,
+  } = input
   const state = cloneState(input.state)
 
   // --- Phase 1: Initial vs Rescan branching ---
@@ -275,16 +274,9 @@ export function processScanResults(
     // accepted results MERGE into selectedAbilitiesCache by slot coordinate.
     const scannedSlots = rawResults as ScanResult[]
 
-    const contaminated = isRescanContaminated(
-      state.selectedAbilitiesCache,
-      scannedSlots,
-    )
-    const baselineNames = new Set(
-      state.selectedAbilitiesCache.map((s) => s.name).filter(Boolean),
-    )
-    const hasNewPicks = scannedSlots.some(
-      (a) => a.name !== null && !baselineNames.has(a.name),
-    )
+    const contaminated = isRescanContaminated(state.selectedAbilitiesCache, scannedSlots)
+    const baselineNames = new Set(state.selectedAbilitiesCache.map((s) => s.name).filter(Boolean))
+    const hasNewPicks = scannedSlots.some((a) => a.name !== null && !baselineNames.has(a.name))
 
     if (contaminated && !hasNewPicks) {
       // Hasty capture: it carries no new information at all, so there is
@@ -311,9 +303,7 @@ export function processScanResults(
 
       // Remove every known picked ability from the cached pool (idempotent —
       // names picked in earlier scans are already gone from the pool)
-      const pickedNames = new Set(
-        selectedAbilities.map((a) => a.name).filter(Boolean) as string[],
-      )
+      const pickedNames = new Set(selectedAbilities.map((a) => a.name).filter(Boolean) as string[])
       state.initialPoolAbilitiesCache = {
         ultimates: state.initialPoolAbilitiesCache.ultimates.filter(
           (a) => !pickedNames.has(a.name ?? ''),
@@ -352,9 +342,7 @@ export function processScanResults(
   const poolNamesArray = Array.from(uniquePoolNames)
 
   // --- Phase 3: Database lookups ---
-  const abilityDetailsMap = deps.abilities.getDetails(
-    Array.from(allRelevantNames),
-  )
+  const abilityDetailsMap = deps.abilities.getDetails(Array.from(allRelevantNames))
   const settings = deps.settings.getSettings()
   const { opThreshold, trapThreshold } = settings
 
@@ -371,8 +359,7 @@ export function processScanResults(
   // Only computed with a role mode EXPLICITLY active AND My Spot known —
   // otherwise null, and every downstream score is bit-identical to the
   // role-less path (anything but 'fixed'/'dynamic' counts as off).
-  const roleModeActive =
-    settings.roleMode === 'fixed' || settings.roleMode === 'dynamic'
+  const roleModeActive = settings.roleMode === 'fixed' || settings.roleMode === 'dynamic'
   const allShifts = roleModeActive ? deps.abilities.getAllShifts() : []
   // A database that predates the shifts scrape has NULL in every shift column;
   // role scoring would then hand every ability the same meaningless delta.
@@ -384,9 +371,7 @@ export function processScanResults(
   // (their raw magnitudes are far below ability shifts) and weight-scaled at
   // scoring time (ROLE_MODEL_WEIGHT_SCALE).
   const heroAxesByName: Map<string, ShiftAxes> =
-    roleModeActive && hasShiftData
-      ? computeShiftAxes(deps.heroes.getAllShifts())
-      : new Map()
+    roleModeActive && hasShiftData ? computeShiftAxes(deps.heroes.getAllShifts()) : new Map()
   const roleContext: RoleContext | null =
     roleModeActive && hasShiftData
       ? resolveRoleContext(
@@ -494,9 +479,7 @@ export function processScanResults(
   const aghsMarkersEnabled = settings.aghsMarkersEnabled === true
   const myModel =
     state.mySelectedModelDbHeroId !== null
-      ? state.identifiedHeroModelsCache.find(
-          (m) => m.dbHeroId === state.mySelectedModelDbHeroId,
-        )
+      ? state.identifiedHeroModelsCache.find((m) => m.dbHeroId === state.mySelectedModelDbHeroId)
       : undefined
   const myModelAttackType =
     deps.tags !== undefined && myModel !== undefined
@@ -523,8 +506,7 @@ export function processScanResults(
           tags: deps.tags,
         })
       : undefined
-  const poolHasTag = (tag: string): boolean =>
-    (boardTags?.pool.get(tag as AbilityTag) ?? 0) > 0
+  const poolHasTag = (tag: string): boolean => (boardTags?.pool.get(tag as AbilityTag) ?? 0) > 0
   const unmetRequirementOf = (
     name: string,
   ): { kind: 'ability' | 'model' | 'tag'; displayName: string } | undefined => {
@@ -534,9 +516,7 @@ export function processScanResults(
       if (req.startsWith('model:')) return myModel?.heroName === req.slice('model:'.length)
       if (req.startsWith('tag:')) {
         const tag = req.slice('tag:'.length)
-        return (
-          myPickTags.some((t) => t.has(tag as AbilityTag)) || poolHasTag(tag)
-        )
+        return myPickTags.some((t) => t.has(tag as AbilityTag)) || poolHasTag(tag)
       }
       return myPickNames.has(req)
     })
@@ -596,15 +576,12 @@ export function processScanResults(
     }
     if (
       state.mySelectedSpotHeroOrder !== null &&
-      selectedAbilities.some(
-        (s) => s.hero_order === state.mySelectedSpotHeroOrder && isUltPick(s),
-      )
+      selectedAbilities.some((s) => s.hero_order === state.mySelectedSpotHeroOrder && isUltPick(s))
     ) {
       return false // I already have my ult
     }
-    const playersWithUlt = new Set(
-      selectedAbilities.filter(isUltPick).map((s) => s.hero_order),
-    ).size
+    const playersWithUlt = new Set(selectedAbilities.filter(isUltPick).map((s) => s.hero_order))
+      .size
     const ultlessDrafters = 10 - playersWithUlt
     const remainingUlts = ultimates.filter((s) => s.name !== null).length
     return remainingUlts <= ultlessDrafters + ULT_SUPPLY_SLACK
@@ -641,11 +618,7 @@ export function processScanResults(
         splitSynergyPartners(displayName, batchSynergies.get(abilityName) ?? []),
       )
     } else {
-      const split = getAbilitySynergySplit(
-        abilityName,
-        poolNamesArray,
-        deps.synergies,
-      )
+      const split = getAbilitySynergySplit(abilityName, poolNamesArray, deps.synergies)
       // Fix ability1DisplayName to use the display name
       abilitySynergyMap.set(abilityName, {
         high: split.high.map((s) => ({
@@ -661,8 +634,7 @@ export function processScanResults(
   }
 
   // --- Phase 6: Per-ability hero synergies ---
-  const allHeroAbilitySynergies =
-    deps.synergies.getAllHeroAbilitySynergiesUnfiltered()
+  const allHeroAbilitySynergies = deps.synergies.getAllHeroAbilitySynergiesUnfiltered()
 
   const abilityHeroSynergyMap = new Map<
     string,
@@ -673,19 +645,12 @@ export function processScanResults(
   >()
 
   for (const abilityName of uniquePoolNames) {
-    const heroSyn = getHeroSynergiesForAbility(
-      abilityName,
-      allHeroAbilitySynergies,
-      heroesInPool,
-    )
+    const heroSyn = getHeroSynergiesForAbility(abilityName, allHeroAbilitySynergies, heroesInPool)
     abilityHeroSynergyMap.set(abilityName, heroSyn)
   }
 
   // --- Phase 7: Per-hero-model ability synergies ---
-  const poolAndPickedNames = new Set([
-    ...uniquePoolNames,
-    ...pickedAbilityNames,
-  ])
+  const poolAndPickedNames = new Set([...uniquePoolNames, ...pickedAbilityNames])
 
   const heroModelSynergyMap = new Map<
     string,
@@ -753,10 +718,7 @@ export function processScanResults(
       ) {
         continue
       }
-      const combos = deps.synergies.getHighWinrateCombinations(
-        slot.name,
-        poolNamesArray,
-      )
+      const combos = deps.synergies.getHighWinrateCombinations(slot.name, poolNamesArray)
       for (const combo of combos) {
         if (combo.synergyWinrate >= 0.5) {
           synergisticPartnersInPool.add(combo.partnerInternalName)
@@ -869,9 +831,7 @@ export function processScanResults(
   }
 
   // Build top-tier lookup for fast enrichment
-  const topTierLookup = new Map(
-    topTierEntities.map((e) => [e.internalName, e]),
-  )
+  const topTierLookup = new Map(topTierEntities.map((e) => [e.internalName, e]))
 
   // --- Phase 13: Enrich scan slots and hero models for UI ---
   const enrichedUltimates = enrichSlots(
@@ -909,9 +869,7 @@ export function processScanResults(
     new Set(state.pickedModelHeroOrders),
   )
 
-  const heroesForMySpotUI = buildHeroesForMySpotUI(
-    state.identifiedHeroModelsCache,
-  )
+  const heroesForMySpotUI = buildHeroesForMySpotUI(state.identifiedHeroModelsCache)
 
   // --- Phase 14: Assemble overlay payload ---
   const overlayPayload: OverlayDataPayload = {
@@ -1077,7 +1035,9 @@ interface EnemyHeld {
 const PICKS_PER_PLAYER = 4
 
 /** Percentile ranks [0,1] with average-rank ties; undefined values -> 0.5. */
-function pctRanks(entries: Array<{ name: string; value: number | undefined }>): Map<string, number> {
+function pctRanks(
+  entries: Array<{ name: string; value: number | undefined }>,
+): Map<string, number> {
   const known = entries.filter((e): e is { name: string; value: number } => e.value !== undefined)
   const ranks = new Map<string, number>()
   for (const e of entries) ranks.set(e.name, 0.5)
@@ -1203,8 +1163,7 @@ function buildScoredEntities(
   const purgeDemandRaw = enemyPurgeablePicks.length
   const demandBoost = (raw: number): number =>
     raw > 0
-      ? DISPEL_DEMAND_WEIGHT *
-        Math.min(DISPEL_DEMAND_MAX, Math.max(0, raw / DISPEL_DEMAND_REF))
+      ? DISPEL_DEMAND_WEIGHT * Math.min(DISPEL_DEMAND_MAX, Math.max(0, raw / DISPEL_DEMAND_REF))
       : 0
   const dispelBoostValue = demandBoost(dispelDemandRaw)
   const purgeBoostValue = demandBoost(purgeDemandRaw)
@@ -1234,18 +1193,14 @@ function buildScoredEntities(
           return { name: m.heroName, value: meta !== undefined ? f(meta) : undefined }
         }),
       )
-    const attackQuality = rank((m) =>
-      m.attackRate !== undefined ? -m.attackRate : undefined,
-    )
+    const attackQuality = rank((m) => (m.attackRate !== undefined ? -m.attackRate : undefined))
     const bulk = rank((m) =>
       m.baseHealth !== undefined && m.baseArmor !== undefined
         ? m.baseHealth * (1 + 0.06 * m.baseArmor)
         : undefined,
     )
     const intPool = rank((m) =>
-      m.baseInt !== undefined && m.intGain !== undefined
-        ? m.baseInt + 6 * m.intGain
-        : undefined,
+      m.baseInt !== undefined && m.intGain !== undefined ? m.baseInt + 6 * m.intGain : undefined,
     )
     return {
       attackQuality: attackQuality.get(myModelHeroName) ?? 0.5,
@@ -1282,11 +1237,7 @@ function buildScoredEntities(
             poolHasHardCc,
           }
         : undefined
-    const role = computeRoleScore(
-      shiftAxesByName.get(slot.name),
-      roleContext,
-      tagInput,
-    )
+    const role = computeRoleScore(shiftAxesByName.get(slot.name), roleContext, tagInput)
     // Ult-security nudge rides outside the role cap (small, flat, ults only)
     const isUlt = details?.isUltimate === true || slot.is_ultimate
     const ultNudge = ultSecurityActive && isUlt && role !== null ? ULT_SECURITY_WEIGHT : 0
@@ -1406,8 +1357,7 @@ function buildScoredEntities(
     // Now-or-never marker: this ability's global pick timing says it is due
     // before the draft comes back around
     const contestedSoon =
-      details?.pickRate != null &&
-      details.pickRate <= namedPickCount + CONTESTED_SOON_WINDOW
+      details?.pickRate != null && details.pickRate <= namedPickCount + CONTESTED_SOON_WINDOW
     entities.push({
       entityType: 'ability',
       internalName: slot.name,
@@ -1442,8 +1392,7 @@ function buildScoredEntities(
           ((myModelAttackType === 'Ranged' && candidateTags.has('melee_only')) ||
             (myModelAttackType === 'Melee' && candidateTags.has('ranged_only'))) &&
           isInertOnModel(candidateTags, myModelAttackType, {
-            nativeToModel:
-              myModelDbHeroId !== null && ownerHeroIdOf(slot.name) === myModelDbHeroId,
+            nativeToModel: myModelDbHeroId !== null && ownerHeroIdOf(slot.name) === myModelDbHeroId,
             picksGrantRanged,
           })) ||
         undefined,
@@ -1479,15 +1428,11 @@ function buildScoredEntities(
   const intPct = metric((m) => m.intGain)
   const totalPct = metric(totalGainOf)
   const intPoolPct = metric((m) =>
-    m.baseInt !== undefined && m.intGain !== undefined
-      ? m.baseInt + 6 * m.intGain
-      : undefined,
+    m.baseInt !== undefined && m.intGain !== undefined ? m.baseInt + 6 * m.intGain : undefined,
   )
   // Chassis percentiles (Layer A): BAT negated so faster attacking ranks high;
   // bulk approximates physical EHP of the base body (armor multiplies HP).
-  const attackQualityPct = metric((m) =>
-    m.attackRate !== undefined ? -m.attackRate : undefined,
-  )
+  const attackQualityPct = metric((m) => (m.attackRate !== undefined ? -m.attackRate : undefined))
   const bulkPct = metric((m) =>
     m.baseHealth !== undefined && m.baseArmor !== undefined
       ? m.baseHealth * (1 + 0.06 * m.baseArmor)
@@ -1539,8 +1484,7 @@ function buildScoredEntities(
       NEED_SCARCITY_MIN,
       Math.min(NEED_SCARCITY_MAX, MODEL_SCARCITY_REF / Math.max(1, goodCoreModels)),
     )
-    urgency =
-      Math.min(MODEL_URGENCY_MAX_STEPS, myPickCount) * MODEL_URGENCY_STEP * scarcity
+    urgency = Math.min(MODEL_URGENCY_MAX_STEPS, myPickCount) * MODEL_URGENCY_STEP * scarcity
   }
 
   for (const model of remainingModels) {
@@ -1562,9 +1506,7 @@ function buildScoredEntities(
     // Reverse pairing (Layer C): the model vs MY drafted ability profile —
     // role-gated like the forward direction.
     const pairingDelta =
-      roleContext !== null
-        ? computeModelPairing(myPickTags, pctOf(model.heroName), meta?.tags)
-        : 0
+      roleContext !== null ? computeModelPairing(myPickTags, pctOf(model.heroName), meta?.tags) : 0
     // Curated hero roleAvoid (Drow/Luna for supports): excluded when it
     // covers the drafter's positions (all five = always) — unless every
     // teammate already has a model.
@@ -1603,10 +1545,7 @@ function buildScoredEntities(
             1,
             Math.max(
               0,
-              scored.consolidatedScore +
-                (role?.delta ?? 0) +
-                pairingDelta -
-                reservationDamp,
+              scored.consolidatedScore + (role?.delta ?? 0) + pairingDelta - reservationDamp,
             ),
           )
         : scored.consolidatedScore
@@ -1682,9 +1621,7 @@ function enrichSlots(
   allScoredEntities: ScoredEntity[],
 ): EnrichedScanSlot[] {
   const scoredAbilityLookup = new Map(
-    allScoredEntities
-      .filter((e) => e.entityType === 'ability')
-      .map((e) => [e.internalName, e]),
+    allScoredEntities.filter((e) => e.entityType === 'ability').map((e) => [e.internalName, e]),
   )
   return slots.map((slot) => {
     if (!slot.name) {
@@ -1705,10 +1642,8 @@ function enrichSlots(
       displayName: details.displayName,
       winrate: details.winrate,
       pickRate: details.pickRate,
-      consolidatedScore: scored?.consolidatedScore ?? calculateConsolidatedScore(
-        details.winrate,
-        details.pickRate,
-      ),
+      consolidatedScore:
+        scored?.consolidatedScore ?? calculateConsolidatedScore(details.winrate, details.pickRate),
       personalGames: scored?.personalGames,
       personalWinrate: scored?.personalWinrate,
       personalScoreDelta: scored?.personalScoreDelta,
@@ -1731,8 +1666,7 @@ function enrichSlots(
       goodShard: scored?.goodShard,
       goodScepter: scored?.goodScepter,
       isGeneralTopTier: topTier?.isGeneralTopTier ?? false,
-      isSynergySuggestionForMySpot:
-        topTier?.isSynergySuggestionForMySpot ?? false,
+      isSynergySuggestionForMySpot: topTier?.isSynergySuggestionForMySpot ?? false,
       isPersonallyDriven: topTier?.isPersonallyDriven ?? false,
       isCuratedForRole: topTier?.isCuratedForRole ?? false,
       isUltimateFromDb: details.isUltimate,
@@ -1774,9 +1708,7 @@ function enrichHeroModels(
   pickedModelHeroOrders: ReadonlySet<number>,
 ): HeroModelDisplay[] {
   const scoredHeroLookup = new Map(
-    allScoredEntities
-      .filter((e) => e.entityType === 'hero')
-      .map((e) => [e.internalName, e]),
+    allScoredEntities.filter((e) => e.entityType === 'hero').map((e) => [e.internalName, e]),
   )
   return heroModels.map((model) => {
     const scored = scoredHeroLookup.get(model.heroName)
@@ -1791,10 +1723,8 @@ function enrichHeroModels(
       dbHeroId: model.dbHeroId,
       winrate: model.winrate,
       pickRate: model.pickRate,
-      consolidatedScore: scored?.consolidatedScore ?? calculateConsolidatedScore(
-        model.winrate,
-        model.pickRate,
-      ),
+      consolidatedScore:
+        scored?.consolidatedScore ?? calculateConsolidatedScore(model.winrate, model.pickRate),
       personalGames: scored?.personalGames,
       personalWinrate: scored?.personalWinrate,
       personalScoreDelta: scored?.personalScoreDelta,
@@ -1812,9 +1742,7 @@ function enrichHeroModels(
   })
 }
 
-function buildHeroesForMySpotUI(
-  heroModels: IdentifiedHeroModel[],
-): HeroSpotDisplay[] {
+function buildHeroesForMySpotUI(heroModels: IdentifiedHeroModel[]): HeroSpotDisplay[] {
   return heroModels
     .filter((m) => m.dbHeroId !== null)
     .map((m) => ({
@@ -1867,7 +1795,12 @@ function enrichPairsWithTriplets(
     const id1 = nameToIdMap.get(name1)
     const id2 = nameToIdMap.get(name2)
     if (!id1 || !id2) continue
-    pairKeys.push({ a: id1, b: id2, display1: combo.ability1DisplayName, display2: combo.ability2DisplayName })
+    pairKeys.push({
+      a: id1,
+      b: id2,
+      display1: combo.ability1DisplayName,
+      display2: combo.ability2DisplayName,
+    })
   }
 
   if (pairKeys.length === 0) return

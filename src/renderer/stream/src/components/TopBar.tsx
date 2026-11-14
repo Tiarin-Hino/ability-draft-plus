@@ -58,10 +58,7 @@ export function TopBar({
 
       <div className="top-bar-center">
         {gsi.connected && clock && (
-          <div
-            className="clock-medallion"
-            style={{ backgroundImage: `url(${medallionUrl})` }}
-          >
+          <div className="clock-medallion" style={{ backgroundImage: `url(${medallionUrl})` }}>
             <span className="clock-time">{clock}</span>
           </div>
         )}

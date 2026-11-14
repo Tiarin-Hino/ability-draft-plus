@@ -104,9 +104,10 @@ export function registerMlHandlers(
         defaultPath: 'model-gaps.json',
         filters: [{ name: 'JSON', extensions: ['json'] }],
       }
-      const result = cp && !cp.isDestroyed()
-        ? await dialog.showSaveDialog(cp, options)
-        : await dialog.showSaveDialog(options)
+      const result =
+        cp && !cp.isDestroyed()
+          ? await dialog.showSaveDialog(cp, options)
+          : await dialog.showSaveDialog(options)
       if (result.canceled || !result.filePath) {
         return { success: false, error: 'cancelled' }
       }
@@ -137,13 +138,7 @@ export function registerMlHandlers(
     }
   })
 
-  ipcMain.on(
-    'ml:scan',
-    (
-      _event,
-      data: { heroOrder: number; isInitialScan: boolean },
-    ) => {
-      void scanTrigger.performScan(data.isInitialScan)
-    },
-  )
+  ipcMain.on('ml:scan', (_event, data: { heroOrder: number; isInitialScan: boolean }) => {
+    void scanTrigger.performScan(data.isInitialScan)
+  })
 }

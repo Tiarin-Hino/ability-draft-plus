@@ -227,8 +227,23 @@ export const TWITCH_LIVE_BUYBACK_READY = 8
  * the viewer catalog, and the whole message still fits the budget without it.
  */
 export type TwitchLivePlayer = [
-  number, number, number, number, number, number, number, number, number,
-  number, number, number, number, number, number, number, number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
   (string | null)[],
 ]
 

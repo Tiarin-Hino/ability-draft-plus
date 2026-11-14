@@ -21,10 +21,7 @@ const api: ElectronApi = {
     ipcRenderer.send(channel, ...args)
   },
 
-  on<K extends keyof IpcOnMap>(
-    channel: K,
-    callback: (data: IpcOnMap[K]) => void,
-  ): () => void {
+  on<K extends keyof IpcOnMap>(channel: K, callback: (data: IpcOnMap[K]) => void): () => void {
     const listener = (_event: Electron.IpcRendererEvent, data: IpcOnMap[K]): void => {
       callback(data)
     }

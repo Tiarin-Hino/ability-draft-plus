@@ -24,16 +24,10 @@ export interface MlModelGaps {
 }
 
 /** Prefixes of abilities that are never pickable in Ability Draft */
-const IGNORED_PREFIXES = [
-  'ad_special_bonus_',
-  'special_bonus_',
-]
+const IGNORED_PREFIXES = ['ad_special_bonus_', 'special_bonus_']
 
 /** Prefixes of non-hero entities whose abilities aren't pickable in AD */
-const NON_HERO_ENTITY_PREFIXES = [
-  'greevil_',
-  'frostbitten_',
-]
+const NON_HERO_ENTITY_PREFIXES = ['greevil_', 'frostbitten_']
 
 /** Specific abilities that are innate, shard-granted, or otherwise not pickable in AD */
 const UNPICKABLE_ABILITIES = new Set([
@@ -77,8 +71,7 @@ export function detectModelGaps(
   dbAbilityNames: string[],
   unpickableAbilities?: Set<string>,
 ): MlModelGaps | null {
-  const isRelevant = (name: string) =>
-    isPickableAbility(name) && !unpickableAbilities?.has(name)
+  const isRelevant = (name: string) => isPickableAbility(name) && !unpickableAbilities?.has(name)
 
   const filteredClassNames = classNames.filter(isRelevant)
   const filteredDbNames = dbAbilityNames.filter(isRelevant)

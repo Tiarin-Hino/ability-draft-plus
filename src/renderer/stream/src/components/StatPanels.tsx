@@ -44,7 +44,10 @@ export function StatPanels({ panels }: { panels: StreamPanels }) {
             <div className="top-winrate-entry" key={i}>
               <AbilityTile slot={slot} size="small" />
               {slot.pickPosition !== null && (
-                <span className="avg-pick" title={t('avgPick', { n: Math.round(slot.pickPosition) })}>
+                <span
+                  className="avg-pick"
+                  title={t('avgPick', { n: Math.round(slot.pickPosition) })}
+                >
                   #{Math.round(slot.pickPosition)}
                 </span>
               )}

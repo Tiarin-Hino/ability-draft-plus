@@ -75,9 +75,10 @@ export function registerFeedbackHandlers(
         defaultPath: `ability-draft-feedback-${date}.zip`,
         filters: [{ name: 'Zip archive', extensions: ['zip'] }],
       }
-      const result = cp && !cp.isDestroyed()
-        ? await dialog.showSaveDialog(cp, options)
-        : await dialog.showSaveDialog(options)
+      const result =
+        cp && !cp.isDestroyed()
+          ? await dialog.showSaveDialog(cp, options)
+          : await dialog.showSaveDialog(options)
       if (result.canceled || !result.filePath) return
 
       const { count } = await feedbackService.exportSamples(result.filePath)

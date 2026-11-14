@@ -20,11 +20,7 @@ import {
 } from '@core/ml/preprocessing'
 import type { DecodedScreenshot } from '@core/ml/preprocessing'
 import type { ClassifierResult } from '@core/ml/classifier'
-import {
-  makeIconTemplate,
-  matchPickSlotScoped,
-  computePixelStats,
-} from '@core/ml/template-matcher'
+import { makeIconTemplate, matchPickSlotScoped, computePixelStats } from '@core/ml/template-matcher'
 import type { IconTemplate, PickMatchResult } from '@core/ml/template-matcher'
 import { matchModelTile } from '@core/ml/model-tile-matcher'
 import {
@@ -314,19 +310,12 @@ async function handleScan(payload: {
   }
 
   const activeSet =
-    activeClassNames && activeClassNames.length > 0
-      ? new Set(activeClassNames)
-      : undefined
+    activeClassNames && activeClassNames.length > 0 ? new Set(activeClassNames) : undefined
 
   let results: InitialScanResults | ScanResult[]
 
   if (isInitialScan) {
-    results = await performInitialScan(
-      screenshot,
-      coords,
-      confidenceThreshold,
-      activeSet,
-    )
+    results = await performInitialScan(screenshot, coords, confidenceThreshold, activeSet)
   } else {
     // heroOrders: undefined = all rows; [] = NO ability rows (model-tile-only
     // confirmation capture); non-empty = targeted player rows
@@ -537,23 +526,11 @@ async function performInitialScan(
   activeClassNames?: ReadonlySet<string>,
 ): Promise<InitialScanResults> {
   const [ultimates, standard] = await Promise.all([
-    identifySlots(
-      coords.ultimate_slots_coords,
-      screenshot,
-      confidenceThreshold,
-      activeClassNames,
-    ),
-    identifySlots(
-      coords.standard_slots_coords,
-      screenshot,
-      confidenceThreshold,
-      activeClassNames,
-    ),
+    identifySlots(coords.ultimate_slots_coords, screenshot, confidenceThreshold, activeClassNames),
+    identifySlots(coords.standard_slots_coords, screenshot, confidenceThreshold, activeClassNames),
   ])
 
-  const heroDefiningAbilities = standard.filter(
-    (slot) => slot.ability_order === 2,
-  )
+  const heroDefiningAbilities = standard.filter((slot) => slot.ability_order === 2)
 
   return {
     ultimates,
@@ -601,12 +578,7 @@ async function performSelectedAbilitiesScan(
   const templates = await refreshPickTemplates()
   if (templates.length === 0) {
     // No icon cache — classifier fallback (pre-template-matching behavior)
-    return identifySlots(
-      slotsToScan,
-      screenshot,
-      confidenceThreshold,
-      activeClassNames,
-    )
+    return identifySlots(slotsToScan, screenshot, confidenceThreshold, activeClassNames)
   }
 
   return matchPickSlots(slotsToScan, screenshot, templates, pickCandidates)
@@ -738,11 +710,7 @@ async function matchPickSlots(
         height: slot.height - inset * 2,
       }
       try {
-        const crop = await cropTile(
-          screenshot,
-          insetSlot,
-          PICK_TEMPLATE_COMPARE_SIZE,
-        )
+        const crop = await cropTile(screenshot, insetSlot, PICK_TEMPLATE_COMPARE_SIZE)
         // An ultimate box can only hold a pool ultimate, a standard box only
         // a pool standard ability — scope to the matching candidate set, with
         // an unrestricted high-confidence fallback so an ability missing from
@@ -788,10 +756,7 @@ async function identifySlots(
 ): Promise<ScanResult[]> {
   if (slots.length === 0) return []
 
-  const { batch, validIndices } = await preprocessBatch(
-    screenshot,
-    slots,
-  )
+  const { batch, validIndices } = await preprocessBatch(screenshot, slots)
   if (validIndices.length === 0) return slots.map(makeDefaultResult)
 
   const classifierResults: ClassifierResult[] = await classifier.classify(

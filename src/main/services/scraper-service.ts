@@ -2,7 +2,11 @@ import { app } from 'electron'
 import { join } from 'path'
 import { readFileSync } from 'fs'
 import log from 'electron-log/main'
-import { performFullScrape, performLiquipediaEnrichment, createWindrunApiClient } from '@core/scraper'
+import {
+  performFullScrape,
+  performLiquipediaEnrichment,
+  createWindrunApiClient,
+} from '@core/scraper'
 import type { ScraperDeps, LiquipediaDeps } from '@core/scraper'
 import type { MlModelGaps } from '@core/ml/staleness-detector'
 import type { DatabaseService } from './database-service'
@@ -36,9 +40,7 @@ export interface ScraperService {
 // the UI shows a warning (mlModelGaps). The gaps are persisted in the metadata table.
 function loadClassNames(): string[] {
   try {
-    const basePath = app.isPackaged
-      ? process.resourcesPath
-      : join(app.getAppPath(), 'resources')
+    const basePath = app.isPackaged ? process.resourcesPath : join(app.getAppPath(), 'resources')
     const classNamesPath = join(basePath, 'model', 'class_names.json')
     const raw = readFileSync(classNamesPath, 'utf-8')
     const parsed = JSON.parse(raw) as Record<string, string> | string[]

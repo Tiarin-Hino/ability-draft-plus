@@ -123,7 +123,9 @@ export function createTopbarSeatService(
         rows.length > 0 ? assignTeamSeats(seatScores, rows) : [null, null, null, null, null]
       assigned.forEach((row, i) => {
         if (row === null) return
-        scores.push(`${first + i}:${draft.models[row]} ${seatScores[i][rows.indexOf(row)].toFixed(2)}`)
+        scores.push(
+          `${first + i}:${draft.models[row]} ${seatScores[i][rows.indexOf(row)].toFixed(2)}`,
+        )
       })
       thisAttempt.push(...assigned)
     }

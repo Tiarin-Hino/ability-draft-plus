@@ -19,60 +19,50 @@ export function registerDraftHandlers(
   windowManager: WindowManager,
   scanProcessingService?: Pick<ScanProcessingService, 'recomputeFromCache'>,
 ): void {
-  ipcMain.on(
-    'draft:selectMySpot',
-    (_event, data: { heroOrder: number; dbHeroId: number }) => {
-      const state = store.getState()
+  ipcMain.on('draft:selectMySpot', (_event, data: { heroOrder: number; dbHeroId: number }) => {
+    const state = store.getState()
 
-      // Toggle: clicking the same hero deselects
-      const isDeselecting = state.mySelectedSpotDbId === data.dbHeroId
-      const newDbId = isDeselecting ? null : data.dbHeroId
-      const newOrder = isDeselecting ? null : data.heroOrder
+    // Toggle: clicking the same hero deselects
+    const isDeselecting = state.mySelectedSpotDbId === data.dbHeroId
+    const newDbId = isDeselecting ? null : data.dbHeroId
+    const newOrder = isDeselecting ? null : data.heroOrder
 
-      state.selectMySpot(newDbId, newOrder)
-      logger.info('My Spot selection changed', {
-        dbHeroId: newDbId,
-        heroOrder: newOrder,
-      })
+    state.selectMySpot(newDbId, newOrder)
+    logger.info('My Spot selection changed', {
+      dbHeroId: newDbId,
+      heroOrder: newOrder,
+    })
 
-      broadcastToAll(windowManager, 'draft:selectMySpot', {
-        selectedHeroOrderForDrafting: newOrder,
-      })
-      scanProcessingService?.recomputeFromCache()
-    },
-  )
+    broadcastToAll(windowManager, 'draft:selectMySpot', {
+      selectedHeroOrderForDrafting: newOrder,
+    })
+    scanProcessingService?.recomputeFromCache()
+  })
 
-  ipcMain.on(
-    'draft:selectMyModel',
-    (_event, data: { heroOrder: number; dbHeroId: number }) => {
-      const state = store.getState()
+  ipcMain.on('draft:selectMyModel', (_event, data: { heroOrder: number; dbHeroId: number }) => {
+    const state = store.getState()
 
-      // Toggle: clicking the same hero deselects
-      const isDeselecting = state.mySelectedModelDbHeroId === data.dbHeroId
-      const newDbId = isDeselecting ? null : data.dbHeroId
-      const newOrder = isDeselecting ? null : data.heroOrder
+    // Toggle: clicking the same hero deselects
+    const isDeselecting = state.mySelectedModelDbHeroId === data.dbHeroId
+    const newDbId = isDeselecting ? null : data.dbHeroId
+    const newOrder = isDeselecting ? null : data.heroOrder
 
-      state.selectMyModel(newDbId, newOrder)
-      logger.info('My Model selection changed', {
-        dbHeroId: newDbId,
-        heroOrder: newOrder,
-      })
+    state.selectMyModel(newDbId, newOrder)
+    logger.info('My Model selection changed', {
+      dbHeroId: newDbId,
+      heroOrder: newOrder,
+    })
 
-      broadcastToAll(windowManager, 'draft:selectMyModel', {
-        selectedModelHeroOrder: newOrder,
-      })
-      scanProcessingService?.recomputeFromCache()
-    },
-  )
+    broadcastToAll(windowManager, 'draft:selectMyModel', {
+      selectedModelHeroOrder: newOrder,
+    })
+    scanProcessingService?.recomputeFromCache()
+  })
 
   logger.info('Draft IPC handlers registered')
 }
 
-function broadcastToAll(
-  wm: WindowManager,
-  channel: string,
-  data: unknown,
-): void {
+function broadcastToAll(wm: WindowManager, channel: string, data: unknown): void {
   const cp = wm.getControlPanelWindow()
   const overlay = wm.getOverlayWindow()
   if (cp && !cp.isDestroyed()) cp.webContents.send(channel, data)

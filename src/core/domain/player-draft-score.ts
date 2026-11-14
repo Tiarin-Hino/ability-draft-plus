@@ -52,9 +52,7 @@ export function calculatePlayerDraftScore(
     return { score: null, base: null, synergyAdjustment: 0, confidence: 'none' }
   }
 
-  const base =
-    picks.reduce((sum, pick) => sum + normalizeWinrate(pick.winrate), 0) /
-    picks.length
+  const base = picks.reduce((sum, pick) => sum + normalizeWinrate(pick.winrate), 0) / picks.length
 
   const pickNames = new Set(picks.map((p) => p.name))
   const countedPairs = new Set<string>()
@@ -77,11 +75,7 @@ export function calculatePlayerDraftScore(
     )
   }
 
-  const score = clamp(
-    base + PLAYER_SCORE_SYNERGY_WEIGHT * synergyAdjustment,
-    0,
-    1,
-  )
+  const score = clamp(base + PLAYER_SCORE_SYNERGY_WEIGHT * synergyAdjustment, 0, 1)
 
   return {
     score,

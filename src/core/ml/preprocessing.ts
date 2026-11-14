@@ -29,18 +29,20 @@ export async function preprocessSlot(
   screenshot: DecodedScreenshot,
   slot: SlotCoordinate,
 ): Promise<Buffer> {
-  return sharp(screenshot.data, {
-    raw: { width: screenshot.width, height: screenshot.height, channels: 3 },
-  })
-    .extract({ left: slot.x, top: slot.y, width: slot.width, height: slot.height })
-    // kernel MUST be 'linear' (bilinear): the training pipeline resizes with TF's
-    // bilinear interpolation, and sharp's default lanczos3 produces sharpening
-    // artifacts the model never saw — verified on a real capture to drop
-    // borderline classes from ~0.7-0.9 confidence to ~0.26-0.72 (below the 0.9
-    // threshold → rendered as Unknown). Train/serve resize kernels must match.
-    .resize(MODEL_INPUT_SIZE, MODEL_INPUT_SIZE, { kernel: 'linear' })
-    .raw()
-    .toBuffer()
+  return (
+    sharp(screenshot.data, {
+      raw: { width: screenshot.width, height: screenshot.height, channels: 3 },
+    })
+      .extract({ left: slot.x, top: slot.y, width: slot.width, height: slot.height })
+      // kernel MUST be 'linear' (bilinear): the training pipeline resizes with TF's
+      // bilinear interpolation, and sharp's default lanczos3 produces sharpening
+      // artifacts the model never saw — verified on a real capture to drop
+      // borderline classes from ~0.7-0.9 confidence to ~0.26-0.72 (below the 0.9
+      // threshold → rendered as Unknown). Train/serve resize kernels must match.
+      .resize(MODEL_INPUT_SIZE, MODEL_INPUT_SIZE, { kernel: 'linear' })
+      .raw()
+      .toBuffer()
+  )
 }
 
 /**
@@ -110,10 +112,7 @@ export async function saveRawVectorPng(
  * used to build pick-slot template-matching candidates from the cached
  * official CDN icons. Alpha is stripped so vectors align with screenshot crops.
  */
-export async function loadIconVector(
-  filePath: string,
-  size: number,
-): Promise<Uint8Array> {
+export async function loadIconVector(filePath: string, size: number): Promise<Uint8Array> {
   const raw = await sharp(filePath)
     .resize(size, size, { kernel: 'linear' })
     .removeAlpha()

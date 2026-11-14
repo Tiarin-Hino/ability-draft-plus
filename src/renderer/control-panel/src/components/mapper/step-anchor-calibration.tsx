@@ -68,9 +68,7 @@ export function StepAnchorCalibration({
     setClicks([])
   }
 
-  const currentInstruction = clicks.length < ANCHOR_TOTAL
-    ? t(INSTRUCTIONS[clicks.length])
-    : ''
+  const currentInstruction = clicks.length < ANCHOR_TOTAL ? t(INSTRUCTIONS[clicks.length]) : ''
 
   return (
     <div className="space-y-4">

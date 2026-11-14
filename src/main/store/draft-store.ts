@@ -59,10 +59,7 @@ export interface DraftSessionSlice {
   /** Committed GSI slot <-> scan row mappings (sticky for the draft). */
   slotRowMappings: SlotRowMapping[]
   /** OCR'd hero names per player row (ocr-service; names are always English). */
-  ocrHeroNamesByRow: Record<
-    number,
-    { name: string; displayName: string; similarity: number }
-  >
+  ocrHeroNamesByRow: Record<number, { name: string; displayName: string; similarity: number }>
   /**
    * OCR'd PLAYER names per row, matched against the names GSI reports (spectate).
    * Resolves a row's identity before its player has drafted a model, which the

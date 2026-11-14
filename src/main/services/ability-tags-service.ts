@@ -20,15 +20,11 @@ import {
 const logger = log.scope('ability-tags')
 
 export function loadAbilityTags(): AbilityTagsLookup | undefined {
-  const base = app.isPackaged
-    ? process.resourcesPath
-    : join(app.getAppPath(), 'resources')
+  const base = app.isPackaged ? process.resourcesPath : join(app.getAppPath(), 'resources')
   let tagsRaw: unknown
   let heroRaw: unknown
   try {
-    tagsRaw = JSON.parse(
-      readFileSync(join(base, 'data', 'ability_tags.json'), 'utf8'),
-    )
+    tagsRaw = JSON.parse(readFileSync(join(base, 'data', 'ability_tags.json'), 'utf8'))
     heroRaw = JSON.parse(readFileSync(join(base, 'data', 'hero_meta.json'), 'utf8'))
   } catch (err) {
     logger.info('Ability tags dataset not available — tags feature off', {

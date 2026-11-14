@@ -83,16 +83,12 @@ export function createMlService(): MlService {
   }
 
   function getModelPath(): string {
-    const basePath = app.isPackaged
-      ? process.resourcesPath
-      : join(app.getAppPath(), 'resources')
+    const basePath = app.isPackaged ? process.resourcesPath : join(app.getAppPath(), 'resources')
     return join(basePath, 'model', 'ability_classifier_fp16.onnx')
   }
 
   function getClassNamesPath(): string {
-    const basePath = app.isPackaged
-      ? process.resourcesPath
-      : join(app.getAppPath(), 'resources')
+    const basePath = app.isPackaged ? process.resourcesPath : join(app.getAppPath(), 'resources')
     return join(basePath, 'model', 'class_names.json')
   }
 
@@ -315,10 +311,9 @@ export function createMlService(): MlService {
 
     restartCount++
     lastRestartTime = now
-    logger.warn(
-      `Restarting ML Worker (${restartCount}/${ML_WORKER_MAX_RESTART_ATTEMPTS})`,
-      { reason: error.message },
-    )
+    logger.warn(`Restarting ML Worker (${restartCount}/${ML_WORKER_MAX_RESTART_ATTEMPTS})`, {
+      reason: error.message,
+    })
 
     await new Promise((r) => setTimeout(r, ML_WORKER_RESTART_COOLDOWN))
 
@@ -329,10 +324,7 @@ export function createMlService(): MlService {
       return true
     } catch (restartError) {
       logger.error('ML Worker restart failed', {
-        error:
-          restartError instanceof Error
-            ? restartError.message
-            : String(restartError),
+        error: restartError instanceof Error ? restartError.message : String(restartError),
       })
       return false
     }

@@ -322,10 +322,7 @@ function needsAdjustment(
       tagInput.poolHasHardCc === true,
     )
     if (candCredit === 0) continue
-    const coverage = tagInput.myPickTags.reduce(
-      (sum, tags) => sum + needCredit(tags, need),
-      0,
-    )
+    const coverage = tagInput.myPickTags.reduce((sum, tags) => sum + needCredit(tags, need), 0)
     if (coverage < 1) {
       const scarcity = tagInput.needScarcity?.get(need.key) ?? 1
       adj += ROLE_NEED_WEIGHT * need.priority * scarcity * candCredit
@@ -426,10 +423,7 @@ export function summarizeTeammateBuilds(
  * DP picks which |builds| of the positions to use. Returns build-index ->
  * position. Optimal for a 1-D metric (matching never benefits from crossing).
  */
-function rankMatch(
-  greeds: number[],
-  positions: readonly DraftPosition[],
-): DraftPosition[] {
+function rankMatch(greeds: number[], positions: readonly DraftPosition[]): DraftPosition[] {
   const n = greeds.length
   const m = positions.length
   // cost[i][j]: first i builds matched within first j positions
@@ -534,9 +528,7 @@ export function resolveRoleContext(
   if (settings.roleMode === 'dynamic' && myHeroOrder === null) return null
 
   const teammates =
-    myHeroOrder !== null
-      ? summarizeTeammateBuilds(selectedAbilities, myHeroOrder, axesByName)
-      : []
+    myHeroOrder !== null ? summarizeTeammateBuilds(selectedAbilities, myHeroOrder, axesByName) : []
   const teamGreed = meanTeamGreed(teammates)
   const namedPicks = selectedAbilities.filter((s) => s.name !== null)
   const myPickCount =
@@ -546,9 +538,7 @@ export function resolveRoleContext(
 
   if (settings.roleMode === 'fixed') {
     const myPicks =
-      myHeroOrder !== null
-        ? selectedAbilities.filter((s) => s.hero_order === myHeroOrder)
-        : []
+      myHeroOrder !== null ? selectedAbilities.filter((s) => s.hero_order === myHeroOrder) : []
     const reserved = reservedPosition(fixedPositions, buildGreedOf(myPicks, axesByName))
     const candidates = ALL_POSITIONS.filter((p) => p !== reserved)
     return {
@@ -566,11 +556,7 @@ export function resolveRoleContext(
     (b) => b.pickCount >= DYNAMIC_ROLE_MIN_PICKS && b.buildGreed !== null,
   ).length
   const gateOpen = confidentCount >= DYNAMIC_ROLE_MIN_TEAMMATES
-  const estimated = estimateTeammatePositions(
-    teammates,
-    ALL_POSITIONS,
-    DYNAMIC_ROLE_MIN_PICKS,
-  )
+  const estimated = estimateTeammatePositions(teammates, ALL_POSITIONS, DYNAMIC_ROLE_MIN_PICKS)
   const taken = new Set(estimated.values())
   return {
     mode: 'dynamic',
@@ -600,10 +586,7 @@ export function computeRoleScore(
   const greed = axes?.greed ?? 0
   // Greed taper: the pick the user is ABOUT to make is pick #(myPickCount+1) —
   // full greed weight on the first picks, needs/coverage take over late.
-  const taper =
-    ROLE_GREED_TAPER[
-      Math.min(context.myPickCount, ROLE_GREED_TAPER.length - 1)
-    ]
+  const taper = ROLE_GREED_TAPER[Math.min(context.myPickCount, ROLE_GREED_TAPER.length - 1)]
   let best = Number.NEGATIVE_INFINITY
   let bestPosition: DraftPosition = context.effectivePositions[0]
   let bestReasons: string[] = []
@@ -615,19 +598,11 @@ export function computeRoleScore(
       const raw = axes[template.accent]
       // Healing is zero-inflated: only the top band of the enabling axis counts
       accentValue =
-        template.accent === 'enabling'
-          ? raw >= ROLE_ENABLING_ACCENT_FLOOR
-            ? raw
-            : 0
-          : raw
+        template.accent === 'enabling' ? (raw >= ROLE_ENABLING_ACCENT_FLOOR ? raw : 0) : raw
     }
     // Tags layer (needs + static accents) — a no-op without a tag input
-    const needs = tagInput
-      ? needsAdjustment(pos, tagInput)
-      : { adj: 0, reasons: [] as string[] }
-    const accentAdj = tagInput
-      ? tagAccentAdjustment(pos, tagInput.candidateTags)
-      : 0
+    const needs = tagInput ? needsAdjustment(pos, tagInput) : { adj: 0, reasons: [] as string[] }
+    const accentAdj = tagInput ? tagAccentAdjustment(pos, tagInput.candidateTags) : 0
     // Curated must-pick for this position: strong boost + its own reason chip
     // (the surfacing GUARANTEE lives in top-tier.ts; this only ranks it well)
     const curatedHere = tagInput?.candidateRoleMust?.has(pos) === true
@@ -649,14 +624,9 @@ export function computeRoleScore(
 
   // Team balance: a farm-heavy team devalues greedy candidates and vice versa
   const teamAdjustment =
-    context.teamGreed !== null
-      ? -ROLE_TEAM_BALANCE_WEIGHT * context.teamGreed * greed
-      : 0
+    context.teamGreed !== null ? -ROLE_TEAM_BALANCE_WEIGHT * context.teamGreed * greed : 0
 
-  const delta = Math.max(
-    -ROLE_ADJUSTMENT_CAP,
-    Math.min(ROLE_ADJUSTMENT_CAP, best + teamAdjustment),
-  )
+  const delta = Math.max(-ROLE_ADJUSTMENT_CAP, Math.min(ROLE_ADJUSTMENT_CAP, best + teamAdjustment))
   return { delta, bestPosition, reasons: bestReasons, curated: curated || undefined }
 }
 
@@ -705,10 +675,7 @@ function heroTagAccentAdjustment(
 }
 
 /** Primary-attribute credit: exact match 1, universal half, else 0. */
-function attrCredit(
-  primaryAttr: string | undefined,
-  wanted: 'str' | 'agi' | 'int',
-): number {
+function attrCredit(primaryAttr: string | undefined, wanted: 'str' | 'agi' | 'int'): number {
   if (primaryAttr === wanted) return 1
   if (primaryAttr === 'all') return 0.5
   return 0
@@ -734,11 +701,7 @@ export function modelAttrFit(
     case 2:
       return 0.5 * pct.totalGain + 0.3 * pct.intGain + 0.2 * pct.strGain
     case 3:
-      return (
-        0.5 * pct.strGain +
-        0.3 * attrCredit(primaryAttr, 'str') +
-        0.2 * (pct.bulk ?? 0.5)
-      )
+      return 0.5 * pct.strGain + 0.3 * attrCredit(primaryAttr, 'str') + 0.2 * (pct.bulk ?? 0.5)
     case 4:
     case 5:
       return (
@@ -790,13 +753,9 @@ export function computeModelRoleScore(
     }
   }
   const curated =
-    heroRoleMust !== undefined &&
-    context.effectivePositions.some((p) => heroRoleMust.has(p))
+    heroRoleMust !== undefined && context.effectivePositions.some((p) => heroRoleMust.has(p))
 
-  const delta = Math.max(
-    -ROLE_ADJUSTMENT_CAP,
-    Math.min(ROLE_ADJUSTMENT_CAP, best + urgency),
-  )
+  const delta = Math.max(-ROLE_ADJUSTMENT_CAP, Math.min(ROLE_ADJUSTMENT_CAP, best + urgency))
   return { delta, bestPosition, reasons: bestReasons, curated: curated || undefined }
 }
 

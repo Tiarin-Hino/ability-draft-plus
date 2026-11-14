@@ -30,7 +30,9 @@ export function StepVerify({
 }: StepVerifyProps) {
   const { t } = useTranslation('data')
   const [submitting, setSubmitting] = useState(false)
-  const [submitResult, setSubmitResult] = useState<{ success: boolean; message: string } | null>(null)
+  const [submitResult, setSubmitResult] = useState<{ success: boolean; message: string } | null>(
+    null,
+  )
 
   const legendItems = [
     { label: t('mapper.verify.ultimates'), color: STROKE_COLORS.ultimates },
@@ -110,11 +112,7 @@ export function StepVerify({
           {t('mapper.verify.redo')}
         </Button>
         {mode === 'user' && (
-          <Button
-            variant="destructive"
-            onClick={handleReportFailed}
-            disabled={submitting}
-          >
+          <Button variant="destructive" onClick={handleReportFailed} disabled={submitting}>
             <Send className="h-4 w-4 mr-2" />
             {submitting ? t('mapper.report.submitting') : t('mapper.report.button')}
           </Button>

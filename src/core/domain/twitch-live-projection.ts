@@ -39,8 +39,7 @@ function flagsOf(live: GsiPlayerLive): number {
   // Off cooldown AND affordable — reported for the living too, since "is this
   // player holding buyback while they take this fight" is the interesting form
   // of the question.
-  const affordable =
-    live.buybackCost !== undefined && (live.gold ?? 0) >= live.buybackCost
+  const affordable = live.buybackCost !== undefined && (live.gold ?? 0) >= live.buybackCost
   if ((live.buybackCooldown ?? 0) <= 0 && affordable) {
     flags |= TWITCH_LIVE_BUYBACK_READY
   }
@@ -92,13 +91,9 @@ export interface TwitchLiveInput {
  * no spectator data, no mapping yet, or no player carrying live numbers (the
  * draft phase, where GSI has no economy blocks at all).
  */
-export function buildTwitchLiveState(
-  input: TwitchLiveInput,
-): TwitchLiveState | null {
+export function buildTwitchLiveState(input: TwitchLiveInput): TwitchLiveState | null {
   if (input.players.length === 0) return null
-  const rowBySlot = new Map(
-    input.slotRowMappings.map((m) => [m.gsiSlot, m.scanRow]),
-  )
+  const rowBySlot = new Map(input.slotRowMappings.map((m) => [m.gsiSlot, m.scanRow]))
   if (rowBySlot.size === 0) return null
 
   const players: (TwitchLivePlayer | null)[] = Array.from(
@@ -169,7 +164,26 @@ export function encodeTwitchLive(
     players: state.players.map((p) =>
       p === null
         ? null
-        : ([p[0], p[1], 0, p[3], p[4], p[5], p[6], 0, 0, 0, 0, 0, 0, p[13], p[14], p[15], p[16], []] as TwitchLivePlayer),
+        : ([
+            p[0],
+            p[1],
+            0,
+            p[3],
+            p[4],
+            p[5],
+            p[6],
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            p[13],
+            p[14],
+            p[15],
+            p[16],
+            [],
+          ] as TwitchLivePlayer),
     ),
   }
   return measure(minimal)

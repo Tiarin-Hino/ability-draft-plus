@@ -110,9 +110,7 @@ function prefixAncestors(prefix: string): string[] {
   return out
 }
 
-export function deriveHeroCdnName(
-  abilityNames: Array<string | null>,
-): string | null {
+export function deriveHeroCdnName(abilityNames: Array<string | null>): string | null {
   const names = abilityNames.filter((n): n is string => n !== null && n.length > 0)
   if (names.length < 2) return null
 

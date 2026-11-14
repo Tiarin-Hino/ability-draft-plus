@@ -45,11 +45,7 @@ function filterAbilityPairs(
       const a2InPool = poolNames.has(combo.ability2InternalName)
       const a1Picked = pickedNames.has(combo.ability1InternalName)
       const a2Picked = pickedNames.has(combo.ability2InternalName)
-      return (
-        (a1InPool && a2InPool) ||
-        (a1InPool && a2Picked) ||
-        (a1Picked && a2InPool)
-      )
+      return (a1InPool && a2InPool) || (a1InPool && a2Picked) || (a1Picked && a2InPool)
     })
     .map((combo) => ({
       ability1DisplayName: combo.ability1DisplayName,
@@ -74,8 +70,7 @@ export function filterRelevantHeroSynergies(
   return allHeroSynergies
     .filter((synergy) => {
       const abilityRelevant =
-        poolNames.has(synergy.abilityInternalName) ||
-        pickedNames.has(synergy.abilityInternalName)
+        poolNames.has(synergy.abilityInternalName) || pickedNames.has(synergy.abilityInternalName)
       const heroRelevant = heroesInPool.has(synergy.heroInternalName)
       const isOP = synergy.synergyWinrate - 0.5 >= threshold
       return abilityRelevant && heroRelevant && isOP
@@ -96,8 +91,7 @@ export function filterRelevantHeroTraps(
   return allHeroTrapSynergies
     .filter((synergy) => {
       const abilityRelevant =
-        poolNames.has(synergy.abilityInternalName) ||
-        pickedNames.has(synergy.abilityInternalName)
+        poolNames.has(synergy.abilityInternalName) || pickedNames.has(synergy.abilityInternalName)
       const heroRelevant = heroesInPool.has(synergy.heroInternalName)
       return abilityRelevant && heroRelevant
     })

@@ -185,17 +185,11 @@ export function correlateByElimination(input: {
   const newMappings: SlotRowMapping[] = []
 
   for (const half of [0, 5]) {
-    const slots = input.knownSlots.filter(
-      (s) => s >= half && s < half + 5 && !mappedSlots.has(s),
-    )
-    const rows = [half, half + 1, half + 2, half + 3, half + 4].filter(
-      (r) => !mappedRows.has(r),
-    )
+    const slots = input.knownSlots.filter((s) => s >= half && s < half + 5 && !mappedSlots.has(s))
+    const rows = [half, half + 1, half + 2, half + 3, half + 4].filter((r) => !mappedRows.has(r))
     // Exactly one candidate on each side, and GSI must know all five of the
     // half's slots — otherwise "the only one left" is not actually determined.
-    const halfSlotsKnown = input.knownSlots.filter(
-      (s) => s >= half && s < half + 5,
-    ).length
+    const halfSlotsKnown = input.knownSlots.filter((s) => s >= half && s < half + 5).length
     if (halfSlotsKnown === 5 && slots.length === 1 && rows.length === 1) {
       newMappings.push({ gsiSlot: slots[0], scanRow: rows[0] })
     }
@@ -372,9 +366,7 @@ export function correlateSlotRows(input: {
   const events: GsiHeroEvent[] = []
   for (const event of eventBySlot.values()) {
     const expired = input.nowMs > event.atMs + 2 * slackAfter
-    const possibleRows = input.rows.filter(
-      (r) => eligibleRow(r) && sameTeam(event.slot, r.row),
-    )
+    const possibleRows = input.rows.filter((r) => eligibleRow(r) && sameTeam(event.slot, r.row))
     if (expired && possibleRows.length === 0) {
       prunedSlots.push(event.slot)
     } else {

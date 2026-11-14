@@ -39,8 +39,7 @@ function resolveEntries(
     .map((e) => ({
       key: e.seq,
       playerName:
-        board.players[e.playerIndex]?.playerName ??
-        t('player', { num: e.playerIndex + 1 }),
+        board.players[e.playerIndex]?.playerName ?? t('player', { num: e.playerIndex + 1 }),
       abilityName: e.abilityName as string,
       displayName: displayByName.get(e.abilityName as string) ?? (e.abilityName as string),
     }))

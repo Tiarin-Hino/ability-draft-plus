@@ -1,13 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MessageSquare, Upload, FileArchive } from 'lucide-react'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import type { FeedbackStatus } from '@shared/ipc/api'
 
@@ -54,12 +48,20 @@ export function FeedbackCard() {
           </Button>
         </div>
         {exportStatus && (
-          <p className={exportStatus.error ? 'text-sm text-destructive' : 'text-sm text-muted-foreground'}>
+          <p
+            className={
+              exportStatus.error ? 'text-sm text-destructive' : 'text-sm text-muted-foreground'
+            }
+          >
             {t(exportStatus.messageKey, exportStatus.params)}
           </p>
         )}
         {uploadStatus && (
-          <p className={uploadStatus.error ? 'text-sm text-destructive' : 'text-sm text-muted-foreground'}>
+          <p
+            className={
+              uploadStatus.error ? 'text-sm text-destructive' : 'text-sm text-muted-foreground'
+            }
+          >
             {t(uploadStatus.messageKey, uploadStatus.params)}
           </p>
         )}

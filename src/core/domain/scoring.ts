@@ -40,8 +40,7 @@ export function normalizePickOrder(pickRate: number | null): number {
     MIN_PICK_ORDER_FOR_NORMALIZATION,
     Math.min(MAX_PICK_ORDER_FOR_NORMALIZATION, pickRate),
   )
-  const range =
-    MAX_PICK_ORDER_FOR_NORMALIZATION - MIN_PICK_ORDER_FOR_NORMALIZATION
+  const range = MAX_PICK_ORDER_FOR_NORMALIZATION - MIN_PICK_ORDER_FOR_NORMALIZATION
   return (MAX_PICK_ORDER_FOR_NORMALIZATION - clamped) / range
 }
 
@@ -53,8 +52,7 @@ export function calculateConsolidatedScore(
   pickRate: number | null,
 ): number {
   return (
-    WEIGHT_WINRATE * normalizeWinrate(winrate) +
-    WEIGHT_PICK_ORDER * normalizePickOrder(pickRate)
+    WEIGHT_WINRATE * normalizeWinrate(winrate) + WEIGHT_PICK_ORDER * normalizePickOrder(pickRate)
   )
 }
 
@@ -73,8 +71,7 @@ export function blendPersonal(
   const prior = globalValue ?? neutral
   if (games <= 0) return prior
   return (
-    (games * personalValue + PERSONAL_PRIOR_STRENGTH * prior) /
-    (games + PERSONAL_PRIOR_STRENGTH)
+    (games * personalValue + PERSONAL_PRIOR_STRENGTH * prior) / (games + PERSONAL_PRIOR_STRENGTH)
   )
 }
 
@@ -108,12 +105,7 @@ export function calculatePersonalizedScore(
     return { consolidatedScore: baseScore }
   }
 
-  const blendedWinrate = blendPersonal(
-    globalWinrate,
-    personal.winrate,
-    personal.games,
-    0.5,
-  )
+  const blendedWinrate = blendPersonal(globalWinrate, personal.winrate, personal.games, 0.5)
   const blendedPickRate =
     personal.avgPickPosition != null
       ? blendPersonal(

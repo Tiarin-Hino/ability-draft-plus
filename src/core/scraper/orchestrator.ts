@@ -152,13 +152,9 @@ export async function performFullScrape(
         dmgShift: s.dmgShift,
         healingShift: s.healingShift,
       }))
-      const applied = deps.abilities.applyAbilityShifts(
-        entries.filter((e) => e.windrunId > 0),
-      )
+      const applied = deps.abilities.applyAbilityShifts(entries.filter((e) => e.windrunId > 0))
       const heroApplied = deps.heroes.applyHeroShifts(
-        entries
-          .filter((e) => e.windrunId < 0)
-          .map((e) => ({ ...e, windrunId: -e.windrunId })),
+        entries.filter((e) => e.windrunId < 0).map((e) => ({ ...e, windrunId: -e.windrunId })),
       )
       onProgress({
         phase: 'phase1',
@@ -166,7 +162,10 @@ export async function performFullScrape(
       })
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
-      onProgress({ phase: 'phase1', message: `Ability shifts unavailable (kept previous values): ${message}` })
+      onProgress({
+        phase: 'phase1',
+        message: `Ability shifts unavailable (kept previous values): ${message}`,
+      })
     }
 
     deps.persist()
@@ -232,10 +231,7 @@ export async function performFullScrape(
       heroNameToIdMap,
     )
 
-    deps.triplets.clearAndInsertAbilityTriplets(
-      abilityTriplets,
-      abilityNameToIdMap,
-    )
+    deps.triplets.clearAndInsertAbilityTriplets(abilityTriplets, abilityNameToIdMap)
 
     deps.triplets.clearAndInsertHeroAbilityTriplets(
       heroTriplets,

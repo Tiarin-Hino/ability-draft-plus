@@ -18,10 +18,7 @@ import type { AppStore } from '../store/app-store'
 import type { StoreApi } from 'zustand/vanilla'
 import type { DraftStore } from '../store/draft-store'
 import type { ScanResult, SlotCoordinate } from '@shared/types'
-import {
-  mergeRetriedPoolSlots,
-  unresolvedPoolSlots,
-} from '@core/domain/pool-retry'
+import { mergeRetriedPoolSlots, unresolvedPoolSlots } from '@core/domain/pool-retry'
 import { addPoolHeroAbilities } from '@core/domain/pick-candidates'
 import { POOL_RETRY_MAX_ATTEMPTS } from '@shared/constants/thresholds'
 import type { InitialScanResults, PickCandidates } from '@shared/types/ml'
@@ -56,10 +53,7 @@ export interface ScanTriggerService {
    * @param options.heroOrders Rescan only: restrict the selected-abilities
    * scan to these player rows (targeted auto-rescan). Omitted → all rows.
    */
-  performScan(
-    isInitialScan: boolean,
-    options?: { heroOrders?: number[] },
-  ): Promise<void>
+  performScan(isInitialScan: boolean, options?: { heroOrders?: number[] }): Promise<void>
 }
 
 export function createScanTriggerService(
@@ -144,16 +138,18 @@ export function createScanTriggerService(
   const poolRetryAttempts = new Map<string, number>()
 
   function getRetryPoolSlots(): SlotCoordinate[] {
-    const unresolved = unresolvedPoolSlots(
-      draftStore.getState().initialPoolAbilitiesCache,
-    )
+    const unresolved = unresolvedPoolSlots(draftStore.getState().initialPoolAbilitiesCache)
     const slots: SlotCoordinate[] = []
     for (const slot of unresolved) {
       const key = `${slot.coord.x},${slot.coord.y}`
       const tries = poolRetryAttempts.get(key) ?? 0
       if (tries >= POOL_RETRY_MAX_ATTEMPTS) continue
       poolRetryAttempts.set(key, tries + 1)
-      slots.push({ ...slot.coord, ability_order: slot.ability_order, is_ultimate: slot.is_ultimate })
+      slots.push({
+        ...slot.coord,
+        ability_order: slot.ability_order,
+        is_ultimate: slot.is_ultimate,
+      })
     }
     return slots
   }
@@ -161,10 +157,7 @@ export function createScanTriggerService(
   function mergePoolRetry(results: ScanResult[] | undefined): void {
     if (!results || results.length === 0) return
     const state = draftStore.getState()
-    const { cache, resolved } = mergeRetriedPoolSlots(
-      state.initialPoolAbilitiesCache,
-      results,
-    )
+    const { cache, resolved } = mergeRetriedPoolSlots(state.initialPoolAbilitiesCache, results)
     if (resolved.length === 0) return
     draftStore.setState({ initialPoolAbilitiesCache: cache })
     // Newly known pool names are immediately valid pick candidates
@@ -333,9 +326,7 @@ export function createScanTriggerService(
           const resolved = result.modelTileMatches.filter((m) => m.name !== null)
           if (resolved.length > 0) {
             logger.info('Model tiles identified (reference match)', {
-              tiles: resolved.map(
-                (m) => `${m.heroOrder}:${m.name} (${m.score.toFixed(3)})`,
-              ),
+              tiles: resolved.map((m) => `${m.heroOrder}:${m.name} (${m.score.toFixed(3)})`),
             })
             addCandidateHeroes(resolved.flatMap((m) => (m.name ? [m.name] : [])))
           }

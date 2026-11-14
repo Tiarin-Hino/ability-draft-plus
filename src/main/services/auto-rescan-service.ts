@@ -18,10 +18,7 @@ import {
   type TurnWindow,
 } from '@core/gsi/draft-clock'
 import { reconcileAbilityPicks } from '@core/domain/pick-attribution'
-import {
-  resolveModelAssignments,
-  reconcileModelMarkers,
-} from '@core/domain/model-picks-from-ocr'
+import { resolveModelAssignments, reconcileModelMarkers } from '@core/domain/model-picks-from-ocr'
 import type { PickEvent } from '@shared/types/stream'
 import {
   AUTO_RESCAN_TICK_MS,
@@ -219,9 +216,7 @@ export function createAutoRescanService(
       // selection every few seconds. Only a DIFFERENT matchid (or the very first
       // entry) is a new draft; re-entries keep the anchor and timeline.
       const isSameDraft =
-        draftMatchId !== null &&
-        snapshot.matchId !== null &&
-        snapshot.matchId === draftMatchId
+        draftMatchId !== null && snapshot.matchId !== null && snapshot.matchId === draftMatchId
       if (isSameDraft) {
         const reentry = classifyHeroSelectionReentry({
           clockTime: snapshot.clockTime,
@@ -233,10 +228,13 @@ export function createAutoRescanService(
           // that has not rendered and time every turn wrong. The pool, if one
           // was read, is the same draft's and stays.
           resetDraftSession()
-          logger.info('Re-entered hero selection at the preview (same match, draft clock restarted)', {
-            matchId: snapshot.matchId,
-            clockTime: snapshot.clockTime,
-          })
+          logger.info(
+            'Re-entered hero selection at the preview (same match, draft clock restarted)',
+            {
+              matchId: snapshot.matchId,
+              clockTime: snapshot.clockTime,
+            },
+          )
           return
         }
         rearmFinalPass()
@@ -287,10 +285,7 @@ export function createAutoRescanService(
     // derived from the same snapshot (mid-draft joins report a clock immediately)
     handlePhaseChange(snapshot)
 
-    if (
-      snapshot.gamePhase !== GSI_HERO_SELECTION_PHASE ||
-      snapshot.clockTime === null
-    ) {
+    if (snapshot.gamePhase !== GSI_HERO_SELECTION_PHASE || snapshot.clockTime === null) {
       return
     }
 
@@ -496,7 +491,6 @@ export function createAutoRescanService(
       const attributionRows = [...pendingRows]
       const heroOrders = fullScanDue ? undefined : attributionRows
       await runRescan(heroOrders, attributionRows, snapshot.clockTime, elapsedS)
-
     } catch (error) {
       logger.error('Auto-rescan tick failed', {
         error: error instanceof Error ? error.message : String(error),
@@ -538,8 +532,7 @@ export function createAutoRescanService(
 
     if (update.added.length > 0 || update.corrected.length > 0 || update.dropped > 0) {
       const heroName = (order: number | undefined): string =>
-        state.identifiedHeroModelsCache.find((m) => m.heroOrder === order)?.heroName ??
-        `#${order}`
+        state.identifiedHeroModelsCache.find((m) => m.heroOrder === order)?.heroName ?? `#${order}`
       logger.info('Model picks from card OCR', {
         added: update.added.map((m) => `row ${m.playerIndex}: ${heroName(m.poolHeroOrder)}`),
         ...(update.corrected.length > 0

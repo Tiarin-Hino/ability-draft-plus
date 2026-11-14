@@ -85,8 +85,7 @@ export function createScreenshotService(): ScreenshotService {
       })
       const getSourcesMs = Math.round(performance.now() - start)
 
-      const source =
-        sources.find((s) => s.display_id === String(primary.id)) ?? sources[0]
+      const source = sources.find((s) => s.display_id === String(primary.id)) ?? sources[0]
       if (!source) {
         throw new Error('No screen sources available for capture')
       }

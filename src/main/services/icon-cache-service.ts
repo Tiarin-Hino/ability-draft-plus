@@ -59,18 +59,12 @@ export interface IconCacheOptions {
 }
 
 function resourcesBase(): string {
-  return app.isPackaged
-    ? process.resourcesPath
-    : join(app.getAppPath(), 'resources')
+  return app.isPackaged ? process.resourcesPath : join(app.getAppPath(), 'resources')
 }
 
-export function createIconCacheService(
-  options: IconCacheOptions = {},
-): IconCacheService {
-  const cacheRoot =
-    options.cacheRoot ?? join(app.getPath('userData'), 'stream-icons')
-  const placeholderRoot =
-    options.placeholderRoot ?? join(resourcesBase(), 'data', 'stream')
+export function createIconCacheService(options: IconCacheOptions = {}): IconCacheService {
+  const cacheRoot = options.cacheRoot ?? join(app.getPath('userData'), 'stream-icons')
+  const placeholderRoot = options.placeholderRoot ?? join(resourcesBase(), 'data', 'stream')
   const fetchImpl = options.fetchImpl ?? fetch
 
   // name -> retry-not-before timestamp
@@ -80,8 +74,7 @@ export function createIconCacheService(
   async function getPlaceholder(kind: IconKind): Promise<Buffer> {
     const cached = placeholders.get(kind)
     if (cached) return cached
-    const file =
-      kind === 'abilities' ? 'placeholder-ability.png' : 'placeholder-hero.png'
+    const file = kind === 'abilities' ? 'placeholder-ability.png' : 'placeholder-hero.png'
     try {
       const data = await fs.readFile(join(placeholderRoot, file))
       placeholders.set(kind, data)
@@ -185,10 +178,7 @@ export function createIconCacheService(
       // Revalidates a cached icon that outlived the refresh TTL: refetch with a
       // cache-busting URL, rewrite on changed art, bump mtime otherwise. Any
       // failure keeps the old file — stale art still beats a placeholder.
-      async function refreshStaleIcon(
-        name: string,
-        cachedPath: string,
-      ): Promise<void> {
+      async function refreshStaleIcon(name: string, cachedPath: string): Promise<void> {
         const fresh = await fetchFromCdn('abilities', name, true)
         if (fresh === null) {
           summary.alreadyCached++
@@ -240,9 +230,7 @@ export function createIconCacheService(
         }
       }
 
-      await Promise.all(
-        Array.from({ length: PREFETCH_CONCURRENCY }, () => worker()),
-      )
+      await Promise.all(Array.from({ length: PREFETCH_CONCURRENCY }, () => worker()))
       logger.info('Ability icon prefetch complete', { ...summary })
       return summary
     },

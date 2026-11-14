@@ -1,13 +1,7 @@
 import { useState, useEffect, useReducer } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Database, Download, RotateCcw } from 'lucide-react'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -63,7 +57,9 @@ export function BackupCard() {
       setBackups(list)
       setStats(backupStats)
     })
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [reloadKey])
 
   const handleCreate = async () => {
@@ -118,9 +114,7 @@ export function BackupCard() {
             {t('backup.createButton')}
           </Button>
 
-          {message && (
-            <p className="text-sm text-muted-foreground">{message}</p>
-          )}
+          {message && <p className="text-sm text-muted-foreground">{message}</p>}
 
           {backups.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t('backup.noBackups')}</p>
@@ -142,9 +136,7 @@ export function BackupCard() {
                       <td className="p-2 text-muted-foreground">
                         {new Date(backup.date).toLocaleString()}
                       </td>
-                      <td className="p-2 text-muted-foreground">
-                        {formatBytes(backup.size)}
-                      </td>
+                      <td className="p-2 text-muted-foreground">{formatBytes(backup.size)}</td>
                       <td className="p-2">
                         <Button
                           variant="ghost"

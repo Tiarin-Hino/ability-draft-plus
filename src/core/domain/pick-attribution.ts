@@ -1,10 +1,7 @@
 import type { ScanResult } from '@shared/types'
 import type { PickEvent } from '@shared/types/stream'
 import type { TurnWindow } from '@core/gsi/draft-clock'
-import {
-  LATE_PICK_GRACE_S,
-  PICK_SEEN_EARLY_TOLERANCE_S,
-} from '@shared/constants/thresholds'
+import { LATE_PICK_GRACE_S, PICK_SEEN_EARLY_TOLERANCE_S } from '@shared/constants/thresholds'
 
 // @DEV-GUIDE: Ability picks are read off each player's card (hero_order = player
 // index 0-9) and tracked per BOX GROUP — the card's single ultimate box, and its
@@ -102,7 +99,11 @@ export function reconcileAbilityPicks(input: AbilityPickInput): AbilityPickUpdat
 
     // A flagged name that shows again was only hidden
     for (const { event, index } of indices) {
-      if (event.vacated === true && event.abilityName !== null && visible.includes(event.abilityName)) {
+      if (
+        event.vacated === true &&
+        event.abilityName !== null &&
+        visible.includes(event.abilityName)
+      ) {
         const cleared = { ...event }
         delete cleared.vacated
         timeline[index] = cleared
@@ -235,12 +236,17 @@ export function assignDraftTurns(
 
     const timed = events
       .filter((x) => x.event.seenAtS !== undefined)
-      .sort((a, b) => (a.event.seenAtS as number) - (b.event.seenAtS as number) || a.position - b.position)
+      .sort(
+        (a, b) =>
+          (a.event.seenAtS as number) - (b.event.seenAtS as number) || a.position - b.position,
+      )
 
     // 1. Seen in time for a turn: the earliest such free turn
     for (const { event, position } of timed) {
       const seenAtS = event.seenAtS as number
-      const turn = turns.find((t) => !taken.has(t) && started(seenAtS, t) && lateness(seenAtS, t) <= 0)
+      const turn = turns.find(
+        (t) => !taken.has(t) && started(seenAtS, t) && lateness(seenAtS, t) <= 0,
+      )
       if (turn !== undefined) assign(position, turn)
     }
 
@@ -279,9 +285,11 @@ export function assignDraftTurns(
       const slots = positions
         .map((position) => turnOf[position])
         .sort((a, b) => (a ?? Infinity) - (b ?? Infinity))
-      ;[...positions].sort((a, b) => a - b).forEach((position, i) => {
-        turnOf[position] = slots[i]
-      })
+      ;[...positions]
+        .sort((a, b) => a - b)
+        .forEach((position, i) => {
+          turnOf[position] = slots[i]
+        })
     }
   }
   return turnOf

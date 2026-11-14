@@ -229,9 +229,7 @@ export function createTwitchPublisherService(
   }
 
   function getCachedAbilityDetails(names: string[]): AbilityDetailMap {
-    const missing = names.filter(
-      (n) => !cachedAbilityDetails.has(n) && !missingAbilityNames.has(n),
-    )
+    const missing = names.filter((n) => !cachedAbilityDetails.has(n) && !missingAbilityNames.has(n))
     if (missing.length > 0) {
       const fetched = dbService.abilities.getDetails(missing)
       for (const name of missing) {

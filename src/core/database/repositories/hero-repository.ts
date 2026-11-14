@@ -2,10 +2,7 @@ import { eq, inArray, sql } from 'drizzle-orm'
 import type { SQLJsDatabase } from 'drizzle-orm/sql-js'
 import { heroes, abilities } from '../schema'
 import type { Hero } from '@shared/types'
-import type {
-  AbilityShiftUpdate,
-  AbilityShiftRow,
-} from './ability-repository'
+import type { AbilityShiftUpdate, AbilityShiftRow } from './ability-repository'
 
 // @DEV-GUIDE: Hero CRUD repository. Provides getAll, getById, getByName, getByAbilityName (joins
 // Abilities table to find which hero owns a given ability), upsertHeroes (batch insert
@@ -106,7 +103,10 @@ export function createHeroRepository(db: SQLJsDatabase): HeroRepository {
       // Clean up stale hero entries that have a different name for the same windrunId.
       // This happens when the seed DB uses underscore-separated names (e.g., "ancient_apparition")
       // but Windrun uses concatenated names (e.g., "ancientapparition").
-      const existing = db.select({ heroId: heroes.heroId, name: heroes.name, windrunId: heroes.windrunId }).from(heroes).all()
+      const existing = db
+        .select({ heroId: heroes.heroId, name: heroes.name, windrunId: heroes.windrunId })
+        .from(heroes)
+        .all()
       const windrunIdToExisting = new Map<number, { heroId: number; name: string }>()
       for (const h of existing) {
         if (h.windrunId !== null) {
@@ -160,7 +160,12 @@ export function createHeroRepository(db: SQLJsDatabase): HeroRepository {
         db
           .select({ windrunId: heroes.windrunId })
           .from(heroes)
-          .where(inArray(heroes.windrunId, shifts.map((s) => s.windrunId)))
+          .where(
+            inArray(
+              heroes.windrunId,
+              shifts.map((s) => s.windrunId),
+            ),
+          )
           .all()
           .map((row) => row.windrunId),
       )

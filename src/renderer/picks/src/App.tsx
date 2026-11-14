@@ -32,10 +32,7 @@ function resolveBg(explicit: PicksBg | null): PicksBg {
 function StripPage({ team }: { team: StreamTeam }) {
   const { t } = useTranslation()
   const { picks } = usePicksState()
-  const options = parseStripOptions(
-    new URLSearchParams(window.location.search),
-    team,
-  )
+  const options = parseStripOptions(new URLSearchParams(window.location.search), team)
   const bg = resolveBg(options.bg)
 
   const language = picks?.meta.language

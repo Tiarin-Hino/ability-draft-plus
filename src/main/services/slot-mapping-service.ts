@@ -9,10 +9,7 @@ import {
   correlateByHeroIdentity,
   correlateByElimination,
 } from '@core/domain/slot-row-correlation'
-import type {
-  PlayerCardCapture,
-  GsiHeroEvent,
-} from '@core/domain/slot-row-correlation'
+import type { PlayerCardCapture, GsiHeroEvent } from '@core/domain/slot-row-correlation'
 import type { PickEvent } from '@shared/types/stream'
 
 // @DEV-GUIDE: Electron-side orchestrator for the GSI slot <-> scan row correlation
@@ -72,9 +69,7 @@ export function createSlotMappingService(
   function flushModelMarkers(): void {
     if (pendingModelMarkers.size === 0) return
     const state = draftStore.getState()
-    const rowBySlot = new Map(
-      state.slotRowMappings.map((m) => [m.gsiSlot, m.scanRow]),
-    )
+    const rowBySlot = new Map(state.slotRowMappings.map((m) => [m.gsiSlot, m.scanRow]))
     const events: PickEvent[] = []
     for (const [slot, npcName] of [...pendingModelMarkers]) {
       const row = rowBySlot.get(slot)
@@ -140,15 +135,11 @@ export function createSlotMappingService(
     const resolvedSlots = new Set(newMappings.map((m) => m.gsiSlot))
     draftStore.setState({
       slotRowMappings: eliminated.mappings,
-      gsiHeroEvents: state.gsiHeroEvents.filter(
-        (e) => !resolvedSlots.has(e.slot),
-      ),
+      gsiHeroEvents: state.gsiHeroEvents.filter((e) => !resolvedSlots.has(e.slot)),
     })
     logger.info('GSI slot <-> scan row mapped', {
       byPlayerName: byPlayer.newMappings,
-      byHeroName: identity.newMappings.filter(
-        (m) => !byPlayer.newMappings.includes(m),
-      ),
+      byHeroName: identity.newMappings.filter((m) => !byPlayer.newMappings.includes(m)),
       byElimination: eliminated.newMappings,
       total: eliminated.mappings.length,
     })
@@ -158,10 +149,7 @@ export function createSlotMappingService(
 
   function runCorrelation(nowMs: number): void {
     const state = draftStore.getState()
-    if (
-      state.gsiHeroEvents.length === 0 &&
-      state.slotRowMappings.length === 0
-    ) {
+    if (state.gsiHeroEvents.length === 0 && state.slotRowMappings.length === 0) {
       return
     }
     const result = correlateSlotRows({
@@ -220,11 +208,8 @@ export function createSlotMappingService(
     }
 
     if (snapshot.players.length > 0) {
-      const haveBaselines =
-        draftStore.getState().playerCardBaselines.length > 0
-      const mappedSlots = new Set(
-        draftStore.getState().slotRowMappings.map((m) => m.gsiSlot),
-      )
+      const haveBaselines = draftStore.getState().playerCardBaselines.length > 0
+      const mappedSlots = new Set(draftStore.getState().slotRowMappings.map((m) => m.gsiSlot))
       const newEvents: GsiHeroEvent[] = []
       for (const player of snapshot.players) {
         if (player.slotIndex < 0 || player.slotIndex > 9) continue
@@ -233,19 +218,12 @@ export function createSlotMappingService(
           lastHeroBySlot.set(player.slotIndex, player.heroNpcName)
           // Timeline markers are queued for EVERY gained hero — unlike the
           // pixel correlation below they do not need card baselines, only a row.
-          if (
-            player.heroNpcName !== null &&
-            !markerEmittedSlots.has(player.slotIndex)
-          ) {
+          if (player.heroNpcName !== null && !markerEmittedSlots.has(player.slotIndex)) {
             pendingModelMarkers.set(player.slotIndex, player.heroNpcName)
           }
           // Only a gained hero is an event; a hero going null is a replay
           // rewind — the next re-pick fires a fresh event.
-          if (
-            player.heroNpcName !== null &&
-            haveBaselines &&
-            !mappedSlots.has(player.slotIndex)
-          ) {
+          if (player.heroNpcName !== null && haveBaselines && !mappedSlots.has(player.slotIndex)) {
             newEvents.push({
               slot: player.slotIndex,
               npcName: player.heroNpcName,
@@ -310,9 +288,7 @@ export function createSlotMappingService(
       draftStore.setState({ playerCardRows: detection.rows })
       if (detection.newlyChanged.length > 0) {
         logger.info('Player cards changed (model drafted on row)', {
-          rows: detection.newlyChanged.map(
-            (c) => `${c.row} (diff ${Math.round(c.diff)})`,
-          ),
+          rows: detection.newlyChanged.map((c) => `${c.row} (diff ${Math.round(c.diff)})`),
         })
       }
 

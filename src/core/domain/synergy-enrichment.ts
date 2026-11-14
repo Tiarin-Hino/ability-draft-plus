@@ -1,5 +1,8 @@
 import type { SynergyPairDisplay, HeroSynergyDisplay } from '@shared/types'
-import type { SynergyPartner, HeroAbilitySynergyRow } from '@core/database/repositories/synergy-repository'
+import type {
+  SynergyPartner,
+  HeroAbilitySynergyRow,
+} from '@core/database/repositories/synergy-repository'
 import type { SynergyLookup } from './types'
 
 // @DEV-GUIDE: Synergy lookup functions for overlay tooltips.
@@ -31,17 +34,11 @@ export function getAbilitySynergySplit(
   draftPoolNames: string[],
   synergyLookup: SynergyLookup,
 ): { high: SynergyPairDisplay[]; low: SynergyPairDisplay[] } {
-  const all = synergyLookup.getHighWinrateCombinations(
-    abilityName,
-    draftPoolNames,
-  )
+  const all = synergyLookup.getHighWinrateCombinations(abilityName, draftPoolNames)
   return splitSynergyPartners(abilityName, all)
 }
 
-function toSynergyPairDisplay(
-  baseName: string,
-  partner: SynergyPartner,
-): SynergyPairDisplay {
+function toSynergyPairDisplay(baseName: string, partner: SynergyPartner): SynergyPairDisplay {
   return {
     ability1DisplayName: baseName,
     ability2DisplayName: partner.partnerDisplayName,
@@ -60,9 +57,7 @@ export function getHeroSynergiesForAbility(
 ): { strong: HeroSynergyDisplay[]; weak: HeroSynergyDisplay[] } {
   const relevant = allHeroSynergies
     .filter(
-      (s) =>
-        s.abilityInternalName === abilityInternalName &&
-        heroesInPool.has(s.heroInternalName),
+      (s) => s.abilityInternalName === abilityInternalName && heroesInPool.has(s.heroInternalName),
     )
     .map((s) => ({
       heroDisplayName: s.heroDisplayName,

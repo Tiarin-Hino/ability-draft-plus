@@ -34,11 +34,12 @@ export function DashboardPage() {
   const activeResolutionSource = useAppStore((s) => s.activeResolutionSource)
   const scraperLastUpdated = useAppStore((s) => s.scraperLastUpdated)
 
-  const overlayValue = overlayActive && activeResolution
-    ? `${tc('status.active')} · ${activeResolution}`
-    : overlayActive
-      ? tc('status.active')
-      : tc('status.idle')
+  const overlayValue =
+    overlayActive && activeResolution
+      ? `${tc('status.active')} · ${activeResolution}`
+      : overlayActive
+        ? tc('status.active')
+        : tc('status.idle')
 
   return (
     <div className="space-y-6">

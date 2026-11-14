@@ -3,10 +3,7 @@ import type { StoreApi } from 'zustand/vanilla'
 import type { DraftStore } from '../store/draft-store'
 import type { WindowManager } from './window-manager'
 import type { StreamServerService } from './stream-server-service'
-import {
-  resolveOwnRowFromOcr,
-  heroNameToken,
-} from '@core/domain/own-row-detection'
+import { resolveOwnRowFromOcr, heroNameToken } from '@core/domain/own-row-detection'
 
 // @DEV-GUIDE: Auto "My Spot" + "My Model" selection from GSI while PLAYING (not
 // spectating) — the automated replacement for the overlay's manual buttons (which
@@ -165,9 +162,7 @@ export function createSpotDetectionService(
     if (!connected || !npcName) return
 
     const token = heroNameToken(npcName)
-    const model = state.identifiedHeroModelsCache.find(
-      (m) => heroNameToken(m.heroName) === token,
-    )
+    const model = state.identifiedHeroModelsCache.find((m) => heroNameToken(m.heroName) === token)
     if (!model || model.dbHeroId === null) {
       logger.warn('GSI reported a picked model outside the identified pool', {
         npcName,

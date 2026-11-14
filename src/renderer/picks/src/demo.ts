@@ -11,23 +11,91 @@ const HERO_SETS: Array<{
   abilities: [string, string, string]
   ultimate: string
 }> = [
-  { npc: 'pudge', display: 'Pudge', abilities: ['pudge_meat_hook', 'pudge_rot', 'pudge_flesh_heap'], ultimate: 'pudge_dismember' },
-  { npc: 'lich', display: 'Lich', abilities: ['lich_frost_nova', 'lich_frost_shield', 'lich_sinister_gaze'], ultimate: 'lich_chain_frost' },
-  { npc: 'sand_king', display: 'Sand King', abilities: ['sandking_burrowstrike', 'sandking_sand_storm', 'sandking_scorpion_strike'], ultimate: 'sandking_epicenter' },
-  { npc: 'oracle', display: 'Oracle', abilities: ['oracle_fortunes_end', 'oracle_fates_edict', 'oracle_purifying_flames'], ultimate: 'oracle_false_promise' },
-  { npc: 'kunkka', display: 'Kunkka', abilities: ['kunkka_torrent', 'kunkka_tidebringer', 'kunkka_x_marks_the_spot'], ultimate: 'kunkka_ghostship' },
-  { npc: 'luna', display: 'Luna', abilities: ['luna_lucent_beam', 'luna_moon_glaive', 'luna_lunar_orbit'], ultimate: 'luna_eclipse' },
-  { npc: 'slark', display: 'Slark', abilities: ['slark_dark_pact', 'slark_pounce', 'slark_essence_shift'], ultimate: 'slark_shadow_dance' },
-  { npc: 'venomancer', display: 'Venomancer', abilities: ['venomancer_venomous_gale', 'venomancer_poison_sting', 'venomancer_plague_ward'], ultimate: 'venomancer_noxious_plague' },
-  { npc: 'tidehunter', display: 'Tidehunter', abilities: ['tidehunter_gush', 'tidehunter_kraken_shell', 'tidehunter_anchor_smash'], ultimate: 'tidehunter_ravage' },
-  { npc: 'brewmaster', display: 'Brewmaster', abilities: ['brewmaster_thunder_clap', 'brewmaster_cinder_brew', 'brewmaster_drunken_brawler'], ultimate: 'brewmaster_primal_split' },
-  { npc: 'ursa', display: 'Ursa', abilities: ['ursa_earthshock', 'ursa_overpower', 'ursa_fury_swipes'], ultimate: 'ursa_enrage' },
-  { npc: 'warlock', display: 'Warlock', abilities: ['warlock_fatal_bonds', 'warlock_shadow_word', 'warlock_upheaval'], ultimate: 'warlock_rain_of_chaos' },
+  {
+    npc: 'pudge',
+    display: 'Pudge',
+    abilities: ['pudge_meat_hook', 'pudge_rot', 'pudge_flesh_heap'],
+    ultimate: 'pudge_dismember',
+  },
+  {
+    npc: 'lich',
+    display: 'Lich',
+    abilities: ['lich_frost_nova', 'lich_frost_shield', 'lich_sinister_gaze'],
+    ultimate: 'lich_chain_frost',
+  },
+  {
+    npc: 'sand_king',
+    display: 'Sand King',
+    abilities: ['sandking_burrowstrike', 'sandking_sand_storm', 'sandking_scorpion_strike'],
+    ultimate: 'sandking_epicenter',
+  },
+  {
+    npc: 'oracle',
+    display: 'Oracle',
+    abilities: ['oracle_fortunes_end', 'oracle_fates_edict', 'oracle_purifying_flames'],
+    ultimate: 'oracle_false_promise',
+  },
+  {
+    npc: 'kunkka',
+    display: 'Kunkka',
+    abilities: ['kunkka_torrent', 'kunkka_tidebringer', 'kunkka_x_marks_the_spot'],
+    ultimate: 'kunkka_ghostship',
+  },
+  {
+    npc: 'luna',
+    display: 'Luna',
+    abilities: ['luna_lucent_beam', 'luna_moon_glaive', 'luna_lunar_orbit'],
+    ultimate: 'luna_eclipse',
+  },
+  {
+    npc: 'slark',
+    display: 'Slark',
+    abilities: ['slark_dark_pact', 'slark_pounce', 'slark_essence_shift'],
+    ultimate: 'slark_shadow_dance',
+  },
+  {
+    npc: 'venomancer',
+    display: 'Venomancer',
+    abilities: ['venomancer_venomous_gale', 'venomancer_poison_sting', 'venomancer_plague_ward'],
+    ultimate: 'venomancer_noxious_plague',
+  },
+  {
+    npc: 'tidehunter',
+    display: 'Tidehunter',
+    abilities: ['tidehunter_gush', 'tidehunter_kraken_shell', 'tidehunter_anchor_smash'],
+    ultimate: 'tidehunter_ravage',
+  },
+  {
+    npc: 'brewmaster',
+    display: 'Brewmaster',
+    abilities: ['brewmaster_thunder_clap', 'brewmaster_cinder_brew', 'brewmaster_drunken_brawler'],
+    ultimate: 'brewmaster_primal_split',
+  },
+  {
+    npc: 'ursa',
+    display: 'Ursa',
+    abilities: ['ursa_earthshock', 'ursa_overpower', 'ursa_fury_swipes'],
+    ultimate: 'ursa_enrage',
+  },
+  {
+    npc: 'warlock',
+    display: 'Warlock',
+    abilities: ['warlock_fatal_bonds', 'warlock_shadow_word', 'warlock_upheaval'],
+    ultimate: 'warlock_rain_of_chaos',
+  },
 ]
 
 const PLAYER_NAMES = [
-  'Aurora', 'Blitz', 'Cinder', 'Drifter', 'Ember',
-  'Frost', 'Gale', 'Havoc', 'Iris', 'Jolt',
+  'Aurora',
+  'Blitz',
+  'Cinder',
+  'Drifter',
+  'Ember',
+  'Frost',
+  'Gale',
+  'Havoc',
+  'Iris',
+  'Jolt',
 ]
 
 function titleCase(internal: string): string {

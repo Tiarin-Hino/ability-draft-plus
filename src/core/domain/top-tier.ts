@@ -42,9 +42,7 @@ export function determineTopTierEntities(
     // Also remove ultimate synergy partners
     const nonUltimateSynergies = new Set<string>()
     for (const partnerName of effectiveSynergyPartners) {
-      const partnerEntity = allScoredEntities.find(
-        (e) => e.internalName === partnerName,
-      )
+      const partnerEntity = allScoredEntities.find((e) => e.internalName === partnerName)
       if (
         partnerEntity &&
         !partnerEntity.isUltimateFromCoordSource &&
@@ -59,10 +57,7 @@ export function determineTopTierEntities(
   // Step 2: Extract synergy suggestions first
   const synergySuggestions: TopTierEntity[] = []
   entitiesToConsider = entitiesToConsider.filter((entity) => {
-    if (
-      entity.entityType === 'ability' &&
-      effectiveSynergyPartners.has(entity.internalName)
-    ) {
+    if (entity.entityType === 'ability' && effectiveSynergyPartners.has(entity.internalName)) {
       synergySuggestions.push({
         ...entity,
         isSynergySuggestionForMySpot: true,
@@ -73,9 +68,7 @@ export function determineTopTierEntities(
     return true
   })
   synergySuggestions.sort((a, b) => b.consolidatedScore - a.consolidatedScore)
-  finalTopTier.push(
-    ...synergySuggestions.slice(0, NUM_TOP_TIER_SUGGESTIONS),
-  )
+  finalTopTier.push(...synergySuggestions.slice(0, NUM_TOP_TIER_SUGGESTIONS))
 
   // Step 3: Curated role must-picks get guaranteed slots (that guarantee is
   // their entire mechanism — the stats already voted against them). A curated
@@ -98,10 +91,7 @@ export function determineTopTierEntities(
   })
   curatedSuggestions.sort((a, b) => b.consolidatedScore - a.consolidatedScore)
   finalTopTier.push(
-    ...curatedSuggestions.slice(
-      0,
-      Math.max(0, NUM_TOP_TIER_SUGGESTIONS - finalTopTier.length),
-    ),
+    ...curatedSuggestions.slice(0, Math.max(0, NUM_TOP_TIER_SUGGESTIONS - finalTopTier.length)),
   )
 
   // Step 4: Fill remaining slots with general top picks
@@ -111,9 +101,7 @@ export function determineTopTierEntities(
 
     // When a hero model is selected, only suggest abilities (not hero models) as general picks
     if (selectedModelId !== null) {
-      generalCandidates = generalCandidates.filter(
-        (e) => e.entityType === 'ability',
-      )
+      generalCandidates = generalCandidates.filter((e) => e.entityType === 'ability')
     }
 
     const generalTopPicks = generalCandidates

@@ -310,10 +310,7 @@ export function parseHeroMeta(json: unknown): Map<string, HeroMeta> | null {
     if (typeof entry !== 'object' || entry === null) continue
     const e = entry as Record<string, unknown>
     const meta: HeroMeta = {
-      attackType:
-        e.attackType === 'Melee' || e.attackType === 'Ranged'
-          ? e.attackType
-          : undefined,
+      attackType: e.attackType === 'Melee' || e.attackType === 'Ranged' ? e.attackType : undefined,
       primaryAttr:
         e.primaryAttr === 'str' ||
         e.primaryAttr === 'agi' ||

@@ -294,7 +294,6 @@ body:has(.bg-dark) {
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
 
-
 .demo-badge {
   align-self: center;
   padding: 0.1rem 0.5rem;
@@ -375,8 +374,12 @@ body:has(.bg-dark) {
   content: '';
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(180deg, rgba(16, 20, 26, 0.62) 0%, rgba(10, 13, 17, 0.68) 45%, rgba(6, 8, 11, 0.78) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(16, 20, 26, 0.62) 0%,
+    rgba(10, 13, 17, 0.68) 45%,
+    rgba(6, 8, 11, 0.78) 100%
+  );
   clip-path: polygon(3.5% 0, 96.5% 0, 100% 100%, 0 100%);
   border-bottom: 3px solid rgba(201, 163, 76, 0.35);
   z-index: -1;
@@ -748,12 +751,22 @@ body:has(.bg-dark) {
 }
 .team-accent-radiant .card-shade {
   background:
-    linear-gradient(90deg, rgba(9, 12, 15, 0.94) 32%, rgba(9, 12, 15, 0.55) 70%, rgba(9, 12, 15, 0.25) 100%),
+    linear-gradient(
+      90deg,
+      rgba(9, 12, 15, 0.94) 32%,
+      rgba(9, 12, 15, 0.55) 70%,
+      rgba(9, 12, 15, 0.25) 100%
+    ),
     linear-gradient(0deg, rgba(23, 46, 22, 0.35), transparent 60%);
 }
 .team-accent-dire .card-shade {
   background:
-    linear-gradient(270deg, rgba(9, 12, 15, 0.94) 32%, rgba(9, 12, 15, 0.55) 70%, rgba(9, 12, 15, 0.25) 100%),
+    linear-gradient(
+      270deg,
+      rgba(9, 12, 15, 0.94) 32%,
+      rgba(9, 12, 15, 0.55) 70%,
+      rgba(9, 12, 15, 0.25) 100%
+    ),
     linear-gradient(0deg, rgba(52, 18, 14, 0.35), transparent 60%);
 }
 

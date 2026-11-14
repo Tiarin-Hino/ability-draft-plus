@@ -55,10 +55,7 @@ function intParam(
   return Math.min(limits.max, Math.max(limits.min, value))
 }
 
-export function parseStripOptions(
-  params: URLSearchParams,
-  team: StreamTeam,
-): StripOptions {
+export function parseStripOptions(params: URLSearchParams, team: StreamTeam): StripOptions {
   const bg = params.get('bg')
   const align = params.get('align')
   return {
@@ -74,11 +71,7 @@ export function parseStripOptions(
 }
 
 /** Build a strip URL with only the non-default options as params. */
-export function buildStripUrl(
-  origin: string,
-  team: StreamTeam,
-  options: StripOptions,
-): string {
+export function buildStripUrl(origin: string, team: StreamTeam, options: StripOptions): string {
   const params = new URLSearchParams({ team })
   if (options.bg) params.set('bg', options.bg)
   if (!options.names) params.set('names', '0')

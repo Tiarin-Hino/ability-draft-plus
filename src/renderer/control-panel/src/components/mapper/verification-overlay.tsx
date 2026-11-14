@@ -48,13 +48,7 @@ function SlotRects({
   )
 }
 
-function SlotDots({
-  slots,
-  color,
-}: {
-  slots: SlotCoordinate[]
-  color: string
-}) {
+function SlotDots({ slots, color }: { slots: SlotCoordinate[]; color: string }) {
   return (
     <>
       {slots.map((slot, i) => (
@@ -91,16 +85,10 @@ export function VerificationOverlay({ layout }: VerificationOverlayProps) {
         />
       )}
       {layout.heroes_coords && (
-        <SlotDots
-          slots={layout.heroes_coords}
-          color={STROKE_COLORS.heroes}
-        />
+        <SlotDots slots={layout.heroes_coords} color={STROKE_COLORS.heroes} />
       )}
       {layout.selected_abilities_coords && (
-        <SlotDots
-          slots={layout.selected_abilities_coords}
-          color={STROKE_COLORS.selected}
-        />
+        <SlotDots slots={layout.selected_abilities_coords} color={STROKE_COLORS.selected} />
       )}
     </>
   )

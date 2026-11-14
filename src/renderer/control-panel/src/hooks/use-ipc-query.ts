@@ -38,7 +38,9 @@ export function useIpcQuery<K extends keyof IpcInvokeMap>(
         }
       })
 
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channel, fetchKey])
 

@@ -5,14 +5,8 @@
 
 export * from './schema'
 export { createHeroRepository, type HeroRepository } from './repositories/hero-repository'
-export {
-  createAbilityRepository,
-  type AbilityRepository,
-} from './repositories/ability-repository'
-export {
-  createSynergyRepository,
-  type SynergyRepository,
-} from './repositories/synergy-repository'
+export { createAbilityRepository, type AbilityRepository } from './repositories/ability-repository'
+export { createSynergyRepository, type SynergyRepository } from './repositories/synergy-repository'
 export {
   createMetadataRepository,
   type MetadataRepository,

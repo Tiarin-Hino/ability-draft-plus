@@ -191,7 +191,7 @@ export function completeSeats(input: CompleteSeatsInput): CompletedSeats {
     input.local !== null &&
     seats[input.local.seat] === null &&
     !rowTaken(input.local.row) &&
-    (input.local.seat < 5) === (input.local.row < 5)
+    input.local.seat < 5 === input.local.row < 5
   ) {
     seats[input.local.seat] = input.local.row
   }

@@ -37,11 +37,7 @@ function HeroMini({ row }: { row: StreamHeroRow | undefined }) {
       title={picked ? `${name} — ${t('pool.modelPicked')}` : name}
     >
       {row?.portraitPath && !failed ? (
-        <img
-          src={`${apiBase()}${row.portraitPath}`}
-          alt={name}
-          onError={() => setFailed(true)}
-        />
+        <img src={`${apiBase()}${row.portraitPath}`} alt={name} onError={() => setFailed(true)} />
       ) : (
         <span className="pool-hero-mini-fallback">{name.charAt(0)}</span>
       )}

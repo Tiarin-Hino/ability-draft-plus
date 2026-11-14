@@ -111,9 +111,7 @@ export function createBackupService(
     }
   }
 
-  async function restoreBackup(
-    backupPath: string,
-  ): Promise<{ success: boolean; error?: string }> {
+  async function restoreBackup(backupPath: string): Promise<{ success: boolean; error?: string }> {
     const dbPath = getDbPath()
     const tempPath = dbPath + '.restore-temp'
 
@@ -184,9 +182,7 @@ export function createBackupService(
       }
 
       // Sort newest-first
-      backups.sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-      )
+      backups.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
       return backups
     } catch (err) {

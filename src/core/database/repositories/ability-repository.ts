@@ -131,11 +131,7 @@ export function createAbilityRepository(db: SQLJsDatabase): AbilityRepository {
       const detailsMap = new Map<string, AbilityDetail>()
       if (names.length === 0) return detailsMap
 
-      const rows = db
-        .select()
-        .from(abilities)
-        .where(inArray(abilities.name, names))
-        .all()
+      const rows = db.select().from(abilities).where(inArray(abilities.name, names)).all()
 
       for (const row of rows) {
         detailsMap.set(row.name, mapRow(row))
@@ -227,7 +223,12 @@ export function createAbilityRepository(db: SQLJsDatabase): AbilityRepository {
         db
           .select({ name: abilities.name })
           .from(abilities)
-          .where(inArray(abilities.name, entries.map((e) => e.name)))
+          .where(
+            inArray(
+              abilities.name,
+              entries.map((e) => e.name),
+            ),
+          )
           .all()
           .map((row) => row.name),
       )
@@ -248,7 +249,12 @@ export function createAbilityRepository(db: SQLJsDatabase): AbilityRepository {
         db
           .select({ windrunId: abilities.windrunId })
           .from(abilities)
-          .where(inArray(abilities.windrunId, shifts.map((s) => s.windrunId)))
+          .where(
+            inArray(
+              abilities.windrunId,
+              shifts.map((s) => s.windrunId),
+            ),
+          )
           .all()
           .map((row) => row.windrunId),
       )

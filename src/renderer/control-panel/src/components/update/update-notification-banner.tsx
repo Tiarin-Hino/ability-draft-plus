@@ -17,9 +17,7 @@ export function UpdateNotificationBanner() {
     <div className="border-b bg-muted/50 px-4 py-2 flex items-center gap-3" role="alert">
       {updateStatus === 'available' && (
         <>
-          <span className="text-sm flex-1">
-            {t('available', { version: updateVersion })}
-          </span>
+          <span className="text-sm flex-1">{t('available', { version: updateVersion })}</span>
           <Button
             size="sm"
             variant="outline"
@@ -35,21 +33,14 @@ export function UpdateNotificationBanner() {
         <>
           <span className="text-sm">{t('downloading')}</span>
           <Progress value={updateProgress ?? 0} className="flex-1 h-2" />
-          <span className="text-sm text-muted-foreground">
-            {Math.round(updateProgress ?? 0)}%
-          </span>
+          <span className="text-sm text-muted-foreground">{Math.round(updateProgress ?? 0)}%</span>
         </>
       )}
 
       {updateStatus === 'downloaded' && (
         <>
-          <span className="text-sm flex-1">
-            {t('readyToInstall', { version: updateVersion })}
-          </span>
-          <Button
-            size="sm"
-            onClick={() => window.electronApi.send('app:installUpdate')}
-          >
+          <span className="text-sm flex-1">{t('readyToInstall', { version: updateVersion })}</span>
+          <Button size="sm" onClick={() => window.electronApi.send('app:installUpdate')}>
             <RefreshCw className="h-4 w-4 mr-1" aria-hidden="true" />
             {t('installButton')}
           </Button>

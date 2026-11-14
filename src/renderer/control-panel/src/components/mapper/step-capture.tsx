@@ -94,10 +94,7 @@ export function StepCapture({
               className="hidden"
               onChange={handleFileUpload}
             />
-            <Button
-              variant="outline"
-              onClick={() => fileInputRef.current?.click()}
-            >
+            <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
               <Upload className="h-4 w-4 mr-2" />
               {t('mapper.capture.uploadButton')}
             </Button>

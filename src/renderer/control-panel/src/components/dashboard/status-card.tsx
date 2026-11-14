@@ -42,7 +42,10 @@ export function StatusCard({ icon: Icon, label, value, color, badge, detail }: S
             )}
           </div>
           <div className="flex items-center gap-1.5">
-            <span className={cn('h-2 w-2 rounded-full shrink-0', dotMap[color])} aria-hidden="true" />
+            <span
+              className={cn('h-2 w-2 rounded-full shrink-0', dotMap[color])}
+              aria-hidden="true"
+            />
             <p className={cn('text-sm truncate', colorMap[color])}>{value}</p>
           </div>
           {detail && (

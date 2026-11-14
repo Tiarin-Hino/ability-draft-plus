@@ -436,7 +436,9 @@ export function createOcrService(
         poolScoped: scoped,
         reads: reads.map((r) => r.text.replace(/\n/g, ' | ').trim()),
         ...(unscoped !== null && unscoped.similarity >= OCR_MIN_SIMILARITY
-          ? { unscoped: { name: unscoped.name, similarity: Number(unscoped.similarity.toFixed(3)) } }
+          ? {
+              unscoped: { name: unscoped.name, similarity: Number(unscoped.similarity.toFixed(3)) },
+            }
           : {}),
         ...(dump !== null ? { strip: dump } : {}),
       })
@@ -475,9 +477,7 @@ export function createOcrService(
         text: (read?.text ?? '').replace(/\n/g, ' | ').slice(0, 120),
       })
       // The pre-pick card is expected to resolve to nothing
-      const dump = noHero
-        ? null
-        : await dumpUnresolvedStrip(row, png, hash, read?.text ?? '', best)
+      const dump = noHero ? null : await dumpUnresolvedStrip(row, png, hash, read?.text ?? '', best)
       record(null, best?.similarity ?? null, dump, unscopedBest)
       return
     }
@@ -520,10 +520,7 @@ export function createOcrService(
    * for this recognize and restored after (tesseract is not reentrant, so the
    * queue guarantees no interleaving).
    */
-  async function recognizeCountdown(
-    png: Buffer,
-    capturedAtMs: number,
-  ): Promise<void> {
+  async function recognizeCountdown(png: Buffer, capturedAtMs: number): Promise<void> {
     if (disposed) return
     const hash = createHash('md5').update(png).digest('hex')
     if (lastCountdownHash === hash) return // countdown unchanged since last read

@@ -52,9 +52,7 @@ export function createLayoutService(): LayoutService {
   function loadConfig(): LayoutCoordinatesConfig {
     if (config) return config
 
-    const basePath = app.isPackaged
-      ? process.resourcesPath
-      : join(app.getAppPath(), 'resources')
+    const basePath = app.isPackaged ? process.resourcesPath : join(app.getAppPath(), 'resources')
     const configPath = join(basePath, 'config', 'layout_coordinates.json')
 
     logger.info('Loading layout coordinates', { path: configPath })
@@ -150,7 +148,13 @@ export function createLayoutService(): LayoutService {
           const baseLayout = loadConfig().resolutions[baseKey]
           if (baseLayout) {
             logger.info('Auto-scaling layout', { resolution, base: baseKey, family })
-            return scaleCoordinates(baseLayout, parsed.width, parsed.height, base.width, base.height)
+            return scaleCoordinates(
+              baseLayout,
+              parsed.width,
+              parsed.height,
+              base.width,
+              base.height,
+            )
           }
         }
       }
@@ -184,12 +188,10 @@ export function createLayoutService(): LayoutService {
       const custom = Object.keys(loadCustomLayouts())
       const allKeys = new Set([...presets, ...custom])
 
-      return [...allKeys]
-        .sort()
-        .map((resolution) => ({
-          resolution,
-          source: this.getLayoutSource(resolution),
-        }))
+      return [...allKeys].sort().map((resolution) => ({
+        resolution,
+        source: this.getLayoutSource(resolution),
+      }))
     },
 
     saveCustomLayout(resolution: string, layout: ResolutionLayout, method: string): void {

@@ -54,9 +54,7 @@ export interface TurnWindow {
 }
 
 /** Full serpentine schedule; offsets in seconds from the pick-phase anchor (clock 0). */
-export function buildTurnSchedule(
-  config: DraftClockConfig = DEFAULT_AD_DRAFT_CLOCK,
-): TurnWindow[] {
+export function buildTurnSchedule(config: DraftClockConfig = DEFAULT_AD_DRAFT_CLOCK): TurnWindow[] {
   const forward = interleavedOrder(config.playerCount)
   const backward = [...forward].reverse()
 
@@ -83,13 +81,8 @@ export function buildTurnSchedule(
 }
 
 /** The turn active at `elapsedS` (seconds since clock zero), or null (break / over / preview). */
-export function turnAt(
-  elapsedS: number,
-  schedule: TurnWindow[],
-): TurnWindow | null {
-  return (
-    schedule.find((w) => elapsedS >= w.startS && elapsedS < w.endS) ?? null
-  )
+export function turnAt(elapsedS: number, schedule: TurnWindow[]): TurnWindow | null {
+  return schedule.find((w) => elapsedS >= w.startS && elapsedS < w.endS) ?? null
 }
 
 /** Turns that fully ENDED inside (fromS, toS] — players whose pick should now be visible. */
@@ -139,10 +132,7 @@ export function countdownTargetRow(input: {
  * True when `elapsedS` falls in a between-rounds break (or past the final turn) —
  * the moments a full-pool reconciliation rescan is safe and cheap to run.
  */
-export function isRoundBreak(
-  elapsedS: number,
-  schedule: TurnWindow[],
-): boolean {
+export function isRoundBreak(elapsedS: number, schedule: TurnWindow[]): boolean {
   if (schedule.length === 0) return false
   const last = schedule[schedule.length - 1]
   if (elapsedS >= last.endS) return true
