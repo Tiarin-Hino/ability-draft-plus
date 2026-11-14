@@ -60,6 +60,12 @@ test-results/
 .claude/settings.local.json
 .claude/instructions.md
 .claude/plans/
+.claude/launch.json
+.claude/scheduled_tasks.lock
+.claude/worktrees/
+
+# Local-only Antigravity handover/private rules (keep shared AGENTS.md & .agents/skills/ tracked)
+.agents/rules/
 
 # Colab
 colab/**

@@ -24,6 +24,7 @@ export default tseslint.config(
       'node_modules/',
       'scripts/',
       '.claude/',
+      '.agents/',
       // twitch/ packages lint themselves (own package.json + config)
       'twitch/**/dist/',
       'twitch/**/.aws-sam/',
