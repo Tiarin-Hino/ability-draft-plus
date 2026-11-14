@@ -142,25 +142,32 @@ export function connect(twitch: TwitchExt, ebs: EbsClient, manifestUrl: string):
   twitch.listen('broadcast', onBroadcast)
 
   const timer = window.setInterval(() => {
+    const hasBuffered = buffer.size() > 0 || liveBuffer.size() > 0
     const now = Date.now()
-    const latency = store.getState().context.latencySec
-    for (const compact of buffer.drain(now, latency)) apply(compact)
-    for (const live of liveBuffer.drain(now, latency)) store.getState().applyLive(live)
+    if (!hasBuffered && (lastMessageAt === 0 || now - lastMessageAt <= STALE_AFTER_MS)) {
+      return
+    }
     const state = store.getState()
+    if (hasBuffered) {
+      const latency = state.context.latencySec
+      for (const compact of buffer.drain(now, latency)) apply(compact)
+      for (const live of liveBuffer.drain(now, latency)) state.applyLive(live)
+    }
     // Silence only means "signal lost" while the board is meant to be CHANGING.
     // During a game the draft board is a finished snapshot and the app sends
     // nothing unless it is a caster streaming telemetry, so flagging that as
     // lost signal told every playing streamer their extension had broken
     // 90 seconds into every match (observed 2026-09-04).
+    const next = store.getState()
     if (
-      state.connection === 'live' &&
-      state.compact &&
-      state.compact.p === 'drafting' &&
+      next.connection === 'live' &&
+      next.compact &&
+      next.compact.p === 'drafting' &&
       lastMessageAt > 0 &&
       now - lastMessageAt > STALE_AFTER_MS &&
       buffer.size() === 0
     ) {
-      state.setConnection('stale')
+      next.setConnection('stale')
     }
   }, TICK_MS)
 

@@ -4,6 +4,8 @@ import {
   type TwitchPickRef,
   type TwitchPlayerRow,
   type TwitchPoolIndex,
+  type TwitchRichAbility,
+  type TwitchRichHero,
   type TwitchRichState,
 } from '@shared/types/twitch'
 import type { Catalog } from './catalog-types'
@@ -32,30 +34,108 @@ export interface PoolSlot {
   heroCdn: string | null
 }
 
-export function poolSlots(compact: TwitchCompactState | null): PoolSlot[] {
-  if (!compact?.pool) return []
+interface CompactIndex {
+  slots: PoolSlot[]
+  byIndex: Map<TwitchPoolIndex, PoolSlot>
+  byName: Map<string, PoolSlot>
+  pickedByIndex: Map<TwitchPoolIndex, number>
+  pickedByName: Map<string, number>
+  pickedByRaw: Map<string, number>
+}
+
+interface RichIndex {
+  abilityByIndex: Map<TwitchPoolIndex, TwitchRichAbility>
+  abilityByName: Map<string, TwitchRichAbility>
+  heroByOrder: Map<number, TwitchRichHero>
+  heroByCdn: Map<string, TwitchRichHero>
+}
+
+const compactIndexCache = new WeakMap<TwitchCompactState, CompactIndex>()
+const richIndexCache = new WeakMap<TwitchRichState, RichIndex>()
+
+function getCompactIndex(compact: TwitchCompactState): CompactIndex {
+  const cached = compactIndexCache.get(compact)
+  if (cached) return cached
+
   const slots: PoolSlot[] = []
-  compact.pool.forEach((row, heroOrder) => {
+  const byIndex = new Map<TwitchPoolIndex, PoolSlot>()
+  const byName = new Map<string, PoolSlot>()
+
+  compact.pool?.forEach((row, heroOrder) => {
     row[1].forEach((name, k) => {
-      slots.push({
+      const slot: PoolSlot = {
         i: poolIndex(heroOrder, k),
         heroOrder,
         k,
         name,
         picked: (row[2] & (1 << k)) !== 0,
         heroCdn: row[0],
-      })
+      }
+      slots.push(slot)
+      byIndex.set(slot.i, slot)
+      if (name && !byName.has(name)) byName.set(name, slot)
     })
   })
-  return slots
+
+  const pickedByIndex = new Map<TwitchPoolIndex, number>()
+  const pickedByName = new Map<string, number>()
+  const pickedByRaw = new Map<string, number>()
+
+  compact.players?.forEach((row, playerIndex) => {
+    for (const pick of row[1]) {
+      if (pick === null) continue
+      if (typeof pick === 'number') {
+        if (!pickedByIndex.has(pick)) pickedByIndex.set(pick, playerIndex)
+        const resolved = byIndex.get(pick)?.name
+        if (resolved && !pickedByName.has(resolved)) pickedByName.set(resolved, playerIndex)
+      } else {
+        if (!pickedByRaw.has(pick)) pickedByRaw.set(pick, playerIndex)
+        if (pick !== '' && !pickedByName.has(pick)) pickedByName.set(pick, playerIndex)
+      }
+    }
+  })
+
+  const idx: CompactIndex = { slots, byIndex, byName, pickedByIndex, pickedByName, pickedByRaw }
+  compactIndexCache.set(compact, idx)
+  return idx
+}
+
+function getRichIndex(rich: TwitchRichState): RichIndex {
+  const cached = richIndexCache.get(rich)
+  if (cached) return cached
+
+  const abilityByIndex = new Map<TwitchPoolIndex, TwitchRichAbility>()
+  const abilityByName = new Map<string, TwitchRichAbility>()
+  for (const a of rich.abilities) {
+    if (!abilityByIndex.has(a.i)) abilityByIndex.set(a.i, a)
+    if (!abilityByName.has(a.n)) abilityByName.set(a.n, a)
+  }
+
+  const heroByOrder = new Map<number, TwitchRichHero>()
+  const heroByCdn = new Map<string, TwitchRichHero>()
+  for (const h of rich.heroes) {
+    if (!heroByOrder.has(h.i)) heroByOrder.set(h.i, h)
+    if (h.cdn !== null && !heroByCdn.has(h.cdn)) heroByCdn.set(h.cdn, h)
+  }
+
+  const idx: RichIndex = { abilityByIndex, abilityByName, heroByOrder, heroByCdn }
+  richIndexCache.set(rich, idx)
+  return idx
+}
+
+export function poolSlots(compact: TwitchCompactState | null): PoolSlot[] {
+  if (!compact?.pool) return []
+  return getCompactIndex(compact).slots
 }
 
 export function slotByIndex(compact: TwitchCompactState | null, i: TwitchPoolIndex): PoolSlot | null {
-  return poolSlots(compact).find((s) => s.i === i) ?? null
+  if (!compact?.pool) return null
+  return getCompactIndex(compact).byIndex.get(i) ?? null
 }
 
 export function slotByName(compact: TwitchCompactState | null, name: string): PoolSlot | null {
-  return poolSlots(compact).find((s) => s.name === name) ?? null
+  if (!compact?.pool) return null
+  return getCompactIndex(compact).byName.get(name) ?? null
 }
 
 export function isModelPicked(compact: TwitchCompactState | null, heroOrder: number): boolean {
@@ -77,15 +157,14 @@ export function playerRows(compact: TwitchCompactState | null): TwitchPlayerRow[
 /** Player index who holds this ability (by pool index or raw name), or null. */
 export function pickedBy(compact: TwitchCompactState | null, ref: TwitchPickRef | string): number | null {
   if (!compact?.players) return null
-  const name = typeof ref === 'string' ? ref : slotByIndex(compact, ref)?.name
-  for (const [playerIndex, row] of compact.players.entries()) {
-    for (const pick of row[1]) {
-      if (pick === null) continue
-      if (pick === ref) return playerIndex
-      if (name && refName(compact, pick) === name) return playerIndex
-    }
+  const idx = getCompactIndex(compact)
+  if (typeof ref === 'string') {
+    if (ref === '') return idx.pickedByRaw.get('') ?? null
+    return idx.pickedByName.get(ref) ?? null
   }
-  return null
+  const name = idx.byIndex.get(ref)?.name
+  if (name) return idx.pickedByName.get(name) ?? idx.pickedByIndex.get(ref) ?? null
+  return idx.pickedByIndex.get(ref) ?? null
 }
 
 export interface PlayerModel {
@@ -120,14 +199,25 @@ export function displayName(
   fallbackIndex?: TwitchPoolIndex,
 ): string {
   if (name === null) return 'Unknown ability'
-  const fromRich =
-    rich?.abilities.find((a) => a.n === name || (fallbackIndex !== undefined && a.i === fallbackIndex))?.dn
+  let fromRich: string | undefined
+  if (rich) {
+    const idx = getRichIndex(rich)
+    fromRich =
+      idx.abilityByName.get(name)?.dn ??
+      (fallbackIndex !== undefined ? idx.abilityByIndex.get(fallbackIndex)?.dn : undefined)
+  }
   return fromRich ?? catalog?.abilities[name]?.n ?? titleCase(name)
 }
 
 export function heroDisplayName(rich: TwitchRichState | null, catalog: Catalog | null, cdn: string | null, heroOrder?: number): string {
   if (cdn === null && heroOrder === undefined) return 'Unknown hero'
-  const fromRich = rich?.heroes.find((h) => (heroOrder !== undefined && h.i === heroOrder) || (cdn !== null && h.cdn === cdn))?.dn
+  let fromRich: string | null | undefined
+  if (rich) {
+    const idx = getRichIndex(rich)
+    fromRich =
+      (heroOrder !== undefined ? idx.heroByOrder.get(heroOrder)?.dn : undefined) ??
+      (cdn !== null ? idx.heroByCdn.get(cdn)?.dn : undefined)
+  }
   if (fromRich) return fromRich
   if (cdn && catalog?.heroes[cdn]) return catalog.heroes[cdn].n
   return cdn ? titleCase(cdn, false) : 'Unknown hero'
@@ -157,13 +247,14 @@ export function partnersInPool(
   const strong: Partner[] = []
   const weak: Partner[] = []
   if (!rich) return { strong, weak }
+  const richIdx = getRichIndex(rich)
   for (const [a, b, wr, inc] of rich.pairs) {
     if (a !== i && b !== i) continue
     const partnerIndex = a === i ? b : a
     const slot = slotByIndex(compact, partnerIndex)
     const entry: Partner = {
       i: partnerIndex,
-      name: slot?.name ?? rich.abilities.find((x) => x.i === partnerIndex)?.n ?? null,
+      name: slot?.name ?? richIdx.abilityByIndex.get(partnerIndex)?.n ?? null,
       wr,
       increase: inc,
       inPool: slot ? !slot.picked : false,
@@ -192,11 +283,12 @@ export function heroPartnersForAbility(
   i: TwitchPoolIndex,
 ): HeroPartner[] {
   if (!rich) return []
+  const richIdx = getRichIndex(rich)
   return rich.heroPairs
     .filter(([, ability]) => ability === i)
     .map(([heroOrder, , wr, inc]) => ({
       heroOrder,
-      cdn: compact?.pool?.[heroOrder]?.[0] ?? rich.heroes.find((h) => h.i === heroOrder)?.cdn ?? null,
+      cdn: compact?.pool?.[heroOrder]?.[0] ?? richIdx.heroByOrder.get(heroOrder)?.cdn ?? null,
       wr,
       increase: inc,
       modelPicked: isModelPicked(compact, heroOrder),
@@ -211,13 +303,14 @@ export function abilityPartnersForHero(
   heroOrder: number,
 ): Partner[] {
   if (!rich) return []
+  const richIdx = getRichIndex(rich)
   return rich.heroPairs
     .filter(([row]) => row === heroOrder)
     .map(([, i, wr, inc]) => {
       const slot = slotByIndex(compact, i)
       return {
         i,
-        name: slot?.name ?? rich.abilities.find((x) => x.i === i)?.n ?? null,
+        name: slot?.name ?? richIdx.abilityByIndex.get(i)?.n ?? null,
         wr,
         increase: inc,
         inPool: slot ? !slot.picked : false,

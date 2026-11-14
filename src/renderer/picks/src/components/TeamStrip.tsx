@@ -14,10 +14,11 @@ import { portraitObjectPosition } from '../portrait-focus'
 
 function AbilityTile({ pick, ult }: { pick: PicksAbility | null; ult: boolean }) {
   const { t } = useTranslation()
-  const [failed, setFailed] = useState(false)
+  const [failedIconPath, setFailedIconPath] = useState<string | null>(null)
   const ultClass = ult ? ' tile-ult' : ''
 
   if (!pick) return <div className={`tile tile-empty${ultClass}`} />
+  const failed = pick.iconPath !== null && failedIconPath === pick.iconPath
   if (pick.isUnknown || !pick.iconPath || failed) {
     return (
       <div
@@ -34,25 +35,18 @@ function AbilityTile({ pick, ult }: { pick: PicksAbility | null; ult: boolean })
       src={`${apiBase()}${pick.iconPath}`}
       alt={pick.displayName}
       title={pick.displayName}
-      onError={() => setFailed(true)}
+      onError={() => setFailedIconPath(pick.iconPath)}
     />
   )
 }
 
-function PlayerRow({
-  player,
-  showName,
-}: {
-  player: PicksPlayer
-  showName: boolean
-}) {
-  const [portraitFailed, setPortraitFailed] = useState(false)
+function PlayerRow({ player, showName }: { player: PicksPlayer; showName: boolean }) {
+  const [failedPortraitPath, setFailedPortraitPath] = useState<string | null>(null)
+  const portraitFailed = player.portraitPath !== null && failedPortraitPath === player.portraitPath
 
   return (
     <div className="player">
-      {showName && player.playerName && (
-        <span className="nameplate">{player.playerName}</span>
-      )}
+      {showName && player.playerName && <span className="nameplate">{player.playerName}</span>}
       <div className="row">
         {player.portraitPath && !portraitFailed ? (
           <img
@@ -61,7 +55,7 @@ function PlayerRow({
             style={{ objectPosition: portraitObjectPosition(player.portraitPath) }}
             alt={player.heroDisplayName ?? ''}
             title={player.heroDisplayName ?? undefined}
-            onError={() => setPortraitFailed(true)}
+            onError={() => setFailedPortraitPath(player.portraitPath)}
           />
         ) : (
           <div className="portrait portrait-unknown">—</div>
@@ -96,11 +90,7 @@ export function TeamStrip({
       }
     >
       {players.map((player) => (
-        <PlayerRow
-          key={player.playerIndex}
-          player={player}
-          showName={options.names}
-        />
+        <PlayerRow key={player.playerIndex} player={player} showName={options.names} />
       ))}
     </div>
   )

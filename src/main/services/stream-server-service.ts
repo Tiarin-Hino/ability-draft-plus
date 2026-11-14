@@ -41,6 +41,7 @@ import type { IconCacheService, IconKind } from './icon-cache-service'
 //                       are the OBS sources, bare /picks is the setup page)
 // - GET /picks/events-> SSE: PicksStateMessage envelopes (payload null until a draft
 //                       has been recorded)
+// - GET/POST /stream/layout -> persisted EditMode transforms (userData/stream-layout.json)
 // - GET /icons/*     -> icon-cache-service (official art, locally cached)
 // - POST /gsi        -> Dota 2 Game State Integration ingest (cfg written by
 //                       gsi-cfg-service). Always answers 200 fast; parsed snapshots
@@ -185,6 +186,37 @@ export function createStreamServerService(
   let picksSnapshotKey = ''
   let picksSaveTimer: NodeJS.Timeout | null = null
   const picksFilePath = join(app.getPath('userData'), 'picks-view.json')
+
+  interface StreamLayoutTransform {
+    x: number
+    y: number
+    s: number
+  }
+  const STREAM_LAYOUT_MAX_BYTES = 65_536
+  let streamLayout: Record<string, StreamLayoutTransform> = {}
+  const streamLayoutFilePath = join(app.getPath('userData'), 'stream-layout.json')
+
+  function parseStreamLayout(raw: unknown): Record<string, StreamLayoutTransform> | null {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
+    const parsed: Record<string, StreamLayoutTransform> = {}
+    for (const [key, val] of Object.entries(raw)) {
+      if (!val || typeof val !== 'object' || Array.isArray(val)) return null
+      const entry = val as { x?: unknown; y?: unknown; s?: unknown }
+      if (
+        typeof entry.x !== 'number' ||
+        !Number.isFinite(entry.x) ||
+        typeof entry.y !== 'number' ||
+        !Number.isFinite(entry.y) ||
+        typeof entry.s !== 'number' ||
+        !Number.isFinite(entry.s) ||
+        entry.s <= 0
+      ) {
+        return null
+      }
+      parsed[key] = { x: entry.x, y: entry.y, s: entry.s }
+    }
+    return parsed
+  }
 
   let gsiSnapshot: GsiSnapshot | null = null
   let gsiLastAt: number | null = null
@@ -363,6 +395,19 @@ export function createStreamServerService(
     })
     .catch(() => {
       // No file yet (or unreadable) — nothing to restore.
+    })
+
+  void fs
+    .readFile(streamLayoutFilePath, 'utf-8')
+    .then((raw) => {
+      const parsed = parseStreamLayout(JSON.parse(raw) as unknown)
+      if (parsed && Object.keys(streamLayout).length === 0) {
+        streamLayout = parsed
+        logger.info('Stream layout restored from disk', { keys: Object.keys(parsed).length })
+      }
+    })
+    .catch(() => {
+      // No layout file yet (or unreadable) — default layout applies.
     })
 
   interface BoardInputs {
@@ -786,11 +831,101 @@ export function createStreamServerService(
     })
   }
 
+  function handleStreamLayoutRequest(req: IncomingMessage, res: ServerResponse): void {
+    const corsHeaders = {
+      'Access-Control-Allow-Origin': '*',
+      'Cache-Control': 'no-store',
+    }
+
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204, {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+      })
+      res.end()
+      return
+    }
+
+    if (req.method === 'GET') {
+      res.writeHead(200, { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' })
+      res.end(JSON.stringify(streamLayout))
+      return
+    }
+
+    if (req.method !== 'POST') {
+      res.writeHead(405, corsHeaders)
+      res.end()
+      return
+    }
+
+    const chunks: Buffer[] = []
+    let size = 0
+    let overflow = false
+
+    req.on('data', (chunk: Buffer) => {
+      size += chunk.length
+      if (size > STREAM_LAYOUT_MAX_BYTES) {
+        overflow = true
+        return
+      }
+      chunks.push(chunk)
+    })
+
+    req.on('end', () => {
+      void (async () => {
+        if (overflow) {
+          res.writeHead(413, corsHeaders)
+          res.end()
+          return
+        }
+        let parsed: Record<string, StreamLayoutTransform> | null = null
+        try {
+          const rawBody = Buffer.concat(chunks).toString('utf-8')
+          parsed = parseStreamLayout(JSON.parse(rawBody) as unknown)
+        } catch {
+          res.writeHead(400, corsHeaders)
+          res.end()
+          return
+        }
+        if (!parsed) {
+          res.writeHead(400, corsHeaders)
+          res.end()
+          return
+        }
+        try {
+          streamLayout = parsed
+          await fs.writeFile(streamLayoutFilePath, JSON.stringify(parsed))
+          res.writeHead(200, { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' })
+          res.end('{"ok":true}')
+        } catch (error) {
+          logger.warn('Stream layout write failed', {
+            error: error instanceof Error ? error.message : String(error),
+          })
+          res.writeHead(500, corsHeaders)
+          res.end()
+        }
+      })()
+    })
+
+    req.on('error', () => {
+      if (!res.writableEnded) {
+        res.writeHead(400, corsHeaders)
+        res.end()
+      }
+    })
+  }
+
   function handleRequest(req: IncomingMessage, res: ServerResponse): void {
     const urlPath = (req.url ?? '/').split('?')[0]
 
     if (req.method === 'POST' && urlPath === '/gsi') {
       handleGsiPost(req, res)
+      return
+    }
+
+    if (urlPath === '/stream/layout') {
+      handleStreamLayoutRequest(req, res)
       return
     }
 

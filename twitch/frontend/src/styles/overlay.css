@@ -6,6 +6,8 @@
 :root {
   --bg-deep: #0b0d11;
   --panel: rgba(18, 21, 27, 0.96);
+  --caster-bg: rgba(11, 13, 17, 0.94);
+  --pick-col-bg: rgba(11, 13, 17, 0.78);
   --panel-border: rgba(255, 255, 255, 0.09);
   --text: #eef1f6;
   --text-dim: #97a0b0;
@@ -17,6 +19,37 @@
   --trap: #d9534f;
   --teal: #3fb8c8;
   --unknown: #e8b93c;
+  --surface-subtle: rgba(255, 255, 255, 0.03);
+  --surface-hover: rgba(255, 255, 255, 0.08);
+  --divider-dotted: rgba(255, 255, 255, 0.08);
+  --art-bg: #1a1e26;
+  --modal-scrim: rgba(0, 0, 0, 0.55);
+  --chip-picked-border: rgba(255, 255, 255, 0.25);
+  --chip-pool-border: rgba(111, 191, 74, 0.4);
+  --chip-new-border: rgba(63, 184, 200, 0.5);
+  --aghs-bg: rgba(63, 184, 200, 0.08);
+  --aghs-border: rgba(63, 184, 200, 0.35);
+  --shard-bg: rgba(201, 163, 76, 0.08);
+  --shard-border: rgba(201, 163, 76, 0.4);
+  --talent-badge-bg: rgba(201, 163, 76, 0.18);
+  --pip-scepter-bg: rgba(88, 160, 255, 0.25);
+  --pip-scepter-fg: #8dc0ff;
+  --pip-shard-bg: rgba(120, 220, 255, 0.2);
+  --pip-shard-fg: #8fe3ff;
+  --pip-dead-bg: rgba(217, 88, 70, 0.2);
+  --pip-bb-bg: rgba(111, 191, 74, 0.22);
+  --pip-bb-cd-bg: rgba(201, 163, 76, 0.18);
+  --pip-bb-none-bg: rgba(255, 255, 255, 0.05);
+  /* Video-reticle outlines always sit on top of Dota video regardless of viewer theme */
+  --hit-gold: #c9a34c;
+  --hit-gold-soft: rgba(201, 163, 76, 0.5);
+  --hit-picked: rgba(255, 255, 255, 0.28);
+  --hit-picked-hover: #cbd5e1;
+  --hit-unknown: rgba(232, 185, 60, 0.5);
+  --hit-strong: #3fb8c8;
+  --hit-weak: #d9534f;
+  --hit-radiant: #6fbf4a;
+  --hit-dire: #d34b3a;
   --picked-opacity: 0.35;
   --font: 'Segoe UI', 'Trebuchet MS', sans-serif;
 }
@@ -170,35 +203,35 @@ button {
   transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
 .hit:hover {
-  border-color: var(--gold);
+  border-color: var(--hit-gold);
 }
 .hit.is-selected {
-  border-color: var(--gold);
-  box-shadow: 0 0 0 2px var(--gold-soft), 0 0 14px var(--gold-soft);
+  border-color: var(--hit-gold);
+  box-shadow: 0 0 0 2px var(--hit-gold-soft), 0 0 14px var(--hit-gold-soft);
 }
 .hit.is-picked {
   border-style: dashed;
-  border-color: rgba(255, 255, 255, 0.25);
+  border-color: var(--hit-picked);
 }
 .hit.is-picked:hover {
-  border-color: var(--text-dim);
+  border-color: var(--hit-picked-hover);
 }
 .hit.is-unknown {
   border-style: dashed;
-  border-color: rgba(232, 185, 60, 0.45);
+  border-color: var(--hit-unknown);
   cursor: default;
 }
 .hit.is-partner-strong {
-  border-color: var(--teal);
+  border-color: var(--hit-strong);
 }
 .hit.is-partner-weak {
-  border-color: var(--trap);
+  border-color: var(--hit-weak);
 }
 .hit-portrait.team-radiant:hover {
-  border-color: var(--radiant);
+  border-color: var(--hit-radiant);
 }
 .hit-portrait.team-dire:hover {
-  border-color: var(--dire);
+  border-color: var(--hit-dire);
 }
 
 /* ---------------- art ---------------- */
@@ -207,7 +240,7 @@ button {
   display: inline-block;
   border-radius: 4px;
   object-fit: cover;
-  background: #1a1e26;
+  background: var(--art-bg);
   flex: none;
 }
 .art-fallback {
@@ -227,7 +260,7 @@ button {
 .details-dock {
   position: absolute;
   top: 6%;
-  z-index: 20;
+  z-index: 28;
   width: 340px;
   max-height: 88%;
   overflow-y: auto;
@@ -260,7 +293,7 @@ button {
 }
 .details-close:hover {
   color: var(--text);
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--surface-hover);
 }
 .details-header {
   display: flex;
@@ -317,11 +350,11 @@ button {
 }
 .chip-pool {
   color: var(--radiant);
-  border-color: rgba(111, 191, 74, 0.4);
+  border-color: var(--chip-pool-border);
 }
 .chip-picked {
   color: var(--text);
-  border-color: rgba(255, 255, 255, 0.25);
+  border-color: var(--chip-picked-border);
 }
 .chip-top {
   color: var(--gold);
@@ -330,7 +363,7 @@ button {
 .chip-new {
   margin-left: 6px;
   color: var(--teal);
-  border-color: rgba(63, 184, 200, 0.5);
+  border-color: var(--chip-new-border);
 }
 
 .stat-grid {
@@ -363,7 +396,7 @@ button {
   justify-content: space-between;
   gap: 8px;
   padding: 2px 0;
-  border-bottom: 1px dotted rgba(255, 255, 255, 0.06);
+  border-bottom: 1px dotted var(--divider-dotted);
 }
 .attrib-row dt {
   color: var(--text-dim);
@@ -380,12 +413,12 @@ button {
   margin-top: 8px;
   padding: 8px 10px;
   border-radius: 8px;
-  border: 1px solid rgba(63, 184, 200, 0.35);
-  background: rgba(63, 184, 200, 0.08);
+  border: 1px solid var(--aghs-border);
+  background: var(--aghs-bg);
 }
 .aghs-shard {
-  border-color: rgba(201, 163, 76, 0.4);
-  background: rgba(201, 163, 76, 0.08);
+  border-color: var(--shard-border);
+  background: var(--shard-bg);
 }
 .aghs-title {
   margin: 0 0 4px;
@@ -429,7 +462,7 @@ button {
   cursor: pointer;
 }
 .partner-row:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--surface-hover);
 }
 .partner-name {
   flex: 1;
@@ -468,7 +501,7 @@ button {
   min-width: 26px;
   padding: 1px 6px;
   border-radius: 999px;
-  background: rgba(201, 163, 76, 0.18);
+  background: var(--talent-badge-bg);
   color: var(--gold);
   text-align: center;
   font-size: 11px;
@@ -490,7 +523,7 @@ button {
   padding: 4px;
   border-radius: 8px;
   border-top: 2px solid var(--radiant);
-  background: rgba(11, 13, 17, 0.75);
+  background: var(--pick-col-bg);
   pointer-events: auto;
 }
 .pick-col.team-dire {
@@ -503,7 +536,7 @@ button {
   padding: 0;
   border: 1px solid var(--panel-border);
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--surface-subtle);
   cursor: pointer;
 }
 .pick-tile.is-ult {
@@ -534,7 +567,7 @@ button {
   flex-direction: column;
   border: 1px solid var(--panel-border);
   border-radius: 10px;
-  background: rgba(11, 13, 17, 0.94);
+  background: var(--caster-bg);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55);
   pointer-events: auto;
   overflow: hidden;
@@ -619,7 +652,7 @@ button {
   min-width: 18px;
   padding: 0 4px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--surface-hover);
   font-size: 10.5px;
   text-align: center;
 }
@@ -630,15 +663,15 @@ button {
   font-weight: 700;
   line-height: 15px;
 }
-.pip-scepter { background: rgba(88, 160, 255, 0.25); color: #8dc0ff; }
-.pip-shard { background: rgba(120, 220, 255, 0.2); color: #8fe3ff; }
-.pip-dead { background: rgba(217, 88, 70, 0.2); color: var(--dire); }
+.pip-scepter { background: var(--pip-scepter-bg); color: var(--pip-scepter-fg); }
+.pip-shard { background: var(--pip-shard-bg); color: var(--pip-shard-fg); }
+.pip-dead { background: var(--pip-dead-bg); color: var(--dire); }
 /* Buyback: held / on cooldown / unaffordable. The unaffordable state stays
    visible but recedes — absence of a pip would read as "no data". */
-.pip-buyback { background: rgba(111, 191, 74, 0.22); color: var(--radiant); }
-.pip-bb-cooldown { background: rgba(201, 163, 76, 0.18); color: var(--gold); }
+.pip-buyback { background: var(--pip-bb-bg); color: var(--radiant); }
+.pip-bb-cooldown { background: var(--pip-bb-cd-bg); color: var(--gold); }
 .pip-bb-none {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--pip-bb-none-bg);
   color: var(--text-dim);
   text-decoration: line-through;
 }
@@ -667,7 +700,7 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.55);
+  background: var(--modal-scrim);
   pointer-events: auto;
 }
 .modal {
@@ -718,7 +751,7 @@ button {
   padding: 2px;
   border: 1px solid var(--panel-border);
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--surface-subtle);
   cursor: pointer;
 }
 .ov-tile.is-large {
@@ -732,7 +765,7 @@ button {
 }
 .ov-tile.is-unknown {
   border-style: dashed;
-  border-color: rgba(232, 185, 60, 0.45);
+  border-color: var(--unknown);
   cursor: default;
 }
 .ov-hero {
@@ -767,7 +800,7 @@ button {
   border-left: 3px solid var(--radiant);
   margin-bottom: 2px;
   border-radius: 0 4px 4px 0;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--surface-subtle);
 }
 .order-row.team-dire {
   border-left-color: var(--dire);
@@ -790,7 +823,69 @@ button {
 /* light theme (Twitch context.theme) */
 .theme-light {
   --panel: rgba(250, 250, 252, 0.97);
-  --panel-border: rgba(0, 0, 0, 0.12);
-  --text: #16181d;
-  --text-dim: #5b6472;
+  --caster-bg: rgba(248, 249, 252, 0.97);
+  --pick-col-bg: rgba(248, 249, 252, 0.92);
+  --panel-border: rgba(15, 23, 42, 0.15);
+  --text: #14171f;
+  --text-dim: #4b5565;
+  --gold: #8a5a00;
+  --gold-soft: rgba(138, 90, 0, 0.42);
+  --radiant: #1e7a2a;
+  --dire: #b42318;
+  --op: #166534;
+  --trap: #b42318;
+  --teal: #0e6f82;
+  --unknown: #925800;
+  --surface-subtle: rgba(15, 23, 42, 0.04);
+  --surface-hover: rgba(15, 23, 42, 0.08);
+  --divider-dotted: rgba(15, 23, 42, 0.14);
+  --art-bg: #e2e6ee;
+  --modal-scrim: rgba(15, 23, 42, 0.45);
+  --chip-picked-border: rgba(15, 23, 42, 0.28);
+  --chip-pool-border: rgba(30, 122, 42, 0.4);
+  --chip-new-border: rgba(14, 111, 130, 0.45);
+  --aghs-bg: rgba(14, 111, 130, 0.08);
+  --aghs-border: rgba(14, 111, 130, 0.32);
+  --shard-bg: rgba(138, 90, 0, 0.08);
+  --shard-border: rgba(138, 90, 0, 0.35);
+  --talent-badge-bg: rgba(138, 90, 0, 0.14);
+  --pip-scepter-bg: rgba(29, 78, 216, 0.14);
+  --pip-scepter-fg: #1e40af;
+  --pip-shard-bg: rgba(3, 105, 161, 0.14);
+  --pip-shard-fg: #0c4a6e;
+  --pip-dead-bg: rgba(180, 35, 24, 0.13);
+  --pip-bb-bg: rgba(30, 122, 42, 0.14);
+  --pip-bb-cd-bg: rgba(138, 90, 0, 0.14);
+  --pip-bb-none-bg: rgba(15, 23, 42, 0.06);
+}
+
+@media (max-width: 720px) {
+  .details-dock {
+    width: min(94%, 340px);
+  }
+  .caster-panel {
+    overflow-x: auto;
+  }
+  .caster-head {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-right: 36px;
+  }
+  .caster-totals {
+    margin-left: 0;
+  }
+  .caster-rows {
+    overflow-x: auto;
+  }
+  .caster-legend,
+  .caster-row {
+    min-width: 640px;
+  }
+  .ov-body {
+    flex-direction: column;
+  }
+  .ov-order {
+    width: 100%;
+    max-height: 220px;
+  }
 }

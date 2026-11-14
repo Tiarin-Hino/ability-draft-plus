@@ -14,10 +14,10 @@ interface AbilityTileProps {
 
 export function AbilityTile({ slot, size = 'normal' }: AbilityTileProps) {
   const { t } = useTranslation()
-  const [iconFailed, setIconFailed] = useState(false)
+  const [failedIconPath, setFailedIconPath] = useState<string | null>(null)
 
   const displayName = slot.isUnknown ? t('unknownAbility') : slot.displayName
-  const showIcon = slot.iconPath !== null && !iconFailed
+  const showIcon = slot.iconPath !== null && failedIconPath !== slot.iconPath
 
   const classes = [
     'tile',
@@ -37,7 +37,7 @@ export function AbilityTile({ slot, size = 'normal' }: AbilityTileProps) {
           className="tile-icon"
           src={`${apiBase()}${slot.iconPath}`}
           alt={displayName}
-          onError={() => setIconFailed(true)}
+          onError={() => setFailedIconPath(slot.iconPath)}
         />
       ) : (
         <div className="tile-fallback" aria-label={displayName}>

@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { abilityCdnUrl, heroCdnUrl, itemCdnUrl, portraitObjectPosition } from '../../data/icons'
 
 export function AbilityIcon({ name, label, size = 40 }: { name: string | null; label: string; size?: number }) {
-  const [failed, setFailed] = useState(false)
-  if (!name || failed) {
+  const [failedName, setFailedName] = useState<string | null>(null)
+  if (!name || failedName === name) {
     return (
       <span className="art art-fallback" style={{ width: size, height: size }} aria-hidden="true">
         {label.charAt(0)}
@@ -18,7 +18,7 @@ export function AbilityIcon({ name, label, size = 40 }: { name: string | null; l
       width={size}
       height={size}
       loading="lazy"
-      onError={() => setFailed(true)}
+      onError={() => setFailedName(name)}
     />
   )
 }
@@ -34,8 +34,8 @@ export function HeroPortrait({
   width?: number
   height?: number
 }) {
-  const [failed, setFailed] = useState(false)
-  if (!cdn || failed) {
+  const [failedCdn, setFailedCdn] = useState<string | null>(null)
+  if (!cdn || failedCdn === cdn) {
     return (
       <span className="art art-fallback art-portrait" style={{ width, height }} aria-hidden="true">
         {cdn ? label.charAt(0) : '?'}
@@ -51,14 +51,14 @@ export function HeroPortrait({
       height={height}
       style={{ objectPosition: portraitObjectPosition(cdn) }}
       loading="lazy"
-      onError={() => setFailed(true)}
+      onError={() => setFailedCdn(cdn)}
     />
   )
 }
 
 export function ItemIcon({ name, size = 28 }: { name: string | null; size?: number }) {
-  const [failed, setFailed] = useState(false)
-  if (!name || failed) {
+  const [failedName, setFailedName] = useState<string | null>(null)
+  if (!name || failedName === name) {
     return (
       <span className="art art-item art-empty" style={{ width: size * 1.33, height: size }} aria-hidden="true" />
     )
@@ -72,7 +72,7 @@ export function ItemIcon({ name, size = 28 }: { name: string | null; size?: numb
       width={size * 1.33}
       height={size}
       loading="lazy"
-      onError={() => setFailed(true)}
+      onError={() => setFailedName(name)}
     />
   )
 }

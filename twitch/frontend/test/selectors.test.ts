@@ -1,13 +1,17 @@
 import { describe, it, expect } from 'vitest'
 import { buildDemoFixture } from '../src/dev/fixtures'
 import {
+  abilityPartnersForHero,
   combosInPool,
+  displayName,
+  heroDisplayName,
   partnersInPool,
   pickOrder,
   pickedBy,
   playerModel,
   poolSlots,
   refName,
+  slotByIndex,
   slotByName,
 } from '../src/data/selectors'
 import { parseBroadcasterConfig } from '../src/twitch/config-service'
@@ -46,6 +50,27 @@ describe('selectors over the demo fixture', () => {
     expect(order.length).toBeGreaterThan(0)
     expect(order[0].seq).toBe(0)
     expect(order.some((e) => e.isModelMarker)).toBe(true)
+  })
+
+  it('caches WeakMap indexes and returns identical lookup results across calls', () => {
+    const firstSlot = slotByIndex(compact, 1)
+    const secondSlot = slotByIndex(compact, 1)
+    expect(firstSlot).not.toBeNull()
+    expect(secondSlot).toEqual(firstSlot)
+
+    const abilityTitle1 = displayName(rich, null, 'pudge_meat_hook', 1)
+    const abilityTitle2 = displayName(rich, null, 'pudge_meat_hook', 1)
+    expect(abilityTitle1).toBe(abilityTitle2)
+    expect(abilityTitle1.length).toBeGreaterThan(0)
+
+    const firstHero = rich.heroes[0]
+    expect(heroDisplayName(rich, null, firstHero?.cdn ?? null, firstHero?.i)).toBe(
+      heroDisplayName(rich, null, firstHero?.cdn ?? null, firstHero?.i),
+    )
+
+    const heroPartners1 = abilityPartnersForHero(rich, compact, 0)
+    const heroPartners2 = abilityPartnersForHero(rich, compact, 0)
+    expect(heroPartners1).toEqual(heroPartners2)
   })
 })
 

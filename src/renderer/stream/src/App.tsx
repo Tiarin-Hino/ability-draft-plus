@@ -1,13 +1,18 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useState } from 'react'
 import { apiBase, isDemoMode, useStreamState } from './hooks/use-stream-state'
 import { TopBar } from './components/TopBar'
 import { PoolBoard } from './components/PoolBoard'
 import { PlayerColumn } from './components/PlayerRows'
 import { StatPanels } from './components/StatPanels'
 import { PickTicker } from './components/PickTicker'
-import { EditMode, applyLayout, loadStoredLayout } from './components/EditMode'
+import {
+  EditMode,
+  applyLayout,
+  fetchServerLayout,
+  loadStoredLayout,
+  saveStoredLayout,
+} from './components/EditMode'
 import i18n from './i18n'
 
 // @DEV-GUIDE: Root of the stream SPA (OBS browser source) — a tournament-style
@@ -48,15 +53,15 @@ function bgMode(): BgMode {
  * the CSS gradient silently.
  */
 function ArtLayer({ name }: { name: string }) {
-  const [failed, setFailed] = useState(false)
-  if (bgMode() !== 'dark' || failed) return null
+  const [failedName, setFailedName] = useState<string | null>(null)
+  if (bgMode() !== 'dark' || failedName === name) return null
   return (
     <img
       className="board-art"
       src={`${apiBase()}/art/${name}`}
       alt=""
       aria-hidden="true"
-      onError={() => setFailed(true)}
+      onError={() => setFailedName(name)}
     />
   )
 }
@@ -74,11 +79,20 @@ function App(): React.ReactElement {
     }
   }, [language])
 
-  // Outside edit mode, still honor a previously tuned layout (the injected
-  // stylesheet is selector-based, so applying once on mount is enough;
-  // EditMode owns application while it is mounted)
+  // Outside edit mode, apply cached layout immediately and refresh from the stream
+  // server so OBS browser sources pick up adjustments saved from desktop browsers.
   useEffect(() => {
-    if (!edit) applyLayout(loadStoredLayout())
+    if (edit) return
+    applyLayout(loadStoredLayout())
+    let cancelled = false
+    void fetchServerLayout().then((remote) => {
+      if (cancelled || !remote) return
+      saveStoredLayout(remote)
+      applyLayout(remote)
+    })
+    return () => {
+      cancelled = true
+    }
   }, [edit])
 
   if (!board || board.phase === 'waiting') {
@@ -100,23 +114,12 @@ function App(): React.ReactElement {
   return (
     <div className={`board bg-${bgMode()}`}>
       <ArtLayer name="board-bg" />
-      <TopBar
-        title={param('title')}
-        gsi={board.gsi}
-        connection={connection}
-        demo={demo}
-      />
+      <TopBar title={param('title')} gsi={board.gsi} connection={connection} demo={demo} />
 
       <main className="board-main">
-        <PlayerColumn
-          team="radiant"
-          players={board.players.filter((p) => p.team === 'radiant')}
-        />
+        <PlayerColumn team="radiant" players={board.players.filter((p) => p.team === 'radiant')} />
         <PoolBoard heroes={board.heroes} />
-        <PlayerColumn
-          team="dire"
-          players={board.players.filter((p) => p.team === 'dire')}
-        />
+        <PlayerColumn team="dire" players={board.players.filter((p) => p.team === 'dire')} />
       </main>
 
       <PickTicker board={board} />

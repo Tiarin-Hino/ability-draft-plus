@@ -12,15 +12,15 @@ import { apiBase } from '../hooks/use-stream-state'
 // draft score as a gold medallion. Radiant left/green, Dire right/red (mirrored).
 
 function CardArt({ model }: { model: StreamPlayerModel }) {
-  const [failed, setFailed] = useState(false)
-  if (failed) return null
+  const [failedPath, setFailedPath] = useState<string | null>(null)
+  if (failedPath === model.portraitPath) return null
   return (
     <img
       className="card-art"
       src={`${apiBase()}${model.portraitPath}`}
       alt=""
       aria-hidden="true"
-      onError={() => setFailed(true)}
+      onError={() => setFailedPath(model.portraitPath)}
     />
   )
 }
@@ -70,23 +70,17 @@ function PlayerCard({ player }: { player: StreamPlayerRow }) {
   )
 }
 
-export function PlayerColumn({
-  team,
-  players,
-}: {
-  team: StreamTeam
-  players: StreamPlayerRow[]
-}) {
+export function PlayerColumn({ team, players }: { team: StreamTeam; players: StreamPlayerRow[] }) {
   const { t } = useTranslation()
   // Bundled banner art (resources/data/stream/<team>-cap.png|jpg). When present
   // the header goes box-less: the banner spans the column and the team name
   // tucks under its long tail, beside the gem head. Boxed style is the fallback.
-  const [capOk, setCapOk] = useState(true)
+  const [failedCapTeam, setFailedCapTeam] = useState<StreamTeam | null>(null)
+  const capOk = failedCapTeam !== team
   const scores = players
     .map((p) => p.draftScore?.score)
     .filter((s): s is number => s !== null && s !== undefined)
-  const teamAverage =
-    scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : null
+  const teamAverage = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : null
 
   return (
     <section className={`team-column team-${team}`} aria-label={t(`team.${team}`)}>
@@ -97,7 +91,7 @@ export function PlayerColumn({
             src={`${apiBase()}/art/${team}-cap`}
             alt=""
             aria-hidden="true"
-            onError={() => setCapOk(false)}
+            onError={() => setFailedCapTeam(team)}
           />
         )}
         <div className="team-heading">

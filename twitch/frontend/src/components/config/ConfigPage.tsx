@@ -24,15 +24,25 @@ export function ConfigPage() {
   const twitch = useMemo(() => getTwitch(), [])
   const ebs = useMemo(() => createEbsClient(resolveEbsUrl(readParams())), [])
   const [auth, setAuth] = useState<TwitchAuth | null>(null)
+  const [theme, setTheme] = useState<'light' | 'dark'>(() =>
+    new URLSearchParams(window.location.search).get('theme') === 'light' ? 'light' : 'dark',
+  )
   const [config, setConfig] = useState<BroadcasterConfig>(DEFAULT_CONFIG)
   const [saved, setSaved] = useState(true)
 
   useEffect(() => {
     twitch.onAuthorized(setAuth)
+    twitch.onContext((ctx) => {
+      if (ctx.theme) setTheme(ctx.theme)
+    })
     const applyConfig = () => setConfig(parseBroadcasterConfig(twitch.configuration.broadcaster?.content))
     applyConfig()
     twitch.configuration.onChanged(applyConfig)
   }, [twitch])
+
+  useEffect(() => {
+    document.body.classList.toggle('theme-light', theme === 'light')
+  }, [theme])
 
   const update = (patch: Partial<BroadcasterConfig>) => {
     setConfig((c) => ({ ...c, ...patch }))
@@ -45,12 +55,35 @@ export function ConfigPage() {
   }
 
   return (
-    <main className="config">
+    <main className={`config theme-${theme}`}>
       <h1>Ability Draft Plus</h1>
+      <CompanionCard />
       <PairingCard auth={auth} ebs={ebs} />
       <CalibrationCard config={config} onChange={update} onSave={save} saved={saved} />
       <StatusCard ebsUrl={ebs.baseUrl} />
     </main>
+  )
+}
+
+function CompanionCard() {
+  return (
+    <section className="card">
+      <h2>Companion desktop app</h2>
+      <p className="muted">
+        Live draft detection, Winrun statistics, and top-bar tracking run locally in the free
+        Ability Draft Plus Windows companion app and publish updates to this extension.
+      </p>
+      <p>
+        <a
+          className="ext-link"
+          href="https://abilitydraftplus.com"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          abilitydraftplus.com ↗
+        </a>
+      </p>
+    </section>
   )
 }
 

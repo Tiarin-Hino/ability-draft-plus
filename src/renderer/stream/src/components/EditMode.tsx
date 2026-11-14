@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { apiBase } from '../hooks/use-stream-state'
 
 // @DEV-GUIDE: ?edit=1 layout tuning mode. Editing works on element TYPES, not
 // individual elements: adjusting any pool tile adjusts every pool tile, dragging
@@ -10,11 +11,9 @@ import { useTranslation } from 'react-i18next'
 // instance inverts the delta so the dragged element follows the cursor), and
 // scaling a tile type also widens its containers' flex gap so tiles spread
 // instead of overlapping. Everything lands in ONE injected <style> tag keyed by
-// the selectors below — it survives React re-renders, persists in localStorage,
-// and is applied on load even without ?edit=1. The panel shows the values as
-// JSON to copy back to the developer, whose job is to bake them into stream.css
-// as real sizes/offsets. NOTE: localStorage is per-browser-profile — an OBS
-// browser source does not see what was tuned in a desktop browser.
+// the selectors below — it survives React re-renders, persists in localStorage
+// AND is synced to GET/POST /stream/layout (userData/stream-layout.json) so OBS
+// browser sources pick up tweaks tuned in a desktop browser automatically.
 
 export interface EditTransform {
   x: number
@@ -118,9 +117,69 @@ const IDENTITY: EditTransform = { x: 0, y: 0, s: 1 }
 
 export function loadStoredLayout(): EditLayout {
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') as EditLayout
+    return sanitizeLayout(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}'))
   } catch {
     return {}
+  }
+}
+
+export function saveStoredLayout(layout: EditLayout): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(layout))
+  } catch {
+    // storage unavailable
+  }
+}
+
+function sanitizeLayout(raw: unknown): EditLayout {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {}
+  const next: EditLayout = {}
+  for (const [key, val] of Object.entries(raw)) {
+    if (!KNOWN_KEYS.has(key) || !val || typeof val !== 'object') continue
+    const candidate = val as { x?: unknown; y?: unknown; s?: unknown }
+    if (
+      typeof candidate.x === 'number' &&
+      Number.isFinite(candidate.x) &&
+      typeof candidate.y === 'number' &&
+      Number.isFinite(candidate.y) &&
+      typeof candidate.s === 'number' &&
+      Number.isFinite(candidate.s) &&
+      candidate.s > 0
+    ) {
+      next[key] = { x: candidate.x, y: candidate.y, s: candidate.s }
+    }
+  }
+  return next
+}
+
+function toAdjustedLayout(layout: EditLayout): EditLayout {
+  return Object.fromEntries(
+    Object.entries(layout).filter(
+      ([key, tr]) => KNOWN_KEYS.has(key) && (tr.x !== 0 || tr.y !== 0 || tr.s !== 1),
+    ),
+  )
+}
+
+export async function fetchServerLayout(): Promise<EditLayout | null> {
+  try {
+    const res = await fetch(`${apiBase()}/stream/layout`, { cache: 'no-store' })
+    if (!res.ok) return null
+    const raw: unknown = await res.json()
+    return sanitizeLayout(raw)
+  } catch {
+    return null
+  }
+}
+
+export async function saveServerLayout(layout: EditLayout): Promise<void> {
+  try {
+    await fetch(`${apiBase()}/stream/layout`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(layout),
+    })
+  } catch {
+    // server unreachable — localStorage still retains local edits
   }
 }
 
@@ -167,11 +226,31 @@ export function EditMode() {
   const [copied, setCopied] = useState(false)
   const [panelPos, setPanelPos] = useState<{ x: number; y: number } | null>(null)
   const layoutRef = useRef(layout)
+  const hydratedRef = useRef(false)
+
+  useEffect(() => {
+    let cancelled = false
+    void fetchServerLayout().then((remote) => {
+      if (cancelled) return
+      hydratedRef.current = true
+      if (remote && Object.keys(remote).length > 0) {
+        setLayout(remote)
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     layoutRef.current = layout
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(layout))
+    saveStoredLayout(layout)
     applyLayout(layout)
+    if (!hydratedRef.current) return
+    const timer = window.setTimeout(() => {
+      void saveServerLayout(toAdjustedLayout(layout))
+    }, 300)
+    return () => window.clearTimeout(timer)
   }, [layout])
 
   useEffect(() => {
@@ -214,8 +293,7 @@ export function EditMode() {
       e.preventDefault()
       const base = layoutRef.current[group.key] ?? IDENTITY
       const onRightSide =
-        group.right !== undefined &&
-        (e.target as HTMLElement).closest(group.right) !== null
+        group.right !== undefined && (e.target as HTMLElement).closest(group.right) !== null
       drag = {
         key: group.key,
         xFactor: onRightSide ? -1 : 1,
@@ -286,11 +364,7 @@ export function EditMode() {
     }
   }, [])
 
-  const adjusted = Object.fromEntries(
-    Object.entries(layout).filter(
-      ([key, tr]) => KNOWN_KEYS.has(key) && (tr.x !== 0 || tr.y !== 0 || tr.s !== 1),
-    ),
-  )
+  const adjusted = toAdjustedLayout(layout)
   const json = JSON.stringify(adjusted)
   const hasAdjustments = Object.keys(adjusted).length > 0
 
@@ -315,8 +389,7 @@ export function EditMode() {
     const rect = panel.getBoundingClientRect()
     const offX = e.clientX - rect.left
     const offY = e.clientY - rect.top
-    const onMove = (ev: PointerEvent) =>
-      setPanelPos({ x: ev.clientX - offX, y: ev.clientY - offY })
+    const onMove = (ev: PointerEvent) => setPanelPos({ x: ev.clientX - offX, y: ev.clientY - offY })
     const onUp = () => {
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
