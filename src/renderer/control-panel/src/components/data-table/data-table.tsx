@@ -9,7 +9,7 @@ import {
   type SortingState,
   type ColumnFiltersState,
 } from '@tanstack/react-table'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Table,
@@ -28,6 +28,8 @@ interface DataTableProps<TData, TValue> {
   searchKey?: string
   searchPlaceholder?: string
   noResultsText?: string
+  initialSorting?: SortingState
+  toolbarExtra?: ReactNode
 }
 
 export function DataTable<TData, TValue>({
@@ -36,9 +38,11 @@ export function DataTable<TData, TValue>({
   searchKey,
   searchPlaceholder,
   noResultsText,
+  initialSorting = [],
+  toolbarExtra,
 }: DataTableProps<TData, TValue>) {
   const { t } = useTranslation('data')
-  const [sorting, setSorting] = useState<SortingState>([])
+  const [sorting, setSorting] = useState<SortingState>(initialSorting)
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
 
   const table = useReactTable({
@@ -56,11 +60,12 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="space-y-4">
-      {searchKey && (
+      {(searchKey || toolbarExtra) && (
         <DataTableToolbar
           table={table}
           searchKey={searchKey}
           searchPlaceholder={searchPlaceholder}
+          toolbarExtra={toolbarExtra}
         />
       )}
       <div className="rounded-md border">
@@ -72,10 +77,7 @@ export function DataTable<TData, TValue>({
                   <TableHead key={header.id}>
                     {header.isPlaceholder
                       ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
+                      : flexRender(header.column.columnDef.header, header.getContext())}
                   </TableHead>
                 ))}
               </TableRow>
@@ -87,20 +89,14 @@ export function DataTable<TData, TValue>({
                 <TableRow key={row.id}>
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
+                <TableCell colSpan={columns.length} className="h-24 text-center">
                   {noResultsText ?? t('noResults')}
                 </TableCell>
               </TableRow>

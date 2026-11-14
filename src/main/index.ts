@@ -210,24 +210,24 @@ app.whenReady().then(async () => {
     if (state.themeMode !== prevThemeMode) {
       prevThemeMode = state.themeMode
       dbService.metadata.setSettings({ themeMode: state.themeMode })
-      dbService.persist()
+      dbService.persistDebounced()
     }
     if (state.language !== prevLanguage) {
       prevLanguage = state.language
       dbService.metadata.setSettings({ language: state.language })
-      dbService.persist()
+      dbService.persistDebounced()
       // Stream board carries the language in meta — re-push so OBS pages follow
       streamService.refresh()
     }
     if (state.overlayOpacity !== prevOverlayOpacity) {
       prevOverlayOpacity = state.overlayOpacity
       dbService.metadata.setSettings({ overlayOpacity: state.overlayOpacity })
-      dbService.persist()
+      dbService.persistDebounced()
     }
     if (state.overlayAnchor !== prevOverlayAnchor) {
       prevOverlayAnchor = state.overlayAnchor
       dbService.metadata.setSettings({ overlayAnchor: state.overlayAnchor })
-      dbService.persist()
+      dbService.persistDebounced()
     }
   })
 

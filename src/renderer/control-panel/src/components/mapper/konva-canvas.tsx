@@ -30,6 +30,8 @@ export function KonvaCanvas({
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const isPanning = useRef(false)
   const lastPointer = useRef({ x: 0, y: 0 })
+  const mouseDownPointer = useRef<{ x: number; y: number } | null>(null)
+  const suppressedClick = useRef(false)
 
   // Load image via effect
   useEffect(() => {
@@ -38,10 +40,7 @@ export function KonvaCanvas({
     img.src = `data:image/png;base64,${imageBase64}`
     img.onload = () => {
       setImage(img)
-      const fitScale = Math.min(
-        containerWidth / imageWidth,
-        containerHeight / imageHeight,
-      )
+      const fitScale = Math.min(containerWidth / imageWidth, containerHeight / imageHeight)
       setScale(fitScale)
       setPosition({
         x: (containerWidth - imageWidth * fitScale) / 2,
@@ -81,36 +80,53 @@ export function KonvaCanvas({
     [scale, position],
   )
 
-  const handleMouseDown = useCallback(
-    (e: Konva.KonvaEventObject<MouseEvent>) => {
-      // Ctrl+click or middle button = pan
-      if (e.evt.ctrlKey || e.evt.button === 1) {
-        isPanning.current = true
-        lastPointer.current = { x: e.evt.clientX, y: e.evt.clientY }
-        e.evt.preventDefault()
-      }
-    },
-    [],
-  )
-
-  const handleMouseMove = useCallback(
-    (e: Konva.KonvaEventObject<MouseEvent>) => {
-      if (!isPanning.current) return
-      const dx = e.evt.clientX - lastPointer.current.x
-      const dy = e.evt.clientY - lastPointer.current.y
+  const handleMouseDown = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
+    mouseDownPointer.current = { x: e.evt.clientX, y: e.evt.clientY }
+    suppressedClick.current = false
+    // Ctrl+click or middle button = pan
+    if (e.evt.ctrlKey || e.evt.button === 1) {
+      isPanning.current = true
       lastPointer.current = { x: e.evt.clientX, y: e.evt.clientY }
-      setPosition((prev) => ({ x: prev.x + dx, y: prev.y + dy }))
-    },
-    [],
-  )
+      e.evt.preventDefault()
+    }
+  }, [])
 
-  const handleMouseUp = useCallback(() => {
+  const handleMouseMove = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
+    if (mouseDownPointer.current) {
+      const moveDist = Math.hypot(
+        e.evt.clientX - mouseDownPointer.current.x,
+        e.evt.clientY - mouseDownPointer.current.y,
+      )
+      if (moveDist > 4) {
+        suppressedClick.current = true
+      }
+    }
+    if (!isPanning.current) return
+    const dx = e.evt.clientX - lastPointer.current.x
+    const dy = e.evt.clientY - lastPointer.current.y
+    lastPointer.current = { x: e.evt.clientX, y: e.evt.clientY }
+    setPosition((prev) => ({ x: prev.x + dx, y: prev.y + dy }))
+  }, [])
+
+  const handleMouseUp = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
+    if (mouseDownPointer.current) {
+      const dist = Math.hypot(
+        e.evt.clientX - mouseDownPointer.current.x,
+        e.evt.clientY - mouseDownPointer.current.y,
+      )
+      if (dist > 4) {
+        suppressedClick.current = true
+      }
+      mouseDownPointer.current = null
+    }
     isPanning.current = false
   }, [])
 
   const handleClick = useCallback(
     (e: Konva.KonvaEventObject<MouseEvent>) => {
-      if (!onImageClick || e.evt.ctrlKey || e.evt.button !== 0) return
+      const wasDrag = suppressedClick.current
+      suppressedClick.current = false
+      if (wasDrag || !onImageClick || e.evt.ctrlKey || e.evt.button !== 0) return
 
       const stage = stageRef.current
       if (!stage) return
@@ -146,13 +162,7 @@ export function KonvaCanvas({
     >
       <Layer>
         {image && (
-          <KonvaImage
-            image={image}
-            x={position.x}
-            y={position.y}
-            scaleX={scale}
-            scaleY={scale}
-          />
+          <KonvaImage image={image} x={position.x} y={position.y} scaleX={scale} scaleY={scale} />
         )}
       </Layer>
       <Layer x={position.x} y={position.y} scaleX={scale} scaleY={scale}>

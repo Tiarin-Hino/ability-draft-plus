@@ -1,13 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Copy, Check, Play, Square, ImageDown, Loader2 } from 'lucide-react'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Copy, Check, ExternalLink, Play, Square, ImageDown, Loader2 } from 'lucide-react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -52,11 +46,7 @@ function BackgroundModeCard() {
       </CardHeader>
       <CardContent className="space-y-2">
         <div className="flex items-center gap-2">
-          <Switch
-            id="overlay-background-mode"
-            checked={enabled}
-            onCheckedChange={handleToggle}
-          />
+          <Switch id="overlay-background-mode" checked={enabled} onCheckedChange={handleToggle} />
           <Label htmlFor="overlay-background-mode">{t('background.toggle')}</Label>
         </div>
         <p className="text-xs text-muted-foreground">{t('background.hint')}</p>
@@ -103,12 +93,7 @@ function IconPrefetchCard() {
         <CardDescription>{t('icons.description')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
-        <Button
-          variant="outline"
-          onClick={handlePrefetch}
-          disabled={prefetching}
-          className="gap-2"
-        >
+        <Button variant="outline" onClick={handlePrefetch} disabled={prefetching} className="gap-2">
           {prefetching ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
@@ -140,7 +125,7 @@ function UrlRow({ label, url }: { label: string; url: string }) {
   return (
     <div className="space-y-1">
       <Label>{label}</Label>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <code className="rounded bg-muted px-2 py-1 text-sm">{url}</code>
         <Button variant="outline" size="sm" onClick={handleCopy} className="gap-1">
           {copied ? (
@@ -154,6 +139,15 @@ function UrlRow({ label, url }: { label: string; url: string }) {
               {t('server.copy')}
             </>
           )}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => window.electronApi.send('app:openExternal', { url })}
+          className="gap-1"
+        >
+          <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+          {t('server.openInBrowser')}
         </Button>
       </div>
     </div>
@@ -172,7 +166,9 @@ export function StreamingPage() {
   const [busy, setBusy] = useState(false)
 
   const running = status === 'running'
-  const effectivePort = running && storePort !== null ? storePort : parseInt(portInput, 10)
+  const parsedPort = parseInt(portInput, 10)
+  const isPortValid = Number.isFinite(parsedPort) && parsedPort >= 1024 && parsedPort <= 65535
+  const effectivePort = running && storePort !== null ? storePort : parsedPort
   const serverOrigin = `http://localhost:${Number.isFinite(effectivePort) ? effectivePort : DEFAULT_STREAM_PORT}`
   const boardUrl = `${serverOrigin}/stream`
   const picksUrl = `${serverOrigin}/picks`
@@ -185,13 +181,14 @@ export function StreamingPage() {
   }, [])
 
   const handleToggle = async () => {
+    if (!running && !isPortValid) return
     setBusy(true)
     try {
       if (running) {
         await window.electronApi.invoke('stream:stop')
       } else {
         await window.electronApi.invoke('stream:start', {
-          port: parseInt(portInput, 10),
+          port: parsedPort,
         })
       }
     } finally {
@@ -208,7 +205,7 @@ export function StreamingPage() {
     status === 'running' ? 'default' : status === 'error' ? 'destructive' : 'secondary'
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -235,14 +232,17 @@ export function StreamingPage() {
                 disabled={running || busy}
                 onChange={(e) => setPortInput(e.target.value.replace(/\D/g, ''))}
                 onBlur={() => {
-                  const port = parseInt(portInput, 10)
-                  if (Number.isFinite(port) && port >= 1024 && port <= 65535) {
-                    window.electronApi.invoke('settings:set', { streamPort: port })
+                  if (isPortValid) {
+                    window.electronApi.invoke('settings:set', { streamPort: parsedPort })
                   }
                 }}
               />
             </div>
-            <Button onClick={handleToggle} disabled={busy} className="gap-2">
+            <Button
+              onClick={handleToggle}
+              disabled={busy || (!running && !isPortValid)}
+              className="gap-2"
+            >
               {running ? (
                 <>
                   <Square className="h-4 w-4" aria-hidden="true" />
@@ -256,6 +256,11 @@ export function StreamingPage() {
               )}
             </Button>
           </div>
+          {!isPortValid && !running && (
+            <p className="text-xs text-destructive" role="alert">
+              {t('server.errorInvalidPort')}
+            </p>
+          )}
           <p className="text-xs text-muted-foreground">{t('server.portHint')}</p>
 
           {running && (
@@ -270,11 +275,7 @@ export function StreamingPage() {
           )}
 
           <div className="flex items-center gap-2 pt-2">
-            <Switch
-              id="stream-autostart"
-              checked={autostart}
-              onCheckedChange={handleAutostart}
-            />
+            <Switch id="stream-autostart" checked={autostart} onCheckedChange={handleAutostart} />
             <Label htmlFor="stream-autostart">{t('server.autostart')}</Label>
           </div>
         </CardContent>
@@ -282,7 +283,7 @@ export function StreamingPage() {
 
       <BackgroundModeCard />
 
-      <GsiCard />
+      <GsiCard streamPortOverride={isPortValid ? parsedPort : undefined} />
 
       <TwitchCard />
 

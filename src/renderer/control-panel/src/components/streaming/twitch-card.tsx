@@ -28,6 +28,7 @@ function formatCode(raw: string): string {
 
 export function TwitchCard() {
   const { t, i18n } = useTranslation('streaming')
+  const { t: tc } = useTranslation()
   const paired = useAppStore((s) => s.twitchPaired)
   const channelName = useAppStore((s) => s.twitchChannelName)
   const enabled = useAppStore((s) => s.twitchBroadcastEnabled)
@@ -40,6 +41,7 @@ export function TwitchCard() {
   const [busy, setBusy] = useState(false)
   const [pairError, setPairError] = useState<string | null>(null)
   const [testMessage, setTestMessage] = useState<{ text: string; error: boolean } | null>(null)
+  const [confirmUnpair, setConfirmUnpair] = useState(false)
 
   useEffect(() => {
     window.electronApi.invoke('twitch:getStatus').then((status) => setLink(status.link))
@@ -69,6 +71,7 @@ export function TwitchCard() {
       await window.electronApi.invoke('twitch:unpair')
       setLink(null)
       setTestMessage(null)
+      setConfirmUnpair(false)
     } finally {
       setBusy(false)
     }
@@ -189,7 +192,7 @@ export function TwitchCard() {
                 : t('twitch.neverPublished')}
             </p>
 
-            <div className="flex gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button
                 variant="outline"
                 onClick={handleTest}
@@ -199,10 +202,32 @@ export function TwitchCard() {
                 <Send className="h-4 w-4" aria-hidden="true" />
                 {t('twitch.testButton')}
               </Button>
-              <Button variant="outline" onClick={handleUnpair} disabled={busy} className="gap-2">
-                <Unlink className="h-4 w-4" aria-hidden="true" />
-                {t('twitch.unpairButton')}
-              </Button>
+              {confirmUnpair ? (
+                <>
+                  <span className="text-xs text-muted-foreground">{t('twitch.unpairConfirm')}</span>
+                  <Button variant="destructive" size="sm" onClick={handleUnpair} disabled={busy}>
+                    {tc('actions.confirm')}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setConfirmUnpair(false)}
+                    disabled={busy}
+                  >
+                    {tc('actions.cancel')}
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="outline"
+                  onClick={() => setConfirmUnpair(true)}
+                  disabled={busy}
+                  className="gap-2"
+                >
+                  <Unlink className="h-4 w-4" aria-hidden="true" />
+                  {t('twitch.unpairButton')}
+                </Button>
+              )}
             </div>
             {testMessage && (
               <p

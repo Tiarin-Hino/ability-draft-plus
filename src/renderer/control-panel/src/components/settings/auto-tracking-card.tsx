@@ -1,17 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { GsiSetupControls, GsiConnectionBadge } from '@/components/streaming/gsi-card'
-import { AUTO_INITIAL_SCAN_DELAY_S } from '@shared/constants/thresholds'
+import { useAppStore } from '@/hooks/use-app-store'
+import { AUTO_INITIAL_SCAN_DELAY_S, DEFAULT_STREAM_PORT } from '@shared/constants/thresholds'
 
 // @DEV-GUIDE: Settings card for GSI-driven automatic draft tracking (the same
 // experimentalAutoDraftTracking setting the auto-rescan service gates on). Bundles:
@@ -29,23 +24,29 @@ const DELAY_MAX_S = 60
 
 export function AutoTrackingCard() {
   const { t } = useTranslation('settings')
+  const streamStatus = useAppStore((s) => s.streamServerStatus)
   const [enabled, setEnabled] = useState(false)
   const [autoClose, setAutoClose] = useState(true)
   const [delayInput, setDelayInput] = useState(String(AUTO_INITIAL_SCAN_DELAY_S))
+  const [streamPort, setStreamPort] = useState(DEFAULT_STREAM_PORT)
 
   useEffect(() => {
     window.electronApi.invoke('settings:get').then((settings) => {
       setEnabled(settings.experimentalAutoDraftTracking)
       setAutoClose(settings.overlayAutoCloseEnabled)
       setDelayInput(String(settings.autoInitialScanDelayS))
+      setStreamPort(settings.streamPort)
     })
   }, [])
 
   const handleToggle = (checked: boolean) => {
     setEnabled(checked)
-    window.electronApi.invoke('settings:set', {
+    void window.electronApi.invoke('settings:set', {
       experimentalAutoDraftTracking: checked,
     })
+    if (checked && streamStatus !== 'running') {
+      void window.electronApi.invoke('stream:start', { port: streamPort })
+    }
   }
 
   const handleAutoCloseToggle = (checked: boolean) => {
@@ -73,11 +74,7 @@ export function AutoTrackingCard() {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center gap-2">
-          <Switch
-            id="auto-draft-tracking"
-            checked={enabled}
-            onCheckedChange={handleToggle}
-          />
+          <Switch id="auto-draft-tracking" checked={enabled} onCheckedChange={handleToggle} />
           <Label htmlFor="auto-draft-tracking">{t('autoTracking.toggle')}</Label>
         </div>
 
@@ -100,9 +97,7 @@ export function AutoTrackingCard() {
               </p>
             </div>
 
-            <p className="text-xs text-muted-foreground">
-              {t('autoTracking.buttonsNote')}
-            </p>
+            <p className="text-xs text-muted-foreground">{t('autoTracking.buttonsNote')}</p>
 
             <div className="space-y-1">
               <div className="flex items-center gap-2">
@@ -111,20 +106,14 @@ export function AutoTrackingCard() {
                   checked={autoClose}
                   onCheckedChange={handleAutoCloseToggle}
                 />
-                <Label htmlFor="overlay-auto-close">
-                  {t('autoTracking.autoCloseToggle')}
-                </Label>
+                <Label htmlFor="overlay-auto-close">{t('autoTracking.autoCloseToggle')}</Label>
               </div>
-              <p className="text-xs text-muted-foreground">
-                {t('autoTracking.autoCloseHint')}
-              </p>
+              <p className="text-xs text-muted-foreground">{t('autoTracking.autoCloseHint')}</p>
             </div>
 
             <div className="space-y-2 border-t pt-4">
               <p className="text-sm font-medium">{t('autoTracking.setupTitle')}</p>
-              <p className="text-xs text-muted-foreground">
-                {t('autoTracking.setupHint')}
-              </p>
+              <p className="text-xs text-muted-foreground">{t('autoTracking.setupHint')}</p>
               <GsiSetupControls />
             </div>
           </>

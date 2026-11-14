@@ -1,13 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Check, RotateCcw } from 'lucide-react'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Slider } from '@/components/ui/slider'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -59,8 +53,11 @@ export function ThresholdCard({
   const defaultPercent = Math.round(defaultValue * 10000) / 100
   const isDefault = Math.abs(value - defaultValue) < 1e-9
 
-  const handleResetToDefault = () => {
-    setLocalValue(defaultValue)
+  const handleResetToDefault = async () => {
+    setLocalValue(null)
+    await onSave(settingsKey, defaultValue)
+    setSaveSuccess(true)
+    setTimeout(() => setSaveSuccess(false), 1500)
   }
 
   return (
@@ -111,12 +108,7 @@ export function ThresholdCard({
               t(`${ns}.saveButton`)
             )}
           </Button>
-          <Button
-            onClick={handleResetToDefault}
-            disabled={isDefault}
-            variant="outline"
-            size="sm"
-          >
+          <Button onClick={handleResetToDefault} disabled={isDefault} variant="outline" size="sm">
             <RotateCcw className="h-4 w-4 mr-1" aria-hidden="true" />
             {t('thresholdCommon.resetButton')}
           </Button>

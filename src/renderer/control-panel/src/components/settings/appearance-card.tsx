@@ -1,12 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Sun, Moon, Monitor, PanelRight, PanelLeft } from 'lucide-react'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
@@ -41,11 +36,18 @@ export function AppearanceCard() {
   // DB-only setting (not in the app store): resolved by the scan processor on
   // the next scan, so it needs no live push to the overlay.
   const [aghsMarkers, setAghsMarkers] = useState(false)
+  const [localOpacity, setLocalOpacity] = useState<number | null>(null)
+  const opacityCommitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     window.electronApi.invoke('settings:get').then((settings) => {
       setAghsMarkers(settings.aghsMarkersEnabled)
     })
+    return () => {
+      if (opacityCommitTimerRef.current) {
+        clearTimeout(opacityCommitTimerRef.current)
+      }
+    }
   }, [])
 
   const handleAghsMarkersToggle = (checked: boolean) => {
@@ -63,8 +65,19 @@ export function AppearanceCard() {
     void window.electronApi.invoke('settings:set', { language: lang })
   }
 
+  const effectiveOpacity = localOpacity ?? overlayOpacity
+
   const handleOpacityChange = (vals: number[]) => {
-    dispatch(APP_ACTIONS.OVERLAY_SET_APPEARANCE, { opacity: vals[0] / 100 })
+    const nextOpacity = vals[0] / 100
+    setLocalOpacity(nextOpacity)
+    if (opacityCommitTimerRef.current) {
+      clearTimeout(opacityCommitTimerRef.current)
+    }
+    opacityCommitTimerRef.current = setTimeout(() => {
+      opacityCommitTimerRef.current = null
+      dispatch(APP_ACTIONS.OVERLAY_SET_APPEARANCE, { opacity: nextOpacity })
+      setLocalOpacity(null)
+    }, 120)
   }
 
   const handleAnchorChange = (anchor: 'left' | 'right') => {
@@ -116,10 +129,10 @@ export function AppearanceCard() {
 
         <div className="space-y-2">
           <label className="text-sm font-medium">
-            {ts('appearance.overlayOpacityLabel')} ({Math.round(overlayOpacity * 100)}%)
+            {ts('appearance.overlayOpacityLabel')} ({Math.round(effectiveOpacity * 100)}%)
           </label>
           <Slider
-            value={[Math.round(overlayOpacity * 100)]}
+            value={[Math.round(effectiveOpacity * 100)]}
             onValueChange={handleOpacityChange}
             min={60}
             max={100}

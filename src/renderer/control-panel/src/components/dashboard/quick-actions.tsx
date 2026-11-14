@@ -2,8 +2,13 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Monitor, Brain, Download, RefreshCw, FileJson, Loader2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { useAppStore } from '@/hooks/use-app-store'
+import { useSettings } from '@/hooks/use-settings'
+import { AdCrestIcon } from '@/components/icons/ad-crest-icon'
 import { BackgroundSessionControls } from '@/components/streaming/background-session-controls'
 
 export function QuickActions() {
@@ -14,6 +19,7 @@ export function QuickActions() {
   const scraperStatus = useAppStore((s) => s.scraperStatus)
   const updateStatus = useAppStore((s) => s.updateStatus)
   const updateVersion = useAppStore((s) => s.updateVersion)
+  const { settings, updateSetting } = useSettings()
   const [activating, setActivating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [gapsMessage, setGapsMessage] = useState<string | null>(null)
@@ -23,6 +29,7 @@ export function QuickActions() {
   const [updateMessage, setUpdateMessage] = useState<string | null>(null)
   const scraping = scraperStatus === 'running'
   const checking = updateStatus === 'checking'
+  const backgroundMode = settings?.overlayBackgroundMode ?? false
 
   useEffect(() => {
     if (!checkRequested) return
@@ -30,9 +37,7 @@ export function QuickActions() {
       setUpdateMessage(t('quickActions.upToDate'))
       setCheckRequested(false)
     } else if (updateStatus === 'available' || updateStatus === 'downloaded') {
-      setUpdateMessage(
-        t('quickActions.updateFound', { version: updateVersion ?? '' }),
-      )
+      setUpdateMessage(t('quickActions.updateFound', { version: updateVersion ?? '' }))
       setCheckRequested(false)
     } else if (updateStatus === 'error') {
       setUpdateMessage(null) // the update banner shows the error itself
@@ -50,7 +55,9 @@ export function QuickActions() {
     setGapsMessage(null)
     const result = await window.electronApi.invoke('ml:exportModelGaps')
     if (result.success) {
-      setGapsMessage(t('quickActions.exportGapsSuccess', { count: result.count, path: result.path }))
+      setGapsMessage(
+        t('quickActions.exportGapsSuccess', { count: result.count, path: result.path }),
+      )
     } else if (result.error !== 'cancelled') {
       setGapsMessage(t('quickActions.exportGapsError', { error: result.error }))
     }
@@ -72,21 +79,60 @@ export function QuickActions() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t('quickActions.title')}</CardTitle>
+    <Card className="border-primary/30">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <AdCrestIcon className="h-5 w-5" />
+            <CardTitle>{t('quickActions.title')}</CardTitle>
+          </div>
+          <Badge variant="outline" className="font-mono text-[11px]">
+            {t('quickActions.hotkeyHint')}
+          </Badge>
+        </div>
       </CardHeader>
-      <CardContent className="space-y-2">
-        <div className="flex flex-wrap gap-2">
+      <CardContent className="space-y-4">
+        {/* Hero launch strip: primary CTA + inline background-capture mode toggle */}
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-primary/30 bg-primary/5 p-3.5">
           <Button
-            variant="outline"
-            size="sm"
+            size="default"
+            className="gap-2 font-semibold shadow-sm"
             disabled={overlayActive || activating}
             onClick={handleActivateOverlay}
           >
-            <Monitor className="h-4 w-4 mr-1" aria-hidden="true" />
-            {activating ? t('quickActions.activating') : overlayActive ? t('quickActions.overlayActive') : t('quickActions.activateOverlay')}
+            {activating ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <Monitor className="h-4 w-4" aria-hidden="true" />
+            )}
+            <span>
+              {activating
+                ? t('quickActions.activating')
+                : overlayActive
+                  ? t('quickActions.overlayActive')
+                  : t('quickActions.activateOverlay')}
+            </span>
           </Button>
+
+          <div className="flex items-center gap-3">
+            <Switch
+              id="quick-background-mode"
+              checked={backgroundMode}
+              onCheckedChange={(checked) => void updateSetting('overlayBackgroundMode', checked)}
+            />
+            <div className="space-y-0.5">
+              <Label htmlFor="quick-background-mode" className="text-xs font-medium cursor-pointer">
+                {t('quickActions.backgroundModeToggle')}
+              </Label>
+              <p className="text-[11px] text-muted-foreground">
+                {t('quickActions.backgroundModeHint')}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Secondary maintenance actions */}
+        <div className="flex flex-wrap gap-2">
           {mlStatus === 'error' && (
             <Button
               variant="outline"
@@ -110,12 +156,7 @@ export function QuickActions() {
             )}
             {scraping ? t('quickActions.updatingData') : t('quickActions.updateData')}
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={checking}
-            onClick={handleCheckUpdates}
-          >
+          <Button variant="outline" size="sm" disabled={checking} onClick={handleCheckUpdates}>
             {checking ? (
               <Loader2 className="h-4 w-4 mr-1 animate-spin" aria-hidden="true" />
             ) : (
@@ -130,17 +171,12 @@ export function QuickActions() {
             </Button>
           )}
         </div>
+
         {/* A background session's overlay is never shown: reset / end it here */}
         <BackgroundSessionControls />
-        {error && (
-          <p className="text-sm text-destructive">{error}</p>
-        )}
-        {gapsMessage && (
-          <p className="text-sm text-muted-foreground">{gapsMessage}</p>
-        )}
-        {updateMessage && (
-          <p className="text-sm text-muted-foreground">{updateMessage}</p>
-        )}
+        {error && <p className="text-sm text-destructive">{error}</p>}
+        {gapsMessage && <p className="text-sm text-muted-foreground">{gapsMessage}</p>}
+        {updateMessage && <p className="text-sm text-muted-foreground">{updateMessage}</p>}
       </CardContent>
     </Card>
   )

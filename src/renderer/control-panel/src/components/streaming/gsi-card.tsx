@@ -27,7 +27,11 @@ interface GsiDetection {
 }
 
 /** Install/browse buttons + detection status; reused outside the Streaming page. */
-export function GsiSetupControls() {
+export function GsiSetupControls({
+  streamPortOverride,
+}: {
+  streamPortOverride?: number
+} = {}) {
   const { t } = useTranslation('streaming')
 
   const [detection, setDetection] = useState<GsiDetection | null>(null)
@@ -45,7 +49,7 @@ export function GsiSetupControls() {
     window.electronApi.invoke('settings:get').then((s) => setSettingsPort(s.streamPort))
   }, [refreshDetection])
 
-  const streamPort = serverPort ?? settingsPort
+  const streamPort = serverPort ?? streamPortOverride ?? settingsPort
   const portMismatch =
     detection?.cfgPort != null && streamPort != null && detection.cfgPort !== streamPort
 
@@ -147,7 +151,7 @@ export function GsiConnectionBadge() {
   )
 }
 
-export function GsiCard() {
+export function GsiCard({ streamPortOverride }: { streamPortOverride?: number } = {}) {
   const { t } = useTranslation('streaming')
 
   return (
@@ -160,7 +164,7 @@ export function GsiCard() {
         <CardDescription>{t('gsi.description')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        <GsiSetupControls />
+        <GsiSetupControls streamPortOverride={streamPortOverride} />
         <div className="space-y-1 text-xs text-muted-foreground">
           <p>{t('gsi.portNote')}</p>
           <p>{t('gsi.spectatorNote')}</p>

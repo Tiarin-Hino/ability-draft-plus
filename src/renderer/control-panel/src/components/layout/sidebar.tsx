@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { AdCrestIcon } from '@/components/icons/ad-crest-icon'
 import { useAppStore } from '@/hooks/use-app-store'
 import { useAppDispatch } from '@/hooks/use-dispatch'
 import { APP_ACTIONS } from '@shared/types/app-store'
@@ -67,9 +68,9 @@ export function Sidebar({ activePage, onNavigate }: SidebarProps) {
 
   return (
     <aside className="flex h-full w-52 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
-      <div className="flex items-center gap-2 px-4 py-4">
-        <Swords className="h-5 w-5 text-brand-purple" aria-hidden="true" />
-        <span className="text-sm font-semibold">{t('appTitle')}</span>
+      <div className="flex items-center gap-2.5 px-4 py-4">
+        <AdCrestIcon className="h-6 w-6 shrink-0" />
+        <span className="text-sm font-semibold tracking-tight">{t('appTitle')}</span>
       </div>
 
       <Separator />
@@ -86,13 +87,16 @@ export function Sidebar({ activePage, onNavigate }: SidebarProps) {
                   onClick={() => onNavigate(item.id)}
                   aria-current={isActive ? 'page' : undefined}
                   className={cn(
-                    'flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                    'flex w-full items-center gap-3 rounded-md border-l-2 px-3 py-2 text-sm font-medium transition-colors',
                     isActive
-                      ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                      : 'text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground',
+                      ? 'border-primary bg-sidebar-accent text-sidebar-accent-foreground shadow-xs'
+                      : 'border-transparent text-muted-foreground hover:bg-sidebar-accent/55 hover:text-sidebar-accent-foreground',
                   )}
                 >
-                  <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  <Icon
+                    className={cn('h-4 w-4 shrink-0', isActive && 'text-primary')}
+                    aria-hidden="true"
+                  />
                   <span>{t(item.labelKey)}</span>
                 </button>
               </TooltipTrigger>

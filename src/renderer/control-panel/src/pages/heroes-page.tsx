@@ -1,11 +1,12 @@
 import { useTranslation } from 'react-i18next'
 import { DataTable } from '@/components/data-table/data-table'
-import { heroColumns } from '@/components/statistics/hero-columns'
+import { useHeroColumns } from '@/components/statistics/hero-columns'
 import { useIpcQuery } from '@/hooks/use-ipc-query'
 
 export function HeroesPage() {
   const { t } = useTranslation('data')
   const { data, loading } = useIpcQuery('hero:getAll')
+  const heroColumns = useHeroColumns()
 
   if (loading) {
     return (
@@ -23,6 +24,8 @@ export function HeroesPage() {
         data={data ?? []}
         searchKey="displayName"
         searchPlaceholder={t('heroes.filterPlaceholder')}
+        noResultsText={t('heroes.noResults')}
+        initialSorting={[{ id: 'winrate', desc: true }]}
       />
     </div>
   )

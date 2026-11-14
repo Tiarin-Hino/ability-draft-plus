@@ -1,12 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import type { PlayerProfileInfo } from '@shared/types'
@@ -22,12 +16,14 @@ import type { PlayerStatsRefreshInfo } from '@shared/ipc/api'
 
 export function PlayerProfileCard() {
   const { t } = useTranslation('settings')
+  const { t: tc } = useTranslation()
   const [profile, setProfile] = useState<PlayerProfileInfo | null>(null)
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   const [errorKey, setErrorKey] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [needsScrape, setNeedsScrape] = useState(false)
+  const [confirmUnlink, setConfirmUnlink] = useState(false)
 
   useEffect(() => {
     window.electronApi.invoke('player:getProfile').then(setProfile)
@@ -98,6 +94,7 @@ export function PlayerProfileCard() {
       await window.electronApi.invoke('player:unlinkProfile')
       setProfile(null)
       setNeedsScrape(false)
+      setConfirmUnlink(false)
     } finally {
       setBusy(false)
     }
@@ -126,19 +123,13 @@ export function PlayerProfileCard() {
                 {busy ? t('personalStats.linking') : t('personalStats.linkButton')}
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">
-              {t('personalStats.inputHint')}
-            </p>
+            <p className="text-xs text-muted-foreground">{t('personalStats.inputHint')}</p>
           </>
         ) : (
           <>
             <div className="flex items-center gap-3">
               {profile.avatarUrl && (
-                <img
-                  src={profile.avatarUrl}
-                  alt=""
-                  className="h-10 w-10 rounded-md"
-                />
+                <img src={profile.avatarUrl} alt="" className="h-10 w-10 rounded-md" />
               )}
               <div>
                 <p className="text-sm font-medium">
@@ -153,27 +144,40 @@ export function PlayerProfileCard() {
                 </p>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button variant="outline" onClick={handleRefresh} disabled={busy}>
                 {t('personalStats.refreshButton')}
               </Button>
-              <Button variant="outline" onClick={handleUnlink} disabled={busy}>
-                {t('personalStats.unlinkButton')}
-              </Button>
+              {confirmUnlink ? (
+                <>
+                  <span className="text-xs text-muted-foreground">
+                    {t('personalStats.unlinkConfirm')}
+                  </span>
+                  <Button variant="destructive" size="sm" onClick={handleUnlink} disabled={busy}>
+                    {tc('actions.confirm')}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setConfirmUnlink(false)}
+                    disabled={busy}
+                  >
+                    {tc('actions.cancel')}
+                  </Button>
+                </>
+              ) : (
+                <Button variant="outline" onClick={() => setConfirmUnlink(true)} disabled={busy}>
+                  {t('personalStats.unlinkButton')}
+                </Button>
+              )}
             </div>
-            <p className="text-xs text-muted-foreground">
-              {t('personalStats.blendNote')}
-            </p>
+            <p className="text-xs text-muted-foreground">{t('personalStats.blendNote')}</p>
           </>
         )}
 
-        {needsScrape && (
-          <p className="text-xs text-amber-500">{t('personalStats.scrapeHint')}</p>
-        )}
+        {needsScrape && <p className="text-xs text-amber-500">{t('personalStats.scrapeHint')}</p>}
         {errorKey && <p className="text-xs text-destructive">{t(errorKey)}</p>}
-        {statusMessage && (
-          <p className="text-xs text-muted-foreground">{statusMessage}</p>
-        )}
+        {statusMessage && <p className="text-xs text-muted-foreground">{statusMessage}</p>}
       </CardContent>
     </Card>
   )
