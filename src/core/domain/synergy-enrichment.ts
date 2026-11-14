@@ -8,6 +8,20 @@ import type { SynergyLookup } from './types'
 // getAbilitySynergiesForHero: For one hero model, returns which pool abilities synergize
 // All functions filter to only include entities currently in the draft pool.
 
+export function splitSynergyPartners(
+  abilityName: string,
+  partners: SynergyPartner[],
+): { high: SynergyPairDisplay[]; low: SynergyPairDisplay[] } {
+  return {
+    high: partners
+      .filter((c) => c.synergyWinrate >= 0.5)
+      .map((c) => toSynergyPairDisplay(abilityName, c)),
+    low: partners
+      .filter((c) => c.synergyWinrate < 0.5)
+      .map((c) => toSynergyPairDisplay(abilityName, c)),
+  }
+}
+
 /**
  * For a single ability, fetch all synergy partners in the pool and split by winrate threshold.
  * High = WR >= 0.5, Low = WR < 0.5.
@@ -21,14 +35,7 @@ export function getAbilitySynergySplit(
     abilityName,
     draftPoolNames,
   )
-  return {
-    high: all
-      .filter((c) => c.synergyWinrate >= 0.5)
-      .map((c) => toSynergyPairDisplay(abilityName, c)),
-    low: all
-      .filter((c) => c.synergyWinrate < 0.5)
-      .map((c) => toSynergyPairDisplay(abilityName, c)),
-  }
+  return splitSynergyPartners(abilityName, all)
 }
 
 function toSynergyPairDisplay(

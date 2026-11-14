@@ -21,9 +21,7 @@ export function useIpcQuery<K extends keyof IpcInvokeMap>(
     let cancelled = false
     setLoading(true)
 
-    const request = args.length > 0
-      ? window.electronApi.invoke(channel, args[0] as never)
-      : window.electronApi.invoke(channel as never)
+    const request = window.electronApi.invoke(channel, ...args)
 
     request
       .then((result) => {

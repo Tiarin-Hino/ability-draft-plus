@@ -316,15 +316,16 @@ export function createScanTriggerService(
         // pool cache (and therefore into the pick candidates)
         mergePoolRetry(result.poolRetryResults)
 
-        // Hero-name OCR: a new draft resets per-row state; every scan's name
-        // strips queue for recognition (per-row gating keeps this cheap)
+        // Hero-name OCR: a new draft resets per-row state; countdown OCR takes
+        // priority ahead of card name strips on the shared worker (countdown
+        // expires every second whereas card reads refine over the draft).
         if (isInitialScan) ocrService.reset()
-        if (result.nameStrips) ocrService.processStrips(result.nameStrips)
         // Countdown digits for own-row detection, stamped with the moment the
         // screenshot was actually taken (the ML pipeline adds seconds)
         if (result.countdownStrip) {
           ocrService.processCountdown(result.countdownStrip, capturedAtMs)
         }
+        if (result.nameStrips) ocrService.processStrips(result.nameStrips)
 
         // Model-tile identification (reference library) — log resolved tiles;
         // consumed by diagnostics and compared against W-slot identification

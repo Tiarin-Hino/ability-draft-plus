@@ -37,22 +37,26 @@ export function createMetadataRepository(db: SQLJsDatabase): MetadataRepository 
     set,
 
     getSettings(): AppSettings {
-      const opThreshold = get('op_threshold')
-      const trapThreshold = get('trap_threshold')
-      const language = get('language')
-      const themeMode = get('theme_mode')
-      const overlayOpacity = get('overlay_opacity')
-      const overlayAnchor = get('overlay_anchor')
-      const streamPort = get('stream_port')
-      const streamAutostart = get('stream_autostart')
-      const autoDraftTracking = get('experimental_auto_draft_tracking')
-      const overlayAutoClose = get('overlay_auto_close')
-      const autoInitialScanDelayS = get('auto_initial_scan_delay_s')
-      const roleMode = get('role_mode')
-      const roleFixedPositions = get('role_fixed_positions')
-      const aghsMarkersEnabled = get('aghs_markers_enabled')
-      const twitchBroadcastEnabled = get('twitch_broadcast_enabled')
-      const overlayBackgroundMode = get('overlay_background_mode')
+      const rows = db.select().from(metadata).all()
+      const map = new Map<string, string | null>(rows.map((r) => [r.key, r.value]))
+      const getVal = (key: string): string | null => map.get(key) ?? null
+
+      const opThreshold = getVal('op_threshold')
+      const trapThreshold = getVal('trap_threshold')
+      const language = getVal('language')
+      const themeMode = getVal('theme_mode')
+      const overlayOpacity = getVal('overlay_opacity')
+      const overlayAnchor = getVal('overlay_anchor')
+      const streamPort = getVal('stream_port')
+      const streamAutostart = getVal('stream_autostart')
+      const autoDraftTracking = getVal('experimental_auto_draft_tracking')
+      const overlayAutoClose = getVal('overlay_auto_close')
+      const autoInitialScanDelayS = getVal('auto_initial_scan_delay_s')
+      const roleMode = getVal('role_mode')
+      const roleFixedPositions = getVal('role_fixed_positions')
+      const aghsMarkersEnabled = getVal('aghs_markers_enabled')
+      const twitchBroadcastEnabled = getVal('twitch_broadcast_enabled')
+      const overlayBackgroundMode = getVal('overlay_background_mode')
 
       return {
         opThreshold:

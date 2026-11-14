@@ -15,6 +15,7 @@ import { processScanResults } from '@core/domain/scan-processor'
 // 3. Delegates to the pure domain function processScanResults() in src/core/domain/
 // 4. Updates DraftStore with new state (caches, selected hero/spot)
 // 5. Broadcasts the enriched OverlayDataPayload to BOTH overlay and control panel windows
+// Also exposes recomputeFromCache() so spot/model/setting changes re-score immediately.
 //
 // The pure domain logic (scoring, synergy filtering, OP/trap detection) lives in src/core/
 // and has zero Electron imports. This service is the Electron-aware adapter that feeds it.
@@ -29,6 +30,7 @@ export interface ScanProcessingService {
     scaleFactor: number,
     playerCardTiles?: import('@core/domain/slot-row-correlation').PlayerCardCapture[],
   ): void
+  recomputeFromCache(): void
 }
 
 export function createScanProcessingService(
@@ -61,78 +63,89 @@ export function createScanProcessingService(
     }
   }
 
-  return {
-    handleScanResults(results, isInitialScan, resolution, scaleFactor, playerCardTiles) {
-      const start = performance.now()
+  let lastResolution: string | null = null
+  let lastScaleFactor = 1
 
-      try {
-        const state = store.getState()
+  function runAndPublish(params: {
+    rawResults: InitialScanResults | ScanResult[]
+    isInitialScan: boolean
+    resolution: string
+    scaleFactor: number
+    preserveGuardFlags: boolean
+  }): void {
+    const { rawResults, isInitialScan, resolution, scaleFactor, preserveGuardFlags } = params
+    const start = performance.now()
 
-        const coords = layoutService.getLayout(resolution)
-        if (!coords) {
-          logger.error('No layout coordinates for resolution', { resolution })
+    try {
+      const state = store.getState()
+
+      const coords = layoutService.getLayout(resolution)
+      if (!coords) {
+        logger.error('No layout coordinates for resolution', { resolution })
+        if (!preserveGuardFlags) {
           broadcastError(`No layout coordinates for resolution: ${resolution}`)
-          return
         }
+        return
+      }
 
-        // Player-card change detection + GSI slot correlation runs on EVERY
-        // capture — the cards are spatially separate from the ability rows, so
-        // the contamination guard's verdict below is irrelevant to them.
-        slotMapping?.onCardTiles(playerCardTiles, isInitialScan)
+      const output = processScanResults({
+        rawResults,
+        isInitialScan,
+        state: {
+          initialPoolAbilitiesCache: state.initialPoolAbilitiesCache,
+          identifiedHeroModelsCache: state.identifiedHeroModelsCache,
+          mySelectedSpotDbId: state.mySelectedSpotDbId,
+          mySelectedSpotHeroOrder: state.mySelectedSpotHeroOrder,
+          mySelectedModelDbHeroId: state.mySelectedModelDbHeroId,
+          mySelectedModelHeroOrder: state.mySelectedModelHeroOrder,
+          selectedAbilitiesCache: state.selectedAbilitiesCache,
+          rescanRejectionStreak: state.rescanRejectionStreak,
+          pickedModelHeroOrders: state.pickedModelHeroOrders,
+        },
+        deps: {
+          heroes: dbService.heroes,
+          abilities: dbService.abilities,
+          synergies: dbService.synergies,
+          triplets: dbService.triplets,
+          settings: dbService.metadata,
+          playerStats: dbService.playerStats,
+          tags: abilityTags,
+        },
+        modelCoords: coords.models_coords ?? [],
+        heroesCoords: coords.heroes_coords ?? [],
+        heroesParams: coords.heroes_params ?? { width: 0, height: 0 },
+        pickBoxCoords: coords.selected_abilities_coords ?? [],
+        pickBoxParams: coords.selected_abilities_params ?? { width: 0, height: 0 },
+        targetResolution: resolution,
+        scaleFactor,
+      })
 
-        const output = processScanResults({
-          rawResults: results,
-          isInitialScan,
-          state: {
-            initialPoolAbilitiesCache: state.initialPoolAbilitiesCache,
-            identifiedHeroModelsCache: state.identifiedHeroModelsCache,
-            mySelectedSpotDbId: state.mySelectedSpotDbId,
-            mySelectedSpotHeroOrder: state.mySelectedSpotHeroOrder,
-            mySelectedModelDbHeroId: state.mySelectedModelDbHeroId,
-            mySelectedModelHeroOrder: state.mySelectedModelHeroOrder,
-            selectedAbilitiesCache: state.selectedAbilitiesCache,
-            rescanRejectionStreak: state.rescanRejectionStreak,
-            pickedModelHeroOrders: state.pickedModelHeroOrders,
-          },
-          deps: {
-            heroes: dbService.heroes,
-            abilities: dbService.abilities,
-            synergies: dbService.synergies,
-            triplets: dbService.triplets,
-            settings: dbService.metadata,
-            playerStats: dbService.playerStats,
-            tags: abilityTags,
-          },
-          modelCoords: coords.models_coords ?? [],
-          heroesCoords: coords.heroes_coords ?? [],
-          heroesParams: coords.heroes_params ?? { width: 0, height: 0 },
-          pickBoxCoords: coords.selected_abilities_coords ?? [],
-          pickBoxParams: coords.selected_abilities_params ?? { width: 0, height: 0 },
-          targetResolution: resolution,
-          scaleFactor,
-        })
+      // Update store with new state
+      store.setState({
+        initialPoolAbilitiesCache: output.updatedState.initialPoolAbilitiesCache,
+        identifiedHeroModelsCache: output.updatedState.identifiedHeroModelsCache,
+        mySelectedSpotDbId: output.updatedState.mySelectedSpotDbId,
+        mySelectedSpotHeroOrder: output.updatedState.mySelectedSpotHeroOrder,
+        mySelectedModelDbHeroId: output.updatedState.mySelectedModelDbHeroId,
+        mySelectedModelHeroOrder: output.updatedState.mySelectedModelHeroOrder,
+        selectedAbilitiesCache: output.updatedState.selectedAbilitiesCache,
+        ...(preserveGuardFlags
+          ? {}
+          : {
+              rescanRejectionStreak: output.updatedState.rescanRejectionStreak,
+              lastRescanRejected: output.rescanRejected === true,
+              lastRescanHasty: output.rescanHasty === true,
+            }),
+        // Picked models belong to the auto-rescan service (card OCR); the
+        // processor only clears them when a new draft's initial scan lands.
+        // Writing them back on every rescan could clobber a pick applied
+        // while this scan was being processed.
+        ...(isInitialScan
+          ? { pickedModelHeroOrders: output.updatedState.pickedModelHeroOrders }
+          : {}),
+      })
 
-        // Update store with new state
-        store.setState({
-          initialPoolAbilitiesCache: output.updatedState.initialPoolAbilitiesCache,
-          identifiedHeroModelsCache: output.updatedState.identifiedHeroModelsCache,
-          mySelectedSpotDbId: output.updatedState.mySelectedSpotDbId,
-          mySelectedSpotHeroOrder: output.updatedState.mySelectedSpotHeroOrder,
-          mySelectedModelDbHeroId: output.updatedState.mySelectedModelDbHeroId,
-          mySelectedModelHeroOrder: output.updatedState.mySelectedModelHeroOrder,
-          selectedAbilitiesCache: output.updatedState.selectedAbilitiesCache,
-          rescanRejectionStreak: output.updatedState.rescanRejectionStreak,
-          lastRescanRejected: output.rescanRejected === true,
-          lastRescanHasty: output.rescanHasty === true,
-          // Picked models belong to the auto-rescan service (card OCR); the
-          // processor only clears them when a new draft's initial scan lands.
-          // Writing them back on every rescan could clobber a pick applied
-          // while this scan was being processed.
-          ...(isInitialScan
-            ? { pickedModelHeroOrders: output.updatedState.pickedModelHeroOrders }
-            : {}),
-        })
-
+      if (!preserveGuardFlags) {
         if (output.rescanRejected) {
           logger.warn(
             'Rescan discarded by contamination guard (pick slot obscured); state unchanged',
@@ -144,40 +157,82 @@ export function createScanProcessingService(
         if (output.rescanRebaselined) {
           logger.warn('Contamination-guard rejection cap reached — accepted scan as new baseline')
         }
+      }
 
-        // Broadcast enriched data to visible overlay (background capture hosts
-        // skip the React UI) and always to the control panel.
-        const overlay = windowManager.getOverlayWindow()
-        if (overlay && !overlay.isDestroyed() && windowManager.isOverlayVisible?.() !== false) {
-          overlay.webContents.send('overlay:data', output.overlayPayload)
-          // A scan repaints the whole hotspot layer, and those hotspots are
-          // hover-ONLY (they never toggle click-through themselves), so they
-          // depend entirely on mouse-move forwarding still being armed. Window
-          // operations around a scan can drop it silently — re-apply the
-          // current state so tooltips work without the user first clicking
-          // something. Idempotent and preserves an in-progress hover.
-          windowManager.refreshOverlayMouseEvents()
-        }
+      // Broadcast enriched data to visible overlay (background capture hosts
+      // skip the React UI) and always to the control panel.
+      const overlay = windowManager.getOverlayWindow()
+      if (overlay && !overlay.isDestroyed() && windowManager.isOverlayVisible?.() !== false) {
+        overlay.webContents.send('overlay:data', output.overlayPayload)
+        // A scan repaints the whole hotspot layer, and those hotspots are
+        // hover-ONLY (they never toggle click-through themselves), so they
+        // depend entirely on mouse-move forwarding still being armed. Window
+        // operations around a scan can drop it silently — re-apply the
+        // current state so tooltips work without the user first clicking
+        // something. Idempotent and preserves an in-progress hover.
+        windowManager.refreshOverlayMouseEvents()
+      }
 
-        const cp = windowManager.getControlPanelWindow()
-        if (cp && !cp.isDestroyed()) {
-          cp.webContents.send('overlay:data', output.overlayPayload)
-        }
+      const cp = windowManager.getControlPanelWindow()
+      if (cp && !cp.isDestroyed()) {
+        cp.webContents.send('overlay:data', output.overlayPayload)
+      }
 
-        // Third consumer: the streamer-view server (caches its own last payload)
-        streamService?.onScanProcessed(output.overlayPayload, isInitialScan)
+      // Third consumer: the streamer-view server (caches its own last payload)
+      streamService?.onScanProcessed(output.overlayPayload, isInitialScan)
 
-        // Initial scans reset the spot selection — re-arm auto spot/model
-        // detection (row derived from GSI hero x card OCR; see spot-detection)
-        if (isInitialScan) spotDetection?.onInitialScanProcessed()
+      // Initial scans reset the spot selection — re-arm auto spot/model
+      // detection (row derived from GSI hero x card OCR; see spot-detection)
+      if (isInitialScan) spotDetection?.onInitialScanProcessed()
 
-        const durationMs = Math.round(performance.now() - start)
+      const durationMs = Math.round(performance.now() - start)
+      if (preserveGuardFlags) {
+        logger.debug('Recomputed scan payload from cache', { durationMs })
+      } else {
         logger.info('Scan processing complete', { durationMs, isInitialScan })
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error)
-        logger.error('Scan processing failed', { error: message })
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      logger.error('Scan processing failed', { error: message })
+      if (!preserveGuardFlags) {
         broadcastError(`Scan processing failed: ${message}`)
       }
+    }
+  }
+
+  return {
+    handleScanResults(results, isInitialScan, resolution, scaleFactor, playerCardTiles) {
+      lastResolution = resolution
+      lastScaleFactor = scaleFactor
+      // Player-card change detection + GSI slot correlation runs on EVERY
+      // capture — the cards are spatially separate from the ability rows, so
+      // the contamination guard's verdict below is irrelevant to them.
+      slotMapping?.onCardTiles(playerCardTiles, isInitialScan)
+      runAndPublish({
+        rawResults: results,
+        isInitialScan,
+        resolution,
+        scaleFactor,
+        preserveGuardFlags: false,
+      })
+    },
+
+    recomputeFromCache() {
+      if (!lastResolution) return
+      const state = store.getState()
+      if (
+        state.initialPoolAbilitiesCache.ultimates.length === 0 &&
+        state.initialPoolAbilitiesCache.standard.length === 0
+      ) {
+        return
+      }
+      runAndPublish({
+        rawResults: [],
+        isInitialScan: false,
+        resolution: lastResolution,
+        scaleFactor: lastScaleFactor,
+        preserveGuardFlags: true,
+      })
     },
   }
 }

@@ -234,7 +234,9 @@ app.whenReady().then(async () => {
   // Create update service (wires autoUpdater events to appStore)
   const updateService = createUpdateService(appStore)
   const windowTracker = createWindowTrackerService()
-  const scraperService = createScraperService(dbService, appStore)
+  const scraperService = createScraperService(dbService, appStore, () =>
+    ocrService.invalidateRosterCache(),
+  )
 
   // Load last scrape date + persisted model gaps into app store
   const lastScrapeDate = dbService.metadata.getLastScrapeDate()
@@ -295,6 +297,7 @@ app.whenReady().then(async () => {
       draftStore.getState().resetSession()
       streamService.onSessionReset()
       slotMappingService.onSessionReset()
+      feedbackService.clearLastScan()
       if (appStore.getState().overlayBackground) {
         cachedWindowCapture.resetSession()
         windowManager.recycleBackgroundOverlay()
@@ -351,6 +354,7 @@ app.whenReady().then(async () => {
     playerStatsService,
     twitchPublisher,
     autoRescanService,
+    ocrService,
   )
 
   // Streamer view autostart (opt-in setting)

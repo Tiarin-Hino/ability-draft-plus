@@ -7,9 +7,9 @@ import { abilities, abilitySynergies, heroAbilitySynergies, heroes } from '../sc
 // pairs (AbilitySynergies table) and hero-ability pairs (HeroAbilitySynergies table).
 //
 // Key query methods used by scan-processor:
-// - getHighWinrateCombinations: Bidirectional synergy lookup for a single ability vs the pool.
-//   Performs two queries (forward + reverse) because pairs are stored base_id < synergy_id.
-//   Filters out same-hero pairs. Used for per-slot tooltip synergy lists.
+// - getHighWinrateCombinations / getHighWinrateCombinationsBatch: Bidirectional synergy
+//   lookup (forward + reverse because pairs are stored base_id < synergy_id), excluding
+//   same-hero pairs. Returns both >=50% and <50% partners so tooltips can split them.
 // - getAllOPCombinations / getAllTrapCombinations: Bulk fetch by synergy_increase threshold.
 //   Same-hero pairs excluded via SQL WHERE clause. Used for OP/Trap combination panels.
 // - getAllHeroSynergies / getAllHeroTrapSynergies: Hero-ability synergies by threshold.
@@ -87,6 +87,11 @@ export interface SynergyRepository {
     baseAbilityName: string,
     draftPoolNames: string[],
   ): SynergyPartner[]
+
+  getHighWinrateCombinationsBatch(
+    baseAbilityNames: string[],
+    draftPoolNames: string[],
+  ): Map<string, SynergyPartner[]>
 
   getOPCombinationsInPool(
     draftPoolNames: string[],
@@ -261,6 +266,88 @@ export function createSynergyRepository(db: SQLJsDatabase): SynergyRepository {
 
       results.sort((a, b) => b.synergyWinrate - a.synergyWinrate)
       return results
+    },
+
+    getHighWinrateCombinationsBatch(
+      baseAbilityNames: string[],
+      draftPoolNames: string[],
+    ): Map<string, SynergyPartner[]> {
+      const resultsByBase = new Map<string, SynergyPartner[]>()
+      const uniqueBase = [...new Set(baseAbilityNames.filter(Boolean))]
+      const uniquePool = [...new Set(draftPoolNames.filter(Boolean))]
+      if (uniqueBase.length === 0 || uniquePool.length === 0) return resultsByBase
+
+      const baseRows = db
+        .select({ name: abilities.name, heroId: abilities.heroId })
+        .from(abilities)
+        .where(inArray(abilities.name, uniqueBase))
+        .all()
+      if (baseRows.length === 0) return resultsByBase
+
+      const baseHeroByName = new Map<string, number | null>(
+        baseRows.map((row) => [row.name, row.heroId]),
+      )
+
+      const forwardRows = db
+        .select({
+          baseName: a1.name,
+          synergyWinrate: abilitySynergies.synergyWinrate,
+          partnerDisplayName: a2.displayName,
+          partnerInternalName: a2.name,
+          partnerHeroId: a2.heroId,
+        })
+        .from(abilitySynergies)
+        .innerJoin(a1, eq(abilitySynergies.baseAbilityId, a1.abilityId))
+        .innerJoin(a2, eq(abilitySynergies.synergyAbilityId, a2.abilityId))
+        .where(and(inArray(a1.name, uniqueBase), inArray(a2.name, uniquePool)))
+        .all()
+
+      const reverseRows = db
+        .select({
+          baseName: a2.name,
+          synergyWinrate: abilitySynergies.synergyWinrate,
+          partnerDisplayName: a1.displayName,
+          partnerInternalName: a1.name,
+          partnerHeroId: a1.heroId,
+        })
+        .from(abilitySynergies)
+        .innerJoin(a1, eq(abilitySynergies.baseAbilityId, a1.abilityId))
+        .innerJoin(a2, eq(abilitySynergies.synergyAbilityId, a2.abilityId))
+        .where(and(inArray(a2.name, uniqueBase), inArray(a1.name, uniquePool)))
+        .all()
+
+      const seenByBase = new Map<string, Set<string>>()
+      for (const row of [...forwardRows, ...reverseRows]) {
+        const baseHeroId = baseHeroByName.get(row.baseName)
+        if (baseHeroId === undefined) continue
+        if (row.partnerInternalName === row.baseName) continue
+        if (baseHeroId !== null && row.partnerHeroId === baseHeroId) continue
+
+        let seen = seenByBase.get(row.baseName)
+        if (!seen) {
+          seen = new Set<string>()
+          seenByBase.set(row.baseName, seen)
+        }
+        if (seen.has(row.partnerInternalName)) continue
+        seen.add(row.partnerInternalName)
+
+        let list = resultsByBase.get(row.baseName)
+        if (!list) {
+          list = []
+          resultsByBase.set(row.baseName, list)
+        }
+        list.push({
+          partnerDisplayName: row.partnerDisplayName ?? row.partnerInternalName,
+          partnerInternalName: row.partnerInternalName,
+          synergyWinrate: row.synergyWinrate,
+        })
+      }
+
+      for (const list of resultsByBase.values()) {
+        list.sort((a, b) => b.synergyWinrate - a.synergyWinrate)
+      }
+
+      return resultsByBase
     },
 
     getOPCombinationsInPool(

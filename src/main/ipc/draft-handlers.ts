@@ -3,20 +3,21 @@ import log from 'electron-log/main'
 import type { StoreApi } from 'zustand/vanilla'
 import type { DraftStore } from '../store/draft-store'
 import type { WindowManager } from '../services/window-manager'
+import type { ScanProcessingService } from '../services/scan-processing-service'
 
 // @DEV-GUIDE: Draft domain IPC handlers for "My Spot" and "My Model" selection during overlay.
 // These are fire-and-forget (ipcMain.on) because the renderer doesn't need a response.
 //
 // Both handlers implement toggle behavior: clicking the same hero again deselects it.
 // After updating the DraftStore, the selection is broadcast to BOTH windows so the overlay
-// and control panel stay in sync. The next ML scan will use these selections to personalize
-// the synergy/trap suggestions (filtering by the user's hero and model).
+// and control panel stay in sync, and scanProcessingService recomputes cached scores/combos.
 
 const logger = log.scope('ipc:draft')
 
 export function registerDraftHandlers(
   store: StoreApi<DraftStore>,
   windowManager: WindowManager,
+  scanProcessingService?: Pick<ScanProcessingService, 'recomputeFromCache'>,
 ): void {
   ipcMain.on(
     'draft:selectMySpot',
@@ -37,6 +38,7 @@ export function registerDraftHandlers(
       broadcastToAll(windowManager, 'draft:selectMySpot', {
         selectedHeroOrderForDrafting: newOrder,
       })
+      scanProcessingService?.recomputeFromCache()
     },
   )
 
@@ -59,6 +61,7 @@ export function registerDraftHandlers(
       broadcastToAll(windowManager, 'draft:selectMyModel', {
         selectedModelHeroOrder: newOrder,
       })
+      scanProcessingService?.recomputeFromCache()
     },
   )
 

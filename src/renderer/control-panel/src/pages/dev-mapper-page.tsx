@@ -20,7 +20,7 @@ export function DevMapperPage({ onNavigate }: PageProps) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <MapperWizard mode="dev" onDone={() => onNavigate('settings')} />
+          <MapperWizard mode="dev" onDone={() => onNavigate?.('settings')} />
         </CardContent>
       </Card>
     </div>

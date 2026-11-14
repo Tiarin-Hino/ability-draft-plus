@@ -64,10 +64,12 @@ describe('feedback-service', () => {
       expect(service.hasScanContext()).toBe(false)
     })
 
-    it('has scan context after recording', () => {
+    it('has scan context after recording and clears it on clearLastScan', () => {
       const service = createFeedbackService(null)
       service.recordScanContext(makeContext())
       expect(service.hasScanContext()).toBe(true)
+      service.clearLastScan()
+      expect(service.hasScanContext()).toBe(false)
     })
 
     it('saveSnapshot throws without a recorded scan', async () => {

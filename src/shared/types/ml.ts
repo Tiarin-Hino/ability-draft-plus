@@ -77,6 +77,8 @@ export interface MlWorkerScanRequest {
      * classifying an empty box invites a confident misread.
      */
     retryPoolSlots?: SlotCoordinate[]
+    /** Monotonic request ID echoed back in worker responses to discard stale timeouts. */
+    requestId?: number
   }
 }
 
@@ -101,6 +103,7 @@ export interface MlWorkerReadyResponse {
 
 export interface MlWorkerSuccessResponse {
   status: 'success'
+  requestId?: number
   results: InitialScanResults | ScanResult[]
   isInitialScan: boolean
   /**
@@ -145,6 +148,7 @@ export interface MlWorkerSuccessResponse {
 export interface MlWorkerErrorResponse {
   status: 'error'
   type?: 'init-error'
+  requestId?: number
   error: { message: string; stack?: string }
 }
 

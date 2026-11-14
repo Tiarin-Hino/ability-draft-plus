@@ -2,6 +2,7 @@ import { ipcMain } from 'electron'
 import log from 'electron-log/main'
 import type { DatabaseService } from '../services/database-service'
 import type { BackupService } from '../services/backup-service'
+import type { ScanProcessingService } from '../services/scan-processing-service'
 import type { AppSettings } from '@shared/types'
 
 // @DEV-GUIDE: Database domain IPC handlers. Exposes repository methods to renderers as typed
@@ -10,17 +11,27 @@ import type { AppSettings } from '@shared/types'
 // Channels:
 // - hero:getAll, hero:getById — Hero table lookups
 // - ability:getAll, ability:getDetails, ability:getByHeroId — Ability table lookups
-// - settings:get, settings:set — App settings in metadata table (persist to disk on write)
+// - settings:get, settings:set — App settings in metadata table (debounced async persist)
 // - backup:create, backup:list, backup:restore, backup:stats — Database backup management
 //
-// settings:set calls persist() immediately to flush the in-memory DB to disk.
-// backup:create also calls persist() first to ensure the backup captures latest state.
+// settings:set debounces disk writes (persistDebounced) and recomputes cached scan scores
+// when scoring/display settings change. backup:create calls sync persist() first.
 
 const logger = log.scope('ipc:database')
+
+const SCORING_SETTING_KEYS: ReadonlyArray<keyof AppSettings> = [
+  'roleMode',
+  'roleFixedPositions',
+  'opThreshold',
+  'trapThreshold',
+  'aghsMarkersEnabled',
+]
 
 export function registerDatabaseHandlers(
   dbService: DatabaseService,
   backupService: BackupService,
+  scanProcessingService?: Pick<ScanProcessingService, 'recomputeFromCache'>,
+  onDatabaseRestored?: () => void,
 ): void {
   // Hero domain
   ipcMain.handle('hero:getAll', () => {
@@ -52,7 +63,10 @@ export function registerDatabaseHandlers(
 
   ipcMain.handle('settings:set', (_event, data: Partial<AppSettings>) => {
     dbService.metadata.setSettings(data)
-    dbService.persist()
+    dbService.persistDebounced()
+    if (SCORING_SETTING_KEYS.some((key) => data[key] !== undefined)) {
+      scanProcessingService?.recomputeFromCache()
+    }
   })
 
   // Backup domain
@@ -66,7 +80,9 @@ export function registerDatabaseHandlers(
   })
 
   ipcMain.handle('backup:restore', async (_event, data: { backupPath: string }) => {
-    return backupService.restoreBackup(data.backupPath)
+    const result = await backupService.restoreBackup(data.backupPath)
+    onDatabaseRestored?.()
+    return result
   })
 
   ipcMain.handle('backup:stats', () => {

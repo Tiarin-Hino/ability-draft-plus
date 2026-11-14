@@ -111,7 +111,33 @@ interface RawGameWindowBounds {
 
 // @DEV-GUIDE: Single query to Win32 for the Dota 2 window's client area (excludes title bar).
 // GetClientRect returns size relative to client origin (0,0), ClientToScreen translates to screen coords.
-// Returns null if the window isn't found, has zero size, or FFI bindings failed to load.
+// Returns null if the window isn't found, is minimized/off-screen (<= -25000), has zero size,
+// or FFI bindings failed to load. Uses screen.screenToDipRect for multi-monitor DPI support.
+export function physicalRectToLogical(physical: GameWindowBounds): GameWindowBounds {
+  try {
+    const dip = screen.screenToDipRect(null, physical)
+    if (dip.width > 0 && dip.height > 0) {
+      return {
+        x: Math.round(dip.x),
+        y: Math.round(dip.y),
+        width: Math.round(dip.width),
+        height: Math.round(dip.height),
+      }
+    }
+  } catch {
+    // Fall through to display scaleFactor math
+  }
+
+  const dpi =
+    screen.getDisplayMatching?.(physical)?.scaleFactor ?? screen.getPrimaryDisplay().scaleFactor
+  return {
+    x: Math.round(physical.x / dpi),
+    y: Math.round(physical.y / dpi),
+    width: Math.round(physical.width / dpi),
+    height: Math.round(physical.height / dpi),
+  }
+}
+
 function queryGameWindow(): RawGameWindowBounds | null {
   const b = loadBindings()
   if (!b) return null
@@ -132,17 +158,17 @@ function queryGameWindow(): RawGameWindowBounds | null {
   const physY = origin['y'] ?? 0
 
   if (physWidth <= 0 || physHeight <= 0) return null
+  if (physX <= -25000 || physY <= -25000) return null
 
-  // Convert physical pixels → logical pixels for Electron BrowserWindow
-  const dpi = screen.getPrimaryDisplay().scaleFactor
+  const physical: GameWindowBounds = {
+    x: physX,
+    y: physY,
+    width: physWidth,
+    height: physHeight,
+  }
   return {
-    physical: { x: physX, y: physY, width: physWidth, height: physHeight },
-    logical: {
-      x: Math.round(physX / dpi),
-      y: Math.round(physY / dpi),
-      width: Math.round(physWidth / dpi),
-      height: Math.round(physHeight / dpi),
-    },
+    physical,
+    logical: physicalRectToLogical(physical),
   }
 }
 

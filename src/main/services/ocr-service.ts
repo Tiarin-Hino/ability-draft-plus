@@ -101,8 +101,21 @@ export interface OcrService {
   settle(timeoutMs: number): Promise<boolean>
   /** Clears per-row state (new draft session). */
   reset(): void
+  /** Invalidates the cached full hero roster after DB scrape/restore. */
+  invalidateRosterCache(): void
   /** Terminates the tesseract worker (app shutdown). */
   dispose(): Promise<void>
+}
+
+interface PendingStrip {
+  row: number
+  png: Buffer
+  queuedWithPool: boolean
+}
+
+interface PendingCountdown {
+  png: Buffer
+  capturedAtMs: number
 }
 
 export function createOcrService(
@@ -114,7 +127,9 @@ export function createOcrService(
   debugDir?: string,
 ): OcrService {
   let workerPromise: Promise<TesseractWorker> | null = null
-  let queue: Promise<void> = Promise.resolve()
+  let pendingCountdown: PendingCountdown | null = null
+  const pendingStrips: PendingStrip[] = []
+  let drainPromise: Promise<void> | null = null
   let disposed = false
 
   // Per-row gates
@@ -535,37 +550,74 @@ export function createOcrService(
     }
   }
 
+  /**
+   * Serialized priority loop on the single Tesseract worker: countdown ticks
+   * always run ahead of queued name strips so own-row detection isn't stalled
+   * behind 10-card OCR passes.
+   */
+  function ensureDrain(): void {
+    if (drainPromise !== null || disposed) return
+    drainPromise = (async () => {
+      while (!disposed) {
+        if (pendingCountdown !== null) {
+          const next = pendingCountdown
+          pendingCountdown = null
+          try {
+            await recognizeCountdown(next.png, next.capturedAtMs)
+          } catch (error) {
+            logger.warn('Countdown OCR failed', {
+              error: error instanceof Error ? error.message : String(error),
+            })
+          }
+          continue
+        }
+        const nextStrip = pendingStrips.shift()
+        if (!nextStrip) break
+        try {
+          await recognizeStrip(nextStrip.row, nextStrip.png, nextStrip.queuedWithPool)
+        } catch (error) {
+          logger.warn('OCR strip failed', {
+            row: nextStrip.row,
+            error: error instanceof Error ? error.message : String(error),
+          })
+        }
+      }
+    })().finally(() => {
+      drainPromise = null
+      if (!disposed && (pendingCountdown !== null || pendingStrips.length > 0)) {
+        ensureDrain()
+      }
+    })
+  }
+
   return {
     processStrips(strips): void {
       if (disposed) return
       const queuedWithPool = poolKnown()
       for (const strip of strips) {
-        const png = Buffer.from(strip.png)
-        queue = queue
-          .then(() => recognizeStrip(strip.row, png, queuedWithPool))
-          .catch((error) => {
-            logger.warn('OCR strip failed', {
-              row: strip.row,
-              error: error instanceof Error ? error.message : String(error),
-            })
-          })
+        const entry: PendingStrip = {
+          row: strip.row,
+          png: Buffer.from(strip.png),
+          queuedWithPool,
+        }
+        const existingIdx = pendingStrips.findIndex((s) => s.row === strip.row)
+        if (existingIdx >= 0) {
+          pendingStrips[existingIdx] = entry
+        } else {
+          pendingStrips.push(entry)
+        }
       }
+      if (pendingStrips.length > 0) ensureDrain()
     },
 
     processCountdown(png, capturedAtMs): void {
       if (disposed) return
-      const buffer = Buffer.from(png)
-      queue = queue
-        .then(() => recognizeCountdown(buffer, capturedAtMs))
-        .catch((error) => {
-          logger.warn('Countdown OCR failed', {
-            error: error instanceof Error ? error.message : String(error),
-          })
-        })
+      pendingCountdown = { png: Buffer.from(png), capturedAtMs }
+      ensureDrain()
     },
 
     settle(timeoutMs): Promise<boolean> {
-      const drained = queue.then(() => true)
+      const drained = (drainPromise ?? Promise.resolve()).then(() => true)
       let timer: NodeJS.Timeout | undefined
       const timedOut = new Promise<boolean>((resolve) => {
         timer = setTimeout(() => resolve(false), timeoutMs)
@@ -574,14 +626,22 @@ export function createOcrService(
     },
 
     reset(): void {
+      pendingCountdown = null
+      pendingStrips.length = 0
       lastStripHash.clear()
       lastCountdownHash = null
       unresolvedDumps = 0
       draftStore.setState({ ocrHeroNamesByRow: {}, draftCountdown: null })
     },
 
+    invalidateRosterCache(): void {
+      rosterCache = null
+    },
+
     async dispose(): Promise<void> {
       disposed = true
+      pendingCountdown = null
+      pendingStrips.length = 0
       if (workerPromise !== null) {
         try {
           const w = await workerPromise

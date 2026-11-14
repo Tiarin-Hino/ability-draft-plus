@@ -75,6 +75,8 @@ export function createMlService(): MlService {
   let initReject: ((err: Error) => void) | null = null
   let scanResolve: ((response: MlWorkerSuccessResponse) => void) | null = null
   let scanReject: ((err: Error) => void) | null = null
+  let nextRequestId = 0
+  let activeScanRequestId: number | null = null
 
   function getWorkerPath(): string {
     return join(__dirname, 'workers', 'ml-worker.js')
@@ -114,7 +116,16 @@ export function createMlService(): MlService {
       initResolve = null
       initReject = null
     } else if (message.status === 'success') {
-      scanResolve?.(message as MlWorkerSuccessResponse)
+      const resp = message as MlWorkerSuccessResponse
+      if (resp.requestId !== undefined && resp.requestId !== activeScanRequestId) {
+        logger.warn('Ignoring stale ML scan response', {
+          requestId: resp.requestId,
+          activeScanRequestId,
+        })
+        return
+      }
+      activeScanRequestId = null
+      scanResolve?.(resp)
       scanResolve = null
       scanReject = null
     } else if (message.status === 'error') {
@@ -125,6 +136,14 @@ export function createMlService(): MlService {
         initResolve = null
         initReject = null
       } else {
+        if (errResponse.requestId !== undefined && errResponse.requestId !== activeScanRequestId) {
+          logger.warn('Ignoring stale ML scan error', {
+            requestId: errResponse.requestId,
+            activeScanRequestId,
+          })
+          return
+        }
+        activeScanRequestId = null
         scanReject?.(error)
         scanResolve = null
         scanReject = null
@@ -222,11 +241,14 @@ export function createMlService(): MlService {
 
     return new Promise<MlWorkerSuccessResponse>((resolve, reject) => {
       const startedAt = Date.now()
+      const requestId = ++nextRequestId
+      activeScanRequestId = requestId
       // Scan timeout watchdog
       const timer = setTimeout(() => {
-        if (scanReject) {
+        if (scanReject && activeScanRequestId === requestId) {
           const err = new Error(`ML scan timed out after ${ML_PREDICTION_TIMEOUT}ms`)
           logger.error(err.message)
+          activeScanRequestId = null
           scanReject(err)
           scanResolve = null
           scanReject = null
@@ -250,11 +272,9 @@ export function createMlService(): MlService {
         reject(err)
       }
 
-      // Create a copy of the ArrayBuffer for transfer
-      const bufferCopy = screenshot.data.buffer.slice(
-        screenshot.data.byteOffset,
-        screenshot.data.byteOffset + screenshot.data.byteLength,
-      )
+      // Create a copy in a concrete ArrayBuffer for transfer (keeps screenshot.data intact for OCR/feedback)
+      const frameCopy = new Uint8Array(screenshot.data)
+      const bufferCopy = frameCopy.buffer
 
       const message: MlWorkerRequest = {
         type: 'scan',
@@ -269,6 +289,7 @@ export function createMlService(): MlService {
           heroOrders,
           pickCandidates,
           retryPoolSlots,
+          requestId,
         },
       }
 

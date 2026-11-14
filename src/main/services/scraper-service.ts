@@ -57,6 +57,7 @@ function loadClassNames(): string[] {
 export function createScraperService(
   dbService: DatabaseService,
   appStore: AppStore,
+  onHeroesUpdated?: () => void,
 ): ScraperService {
   let isWindrunRunning = false
   let isLiquipediaRunning = false
@@ -113,6 +114,7 @@ export function createScraperService(
       })
         .then((result) => {
           if (result.success) {
+            onHeroesUpdated?.()
             const lastUpdated = dbService.metadata.getLastScrapeDate()
             appStore.setState({
               scraperStatus: 'idle',

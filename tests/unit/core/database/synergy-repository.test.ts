@@ -229,4 +229,28 @@ describe('SynergyRepository', () => {
       expect(result[0].abilityInternalName).toBe('antimage_blink')
     })
   })
+
+  describe('getHighWinrateCombinationsBatch', () => {
+    it('matches getHighWinrateCombinations output across all pool abilities', () => {
+      const pool = [
+        'antimage_mana_break',
+        'antimage_blink',
+        'crystal_maiden_frostbite',
+        'crystal_maiden_crystal_nova',
+        'pudge_meat_hook',
+        'pudge_rot',
+      ]
+      const batch = repo.getHighWinrateCombinationsBatch(pool, pool)
+      for (const name of pool) {
+        expect(batch.get(name) ?? []).toEqual(
+          repo.getHighWinrateCombinations(name, pool),
+        )
+      }
+    })
+
+    it('returns an empty map for empty inputs', () => {
+      expect(repo.getHighWinrateCombinationsBatch([], ['antimage_mana_break']).size).toBe(0)
+      expect(repo.getHighWinrateCombinationsBatch(['antimage_mana_break'], []).size).toBe(0)
+    })
+  })
 })

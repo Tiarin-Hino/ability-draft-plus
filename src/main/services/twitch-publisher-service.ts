@@ -201,6 +201,77 @@ export function createTwitchPublisherService(
   let liveFailures = 0
   let lastGsiSnapshot: GsiSnapshot | null = null
 
+  // Per-draft memoization for buildTwitchRichState DB queries (cleared on new
+  // initialPayload and onSessionReset so GSI-rate state rebuilds stay in O(1)).
+  type AbilityDetailMap = ReturnType<DatabaseService['abilities']['getDetails']>
+  type HeroList = ReturnType<DatabaseService['heroes']['getAll']>
+  type PairSynergyList = ReturnType<DatabaseService['synergies']['getSynergiesAmong']>
+  type HeroPairSynergyList = ReturnType<DatabaseService['synergies']['getHeroSynergiesAmong']>
+  let cachedHeroes: HeroList | null = null
+  const cachedAbilityDetails: AbilityDetailMap = new Map()
+  const missingAbilityNames = new Set<string>()
+  const cachedPairSynergies = new Map<string, PairSynergyList>()
+  const cachedHeroSynergies = new Map<string, HeroPairSynergyList>()
+
+  function clearLookupCache(): void {
+    cachedHeroes = null
+    cachedAbilityDetails.clear()
+    missingAbilityNames.clear()
+    cachedPairSynergies.clear()
+    cachedHeroSynergies.clear()
+  }
+
+  function getCachedHeroes(): HeroList {
+    if (cachedHeroes === null) {
+      cachedHeroes = dbService.heroes.getAll()
+    }
+    return cachedHeroes
+  }
+
+  function getCachedAbilityDetails(names: string[]): AbilityDetailMap {
+    const missing = names.filter(
+      (n) => !cachedAbilityDetails.has(n) && !missingAbilityNames.has(n),
+    )
+    if (missing.length > 0) {
+      const fetched = dbService.abilities.getDetails(missing)
+      for (const name of missing) {
+        const hit = fetched.get(name)
+        if (hit) {
+          cachedAbilityDetails.set(name, hit)
+        } else {
+          missingAbilityNames.add(name)
+        }
+      }
+    }
+    const result: AbilityDetailMap = new Map()
+    for (const name of names) {
+      const entry = cachedAbilityDetails.get(name)
+      if (entry) result.set(name, entry)
+    }
+    return result
+  }
+
+  function getCachedPairSynergies(names: string[]): PairSynergyList {
+    const key = [...new Set(names)].sort().join(',')
+    const cached = cachedPairSynergies.get(key)
+    if (cached !== undefined) return cached
+    const fetched = dbService.synergies.getSynergiesAmong(names)
+    cachedPairSynergies.set(key, fetched)
+    return fetched
+  }
+
+  function getCachedHeroPairSynergies(
+    heroNames: string[],
+    abilityNames: string[],
+  ): HeroPairSynergyList {
+    const key = `${[...new Set(heroNames)].sort().join(',')}|${[...new Set(abilityNames)].sort().join(',')}`
+    const cached = cachedHeroSynergies.get(key)
+    if (cached !== undefined) return cached
+    const fetched = dbService.synergies.getHeroSynergiesAmong(heroNames, abilityNames)
+    cachedHeroSynergies.set(key, fetched)
+    return fetched
+  }
+
   // ---------------------------------------------------------------------------
   // Link + settings
   // ---------------------------------------------------------------------------
@@ -354,6 +425,7 @@ export function createTwitchPublisherService(
 
     if (context.initialPayload !== lastInitialPayload || phaseState.draftId === null) {
       lastInitialPayload = context.initialPayload
+      clearLookupCache()
       applyPhaseEvent({ type: 'initialScan', ts: stamp })
     } else {
       applyPhaseEvent({ type: 'rescan' })
@@ -370,11 +442,10 @@ export function createTwitchPublisherService(
       thresholds: { op: settings.opThreshold, trap: settings.trapThreshold },
       meta: { appVersion: app.getVersion(), language: board.meta.language },
       lookups: {
-        getAbilityDetails: (names) => dbService.abilities.getDetails(names),
-        getHeroes: () => dbService.heroes.getAll(),
-        getPairSynergies: (names) => dbService.synergies.getSynergiesAmong(names),
-        getHeroPairSynergies: (heroNames, abilityNames) =>
-          dbService.synergies.getHeroSynergiesAmong(heroNames, abilityNames),
+        getAbilityDetails: getCachedAbilityDetails,
+        getHeroes: getCachedHeroes,
+        getPairSynergies: getCachedPairSynergies,
+        getHeroPairSynergies: getCachedHeroPairSynergies,
       },
     })
     const nextRichKey = twitchRichContentKey(rich)
@@ -443,6 +514,7 @@ export function createTwitchPublisherService(
   }
 
   function onSessionReset(): void {
+    clearLookupCache()
     if (applyPhaseEvent({ type: 'sessionReset' })) schedulePublish()
   }
 

@@ -1,3 +1,5 @@
+export type { LayoutSource } from '../ipc/api'
+
 export interface Hero {
   heroId: number
   name: string

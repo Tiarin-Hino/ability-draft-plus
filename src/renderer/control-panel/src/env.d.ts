@@ -7,6 +7,3 @@ declare global {
     electronApi: ElectronApi
   }
 }
-
-// i18next type augmentation
-import './i18n/types'

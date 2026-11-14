@@ -92,6 +92,8 @@ let pickIconsDir: string | null = null
 const pickTemplates = new Map<string, IconTemplate>()
 const pickTemplateMtimes = new Map<string, number>()
 let pickTemplatesDirBroken = false
+const PICK_TEMPLATE_REFRESH_INTERVAL_MS = 30_000
+let lastPickTemplatesRefreshAt = 0
 
 // Dev-only diagnostic sink for rejected pick-slot crops (see MlWorkerInitRequest)
 let rejectedCropsDir: string | null = null
@@ -176,6 +178,12 @@ async function refreshModelTileTemplates(): Promise<IconTemplate[]> {
 
 async function refreshPickTemplates(): Promise<IconTemplate[]> {
   if (pickIconsDir === null || pickTemplatesDirBroken) return []
+  if (
+    pickTemplates.size > 0 &&
+    Date.now() - lastPickTemplatesRefreshAt < PICK_TEMPLATE_REFRESH_INTERVAL_MS
+  ) {
+    return [...pickTemplates.values()]
+  }
   let files: string[]
   try {
     files = await readdir(pickIconsDir)
@@ -198,10 +206,12 @@ async function refreshPickTemplates(): Promise<IconTemplate[]> {
       // Unstattable/undecodable file — skip; retried next scan (mtime unrecorded)
     }
   }
+  lastPickTemplatesRefreshAt = Date.now()
   return [...pickTemplates.values()]
 }
 
 parentPort.on('message', async (message: MlWorkerRequest) => {
+  const requestId = message.type === 'scan' ? message.payload.requestId : undefined
   try {
     switch (message.type) {
       case 'init':
@@ -218,6 +228,7 @@ parentPort.on('message', async (message: MlWorkerRequest) => {
     const err = error instanceof Error ? error : new Error(String(error))
     const response: MlWorkerErrorResponse = {
       status: 'error',
+      requestId,
       error: { message: err.message, stack: err.stack },
     }
     parentPort!.postMessage(response)
@@ -250,7 +261,7 @@ async function handleInit(payload: {
     await classifier.initialize(payload)
     const response: MlWorkerReadyResponse = {
       status: 'ready',
-      executionProvider: classifier.getExecutionProvider(),
+      executionProvider: classifier.getExecutionProvider?.() ?? 'cpu',
     }
     parentPort!.postMessage(response)
   } catch (error) {
@@ -275,6 +286,7 @@ async function handleScan(payload: {
   heroOrders?: number[]
   pickCandidates?: PickCandidates
   retryPoolSlots?: SlotCoordinate[]
+  requestId?: number
 }): Promise<void> {
   if (!classifier.isReady()) {
     throw new Error('ML Worker not initialized')
@@ -291,6 +303,7 @@ async function handleScan(payload: {
     heroOrders,
     pickCandidates,
     retryPoolSlots,
+    requestId,
   } = payload
   // The buffer arrives as a transferred RAW RGB bitmap — no decode step;
   // every slot crop reads from it directly.
@@ -359,6 +372,7 @@ async function handleScan(payload: {
 
   const response: MlWorkerSuccessResponse = {
     status: 'success',
+    requestId,
     results,
     isInitialScan,
     playerCardTiles,
@@ -389,7 +403,7 @@ async function captureModelTiles(
       const raw = await cropTile(screenshot, c, MODEL_TILE_COMPARE_SIZE)
       tiles.push({
         heroOrder: c.hero_order,
-        tile: raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength),
+        tile: new Uint8Array(raw).buffer,
       })
     } catch {
       // Out-of-bounds crop (layout drift) — skip this tile
@@ -421,7 +435,7 @@ async function capturePlayerCardTiles(
       )
       tiles.push({
         row: c.hero_order,
-        tile: raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength),
+        tile: new Uint8Array(raw).buffer,
       })
     } catch {
       // Out-of-bounds crop (layout drift) — skip this card
@@ -459,7 +473,7 @@ async function captureNameStrips(
       )
       strips.push({
         row: c.hero_order,
-        png: png.buffer.slice(png.byteOffset, png.byteOffset + png.byteLength),
+        png: new Uint8Array(png).buffer,
       })
     } catch {
       // Out-of-bounds crop (layout drift) — skip this card
@@ -490,7 +504,7 @@ async function captureCountdownStrip(
   }
   try {
     const png = await cropRegionPng(screenshot, region, COUNTDOWN_STRIP_TARGET_WIDTH)
-    return png.buffer.slice(png.byteOffset, png.byteOffset + png.byteLength)
+    return new Uint8Array(png).buffer
   } catch {
     return undefined
   }

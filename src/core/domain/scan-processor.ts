@@ -36,6 +36,7 @@ import { computeBoardTagProfile, type BoardTagProfile } from './board-tag-profil
 import { identifyHeroModels } from './hero-identification'
 import {
   getAbilitySynergySplit,
+  splitSynergyPartners,
   getHeroSynergiesForAbility,
   getAbilitySynergiesForHero,
 } from './synergy-enrichment'
@@ -626,25 +627,37 @@ export function processScanResults(
     }
   >()
 
+  const batchSynergies = deps.synergies.getHighWinrateCombinationsBatch?.(
+    poolNamesArray,
+    poolNamesArray,
+  )
+
   for (const abilityName of uniquePoolNames) {
     const details = abilityDetailsMap.get(abilityName)
     const displayName = details?.displayName ?? abilityName
-    const split = getAbilitySynergySplit(
-      abilityName,
-      poolNamesArray,
-      deps.synergies,
-    )
-    // Fix ability1DisplayName to use the display name
-    abilitySynergyMap.set(abilityName, {
-      high: split.high.map((s) => ({
-        ...s,
-        ability1DisplayName: displayName,
-      })),
-      low: split.low.map((s) => ({
-        ...s,
-        ability1DisplayName: displayName,
-      })),
-    })
+    if (batchSynergies) {
+      abilitySynergyMap.set(
+        abilityName,
+        splitSynergyPartners(displayName, batchSynergies.get(abilityName) ?? []),
+      )
+    } else {
+      const split = getAbilitySynergySplit(
+        abilityName,
+        poolNamesArray,
+        deps.synergies,
+      )
+      // Fix ability1DisplayName to use the display name
+      abilitySynergyMap.set(abilityName, {
+        high: split.high.map((s) => ({
+          ...s,
+          ability1DisplayName: displayName,
+        })),
+        low: split.low.map((s) => ({
+          ...s,
+          ability1DisplayName: displayName,
+        })),
+      })
+    }
   }
 
   // --- Phase 6: Per-ability hero synergies ---
@@ -726,23 +739,33 @@ export function processScanResults(
 
   // --- Phase 8.5: Enrich pairs with triplet context ---
   if (deps.triplets) {
-    enrichPairsWithTriplets(opCombinations, trapCombinations, deps)
+    enrichPairsWithTriplets(opCombinations, trapCombinations, deps, abilityDetailsMap)
   }
 
   // --- Phase 9: My Spot synergistic partners ---
   const synergisticPartnersInPool = new Set<string>()
-  if (state.mySelectedSpotDbId !== null) {
+  if (state.mySelectedSpotHeroOrder !== null || state.mySelectedSpotDbId !== null) {
     for (const slot of selectedAbilities) {
       if (!slot.name) continue
+      if (
+        state.mySelectedSpotHeroOrder !== null &&
+        slot.hero_order !== state.mySelectedSpotHeroOrder
+      ) {
+        continue
+      }
       const combos = deps.synergies.getHighWinrateCombinations(
         slot.name,
         poolNamesArray,
       )
       for (const combo of combos) {
-        synergisticPartnersInPool.add(combo.partnerInternalName)
+        if (combo.synergyWinrate >= 0.5) {
+          synergisticPartnersInPool.add(combo.partnerInternalName)
+        }
       }
     }
   }
+
+  const ownerHeroCache = new Map<string, number | null>()
 
   // --- Phase 10: Score all entities ---
   const allScoredEntities = buildScoredEntities(
@@ -763,7 +786,12 @@ export function processScanResults(
       myModelDbHeroId: state.mySelectedModelDbHeroId,
       myModelHeroName: myModel?.heroName,
       myHeroOrder: state.mySelectedSpotHeroOrder,
-      ownerHeroIdOf: (name) => deps.heroes.getByAbilityName(name)?.heroId ?? null,
+      ownerHeroIdOf: (name) => {
+        if (ownerHeroCache.has(name)) return ownerHeroCache.get(name)!
+        const heroId = deps.heroes.getByAbilityName(name)?.heroId ?? null
+        ownerHeroCache.set(name, heroId)
+        return heroId
+      },
       unmetRequirementOf,
       boardTags,
       needScarcity,
@@ -1409,11 +1437,16 @@ function buildScoredEntities(
       goodScepter: (aghsMarkersEnabled && hasTag('good_aghanims')) || undefined,
       pairingScoreDelta: pairingDelta !== 0 ? pairingDelta : undefined,
       inertOnModel:
-        isInertOnModel(candidateTags, myModelAttackType, {
-          nativeToModel:
-            myModelDbHeroId !== null && ownerHeroIdOf(slot.name) === myModelDbHeroId,
-          picksGrantRanged,
-        }) || undefined,
+        (myModelAttackType !== undefined &&
+          candidateTags !== undefined &&
+          ((myModelAttackType === 'Ranged' && candidateTags.has('melee_only')) ||
+            (myModelAttackType === 'Melee' && candidateTags.has('ranged_only'))) &&
+          isInertOnModel(candidateTags, myModelAttackType, {
+            nativeToModel:
+              myModelDbHeroId !== null && ownerHeroIdOf(slot.name) === myModelDbHeroId,
+            picksGrantRanged,
+          })) ||
+        undefined,
       unmetRequirement: unmetRequirementOf(slot.name),
       isUltimateFromCoordSource: slot.is_ultimate,
       isUltimateFromDb: details?.isUltimate,
@@ -1798,27 +1831,33 @@ function enrichPairsWithTriplets(
   opCombinations: import('@shared/types').SynergyPairDisplay[],
   trapCombinations: import('@shared/types').SynergyPairDisplay[],
   deps: ScanProcessorDeps,
+  abilityDetailsMap?: Map<string, import('@shared/types').AbilityDetail>,
 ): void {
   if (!deps.triplets) return
 
   const nameToIdMap = deps.abilities.getNameToIdMap()
 
-  // Collect all unique pair keys from both OP and trap combinations
-  // We need internal names, not display names — build a reverse lookup
-  const idToName = new Map<number, string>()
-  for (const [name, id] of nameToIdMap) {
-    idToName.set(id, name)
-  }
-
-  // Build display→internal name mapping from the name→id map
-  // We'll match display names against DB abilities
-  const allDetails = deps.abilities.getDetails(Array.from(nameToIdMap.keys()))
+  // Reuse pooled/picked ability details first; only query remaining abilities
+  // if a display name is missing from the pre-fetched map.
   const displayToInternal = new Map<string, string>()
-  for (const [internalName, detail] of allDetails) {
-    displayToInternal.set(detail.displayName, internalName)
+  if (abilityDetailsMap) {
+    for (const [internalName, detail] of abilityDetailsMap) {
+      displayToInternal.set(detail.displayName, internalName)
+    }
   }
 
   const allPairs = [...opCombinations, ...trapCombinations]
+  const hasMissingName = allPairs.some(
+    (combo) =>
+      !displayToInternal.has(combo.ability1DisplayName) ||
+      !displayToInternal.has(combo.ability2DisplayName),
+  )
+  if (!abilityDetailsMap || hasMissingName) {
+    const allDetails = deps.abilities.getDetails(Array.from(nameToIdMap.keys()))
+    for (const [internalName, detail] of allDetails) {
+      displayToInternal.set(detail.displayName, internalName)
+    }
+  }
   const pairKeys: { a: number; b: number; display1: string; display2: string }[] = []
 
   for (const combo of allPairs) {

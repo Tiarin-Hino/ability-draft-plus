@@ -251,6 +251,59 @@ describe('MlService', () => {
       await expect(scanPromise).rejects.toThrow('Inference failed')
     })
 
+    it('ignores late responses whose requestId does not match the active scan', async () => {
+      const service = await createReadyService()
+
+      const scan1 = service.scan(
+        { data: Buffer.from('screenshot1'), width: 3, height: 1 },
+        {} as never,
+        true,
+      )
+      const firstReqId = (
+        mockWorkerInstance.postMessage.mock.calls.at(-1)?.[0] as {
+          payload: { requestId: number }
+        }
+      ).payload.requestId
+
+      // Trigger watchdog timeout on first scan
+      const caught = scan1.catch((e: Error) => e)
+      await vi.advanceTimersByTimeAsync(15_000)
+      expect((await caught).message).toContain('timed out')
+
+      // Start second scan
+      const scan2 = service.scan(
+        { data: Buffer.from('screenshot2'), width: 3, height: 1 },
+        {} as never,
+        false,
+      )
+      const secondReqId = (
+        mockWorkerInstance.postMessage.mock.calls.at(-1)?.[0] as {
+          payload: { requestId: number }
+        }
+      ).payload.requestId
+      expect(secondReqId).toBeGreaterThan(firstReqId)
+
+      // Late response from timed-out scan1 must be ignored
+      mockWorkerInstance.emit('message', {
+        status: 'success',
+        requestId: firstReqId,
+        results: [{ stale: true }],
+        isInitialScan: true,
+      })
+
+      // Actual response for scan2 resolves scan2 cleanly
+      mockWorkerInstance.emit('message', {
+        status: 'success',
+        requestId: secondReqId,
+        results: [{ fresh: true }],
+        isInitialScan: false,
+      })
+
+      const res = await scan2
+      expect(res.isInitialScan).toBe(false)
+      expect(res.results).toEqual([{ fresh: true }])
+    })
+
     it('throws if worker not ready', async () => {
       const service = createMlService()
       await expect(

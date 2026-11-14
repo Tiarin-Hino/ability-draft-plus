@@ -1,4 +1,5 @@
 import initSqlJs, { type SqlJsStatic, type Database as SqlJsDatabase } from 'sql.js'
+import { is } from 'drizzle-orm'
 import { drizzle, type SQLJsDatabase } from 'drizzle-orm/sql-js'
 import { SQLiteTable, getTableConfig } from 'drizzle-orm/sqlite-core'
 import * as fs from 'fs'
@@ -16,7 +17,8 @@ import log from 'electron-log/main'
 // Key gotcha: sql.js's run() returns the Database instance, NOT { changes: N }.
 // Drizzle propagates this, so result.changes is always undefined. Use SELECT-before-UPDATE.
 //
-// persist() serializes the entire in-memory DB to disk via sqliteDb.export() → fs.writeFileSync.
+// persist() atomically writes the serialized DB via temp-file rename (use for bulk/shutdown).
+// persistDebounced() coalesces frequent UI setting edits and writes asynchronously off the main loop.
 // reload() replaces the in-memory DB from a Uint8Array (used by backup restore).
 
 import * as schema from '@core/database/schema'
@@ -59,6 +61,7 @@ export interface DatabaseService {
   metadata: MetadataRepository
   playerStats: PlayerStatsRepository
   persist(): void
+  persistDebounced(delayMs?: number): void
   close(): void
   getDbPath(): string
   isFirstRun(): boolean
@@ -72,6 +75,16 @@ export function createDatabaseService(): DatabaseService {
   let sqliteDb: SqlJsDatabase
   let drizzleDb: SQLJsDatabase
   let firstRun = false
+  let persistTimer: ReturnType<typeof setTimeout> | null = null
+  let asyncPersistChain: Promise<void> = Promise.resolve()
+  let closed = false
+
+  function clearPersistTimer(): void {
+    if (persistTimer !== null) {
+      clearTimeout(persistTimer)
+      persistTimer = null
+    }
+  }
 
   let heroRepo: HeroRepository
   let abilityRepo: AbilityRepository
@@ -131,42 +144,72 @@ export function createDatabaseService(): DatabaseService {
     sqliteDb.run(SCHEMA_SQL)
 
     // 4b. Run column migrations for existing databases that predate schema additions
-    runColumnMigrations(sqliteDb)
+    const migrationsApplied = runColumnMigrations(sqliteDb)
 
     // 5. Create Drizzle instance
-    drizzleDb = drizzle(sqliteDb, { schema })
+    drizzleDb = drizzle(sqliteDb)
 
-    // 6. Persist (in case schema was just created for an empty DB)
-    persist()
-
-    // 7. Create repositories
+    // 6. Create repositories and deduplicate any seed/Windrun naming mismatches
     initRepositories()
-
-    // 8. Clean up duplicate heroes from seed/Windrun name mismatch
     const deduped = heroRepo.deduplicateByDisplayName()
     if (deduped > 0) {
       logger.info(`Removed ${deduped} duplicate hero entries`)
+    }
+
+    // 7. Only write back to disk on first run, schema migration, or deduplication
+    if (firstRun || migrationsApplied > 0 || deduped > 0) {
       persist()
     }
 
     logger.info('Database initialized successfully', {
       path: dbPath,
       firstRun,
+      migrationsApplied,
     })
   }
 
   function persist(): void {
+    clearPersistTimer()
     const data = sqliteDb.export()
     const buffer = Buffer.from(data)
-    fs.writeFileSync(dbPath, buffer)
+    const tmpPath = `${dbPath}.sync.tmp`
+    fs.writeFileSync(tmpPath, buffer)
+    fs.renameSync(tmpPath, dbPath)
     logger.debug('Database persisted to disk', {
       path: dbPath,
       size: buffer.length,
     })
   }
 
+  function persistDebounced(delayMs = 300): void {
+    if (closed) return
+    clearPersistTimer()
+    persistTimer = setTimeout(() => {
+      persistTimer = null
+      if (closed || !sqliteDb) return
+      const buffer = Buffer.from(sqliteDb.export())
+      const tmpPath = `${dbPath}.tmp`
+      asyncPersistChain = asyncPersistChain
+        .then(async () => {
+          if (closed) return
+          await fs.promises.writeFile(tmpPath, buffer)
+          if (closed) return
+          await fs.promises.rename(tmpPath, dbPath)
+          logger.debug('Database persisted asynchronously', {
+            path: dbPath,
+            size: buffer.length,
+          })
+        })
+        .catch((err) => {
+          logger.error('Async database persist failed', { error: err })
+        })
+    }, delayMs)
+  }
+
   function close(): void {
     try {
+      closed = true
+      clearPersistTimer()
       persist()
       sqliteDb.close()
       logger.info('Database closed')
@@ -176,10 +219,11 @@ export function createDatabaseService(): DatabaseService {
   }
 
   function reload(data: Uint8Array): void {
+    clearPersistTimer()
     sqliteDb.close()
     sqliteDb = new SQL.Database(data)
     sqliteDb.run('PRAGMA foreign_keys = ON;')
-    drizzleDb = drizzle(sqliteDb, { schema })
+    drizzleDb = drizzle(sqliteDb)
     initRepositories()
     logger.info('Database reloaded from new data')
   }
@@ -206,6 +250,7 @@ export function createDatabaseService(): DatabaseService {
       return playerStatsRepo
     },
     persist,
+    persistDebounced,
     close,
     getDbPath: () => dbPath,
     isFirstRun: () => firstRun,
@@ -227,10 +272,12 @@ export function createDatabaseService(): DatabaseService {
 // ("val.toFixed is not a function") and silently corrupts scoring. Text values
 // in REAL columns are CAST to their numeric prefix in place.
 // Exported for unit testing.
-export function runColumnMigrations(db: SqlJsDatabase): void {
-  const tables = Object.values(schema).filter(
-    (value): value is SQLiteTable => value instanceof SQLiteTable,
-  )
+export function runColumnMigrations(db: SqlJsDatabase): number {
+  const tables: SQLiteTable[] = []
+  for (const value of Object.values(schema)) {
+    if (is(value, SQLiteTable)) tables.push(value)
+  }
+  let migrationsApplied = 0
 
   for (const table of tables) {
     const { name: tableName, columns } = getTableConfig(table)
@@ -248,6 +295,7 @@ export function runColumnMigrations(db: SqlJsDatabase): void {
       }
       logger.info(`Migration: adding column ${column.name} to ${tableName}`)
       db.run(`ALTER TABLE ${tableName} ADD COLUMN ${column.name} ${column.getSQLType()}`)
+      migrationsApplied++
     }
 
     // Normalize text-typed values lingering in REAL columns from early builds
@@ -258,12 +306,14 @@ export function runColumnMigrations(db: SqlJsDatabase): void {
       )
       const modified = db.getRowsModified()
       if (modified > 0) {
+        migrationsApplied++
         logger.info(
           `Migration: normalized ${modified} text values in ${tableName}.${column.name} to REAL`,
         )
       }
     }
   }
+  return migrationsApplied
 }
 
 // @DEV-GUIDE: In dev mode, bundled DB is at <project>/resources/. In production (packaged),

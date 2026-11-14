@@ -25,4 +25,5 @@ export interface ImageClassifier {
   ): Promise<ClassifierResult[]>
   dispose(): Promise<void>
   isReady(): boolean
+  getExecutionProvider?(): string
 }

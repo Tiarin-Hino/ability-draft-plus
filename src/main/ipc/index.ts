@@ -34,6 +34,7 @@ import type { FeedbackService } from '../services/feedback-service'
 import type { ScanTriggerService } from '../services/scan-trigger-service'
 import type { SlotMappingService } from '../services/slot-mapping-service'
 import type { AutoRescanService } from '../services/auto-rescan-service'
+import type { OcrService } from '../services/ocr-service'
 import { startDevControlServer } from '../services/dev-control-service'
 import { initialOverlayLifecycleState, nextOverlayLifecycle } from '@core/gsi/overlay-lifecycle'
 import type { LayoutSource } from '@shared/types'
@@ -81,6 +82,7 @@ export function registerIpcHandlers(
   playerStatsService: PlayerStatsService,
   twitchPublisher: TwitchPublisherService,
   autoRescan: Pick<AutoRescanService, 'finalizeDraft' | 'resetSession'>,
+  ocrService?: Pick<OcrService, 'invalidateRosterCache'>,
 ): void {
   logger.info('Registering IPC handlers...')
 
@@ -246,6 +248,8 @@ export function registerIpcHandlers(
       heroesCoords: coords.heroes_coords ?? [],
       heroesParams: coords.heroes_params ?? { width: 0, height: 0 },
       modelsCoords: coords.models_coords ?? [],
+      autoDraftTrackingEnabled:
+        dbService.metadata.getSettings().experimentalAutoDraftTracking === true,
     }
 
     if (!backgroundMode) {
@@ -282,6 +286,7 @@ export function registerIpcHandlers(
       draftStore.getState().resetSession()
       streamService.onSessionReset()
       slotMappingService.onSessionReset()
+      feedbackService.clearLastScan()
       pendingOverlayData = null
 
       if (suppressPanelRestoreOnce || backgroundMode) {
@@ -383,6 +388,7 @@ export function registerIpcHandlers(
     draftStore.getState().resetSession()
     streamService.onSessionReset()
     slotMappingService.onSessionReset()
+    feedbackService.clearLastScan()
     autoRescan.resetSession()
   })
 
@@ -391,7 +397,12 @@ export function registerIpcHandlers(
   })
 
   // Database domain (hero, ability, settings, backup)
-  registerDatabaseHandlers(dbService, backupService)
+  registerDatabaseHandlers(
+    dbService,
+    backupService,
+    scanProcessingService,
+    ocrService ? () => ocrService.invalidateRosterCache() : undefined,
+  )
 
   // Linked Windrun profile (personalized suggestions)
   registerPlayerHandlers(playerStatsService)
@@ -407,7 +418,7 @@ export function registerIpcHandlers(
   registerMlHandlers(mlService, windowManager, scanTrigger, appStore, dbService)
 
   // Draft domain (My Spot, My Model)
-  registerDraftHandlers(draftStore, windowManager)
+  registerDraftHandlers(draftStore, windowManager, scanProcessingService)
 
   // Scraper domain
   registerScraperHandlers(scraperService)

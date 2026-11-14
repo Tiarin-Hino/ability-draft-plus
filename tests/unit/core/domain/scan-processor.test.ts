@@ -2035,4 +2035,104 @@ describe('role-aware suggestions', () => {
       expect(slot.roleScoreDelta).toBeUndefined()
     }
   })
+
+  describe('Phase 9 My Spot synergy filtering and batching', () => {
+    it('excludes < 0.5 anti-synergy partners and other players picks from My Spot suggestions', () => {
+      const initial = processScanResults(makeInitialScanInput())
+      const state = initial.updatedState
+      // Pool after initial: laguna_blade, fireball, ice_blast, firestorm, blink
+      // Player spots: user picked spot 0 (dbId 1), enemy picked spot 2
+      state.mySelectedSpotDbId = 1
+      state.mySelectedSpotHeroOrder = 0
+
+      // Suppose blink (spot 2, enemy) synergizes strongly with laguna_blade (0.65),
+      // while fireball (spot 0, mine) has a strong synergy with ice_blast (0.58)
+      // and a negative anti-synergy with firestorm (0.42).
+      const depsWithMixedSynergies: ScanProcessorDeps = {
+        ...mockDeps,
+        synergies: {
+          ...mockDeps.synergies,
+          getHighWinrateCombinations(baseAbilityName: string): SynergyPartner[] {
+            if (baseAbilityName === 'fireball') {
+              return [
+                { partnerDisplayName: 'Ice Blast', partnerInternalName: 'ice_blast', synergyWinrate: 0.58 },
+                { partnerDisplayName: 'Firestorm', partnerInternalName: 'firestorm', synergyWinrate: 0.42 },
+              ]
+            }
+            if (baseAbilityName === 'blink') {
+              return [
+                { partnerDisplayName: 'Laguna Blade', partnerInternalName: 'laguna_blade', synergyWinrate: 0.65 },
+              ]
+            }
+            return []
+          },
+        },
+      }
+
+      const rescan = processScanResults({
+        rawResults: [
+          makeScanResult('fireball', 0, 0, false),
+          makeScanResult('blink', 2, 1, false),
+        ],
+        isInitialScan: false,
+        state,
+        deps: depsWithMixedSynergies,
+        modelCoords: [makeCoord(0), makeCoord(1)],
+        heroesCoords: [makeCoord(0), makeCoord(1)],
+        heroesParams: { width: 358, height: 170 },
+        targetResolution: '1920x1080',
+        scaleFactor: 1.0,
+      })
+
+      const iceBlast = rescan.overlayPayload.scanData!.standard.find((s) => s.name === 'ice_blast')!
+      const firestorm = rescan.overlayPayload.scanData!.standard.find((s) => s.name === 'firestorm')!
+      const laguna = rescan.overlayPayload.scanData!.ultimates.find((s) => s.name === 'laguna_blade')!
+
+      expect(iceBlast.isSynergySuggestionForMySpot).toBe(true)
+      // < 0.50 anti-synergy partner must NEVER be highlighted as My Spot synergy
+      expect(firestorm.isSynergySuggestionForMySpot).toBe(false)
+      // Spot 2 enemy pick ('blink') must NEVER trigger Laguna Blade suggestion for spot 0
+      expect(laguna.isSynergySuggestionForMySpot).toBe(false)
+    })
+
+    it('uses batched Phase 5 synergy lookup when provided', () => {
+      let batchCalls = 0
+      let singleCallsForPool = 0
+      const batchDeps: ScanProcessorDeps = {
+        ...mockDeps,
+        synergies: {
+          ...mockDeps.synergies,
+          getHighWinrateCombinations() {
+            singleCallsForPool += 1
+            return []
+          },
+          getHighWinrateCombinationsBatch(baseNames: string[]) {
+            batchCalls += 1
+            const out = new Map<string, SynergyPartner[]>()
+            for (const name of baseNames) {
+              if (name === 'fireball') {
+                out.set(name, [
+                  { partnerDisplayName: 'Ice Blast', partnerInternalName: 'ice_blast', synergyWinrate: 0.58 },
+                  { partnerDisplayName: 'Firestorm', partnerInternalName: 'firestorm', synergyWinrate: 0.44 },
+                ])
+              }
+            }
+            return out
+          },
+        },
+      }
+
+      const input = makeInitialScanInput()
+      input.deps = batchDeps
+      const { overlayPayload } = processScanResults(input)
+      const fireball = overlayPayload.scanData!.standard.find((s) => s.name === 'fireball')!
+
+      expect(batchCalls).toBe(1)
+      expect(singleCallsForPool).toBe(0)
+      expect(fireball.highWinrateCombinations).toHaveLength(1)
+      expect(fireball.highWinrateCombinations[0].ability2DisplayName).toBe('Ice Blast')
+      expect(fireball.lowWinrateCombinations).toHaveLength(1)
+      expect(fireball.lowWinrateCombinations[0].ability2DisplayName).toBe('Firestorm')
+    })
+  })
 })

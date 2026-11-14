@@ -192,6 +192,10 @@ export interface SynergyLookup {
     baseAbilityName: string,
     draftPoolNames: string[],
   ): SynergyPartner[]
+  getHighWinrateCombinationsBatch?(
+    baseAbilityNames: string[],
+    draftPoolNames: string[],
+  ): Map<string, SynergyPartner[]>
   getAllOPCombinations(threshold: number): AbilitySynergyPair[]
   getAllTrapCombinations(threshold: number): AbilitySynergyPair[]
   getAllHeroSynergies(threshold: number): HeroAbilitySynergyRow[]

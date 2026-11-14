@@ -50,6 +50,7 @@ export interface SampleInfo {
 
 export interface FeedbackService {
   recordScanContext(ctx: ScanContext): void
+  clearLastScan(): void
   hasScanContext(): boolean
   isUploadConfigured(): boolean
   saveSnapshot(): Promise<{ storedCount: number }>
@@ -96,6 +97,10 @@ export function createFeedbackService(apiConfig: ApiConfig | null): FeedbackServ
       // is actually reporting. Keep the last full scan instead.
       if (ctx.targetedRows) return
       lastScan = { ...ctx, capturedAt: new Date().toISOString() }
+    },
+
+    clearLastScan() {
+      lastScan = null
     },
 
     hasScanContext() {

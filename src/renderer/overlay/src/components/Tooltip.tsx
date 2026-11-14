@@ -236,7 +236,7 @@ function AbilityTooltipContent({
   t,
 }: {
   slot: EnrichedScanSlot
-  t: (key: string, opts?: Record<string, string>) => string
+  t: (key: string, opts?: Record<string, string | number>) => string
 }): React.ReactElement {
   if (slot.isUnknown) {
     return (
