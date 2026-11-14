@@ -103,6 +103,7 @@
     "roleCovers": "Covers your missing {{need}}",
     "rolePartial": "Partially covers your missing {{need}}",
     "roleDuplicate": "Already covered: {{need}}",
+    "manaBudgetWarning": "Too many mana-hungry abilities — high mana demand",
     "roleCurated": "Curated pick for this role",
     "curatedPick": "Role Pick — curated as a must-have for your role",
     "inertOnModel": "Does not work on your model (melee/ranged mismatch)",

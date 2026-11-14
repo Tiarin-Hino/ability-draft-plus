@@ -103,6 +103,7 @@
     "roleCovers": "Cubre tu carencia de {{need}}",
     "rolePartial": "Cubre parcialmente tu carencia de {{need}}",
     "roleDuplicate": "Ya cubierto: {{need}}",
+    "manaBudgetWarning": "Demasiadas habilidades de alto coste de maná",
     "roleCurated": "Pick curado para este rol",
     "curatedPick": "Pick de rol — curado como imprescindible para tu rol",
     "inertOnModel": "No funciona en tu modelo (incompatibilidad melee/ranged)",

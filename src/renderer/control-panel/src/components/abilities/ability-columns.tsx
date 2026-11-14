@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { ColumnDef } from '@tanstack/react-table'
 import type { AbilityDetail } from '@shared/types'
 import { Badge } from '@/components/ui/badge'
@@ -18,53 +19,53 @@ function rate(val: number | null): string {
   return n.toFixed(2)
 }
 
-export function useAbilityColumns(
-  heroMap: Map<number, string>,
-): ColumnDef<AbilityDetail>[] {
+export function useAbilityColumns(heroMap: Map<number, string>): ColumnDef<AbilityDetail>[] {
+  const { t } = useTranslation('data')
   return useMemo(
     () => [
       {
         accessorKey: 'displayName',
         header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="Name" />
+          <DataTableColumnHeader column={column} title={t('abilities.columns.name')} />
         ),
         filterFn: 'includesString',
       },
       {
         accessorKey: 'heroId',
         header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="Hero" />
+          <DataTableColumnHeader column={column} title={t('abilities.columns.hero')} />
         ),
         cell: ({ row }) =>
-          heroMap.get(row.original.heroId) ?? `Hero #${row.original.heroId}`,
+          heroMap.get(row.original.heroId) ??
+          `${t('abilities.columns.hero')} #${row.original.heroId}`,
       },
       {
         accessorKey: 'winrate',
         header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="Win Rate" />
+          <DataTableColumnHeader column={column} title={t('abilities.columns.winrate')} />
         ),
         cell: ({ row }) => pct(row.original.winrate),
       },
       {
         accessorKey: 'highSkillWinrate',
         header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="HS Win Rate" />
+          <DataTableColumnHeader column={column} title={t('abilities.columns.hsWinrate')} />
         ),
         cell: ({ row }) => pct(row.original.highSkillWinrate),
       },
       {
         accessorKey: 'pickRate',
         header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="Pick Rate" />
+          <DataTableColumnHeader column={column} title={t('abilities.columns.pickRate')} />
         ),
         cell: ({ row }) => rate(row.original.pickRate),
       },
       {
         accessorKey: 'isUltimate',
-        header: 'Ultimate',
+        header: () => t('abilities.columns.ultimate'),
         cell: ({ row }) =>
           row.original.isUltimate ? (
-            <Badge variant="secondary">Ult</Badge>
+            <Badge variant="secondary">{t('abilities.columns.ultimate')}</Badge>
           ) : null,
         filterFn: (row, _id, filterValue) => {
           if (filterValue === undefined) return true
@@ -72,6 +73,6 @@ export function useAbilityColumns(
         },
       },
     ],
-    [heroMap],
+    [heroMap, t],
   )
 }

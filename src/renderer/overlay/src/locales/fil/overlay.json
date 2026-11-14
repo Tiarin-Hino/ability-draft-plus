@@ -103,6 +103,7 @@
     "roleCovers": "Sinasagot ang kulang mong {{need}}",
     "rolePartial": "Bahagyang sinasagot ang kulang mong {{need}}",
     "roleDuplicate": "May sumasagot na: {{need}}",
+    "manaBudgetWarning": "Masyadong maraming kakayahang malakas gumamit ng mana",
     "roleCurated": "Curated pick para sa role na ito",
     "curatedPick": "Role Pick — curated bilang must-have para sa role mo",
     "inertOnModel": "Hindi gumagana sa model mo (melee/ranged mismatch)",
