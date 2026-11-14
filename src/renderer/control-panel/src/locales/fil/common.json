@@ -37,7 +37,8 @@
     "cancel": "Kanselahin",
     "confirm": "Kumpirmahin",
     "close": "Isara",
-    "retry": "Subukan ulit"
+    "retry": "Subukan ulit",
+    "loading": "Naglo-load…"
   },
   "support": {
     "label": "Suportahan ako",

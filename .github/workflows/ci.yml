@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   quality:
     runs-on: windows-latest
@@ -18,6 +22,9 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
+      - run: npm run format:check
+      - run: node .agents/skills/i18n-sync/scripts/check-i18n.mjs
+      - run: node .agents/skills/quality-and-release/scripts/audit-seed-data.mjs
       - run: npm test
 
   build:

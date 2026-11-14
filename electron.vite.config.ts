@@ -27,6 +27,7 @@ const isExternal = (id: string): boolean =>
 export default defineConfig({
   main: {
     build: {
+      sourcemap: 'hidden',
       rollupOptions: {
         external: isExternal,
         input: {
@@ -47,6 +48,7 @@ export default defineConfig({
   },
   preload: {
     build: {
+      sourcemap: 'hidden',
       rollupOptions: {
         external: isExternal,
         input: {
@@ -76,6 +78,7 @@ export default defineConfig({
     },
     plugins: [react(), tailwindcss()],
     build: {
+      sourcemap: 'hidden',
       rollupOptions: {
         input: {
           'control-panel': resolve(__dirname, 'src/renderer/control-panel/index.html'),

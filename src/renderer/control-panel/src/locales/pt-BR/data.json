@@ -50,7 +50,11 @@
       "ultimate": "Ultimate"
     },
     "filterPlaceholder": "Filtrar habilidades...",
-    "noResults": "Nenhuma habilidade encontrada."
+    "noResults": "Nenhuma habilidade encontrada.",
+    "ultimateLabel": "Ult",
+    "filterAll": "Todas",
+    "filterUltimates": "Ultimates",
+    "filterStandard": "Padrão"
   },
   "heroes": {
     "title": "Heróis",

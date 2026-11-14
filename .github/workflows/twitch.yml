@@ -16,6 +16,15 @@ on:
     paths:
       - 'twitch/**'
       - 'src/shared/**'
+      - 'src/core/stream/**'
+      - 'src/core/domain/twitch-projection.ts'
+      - 'resources/model/class_names.json'
+      - 'resources/data/hero_meta.json'
+      - '.github/workflows/twitch.yml'
+
+concurrency:
+  group: twitch-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   ebs:
@@ -28,6 +37,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: twitch/ebs/package-lock.json
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
@@ -42,6 +53,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: twitch/catalog/package-lock.json
       - run: npm ci
       # Builds against dotaconstants master; fails on unlisted missing abilities/heroes
       - run: npm run build:demo
@@ -63,11 +76,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: twitch/frontend/package-lock.json
       - run: npm ci
       - run: npm run gen:geometry
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      - name: Check bundle size (< 900 KB)
+        run: |
+          node -e "const fs=require('fs'),path=require('path');const walk=d=>fs.readdirSync(d,{withFileTypes:true}).reduce((s,e)=>s+(e.isDirectory()?walk(path.join(d,e.name)):fs.statSync(path.join(d,e.name)).size),0);const bytes=walk('dist');console.log('dist bytes:',bytes);if(bytes>=921600)throw new Error('Twitch frontend dist exceeds 900 KB: '+bytes);"
       - uses: actions/upload-artifact@v4
         with:
           name: twitch-frontend-dist

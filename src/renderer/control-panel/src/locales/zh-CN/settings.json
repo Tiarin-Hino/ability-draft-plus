@@ -69,6 +69,7 @@
     "linking": "正在关联…",
     "refreshButton": "刷新数据",
     "unlinkButton": "取消关联",
+    "unlinkConfirm": "取消关联资料？",
     "lastUpdated": "更新于 {{date}}",
     "refreshSuccess": "已刷新：{{abilities}} 个技能、{{heroes}} 个英雄有个人数据。",
     "blendNote": "个人胜率会根据你使用各技能的场次数量与全局数据加权融合——小样本只会轻微调整评分。启用覆盖层时会自动刷新数据（每小时最多一次）。",

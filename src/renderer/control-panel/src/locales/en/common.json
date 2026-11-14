@@ -37,7 +37,8 @@
     "cancel": "Cancel",
     "confirm": "Confirm",
     "close": "Close",
-    "retry": "Retry"
+    "retry": "Retry",
+    "loading": "Loading…"
   },
   "support": {
     "label": "Support me",

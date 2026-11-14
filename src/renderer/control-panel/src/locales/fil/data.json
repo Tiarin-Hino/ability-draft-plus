@@ -50,7 +50,11 @@
       "ultimate": "Ultimate"
     },
     "filterPlaceholder": "I-filter ang mga ability...",
-    "noResults": "Walang nahanap na ability."
+    "noResults": "Walang nahanap na ability.",
+    "ultimateLabel": "Ult",
+    "filterAll": "Lahat",
+    "filterUltimates": "Mga Ultimate",
+    "filterStandard": "Karaniwan"
   },
   "heroes": {
     "title": "Mga Hero",

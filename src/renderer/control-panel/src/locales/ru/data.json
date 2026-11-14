@@ -50,7 +50,11 @@
       "ultimate": "Ультимейт"
     },
     "filterPlaceholder": "Фильтр способностей...",
-    "noResults": "Способности не найдены."
+    "noResults": "Способности не найдены.",
+    "ultimateLabel": "Ульт",
+    "filterAll": "Все",
+    "filterUltimates": "Ультимейты",
+    "filterStandard": "Обычные"
   },
   "heroes": {
     "title": "Герои",

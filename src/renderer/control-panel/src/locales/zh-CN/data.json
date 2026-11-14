@@ -50,7 +50,11 @@
       "ultimate": "终极技能"
     },
     "filterPlaceholder": "筛选技能...",
-    "noResults": "未找到技能。"
+    "noResults": "未找到技能。",
+    "ultimateLabel": "大招",
+    "filterAll": "全部",
+    "filterUltimates": "终极技能",
+    "filterStandard": "普通技能"
   },
   "heroes": {
     "title": "英雄",

@@ -2,8 +2,8 @@ name: Retrain ML model
 
 # Manually triggered after uploading a new dataset zip to S3
 # (see ad_data_gather_script/upload_dataset.py). Trains the ability classifier,
-# converts to INT8 ONNX, runs the accuracy regression gate against the test
-# split, and opens a PR with the new model files + a minor version bump.
+# converts to FP16 ONNX, runs the accuracy regression gate against the test
+# split, and opens a PR with the new model files.
 #
 # Required repository secrets:
 #   AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY  – read access to the dataset bucket
@@ -21,7 +21,7 @@ on:
         description: 'Also fine-tune the top MobileNetV2 block'
         required: false
         type: boolean
-        default: false
+        default: true
       min_accuracy:
         description: 'Gate: minimum INT8 test accuracy'
         required: false
@@ -90,13 +90,10 @@ jobs:
             training_output/report.md
           retention-days: 30
 
-      - name: Stage model files and bump minor version
+      - name: Stage model files
         run: |
           cp training_output/ability_classifier_fp16.onnx resources/model/ability_classifier_fp16.onnx
           cp training_output/class_names.json resources/model/class_names.json
-          npm version minor --no-git-tag-version
-          NEW_VERSION=$(node -p "require('./package.json').version")
-          echo "NEW_VERSION=$NEW_VERSION" >> "$GITHUB_ENV"
           rm -rf training_output/saved_model training_output/ability_classifier.onnx
 
       - name: Open pull request
@@ -104,13 +101,11 @@ jobs:
         with:
           branch: model/dataset-v${{ inputs.dataset_version }}
           commit-message: |
-            feat(ml): retrain model on dataset v${{ inputs.dataset_version }} (v${{ env.NEW_VERSION }})
-          title: 'ML model retrain: dataset v${{ inputs.dataset_version }} → app v${{ env.NEW_VERSION }}'
+            feat(ml): retrain model on dataset v${{ inputs.dataset_version }}
+          title: 'ML model retrain: dataset v${{ inputs.dataset_version }}'
           body-path: training_output/report.md
           add-paths: |
             resources/model/ability_classifier_fp16.onnx
             resources/model/class_names.json
-            package.json
-            package-lock.json
           labels: ml-model
           delete-branch: true

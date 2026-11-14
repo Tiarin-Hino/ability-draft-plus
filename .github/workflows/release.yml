@@ -9,6 +9,10 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: write
+    env:
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+      SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -31,12 +35,16 @@ jobs:
           CLIENT_SHARED_SECRET: ${{ secrets.CLIENT_SHARED_SECRET }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           CLIENT_TAG: ${{ secrets.CLIENT_TAG }}
-      - name: Convert pre-existing release to draft
-        # electron-builder requires the release to be a draft (or non-existent) before it can
-        # upload assets. If we pre-created a published release (e.g. via gh release create),
-        # electron-builder skips all uploads with "existing type not compatible with publishing type".
-        # Converting to draft first lets electron-builder upload and then publish it normally.
-        run: gh release edit ${{ github.ref_name }} --draft 2>$null; exit 0
+      - name: Ensure single draft release exists
+        # Pre-creating a single draft release prevents electron-builder from racing
+        # to create duplicate drafts (one holding only Setup.exe.blockmap).
+        # If the tag already has a release, ensure it stays in draft mode first.
+        run: |
+          if (gh release view "${{ github.ref_name }}" 2>$null) {
+            gh release edit "${{ github.ref_name }}" --draft
+          } else {
+            gh release create "${{ github.ref_name }}" --draft --title "${{ github.ref_name }}" --notes ""
+          }
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: npx electron-builder --win --publish=always
@@ -46,7 +54,3 @@ jobs:
       - name: Upload source maps to Sentry
         if: env.SENTRY_AUTH_TOKEN != ''
         run: npx @sentry/cli sourcemaps upload --release="ability-draft-plus@${{ github.ref_name }}" ./out
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}

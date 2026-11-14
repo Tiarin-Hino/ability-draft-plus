@@ -69,6 +69,7 @@
     "linking": "Linkitetään…",
     "refreshButton": "Päivitä tilastot",
     "unlinkButton": "Poista linkitys",
+    "unlinkConfirm": "Poistetaanko profiilin linkitys?",
     "lastUpdated": "päivitetty {{date}}",
     "refreshSuccess": "Päivitetty: {{abilities}} kykyä, {{heroes}} sankaria henkilökohtaisilla tilastoilla.",
     "blendNote": "Henkilökohtaiset voittoprosentit sekoitetaan globaaleihin tilastoihin suhteessa siihen, montako peliä sinulla on kullakin kyvyllä — pienet otokset vain hienosäätävät pisteitä. Tilastot päivittyvät automaattisesti, kun overlay aktivoidaan (korkeintaan kerran tunnissa).",

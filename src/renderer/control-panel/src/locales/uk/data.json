@@ -50,7 +50,11 @@
       "ultimate": "Ультімейт"
     },
     "filterPlaceholder": "Фільтр здібностей...",
-    "noResults": "Здібностей не знайдено."
+    "noResults": "Здібностей не знайдено.",
+    "ultimateLabel": "Ульт",
+    "filterAll": "Усі",
+    "filterUltimates": "Ультимейти",
+    "filterStandard": "Звичайні"
   },
   "heroes": {
     "title": "Герої",

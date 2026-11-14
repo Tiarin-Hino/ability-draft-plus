@@ -37,7 +37,8 @@
     "cancel": "Cancelar",
     "confirm": "Confirmar",
     "close": "Fechar",
-    "retry": "Tentar novamente"
+    "retry": "Tentar novamente",
+    "loading": "Carregando…"
   },
   "support": {
     "label": "Apoie o projeto",

@@ -37,7 +37,8 @@
     "cancel": "Cancelar",
     "confirm": "Confirmar",
     "close": "Cerrar",
-    "retry": "Reintentar"
+    "retry": "Reintentar",
+    "loading": "Cargando…"
   },
   "support": {
     "label": "Apóyame",

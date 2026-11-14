@@ -37,7 +37,8 @@
     "cancel": "Peruuta",
     "confirm": "Vahvista",
     "close": "Sulje",
-    "retry": "Yritä uudelleen"
+    "retry": "Yritä uudelleen",
+    "loading": "Ladataan…"
   },
   "support": {
     "label": "Tue kehittäjää",

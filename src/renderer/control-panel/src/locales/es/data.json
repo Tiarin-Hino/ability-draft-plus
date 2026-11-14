@@ -50,7 +50,11 @@
       "ultimate": "Ultimate"
     },
     "filterPlaceholder": "Filtrar habilidades...",
-    "noResults": "No se encontraron habilidades."
+    "noResults": "No se encontraron habilidades.",
+    "ultimateLabel": "Definitiva",
+    "filterAll": "Todas",
+    "filterUltimates": "Definitivas",
+    "filterStandard": "Estándar"
   },
   "heroes": {
     "title": "Héroes",

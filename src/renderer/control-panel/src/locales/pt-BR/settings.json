@@ -69,6 +69,7 @@
     "linking": "Vinculando…",
     "refreshButton": "Atualizar estatísticas",
     "unlinkButton": "Desvincular",
+    "unlinkConfirm": "Desvincular perfil?",
     "lastUpdated": "atualizado em {{date}}",
     "refreshSuccess": "Atualizado: {{abilities}} habilidades, {{heroes}} heróis com estatísticas pessoais.",
     "blendNote": "As taxas de vitória pessoais são misturadas às estatísticas globais na proporção de quantas partidas você tem com cada habilidade — amostras pequenas só ajustam levemente a pontuação. As estatísticas se atualizam automaticamente quando o overlay é ativado (no máximo uma vez por hora).",

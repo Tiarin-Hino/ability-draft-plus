@@ -50,7 +50,11 @@
       "ultimate": "Ultimaatti"
     },
     "filterPlaceholder": "Suodata kykyjä...",
-    "noResults": "Kykyjä ei löytynyt."
+    "noResults": "Kykyjä ei löytynyt.",
+    "ultimateLabel": "Ulti",
+    "filterAll": "Kaikki",
+    "filterUltimates": "Ultimaatit",
+    "filterStandard": "Tavalliset"
   },
   "heroes": {
     "title": "Sankarit",

@@ -69,6 +69,7 @@
     "linking": "Nili-link…",
     "refreshButton": "I-refresh ang stats",
     "unlinkButton": "I-unlink",
+    "unlinkConfirm": "I-unlink ang profile?",
     "lastUpdated": "na-update {{date}}",
     "refreshSuccess": "Na-refresh: {{abilities}} abilities, {{heroes}} heroes na may personal stats.",
     "blendNote": "Ang personal winrates ay hinahalo sa global stats ayon sa dami ng games mo sa bawat ability — kaunting laro lang, kaunting epekto lang sa score. Awtomatikong nagre-refresh ang stats kapag na-activate ang overlay (hanggang isang beses bawat oras).",

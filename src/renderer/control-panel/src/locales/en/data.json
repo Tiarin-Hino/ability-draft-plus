@@ -50,7 +50,11 @@
       "ultimate": "Ultimate"
     },
     "filterPlaceholder": "Filter abilities...",
-    "noResults": "No abilities found."
+    "noResults": "No abilities found.",
+    "ultimateLabel": "Ult",
+    "filterAll": "All",
+    "filterUltimates": "Ultimates",
+    "filterStandard": "Standard"
   },
   "heroes": {
     "title": "Heroes",

@@ -37,7 +37,8 @@
     "cancel": "取消",
     "confirm": "确认",
     "close": "关闭",
-    "retry": "重试"
+    "retry": "重试",
+    "loading": "加载中…"
   },
   "support": {
     "label": "支持作者",
