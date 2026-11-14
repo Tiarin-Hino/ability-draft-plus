@@ -1,8 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import {
-  CAPTURE_FRAME_TIMEOUT_MS,
-  CAPTURE_IDLE_STOP_MS,
-} from '@shared/constants/thresholds'
+import { CAPTURE_FRAME_TIMEOUT_MS, CAPTURE_IDLE_STOP_MS } from '@shared/constants/thresholds'
 
 // Mock electron's desktopCapturer + ipcMain
 const mockGetSources = vi.fn()
@@ -57,19 +54,28 @@ describe('CachedWindowCaptureService', () => {
   const mockSend = vi.fn()
   let overlayDestroyed = false
   let overlayExists = true
+  let isLoadingMainFrame = false
+  let wcOnceHandlers = new Map<string, () => void>()
   const windowManager = {
     getOverlayWindow: () =>
       overlayExists
-        ? { isDestroyed: () => overlayDestroyed, webContents: { send: mockSend } }
+        ? {
+            isDestroyed: () => overlayDestroyed,
+            webContents: {
+              send: mockSend,
+              isLoadingMainFrame: () => isLoadingMainFrame,
+              once: (event: string, handler: () => void) => {
+                wcOnceHandlers.set(event, handler)
+              },
+            },
+          }
         : null,
   } as unknown as WindowManager
 
   let service: CachedWindowCaptureService
 
   /** Wires webContents.send('capture:frame') to synchronously answer like the renderer. */
-  function autoRespond(
-    responder: (req: SentFrameRequest) => Record<string, unknown> | null,
-  ): void {
+  function autoRespond(responder: (req: SentFrameRequest) => Record<string, unknown> | null): void {
     mockSend.mockImplementation((channel: string, req: SentFrameRequest) => {
       if (channel !== 'capture:frame') return
       const reply = responder(req)
@@ -84,6 +90,8 @@ describe('CachedWindowCaptureService', () => {
     ipcListeners.clear()
     overlayDestroyed = false
     overlayExists = true
+    isLoadingMainFrame = false
+    wcOnceHandlers = new Map()
     mockGetSources.mockResolvedValue([
       { id: 'window:1:0', name: 'Discord' },
       { id: 'window:2:0', name: 'Dota 2' },
@@ -213,5 +221,40 @@ describe('CachedWindowCaptureService', () => {
     service.dispose()
     expect(ipcListeners.has('capture:frameResult')).toBe(false)
     expect(ipcListeners.has('capture:sessionEnded')).toBe(false)
+  })
+
+  it('resetSession clears cached source, stops stream, and settles pending grabs immediately', async () => {
+    vi.useFakeTimers()
+    autoRespond(() => null)
+
+    const pendingPromise = service.captureFrame('Dota 2', { width: 2, height: 2 })
+    // Yield once so getSources resolves and requestFrame queues pending grab
+    await Promise.resolve()
+    await Promise.resolve()
+
+    service.resetSession()
+
+    expect(await pendingPromise).toBeNull()
+    expect(mockSend).toHaveBeenCalledWith('capture:stop')
+
+    // Next capture must re-resolve sourceId rather than reusing the old one
+    autoRespond(() => ({ ok: true, width: 2, height: 2, data: makeRgbaFrame(2, 2) }))
+    expect(await service.captureFrame('Dota 2', { width: 2, height: 2 })).not.toBeNull()
+    expect(mockGetSources).toHaveBeenCalledTimes(2)
+  })
+
+  it('waits for did-finish-load when the background capture host is still loading', async () => {
+    isLoadingMainFrame = true
+    autoRespond(() => ({ ok: true, width: 2, height: 2, data: makeRgbaFrame(2, 2) }))
+
+    const pending = service.captureFrame('Dota 2', { width: 2, height: 2 })
+    expect(mockGetSources).not.toHaveBeenCalled()
+
+    isLoadingMainFrame = false
+    wcOnceHandlers.get('did-finish-load')?.()
+
+    const raw = await pending
+    expect(raw).not.toBeNull()
+    expect(mockGetSources).toHaveBeenCalledTimes(1)
   })
 })

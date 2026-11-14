@@ -17,8 +17,8 @@ import i18n from './i18n'
 // Component tree:
 // - HotspotLayer: Invisible rects at ability/hero positions, show tooltips on hover
 // - DynamicButtons: "My Spot" / "My Model" selection buttons at hero positions
-// - ControlsPanel: Top-right buttons (Scan, Rescan, Reset, Report, Close)
-// - CombinationPanel (x2): Scrollable OP and Trap combination lists
+// - ControlsPanel + RolePanel + Info Chips: Horizontal top header cluster above hero cards
+// - CombinationPanel (x2): Scrollable OP and Trap combination lists below the header row
 // - StatusToast: Scan progress/error notifications
 // - ConfirmModal: Confirmation dialogs for scan and report
 //
@@ -136,8 +136,7 @@ function App(): React.ReactElement {
         ? t('status.error', { message: scanError })
         : null
 
-  const statusVariant =
-    scanState === 'error' ? ('error' as const) : ('info' as const)
+  const statusVariant = scanState === 'error' ? ('error' as const) : ('info' as const)
 
   return (
     <div className={`overlay-root${scanState === 'scanning' ? ' capture-mode' : ''}`}>
@@ -159,52 +158,67 @@ function App(): React.ReactElement {
         />
       )}
 
-      {/* Controls + OP/Trap panels column; side and opacity are user settings */}
+      {/* Top HUD header cluster + OP/Trap panels column; side and opacity are user settings */}
       <div
         className={`top-right-column${overlayAnchor === 'left' ? ' top-right-column-left' : ''}`}
         style={{
           opacity: overlayOpacity ?? 1,
-          ...(overlayAnchor === 'left' ? { left: 15 } : { right: 15 }),
+          ...(overlayAnchor === 'left' ? { left: 12 } : { right: 12 }),
         }}
       >
-        {/* Controls Panel - z-index 10000 */}
-        <ControlsPanel
-          scanState={scanState}
-          onInitialScan={handleInitialScan}
-          onRescan={handleRescan}
-          onReset={resetOverlay}
-          onClose={handleClose}
-          onReportFailed={handleReportFailed}
-        />
-
-        {/* Resolution + layout source badge */}
-        {activeResolution && activeResolutionSource && (
+        {/* Horizontal header keeps RolePanel and status chips beside ControlsPanel
+            so the top corner stays above the hero cards and never covers Row 0/5 My Spot. */}
+        <div
+          className={`overlay-header-row${overlayAnchor === 'left' ? ' overlay-header-row-left' : ''}`}
+        >
           <div
-            className={`resolution-badge${activeResolutionSource === 'auto-scaled' ? ' resolution-badge-warn' : ''}`}
-            title={
-              activeResolutionSource === 'auto-scaled'
-                ? t('resolution.autoScaledWarning')
-                : undefined
-            }
+            className={`overlay-status-cluster${overlayAnchor === 'left' ? ' overlay-status-cluster-left' : ''}`}
           >
-            {activeResolution} · {t(`resolution.source.${activeResolutionSource}`)}
-          </div>
-        )}
+            {/* Role-aware suggestions quick control */}
+            <RolePanel
+              roleContext={overlayData?.roleContext}
+              hasScanData={overlayData?.scanData != null}
+              mySpotSelected={selectedSpotHeroOrder !== null}
+              autoTracking={overlayData?.autoDraftTrackingEnabled ?? false}
+            />
 
-        {/* Scan quality summary */}
-        {overlayData?.scanData && poolSlots.length > 0 && (
-          <div className={`scan-summary${unknownCount > 0 ? ' scan-summary-warn' : ''}`}>
-            {t('scanSummary', { recognized: recognizedCount, total: poolSlots.length })}
-          </div>
-        )}
+            {((activeResolution && activeResolutionSource) ||
+              (overlayData?.scanData && poolSlots.length > 0)) && (
+              <div className="overlay-info-chips">
+                {/* Resolution + layout source badge */}
+                {activeResolution && activeResolutionSource && (
+                  <div
+                    className={`resolution-badge${activeResolutionSource === 'auto-scaled' ? ' resolution-badge-warn' : ''}`}
+                    title={
+                      activeResolutionSource === 'auto-scaled'
+                        ? t('resolution.autoScaledWarning')
+                        : undefined
+                    }
+                  >
+                    {activeResolution} · {t(`resolution.source.${activeResolutionSource}`)}
+                  </div>
+                )}
 
-        {/* Role-aware suggestions quick control */}
-        <RolePanel
-          roleContext={overlayData?.roleContext}
-          hasScanData={overlayData?.scanData != null}
-          mySpotSelected={selectedSpotHeroOrder !== null}
-          autoTracking={overlayData?.autoDraftTrackingEnabled ?? false}
-        />
+                {/* Scan quality summary */}
+                {overlayData?.scanData && poolSlots.length > 0 && (
+                  <div className={`scan-summary${unknownCount > 0 ? ' scan-summary-warn' : ''}`}>
+                    {t('scanSummary', { recognized: recognizedCount, total: poolSlots.length })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Controls Panel - z-index 10000 */}
+          <ControlsPanel
+            scanState={scanState}
+            onInitialScan={handleInitialScan}
+            onRescan={handleRescan}
+            onReset={resetOverlay}
+            onClose={handleClose}
+            onReportFailed={handleReportFailed}
+          />
+        </div>
 
         {/* OP Combinations Panel - z-index 9999 */}
         {overlayData && (
@@ -231,10 +245,7 @@ function App(): React.ReactElement {
 
       {/* Status Toast - z-index 10001 */}
       <StatusToast message={statusMessage} variant={statusVariant} />
-      <StatusToast
-        message={snapshotMessage}
-        variant={snapshotIsError ? 'error' : 'success'}
-      />
+      <StatusToast message={snapshotMessage} variant={snapshotIsError ? 'error' : 'success'} />
 
       {/* Scan Confirm Modal - z-index 10005 */}
       <ConfirmModal

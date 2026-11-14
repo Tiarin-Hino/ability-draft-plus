@@ -44,18 +44,15 @@ export function createScanProcessingService(
     import('./spot-detection-service').SpotDetectionService,
     'onInitialScanProcessed'
   >,
-  slotMapping?: Pick<
-    import('./slot-mapping-service').SlotMappingService,
-    'onCardTiles'
-  >,
+  slotMapping?: Pick<import('./slot-mapping-service').SlotMappingService, 'onCardTiles'>,
   abilityTags?: import('@core/domain/ability-tags').AbilityTagsLookup,
 ): ScanProcessingService {
-  // Enrichment failures must reach the overlay: without this broadcast the renderer's
-  // scanState stays pinned at 'scanning' with every button disabled.
+  // Enrichment failures must reach the visible overlay: without this broadcast the
+  // renderer's scanState stays pinned at 'scanning' with every button disabled.
   function broadcastError(message: string): void {
     const payload = { error: message }
     const overlay = windowManager.getOverlayWindow()
-    if (overlay && !overlay.isDestroyed()) {
+    if (overlay && !overlay.isDestroyed() && windowManager.isOverlayVisible?.() !== false) {
       overlay.webContents.send('ml:scanResults', payload)
     }
     const cp = windowManager.getControlPanelWindow()
@@ -65,13 +62,7 @@ export function createScanProcessingService(
   }
 
   return {
-    handleScanResults(
-      results,
-      isInitialScan,
-      resolution,
-      scaleFactor,
-      playerCardTiles,
-    ) {
+    handleScanResults(results, isInitialScan, resolution, scaleFactor, playerCardTiles) {
       const start = performance.now()
 
       try {
@@ -123,15 +114,12 @@ export function createScanProcessingService(
 
         // Update store with new state
         store.setState({
-          initialPoolAbilitiesCache:
-            output.updatedState.initialPoolAbilitiesCache,
-          identifiedHeroModelsCache:
-            output.updatedState.identifiedHeroModelsCache,
+          initialPoolAbilitiesCache: output.updatedState.initialPoolAbilitiesCache,
+          identifiedHeroModelsCache: output.updatedState.identifiedHeroModelsCache,
           mySelectedSpotDbId: output.updatedState.mySelectedSpotDbId,
           mySelectedSpotHeroOrder: output.updatedState.mySelectedSpotHeroOrder,
           mySelectedModelDbHeroId: output.updatedState.mySelectedModelDbHeroId,
-          mySelectedModelHeroOrder:
-            output.updatedState.mySelectedModelHeroOrder,
+          mySelectedModelHeroOrder: output.updatedState.mySelectedModelHeroOrder,
           selectedAbilitiesCache: output.updatedState.selectedAbilitiesCache,
           rescanRejectionStreak: output.updatedState.rescanRejectionStreak,
           lastRescanRejected: output.rescanRejected === true,
@@ -154,14 +142,13 @@ export function createScanProcessingService(
           logger.debug('Hasty rescan (no new picks) skipped; state unchanged')
         }
         if (output.rescanRebaselined) {
-          logger.warn(
-            'Contamination-guard rejection cap reached — accepted scan as new baseline',
-          )
+          logger.warn('Contamination-guard rejection cap reached — accepted scan as new baseline')
         }
 
-        // Broadcast enriched data to both windows
+        // Broadcast enriched data to visible overlay (background capture hosts
+        // skip the React UI) and always to the control panel.
         const overlay = windowManager.getOverlayWindow()
-        if (overlay && !overlay.isDestroyed()) {
+        if (overlay && !overlay.isDestroyed() && windowManager.isOverlayVisible?.() !== false) {
           overlay.webContents.send('overlay:data', output.overlayPayload)
           // A scan repaints the whole hotspot layer, and those hotspots are
           // hover-ONLY (they never toggle click-through themselves), so they

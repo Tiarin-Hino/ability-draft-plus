@@ -160,11 +160,7 @@ app.whenReady().then(async () => {
     () => draftStore.getState().mySelectedSpotHeroOrder,
   )
   // Auto "My Spot" from GSI (playing mode) — re-applied after each initial scan
-  const spotDetectionService = createSpotDetectionService(
-    draftStore,
-    windowManager,
-    streamService,
-  )
+  const spotDetectionService = createSpotDetectionService(draftStore, windowManager, streamService)
   // GSI slot <-> scan row correlation (spectate/replay name placement)
   const slotMappingService = createSlotMappingService(draftStore, streamService)
   const scanProcessingService = createScanProcessingService(
@@ -292,11 +288,17 @@ app.whenReady().then(async () => {
     streamService,
     scanTrigger,
     ocrService,
-    // A new match clears the previous draft exactly like closing the overlay
+    // A new match clears the previous draft exactly like closing the overlay;
+    // in Background Mode also recycle the hidden capture window so WGC/DWM
+    // handles never accumulate across back-to-back games.
     () => {
       draftStore.getState().resetSession()
       streamService.onSessionReset()
       slotMappingService.onSessionReset()
+      if (appStore.getState().overlayBackground) {
+        cachedWindowCapture.resetSession()
+        windowManager.recycleBackgroundOverlay()
+      }
     },
   )
   autoRescanService.start()

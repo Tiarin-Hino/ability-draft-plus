@@ -35,10 +35,7 @@ import type { ScanTriggerService } from '../services/scan-trigger-service'
 import type { SlotMappingService } from '../services/slot-mapping-service'
 import type { AutoRescanService } from '../services/auto-rescan-service'
 import { startDevControlServer } from '../services/dev-control-service'
-import {
-  initialOverlayLifecycleState,
-  nextOverlayLifecycle,
-} from '@core/gsi/overlay-lifecycle'
+import { initialOverlayLifecycleState, nextOverlayLifecycle } from '@core/gsi/overlay-lifecycle'
 import type { LayoutSource } from '@shared/types'
 
 // @DEV-GUIDE: Central IPC handler registration. All renderer↔main communication goes through
@@ -125,6 +122,7 @@ export function registerIpcHandlers(
   // must NOT restore/focus the control panel then — the game is starting, and
   // stealing focus would alt-tab the player out of Dota.
   let suppressPanelRestoreOnce = false
+  let unsubOverlayClosed: (() => void) | null = null
 
   // Renderer calls this on mount to get initial data (avoids did-finish-load race)
   ipcMain.handle('overlay:getInitialData', () => pendingOverlayData)
@@ -167,14 +165,16 @@ export function registerIpcHandlers(
 
     if (!coords) {
       logger.warn('No layout coordinates for auto-detected resolution', { resolution, source })
-      return { success: false, error: `Unsupported resolution: ${resolution}. No layout coordinates available.` }
+      return {
+        success: false,
+        error: `Unsupported resolution: ${resolution}. No layout coordinates available.`,
+      }
     }
 
     // Background mode: the session runs with the overlay never shown. Everything
     // downstream (capture agent, hotkeys, scans, stream server, Twitch publisher)
     // is unchanged — only visibility differs.
-    const backgroundMode =
-      dbService.metadata.getSettings().overlayBackgroundMode === true
+    const backgroundMode = dbService.metadata.getSettings().overlayBackgroundMode === true
 
     const controlPanel = windowManager.getControlPanelWindow()
     if (controlPanel && !controlPanel.isDestroyed() && !backgroundMode) {
@@ -184,8 +184,18 @@ export function registerIpcHandlers(
       controlPanel.minimize()
     }
 
+    // Detach prior lifecycle hook and hotkeys before spawning (or replacing)
+    // the overlay window so window replacement never leaves stale listeners.
+    unsubOverlayClosed?.()
+    unsubOverlayClosed = null
+    globalShortcut.unregister('Control+Shift+S')
+    globalShortcut.unregister('Control+Shift+R')
+    windowTracker.stopTracking()
+
     const overlayWin = windowManager.createOverlayWindow({ visible: !backgroundMode })
-    bridge.subscribe([overlayWin])
+    if (!backgroundMode) {
+      bridge.subscribe([overlayWin])
+    }
     appStore.setState({
       overlayActive: true,
       overlayBackground: backgroundMode,
@@ -238,24 +248,28 @@ export function registerIpcHandlers(
       modelsCoords: coords.models_coords ?? [],
     }
 
-    // Auto-detect game window and reposition overlay for windowed mode
-    const displayBounds = primaryDisplay.bounds
+    if (!backgroundMode) {
+      // Auto-detect game window and reposition overlay for windowed mode
+      const displayBounds = primaryDisplay.bounds
 
-    windowTracker.startTracking((trackBounds) => {
-      if (trackBounds && (
-        trackBounds.width < displayBounds.width ||
-        trackBounds.height < displayBounds.height
-      )) {
-        // Game window is smaller than display → windowed mode
-        windowManager.repositionOverlay(trackBounds)
-      } else {
-        // Fullscreen/borderless or game not found → use full display
-        windowManager.repositionOverlay(displayBounds)
-      }
-    })
+      windowTracker.startTracking((trackBounds) => {
+        if (
+          trackBounds &&
+          (trackBounds.width < displayBounds.width || trackBounds.height < displayBounds.height)
+        ) {
+          // Game window is smaller than display → windowed mode
+          windowManager.repositionOverlay(trackBounds)
+        } else {
+          // Fullscreen/borderless or game not found → use full display
+          windowManager.repositionOverlay(displayBounds)
+        }
+      })
+    }
 
-    // Reset state when overlay window closes for any reason (user close, crash, etc.)
-    overlayWin.on('closed', () => {
+    // Reset state only on logical overlay close (user close, overlay:close,
+    // or unrecoverable crash) — NOT when recycling the background capture window.
+    unsubOverlayClosed = windowManager.onOverlayClosed(() => {
+      unsubOverlayClosed = null
       globalShortcut.unregister('Control+Shift+S')
       globalShortcut.unregister('Control+Shift+R')
       windowTracker.stopTracking()
@@ -270,7 +284,7 @@ export function registerIpcHandlers(
       slotMappingService.onSessionReset()
       pendingOverlayData = null
 
-      if (suppressPanelRestoreOnce) {
+      if (suppressPanelRestoreOnce || backgroundMode) {
         suppressPanelRestoreOnce = false
       } else {
         const cp = windowManager.getControlPanelWindow()
@@ -317,7 +331,7 @@ export function registerIpcHandlers(
         logger.info('Overlay auto-close: draft ended', { matchId: snapshot.matchId })
         suppressPanelRestoreOnce = true
         windowTracker.stopTracking()
-        windowManager.closeOverlay()
+        windowManager.closeOverlay({ suppressControlPanelRestore: true })
         appStore.setState({
           overlayActive: false,
           activeResolution: null,
@@ -372,12 +386,9 @@ export function registerIpcHandlers(
     autoRescan.resetSession()
   })
 
-  ipcMain.on(
-    'overlay:setMouseIgnore',
-    (_event, data: { ignore: boolean; forward?: boolean }) => {
-      windowManager.setOverlayMouseEvents(data.ignore, data.forward ?? true)
-    },
-  )
+  ipcMain.on('overlay:setMouseIgnore', (_event, data: { ignore: boolean; forward?: boolean }) => {
+    windowManager.setOverlayMouseEvents(data.ignore, data.forward ?? true)
+  })
 
   // Database domain (hero, ability, settings, backup)
   registerDatabaseHandlers(dbService, backupService)
@@ -408,7 +419,13 @@ export function registerIpcHandlers(
   registerTwitchHandlers(twitchPublisher)
 
   // Resolution domain
-  registerResolutionHandlers(layoutService, screenshotService, windowTracker, windowManager, apiConfig)
+  registerResolutionHandlers(
+    layoutService,
+    screenshotService,
+    windowTracker,
+    windowManager,
+    apiConfig,
+  )
 
   // Dev-only ML pipeline cockpit (gather/upload/retrain shortcuts)
   if (!app.isPackaged) {

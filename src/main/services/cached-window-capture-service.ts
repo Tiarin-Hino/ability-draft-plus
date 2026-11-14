@@ -3,10 +3,7 @@ import log from 'electron-log/main'
 import type { IpcSendMap } from '@shared/ipc/api'
 import type { DecodedScreenshot } from '@core/ml/preprocessing'
 import type { WindowManager } from './window-manager'
-import {
-  CAPTURE_FRAME_TIMEOUT_MS,
-  CAPTURE_IDLE_STOP_MS,
-} from '@shared/constants/thresholds'
+import { CAPTURE_FRAME_TIMEOUT_MS, CAPTURE_IDLE_STOP_MS } from '@shared/constants/thresholds'
 
 // @DEV-GUIDE: The PRIMARY scan capture path for fullscreen/borderless Dota.
 // desktopCapturer.getSources() thumbnails every open window to deliver the one
@@ -47,6 +44,8 @@ export interface CachedWindowCaptureService {
     title: string,
     expectedSize: { width: number; height: number },
   ): Promise<DecodedScreenshot | null>
+  /** Clear cached source, reject in-flight grabs immediately, and stop the renderer stream. */
+  resetSession(): void
   dispose(): void
 }
 
@@ -86,6 +85,21 @@ export function createCachedWindowCaptureService(
     if (overlay && !overlay.isDestroyed()) {
       overlay.webContents.send('capture:stop')
     }
+  }
+
+  /** Forget the source, clear idle stop timer, fail pending grabs, and stop stream. */
+  function resetSession(): void {
+    if (idleTimer) {
+      clearTimeout(idleTimer)
+      idleTimer = null
+    }
+    sourceId = null
+    const entries = [...pending.entries()]
+    pending.clear()
+    for (const [requestId, finish] of entries) {
+      finish({ requestId, ok: false, error: 'session-reset' })
+    }
+    sendStopToRenderer()
   }
 
   /** Forget the source and stop the renderer stream — next scan re-resolves. */
@@ -132,6 +146,22 @@ export function createCachedWindowCaptureService(
     async captureFrame(title, expectedSize): Promise<DecodedScreenshot | null> {
       const overlay = windowManager.getOverlayWindow()
       if (!overlay || overlay.isDestroyed()) return null
+
+      // Wait for initial load after activateOverlay / recycleBackgroundOverlay so
+      // a cold scan doesn't send capture:frame before initCaptureAgent() attaches.
+      if (
+        overlay.webContents.isLoadingMainFrame?.() === true &&
+        typeof overlay.webContents.once === 'function'
+      ) {
+        const loaded = await new Promise<boolean>((resolve) => {
+          const timer = setTimeout(() => resolve(false), Math.min(CAPTURE_FRAME_TIMEOUT_MS, 2000))
+          overlay.webContents.once('did-finish-load', () => {
+            clearTimeout(timer)
+            resolve(true)
+          })
+        })
+        if (!loaded || overlay.isDestroyed()) return null
+      }
 
       try {
         let resolveMs: number | null = null
@@ -220,6 +250,8 @@ export function createCachedWindowCaptureService(
         return null
       }
     },
+
+    resetSession,
 
     dispose(): void {
       if (idleTimer) {
