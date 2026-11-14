@@ -1,23 +1,36 @@
-@import 'tailwindcss';
+/* @DEV-GUIDE: Dota 2 Panorama diegetic HUD styles for the transparent overlay window.
+ * HARD CONSTRAINTS:
+ * - Zero `backdrop-filter: blur()` (breaks/lags transparent WS_EX_LAYERED HWND compositor).
+ * - Slot shimmers animate GPU-only `opacity` on `::after` instead of `box-shadow` blur loops.
+ * - Top HUD dock stays <= 76px tall above hero cards; expanded combo drawers offset 112px inward
+ *   so Radiant Row 0 and Dire Row 5 "My Spot" controls remain clickable at all times.
+ * - `.capture-mode` hides every overlay border, pseudo-element, badge, corner marker, and chrome. */
 
-/* ============================================================
-   Colorblind-Safe Palette (Viridis/Cividis-inspired)
-   All indicator colors differ in luminance, not just hue.
-   ============================================================ */
 :root {
-  --color-top-pick: 33, 145, 128;
-  --color-top-pick-bright: 45, 170, 150;
-  --color-hero-tier: 255, 215, 0;
-  --color-hero-tier-bright: 255, 230, 50;
-  --color-synergy: 68, 120, 213;
-  --color-synergy-bright: 90, 145, 235;
-  /* my-spot is deliberately DISTINCT from top-pick (they were identical, making
-     "recommended" and "yours" indistinguishable) — warm amber vs teal differs in
-     both hue and luminance, keeping the colorblind-safe intent */
-  --color-my-spot: 226, 149, 58;
-  --color-my-model: 94, 201, 98;
-  --color-wr-strong: #219180;
-  --color-wr-weak: #cf597e;
+  /* Colorblind-safe semantic accents (Viridis/Cividis luminance separation) */
+  --color-top-pick: 33, 185, 154;
+  --color-top-pick-bright: 72, 224, 192;
+  --color-hero-tier: 240, 196, 68;
+  --color-hero-tier-bright: 255, 222, 112;
+  --color-synergy: 72, 148, 232;
+  --color-synergy-bright: 118, 182, 252;
+  /* Warm amber distinct in hue and luminance from top-pick teal & synergy blue */
+  --color-my-spot: 236, 154, 54;
+  --color-my-model: 88, 206, 114;
+  --color-wr-strong: #3fd2b1;
+  --color-wr-weak: #e6728c;
+
+  /* Dota 2 Panorama Slate & Burnished Gold HUD surfaces (solid/alpha rgba only) */
+  --hud-bg: rgba(13, 18, 25, 0.94);
+  --hud-bg-elevated: rgba(20, 27, 37, 0.96);
+  --hud-bg-chip: rgba(16, 22, 31, 0.9);
+  --hud-gold: #d4ad56;
+  --hud-gold-bright: #eccb79;
+  --hud-gold-border: rgba(212, 173, 86, 0.48);
+  --hud-slate-border: rgba(124, 144, 168, 0.34);
+  --hud-text-primary: #eef2f7;
+  --hud-text-secondary: #a8b4c4;
+  --hud-text-muted: #7f8c9d;
 }
 
 /* ============================================================
@@ -35,8 +48,13 @@ body {
   pointer-events: none;
   width: 100vw;
   height: 100vh;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  color: #e0e0e0;
+  font-family:
+    'Segoe UI',
+    system-ui,
+    -apple-system,
+    sans-serif;
+  color: var(--hud-text-primary);
+  -webkit-font-smoothing: antialiased;
 }
 
 /* ============================================================
@@ -55,827 +73,19 @@ body {
 }
 
 /* ============================================================
-   Controls Panel (top-right)
-   ============================================================ */
-.controls-panel {
-  z-index: 10000;
-  background-color: rgba(56, 32, 57, 0.92);
-  border: 1px solid rgba(93, 53, 102, 0.4);
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-  gap: 5px;
-  padding: 8px;
-  transition: all 0.2s ease-in-out;
-  will-change: transform;
-}
-
-.controls-panel .overlay-btn {
-  min-height: 32px;
-  padding: 5px 12px;
-  font-size: 13px;
-}
-
-.controls-panel:hover {
-  background-color: rgba(72, 41, 76, 0.92);
-  border-color: rgba(93, 53, 102, 0.6);
-}
-
-.controls-button-group {
-  display: flex;
-  gap: 5px;
-}
-
-/* ============================================================
-   Overlay Buttons
-   ============================================================ */
-.overlay-btn {
-  align-items: center;
-  border-radius: 6px;
-  color: #e8e8e8;
-  cursor: pointer;
-  display: inline-flex;
-  font-size: 14px;
-  font-weight: 500;
-  justify-content: center;
-  min-height: 36px;
-  padding: 7px 15px;
-  text-align: center;
-  transition: all 0.15s ease-out;
-  white-space: nowrap;
-  border: 1px solid transparent;
-}
-
-.overlay-btn:hover {
-  transform: translateY(-2px) scale(1.02);
-}
-
-.overlay-btn:active {
-  transform: translateY(0);
-}
-
-.overlay-btn:disabled {
-  background: rgba(40, 42, 45, 0.6) !important;
-  border-color: rgba(60, 62, 65, 0.7) !important;
-  color: rgba(150, 155, 160, 0.7) !important;
-  cursor: not-allowed;
-  transform: none !important;
-}
-
-.overlay-btn-purple {
-  background-color: rgba(93, 53, 102, 0.85);
-  border-color: rgba(106, 60, 118, 0.9);
-}
-.overlay-btn-purple:hover {
-  background-color: rgba(106, 60, 118, 0.98);
-}
-
-.overlay-btn-green {
-  background-color: rgba(57, 127, 69, 0.85);
-  border-color: rgba(71, 149, 86, 0.9);
-}
-.overlay-btn-green:hover {
-  background-color: rgba(71, 149, 86, 0.98);
-}
-
-.overlay-btn-yellow {
-  background-color: rgba(255, 193, 7, 0.85);
-  border-color: rgba(200, 150, 0, 0.9);
-  color: #1a1a1a;
-}
-.overlay-btn-yellow:hover {
-  background-color: rgba(255, 210, 50, 0.98);
-}
-
-.overlay-btn-red {
-  background-color: rgba(192, 57, 43, 0.85);
-  border-color: rgba(160, 40, 30, 0.9);
-}
-.overlay-btn-red:hover {
-  background-color: rgba(210, 70, 55, 0.98);
-}
-
-.overlay-btn-orange {
-  background-color: rgba(230, 126, 34, 0.85);
-  border-color: rgba(190, 100, 25, 0.9);
-}
-.overlay-btn-orange:hover {
-  background-color: rgba(240, 140, 50, 0.98);
-}
-
-.overlay-btn-gray {
-  background-color: rgba(114, 118, 125, 0.85);
-  border-color: rgba(90, 94, 100, 0.9);
-}
-.overlay-btn-gray:hover {
-  background-color: rgba(130, 134, 140, 0.98);
-}
-
-/* ============================================================
-   Confirm Modal
-   ============================================================ */
-.confirm-modal-scrim {
-  position: fixed;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.75);
-  display: flex;
-  justify-content: flex-end;
-  align-items: flex-start;
-  padding: 15px;
-  box-sizing: border-box;
-  z-index: 10005;
-}
-
-.confirm-modal-card {
-  background-color: rgba(72, 41, 76, 0.97);
-  border: 2px solid rgba(93, 53, 102, 0.9);
-  border-radius: 10px;
-  box-shadow:
-    0 8px 32px rgba(93, 53, 102, 0.4),
-    0 0 0 1px rgba(93, 53, 102, 0.2);
-  color: #e8e8e8;
-  max-width: 450px;
-  padding: 24px 28px;
-  text-align: center;
-}
-
-.confirm-modal-message {
-  margin-bottom: 20px;
-  line-height: 1.6;
-  font-size: 1.1em;
-}
-
-.confirm-modal-buttons {
-  display: flex;
-  justify-content: center;
-  gap: 15px;
-}
-
-/* ============================================================
-   Status Toast (bottom-right)
-   ============================================================ */
-.status-toast {
-  position: fixed;
-  bottom: 15px;
-  right: 15px;
-  z-index: 10001;
-  background-color: rgba(32, 18, 34, 0.95);
-  border: 1px solid rgba(93, 53, 102, 0.8);
-  border-left: 4px solid rgba(106, 60, 118, 0.8);
-  border-radius: 6px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
-  color: #e8e8e8;
-  font-size: 14px;
-  max-width: 320px;
-  padding: 12px 16px;
-  pointer-events: none;
-  will-change: transform;
-}
-
-/* ============================================================
-   Shimmer Keyframe Animations
-   ============================================================ */
-@keyframes shimmerGreen {
-  0%,
-  100% {
-    box-shadow:
-      0 0 4px 1px rgba(var(--color-top-pick), 0.8),
-      inset 0 0 3px 0px rgba(var(--color-top-pick), 0.6);
-    border-color: rgba(var(--color-top-pick), 0.9);
-  }
-  50% {
-    box-shadow:
-      0 0 8px 3px rgba(var(--color-top-pick-bright), 1),
-      inset 0 0 5px 2px rgba(var(--color-top-pick-bright), 0.9);
-    border-color: rgba(var(--color-top-pick-bright), 1);
-  }
-}
-
-@keyframes shimmerGold {
-  0%,
-  100% {
-    box-shadow:
-      0 0 5px 1px rgba(255, 215, 0, 0.6),
-      inset 0 0 3px 0px rgba(255, 215, 0, 0.4);
-    border-color: rgba(255, 223, 30, 0.8);
-  }
-  50% {
-    box-shadow:
-      0 0 12px 4px rgba(255, 215, 0, 1),
-      inset 0 0 7px 2px rgba(255, 215, 0, 0.8);
-    border-color: rgba(255, 230, 50, 1);
-  }
-}
-
-@keyframes shimmerTeal {
-  0%,
-  100% {
-    box-shadow:
-      0 0 3px 0px rgba(var(--color-synergy), 0.65),
-      inset 0 0 2px 0px rgba(var(--color-synergy), 0.45);
-    border-color: rgba(var(--color-synergy), 0.8);
-  }
-  50% {
-    box-shadow:
-      0 0 6px 2px rgba(var(--color-synergy-bright), 1),
-      inset 0 0 4px 1px rgba(var(--color-synergy-bright), 0.8);
-    border-color: rgba(var(--color-synergy-bright), 1);
-  }
-}
-
-/* ============================================================
-   Hotspot Base Styles
-   ============================================================ */
-.ability-hotspot,
-.hero-model-hotspot {
-  position: absolute;
-  box-sizing: border-box;
-  pointer-events: auto;
-}
-
-.shimmer-green {
-  border: 2px solid rgba(var(--color-top-pick), 0.9);
-  border-radius: 4px;
-  animation: shimmerGreen 1.2s infinite ease-in-out;
-}
-
-.shimmer-gold {
-  border: 2px solid rgba(255, 223, 30, 0.8);
-  border-radius: 4px;
-  animation: shimmerGold 1.2s infinite ease-in-out;
-}
-
-.shimmer-teal {
-  border: 2px solid rgba(var(--color-synergy), 0.8);
-  border-radius: 4px;
-  animation: shimmerTeal 1.2s infinite ease-in-out;
-}
-
-/* Corner marker: slot is recommended because of the linked profile's personal
-   stats. Uses the "yours" amber (--color-my-spot) — same semantic family as
-   My Spot, and distinct in hue+luminance from top-pick teal-green, synergy
-   blue, and hero-tier gold. Composes on top of any shimmer border; never
-   intercepts the mouse (hover belongs to the hotspot). */
-.personal-marker {
-  position: absolute;
-  top: 3px;
-  right: 3px;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: rgba(var(--color-my-spot), 0.95);
-  border: 1px solid rgba(0, 0, 0, 0.7);
-  box-shadow: 0 0 4px rgba(var(--color-my-spot), 0.9);
-  pointer-events: none;
-}
-
-/* Aghanim's markers (opt-in setting): strong Shard upgrade = light-blue
-   diamond bottom-left, strong Scepter upgrade = violet dot bottom-right.
-   Same geometry as the personal marker (top-right) so all three compose on
-   one slot; never intercepts the mouse. rgba only — no backdrop-filter. */
-.aghs-marker {
-  position: absolute;
-  bottom: 3px;
-  width: 9px;
-  height: 9px;
-  border: 1px solid rgba(0, 0, 0, 0.7);
-  pointer-events: none;
-}
-.aghs-marker-shard {
-  left: 3px;
-  border-radius: 2px;
-  transform: rotate(45deg);
-  background: rgba(90, 180, 235, 0.95);
-  box-shadow: 0 0 4px rgba(90, 180, 235, 0.9);
-}
-.aghs-marker-scepter {
-  right: 3px;
-  border-radius: 50%;
-  background: rgba(150, 110, 235, 0.95);
-  box-shadow: 0 0 4px rgba(150, 110, 235, 0.9);
-}
-
-/* Round-5 pick_asap: gold dashed outline, composes with the shimmer borders
-   (outline, not border, so it never shifts the hotspot box) */
-.pick-asap {
-  outline: 2px dashed rgba(255, 200, 70, 0.95);
-  outline-offset: -3px;
-}
-
-/* Round-5 combo deny marker: red triangle in the top-right corner */
-.deny-marker {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 0;
-  height: 0;
-  border-top: 11px solid rgba(235, 80, 80, 0.95);
-  border-left: 11px solid transparent;
-  filter: drop-shadow(0 0 3px rgba(235, 80, 80, 0.9));
-  pointer-events: none;
-}
-
-/* User's selected ability - teal */
-.my-spot-selected {
-  border: 3px solid rgba(var(--color-my-spot), 1) !important;
-  box-shadow: 0 0 10px 4px rgba(var(--color-my-spot), 0.7) !important;
-  border-radius: 4px;
-}
-
-/* User's selected hero model - green */
-.is-my-model {
-  border: 3px solid rgba(var(--color-my-model), 1) !important;
-  box-shadow: 0 0 10px 3px rgba(var(--color-my-model), 0.6) !important;
-  border-radius: 4px;
-}
-
-/* Snapshot mode: hide all borders and animations */
-.snapshot-hidden-border {
-  border: none !important;
-  animation: none !important;
-  box-shadow: none !important;
-}
-
-/* Capture mode (active while a scan is in flight): every overlay decoration must
-   vanish from the screen, or the captured screenshot contains our own borders
-   inside the icon crops and the ML confidence collapses. The status toast stays
-   visible (bottom-right, never overlaps slots). */
-.capture-mode .ability-hotspot,
-.capture-mode .hero-model-hotspot {
-  border: none !important;
-  animation: none !important;
-  box-shadow: none !important;
-}
-
-/* The personal marker is a filled child element — border/shadow resets alone
-   don't hide it, and a leftover dot inside an icon crop would contaminate the
-   scan exactly like a border would. */
-.capture-mode .personal-marker,
-.capture-mode .aghs-marker,
-.capture-mode .deny-marker {
-  display: none !important;
-}
-.capture-mode .pick-asap {
-  outline: none !important;
-}
-
-.capture-mode .dynamic-btn,
-.capture-mode .top-right-column {
-  visibility: hidden !important;
-}
-
-/* ML could not identify this slot */
-.unknown-slot {
-  border: 2px dashed rgba(230, 170, 40, 0.85);
-  border-radius: 4px;
-}
-
-/* ============================================================
-   Tooltip
-   ============================================================ */
-.overlay-tooltip {
-  position: absolute;
-  z-index: 10002;
-  pointer-events: none;
-  background-color: rgba(32, 18, 34, 0.97);
-  border: 1px solid rgba(93, 53, 102, 0.6);
-  border-left: 3px solid rgba(106, 60, 118, 0.8);
-  border-radius: 6px;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.8);
-  color: #e8e8e8;
-  font-size: 14px;
-  line-height: 1.5;
-  max-width: 300px;
-  padding: 12px 16px;
-  white-space: pre-line;
-  will-change: transform;
-}
-
-.tooltip-badge {
-  font-weight: bold;
-  margin-bottom: 2px;
-}
-
-.tooltip-badge-top {
-  color: rgb(var(--color-top-pick));
-}
-
-.tooltip-badge-synergy {
-  color: rgb(var(--color-synergy));
-}
-
-.tooltip-badge-model {
-  color: rgb(var(--color-hero-tier));
-}
-
-/* Recommended because of the linked profile's stats (matches .personal-marker) */
-.tooltip-badge-personal {
-  color: rgb(var(--color-my-spot));
-}
-
-/* Curated role must-pick (roleMust) — same blue family as the role-fit line */
-.tooltip-badge-curated {
-  color: #7fb3e3;
-}
-
-.tooltip-title {
-  font-weight: 600;
-  margin-bottom: 6px;
-  color: #ffffff;
-  font-size: 15px;
-}
-
-.tooltip-stat {
-  color: #a8b2bc;
-  margin-bottom: 4px;
-  font-size: 12px;
-}
-
-/* Personal (linked Windrun profile) stat line + score-shift markers.
-   Same "yours" amber as .personal-marker / .tooltip-badge-personal. */
-.tooltip-personal {
-  color: rgb(var(--color-my-spot));
-}
-
-.tooltip-personal-up {
-  color: #6fce7e;
-}
-
-.tooltip-personal-down {
-  color: #d97b6a;
-}
-
-/* Role-fit line (role-aware suggestions) — blue, distinct from the amber
-   personal line and the teal synergy accents. */
-.tooltip-role {
-  color: #7fb3e3;
-}
-
-.tooltip-role-up {
-  color: #6fce7e;
-}
-
-.tooltip-role-down {
-  color: #d97b6a;
-}
-
-.tooltip-role-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin: 3px 0;
-}
-
-.tooltip-role-chip {
-  background-color: rgba(64, 105, 150, 0.35);
-  border: 1px solid rgba(127, 179, 227, 0.5);
-  border-radius: 4px;
-  color: #b8d4ee;
-  font-size: 11px;
-  line-height: 1;
-  padding: 3px 6px;
-}
-
-.tooltip-role-chip-dup {
-  background-color: rgba(120, 90, 40, 0.35);
-  border-color: rgba(217, 123, 106, 0.5);
-  color: #e0b8a8;
-}
-
-/* Curated must-pick chip — brighter than the needs chips, it IS the headline */
-.tooltip-role-chip-curated {
-  background-color: rgba(64, 105, 150, 0.6);
-  border-color: rgba(184, 212, 238, 0.7);
-  color: #dcebf8;
-}
-
-/* Aghanim's Shard / Scepter notes (stacking with own picks, always-on markers) */
-.tooltip-aghs {
-  color: #8fc7ef;
-}
-
-/* Ability mechanically dead on the selected model (cleave on ranged) */
-.tooltip-inert {
-  color: #e6c063;
-}
-
-/* Now-or-never: usually drafted by this point in the draft */
-.tooltip-contested {
-  color: #e0a05a;
-}
-
-.tooltip-section-title {
-  font-weight: 600;
-  margin-top: 10px;
-  margin-bottom: 5px;
-  color: #c5cdd3;
-  font-size: 13px;
-  border-bottom: 1px solid rgba(70, 75, 80, 0.5);
-  padding-bottom: 3px;
-}
-
-.tooltip-combo {
-  font-size: 12px;
-  color: #b0b9c1;
-  padding-left: 12px;
-  margin-bottom: 3px;
-}
-
-.tooltip-combo-winrate {
-  color: var(--color-wr-strong);
-}
-
-.tooltip-combo-weak {
-  color: var(--color-wr-weak);
-}
-
-.tooltip-combo-hero {
-  font-style: italic;
-}
-
-/* ============================================================
-   Combination Panels (OP/Trap)
-   ============================================================ */
-.combination-panel {
-  z-index: 9999;
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7);
-  color: #e8e8e8;
-  font-size: 13px;
-  padding: 14px;
-  transition: all 0.2s ease-in-out;
-  width: 260px;
-  will-change: transform;
-  /* Cap each panel so OP + Trap together can't occupy the full right edge
-     (the draft timer and pick order live there). No extra opacity multiplier —
-     panel transparency is a user setting applied on the parent column, and
-     stacked multipliers washed the 12px text out over bright footage. */
-  max-height: 40vh;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
-.combination-panel::-webkit-scrollbar {
-  width: 4px;
-}
-
-.combination-panel::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 2px;
-}
-
-.combination-panel::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.combination-panel-op {
-  background: linear-gradient(135deg, rgba(72, 41, 76, 0.95) 0%, rgba(93, 53, 102, 0.92) 100%);
-  border: 1px solid rgba(93, 53, 102, 0.8);
-}
-
-.combination-panel-trap {
-  background: linear-gradient(135deg, rgba(139, 35, 35, 0.95) 0%, rgba(184, 48, 48, 0.92) 100%);
-  border: 1px solid rgba(184, 48, 48, 0.8);
-}
-
-.combination-panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin: -14px -14px 10px -14px;
-  padding: 10px 12px;
-  border-radius: 4px 4px 0 0;
-  border-bottom-width: 2px;
-  border-bottom-style: solid;
-}
-
-.combination-panel-op .combination-panel-header {
-  background: linear-gradient(to right, rgba(72, 41, 76, 0.5), rgba(93, 53, 102, 0.3));
-  border-bottom-color: rgba(93, 53, 102, 0.6);
-}
-
-.combination-panel-trap .combination-panel-header {
-  background: linear-gradient(to right, rgba(139, 35, 35, 0.5), rgba(184, 48, 48, 0.3));
-  border-bottom-color: rgba(184, 48, 48, 0.6);
-}
-
-.combination-panel-title {
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.combination-panel-op .combination-panel-title {
-  color: #e0c4e8;
-}
-
-.combination-panel-trap .combination-panel-title {
-  color: #ffb4a9;
-}
-
-.combination-panel-item {
-  margin-bottom: 5px;
-  font-size: 12px;
-  color: #d0d0d0;
-  padding-left: 5px;
-}
-
-.combination-panel-item span {
-  font-weight: 500;
-}
-
-.combination-panel-op .combination-panel-item span {
-  color: #b39fbd;
-}
-
-.combination-panel-trap .combination-panel-item span {
-  color: #ffb4a9;
-}
-
-.combination-panel-hero-synergy {
-  font-style: italic;
-}
-
-.combination-panel-third {
-  display: inline-block;
-  margin-left: 4px;
-  padding: 1px 5px;
-  border-radius: 3px;
-  background: rgba(147, 130, 220, 0.35);
-  font-size: 10px;
-  color: #c9b8ff;
-  cursor: default;
-}
-
-.combination-panel-trap .combination-panel-third {
-  background: rgba(220, 130, 130, 0.35);
-  color: #ffb8b8;
-}
-
-.combination-panel-inflated {
-  opacity: 0.75;
-}
-
-.combination-panel-separator {
-  border: none;
-  border-top: 1px solid rgba(255, 255, 255, 0.3);
-  margin: 8px 0;
-}
-
-/* ============================================================
-   Dynamic Buttons (My Spot / My Model)
-   ============================================================ */
-.dynamic-btn {
-  position: absolute;
-  z-index: 9998;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-  opacity: 0.75;
-  white-space: normal;
-  text-align: center;
-  line-height: 1.2;
-  pointer-events: auto;
-}
-
-.dynamic-btn:hover {
-  opacity: 1;
-}
-
-.dynamic-btn-left {
-  transform: translateX(-100%);
-}
-
-.my-spot-btn {
-  font-size: 11px;
-  padding: 4px 8px;
-}
-
-.my-spot-btn-unselected {
-  background-color: rgba(97, 55, 107, 0.85);
-}
-
-.my-spot-btn-selected {
-  background-color: rgba(59, 130, 71, 0.85);
-}
-
-.my-model-btn {
-  font-size: 10px;
-  padding: 3px 6px;
-}
-
-.my-model-btn-unselected {
-  background-color: rgba(93, 53, 102, 0.8);
-}
-
-.my-model-btn-selected {
-  background-color: rgba(57, 127, 69, 0.8);
-}
-
-/* ============================================================
-   Info Chips (resolution badge, scan summary)
-   ============================================================ */
-.resolution-badge,
-.scan-summary {
-  z-index: 10000;
-  background-color: rgba(32, 18, 34, 0.85);
-  border: 1px solid rgba(93, 53, 102, 0.6);
-  border-radius: 10px;
-  color: #c8c8c8;
-  font-size: 11px;
-  line-height: 1;
-  padding: 4px 10px;
-  pointer-events: auto;
-  white-space: nowrap;
-}
-
-.resolution-badge-warn,
-.scan-summary-warn {
-  border-color: rgba(230, 170, 40, 0.8);
-  color: #e6c063;
-}
-
-/* ============================================================
-   Role Panel (role-aware suggestions quick control)
-   ============================================================ */
-.role-panel {
-  z-index: 10000;
-  background-color: rgba(32, 18, 34, 0.85);
-  border: 1px solid rgba(93, 53, 102, 0.6);
-  border-radius: 10px;
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-  gap: 3px;
-  padding: 5px 9px;
-}
-
-.role-panel:hover {
-  background-color: rgba(48, 28, 51, 0.92);
-}
-
-.role-button-row {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.role-label {
-  color: #a8b2bc;
-  font-size: 11px;
-  margin-right: 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.role-btn {
-  background-color: rgba(56, 32, 57, 0.85);
-  border: 1px solid rgba(93, 53, 102, 0.5);
-  border-radius: 5px;
-  color: #c8c8c8;
-  cursor: pointer;
-  font-size: 12px;
-  line-height: 1;
-  min-width: 24px;
-  padding: 4px 6px;
-  text-align: center;
-  transition: all 0.15s ease-out;
-}
-
-.role-btn:hover {
-  background-color: rgba(93, 53, 102, 0.9);
-  color: #e8e8e8;
-}
-
-.role-btn-active {
-  background-color: rgba(64, 105, 150, 0.9);
-  border-color: rgba(127, 179, 227, 0.9);
-  color: #eef4fa;
-}
-
-.role-status {
-  color: #a8b2bc;
-  font-size: 11px;
-  line-height: 1.2;
-}
-
-/* ============================================================
-   Top-right Column Layout
+   Top HUD Dock (stays <= 76px tall above hero cards)
    ============================================================ */
 .top-right-column {
   position: fixed;
-  top: 10px;
-  /* horizontal side (left/right) and opacity are set inline from user settings */
+  top: 8px;
+  /* left/right anchor and user opacity are applied inline from App.tsx */
   z-index: 10000;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 8px;
-  max-height: calc(100vh - 20px);
-  overflow-y: auto;
-  overflow-x: hidden;
+  gap: 6px;
+  max-height: calc(100vh - 16px);
+  overflow: visible;
   pointer-events: none;
 }
 
@@ -910,23 +120,885 @@ body {
   align-items: flex-start;
 }
 
-.overlay-info-chips {
+.overlay-meta-row {
   display: flex;
   align-items: center;
+  flex-wrap: nowrap;
   gap: 6px;
+  pointer-events: none;
+}
+
+.overlay-info-chips,
+.overlay-combo-pills {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   flex-wrap: nowrap;
   pointer-events: none;
 }
 
-.top-right-column::-webkit-scrollbar {
+.overlay-combo-drawers {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  /* Shift drawers inward past the ~108px outer Row 0/5 "My Spot" margin */
+  margin-right: 112px;
+  pointer-events: none;
+}
+
+.top-right-column-left .overlay-combo-drawers {
+  margin-right: 0;
+  margin-left: 112px;
+}
+
+/* ============================================================
+   Controls Panel (compact metallic action cluster)
+   ============================================================ */
+.controls-panel {
+  z-index: 10000;
+  background: linear-gradient(180deg, rgba(24, 31, 42, 0.95) 0%, var(--hud-bg) 100%);
+  border: 1px solid var(--hud-gold-border);
+  border-top: 1px solid rgba(236, 203, 121, 0.52);
+  border-radius: 6px;
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: 4px;
+  padding: 5px 6px;
+  transition:
+    border-color 0.16s ease,
+    background-color 0.16s ease;
+}
+
+.controls-panel:hover {
+  border-color: rgba(236, 203, 121, 0.72);
+}
+
+.controls-panel .overlay-btn {
+  min-height: 24px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.controls-button-group {
+  display: flex;
+  gap: 4px;
+}
+
+/* ============================================================
+   Overlay Buttons & Combo Pills
+   ============================================================ */
+.overlay-btn {
+  align-items: center;
+  border-radius: 4px;
+  color: var(--hud-text-primary);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 600;
+  justify-content: center;
+  min-height: 30px;
+  padding: 5px 12px;
+  text-align: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.75);
+  transition:
+    transform 0.12s ease-out,
+    filter 0.12s ease-out,
+    border-color 0.12s ease-out;
+  white-space: nowrap;
+  border: 1px solid var(--hud-slate-border);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.overlay-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.1);
+}
+
+.overlay-btn:active {
+  transform: translateY(0);
+}
+
+.overlay-btn:disabled {
+  background: rgba(34, 40, 50, 0.75) !important;
+  border-color: rgba(74, 84, 98, 0.5) !important;
+  color: rgba(154, 165, 180, 0.65) !important;
+  cursor: not-allowed;
+  transform: none !important;
+  filter: none !important;
+}
+
+.overlay-btn-pill {
+  min-height: 20px !important;
+  padding: 2px 8px !important;
+  font-size: 11px !important;
+  border-radius: 999px;
+  gap: 5px;
+}
+
+.overlay-pill-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 15px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: var(--hud-gold-bright);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.overlay-btn-purple {
+  background: linear-gradient(180deg, rgba(164, 126, 48, 0.94) 0%, rgba(124, 91, 28, 0.95) 100%);
+  border-color: rgba(236, 203, 121, 0.72);
+  color: #fdf7e4;
+}
+
+.overlay-btn-green {
+  background: linear-gradient(180deg, rgba(32, 134, 108, 0.92) 0%, rgba(22, 98, 79, 0.94) 100%);
+  border-color: rgba(72, 224, 192, 0.6);
+}
+
+.overlay-btn-yellow {
+  background: linear-gradient(180deg, rgba(212, 162, 54, 0.92) 0%, rgba(166, 121, 32, 0.94) 100%);
+  border-color: rgba(255, 222, 112, 0.72);
+  color: #fffaf0;
+}
+
+.overlay-btn-red {
+  background: linear-gradient(180deg, rgba(166, 48, 48, 0.92) 0%, rgba(120, 30, 30, 0.94) 100%);
+  border-color: rgba(230, 114, 114, 0.58);
+}
+
+.overlay-btn-orange {
+  background: linear-gradient(180deg, rgba(188, 104, 34, 0.92) 0%, rgba(142, 74, 20, 0.94) 100%);
+  border-color: rgba(242, 166, 92, 0.58);
+}
+
+.overlay-btn-gray {
+  background: linear-gradient(180deg, rgba(64, 74, 90, 0.9) 0%, rgba(44, 52, 65, 0.92) 100%);
+  border-color: rgba(132, 148, 170, 0.45);
+}
+
+/* ============================================================
+   Role Panel (single horizontal HUD strip)
+   ============================================================ */
+.role-panel {
+  z-index: 10000;
+  background: linear-gradient(180deg, rgba(22, 29, 40, 0.95) 0%, var(--hud-bg) 100%);
+  border: 1px solid var(--hud-gold-border);
+  border-radius: 6px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.55);
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 4px 8px;
+}
+
+.role-panel:hover {
+  border-color: rgba(236, 203, 121, 0.72);
+}
+
+.role-button-row {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-wrap: nowrap;
+}
+
+.role-label {
+  color: var(--hud-gold);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-right: 3px;
+}
+
+.role-btn {
+  background-color: rgba(28, 37, 50, 0.85);
+  border: 1px solid rgba(114, 134, 158, 0.35);
+  border-radius: 4px;
+  color: var(--hud-text-secondary);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  min-width: 22px;
+  padding: 4px 6px;
+  transition:
+    background-color 0.12s ease,
+    border-color 0.12s ease,
+    color 0.12s ease;
+}
+
+.role-btn:hover {
+  background-color: rgba(54, 72, 96, 0.92);
+  border-color: rgba(164, 192, 224, 0.6);
+  color: var(--hud-text-primary);
+}
+
+.role-btn-active {
+  background: linear-gradient(180deg, rgba(64, 118, 174, 0.95) 0%, rgba(42, 84, 130, 0.96) 100%);
+  border-color: rgba(138, 196, 250, 0.85);
+  color: #f4f9ff;
+}
+
+.role-status {
+  margin-left: 5px;
+  padding-left: 6px;
+  border-left: 1px solid rgba(124, 144, 168, 0.28);
+  color: var(--hud-text-secondary);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.1;
+  max-width: 145px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ============================================================
+   Info Chips (resolution badge, scan summary)
+   ============================================================ */
+.resolution-badge,
+.scan-summary {
+  z-index: 10000;
+  background-color: var(--hud-bg-chip);
+  border: 1px solid var(--hud-slate-border);
+  border-radius: 999px;
+  color: var(--hud-text-secondary);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  padding: 4px 8px;
+  pointer-events: auto;
+  white-space: nowrap;
+}
+
+.resolution-badge-warn,
+.scan-summary-warn {
+  border-color: rgba(236, 176, 62, 0.72);
+  color: #f0c96e;
+}
+
+/* ============================================================
+   Confirm Modal (zero backdrop-filter blur)
+   ============================================================ */
+.confirm-modal-scrim {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(6, 9, 14, 0.76);
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+  padding: 16px;
+  z-index: 10005;
+}
+
+.confirm-modal-card {
+  background: linear-gradient(180deg, rgba(24, 31, 43, 0.98) 0%, rgba(13, 18, 26, 0.98) 100%);
+  border: 1px solid var(--hud-gold-border);
+  border-top: 2px solid var(--hud-gold);
+  border-radius: 8px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.85);
+  color: var(--hud-text-primary);
+  max-width: 440px;
+  padding: 20px 24px;
+  text-align: center;
+}
+
+.confirm-modal-message {
+  margin-bottom: 18px;
+  line-height: 1.55;
+  font-size: 14px;
+}
+
+.confirm-modal-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+/* ============================================================
+   Status Toast (bottom-right)
+   ============================================================ */
+.status-toast {
+  position: fixed;
+  bottom: 14px;
+  right: 14px;
+  z-index: 10001;
+  background: linear-gradient(180deg, rgba(20, 27, 37, 0.96) 0%, var(--hud-bg) 100%);
+  border: 1px solid var(--hud-slate-border);
+  border-left: 4px solid var(--hud-gold);
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.75);
+  color: var(--hud-text-primary);
+  font-size: 13px;
+  max-width: 320px;
+  padding: 10px 14px;
+  pointer-events: none;
+  will-change: transform;
+}
+
+/* ============================================================
+   GPU-Only Opacity Shimmer Keyframes (zero box-shadow loops)
+   ============================================================ */
+@keyframes hudPulseOpacity {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ============================================================
+   Hotspot Frames & Perspective alignment
+   ============================================================ */
+.ability-hotspot,
+.hero-model-hotspot {
+  position: absolute;
+  box-sizing: border-box;
+  pointer-events: auto;
+  transform-origin: center center;
+  border-radius: 4px;
+}
+
+.shimmer-green,
+.shimmer-teal,
+.shimmer-gold {
+  border-radius: 4px;
+}
+
+.shimmer-green {
+  border: 2px solid rgba(var(--color-top-pick), 0.9);
+  box-shadow: inset 0 0 0 1px rgba(var(--color-top-pick-bright), 0.35);
+}
+
+.shimmer-teal {
+  border: 2px solid rgba(var(--color-synergy), 0.88);
+  box-shadow: inset 0 0 0 1px rgba(var(--color-synergy-bright), 0.32);
+}
+
+.shimmer-gold {
+  border: 2px solid rgba(var(--color-hero-tier), 0.9);
+  box-shadow: inset 0 0 0 1px rgba(var(--color-hero-tier-bright), 0.38);
+}
+
+.shimmer-green::after,
+.shimmer-teal::after,
+.shimmer-gold::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 5px;
+  pointer-events: none;
+  animation: hudPulseOpacity 1.4s ease-in-out infinite;
+  will-change: opacity;
+}
+
+.shimmer-green::after {
+  border: 2px solid rgba(var(--color-top-pick-bright), 0.95);
+  box-shadow: 0 0 8px 1px rgba(var(--color-top-pick-bright), 0.72);
+}
+
+.shimmer-teal::after {
+  border: 2px solid rgba(var(--color-synergy-bright), 0.95);
+  box-shadow: 0 0 7px 1px rgba(var(--color-synergy-bright), 0.68);
+}
+
+.shimmer-gold::after {
+  border: 2px solid rgba(var(--color-hero-tier-bright), 0.98);
+  box-shadow: 0 0 10px 2px rgba(var(--color-hero-tier-bright), 0.78);
+}
+
+/* Top-10 pool pick rank pill (#1..#10) in top-left corner */
+.ability-rank-badge {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  z-index: 2;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(11, 15, 22, 0.88);
+  border: 1px solid rgba(212, 173, 86, 0.78);
+  color: #f4d88a;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1.15;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.9);
+  pointer-events: none;
+}
+
+/* Corner marker: slot is recommended because of linked Windrun stats */
+.personal-marker {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  z-index: 2;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(var(--color-my-spot), 0.96);
+  border: 1px solid rgba(0, 0, 0, 0.8);
+  box-shadow: 0 0 4px rgba(var(--color-my-spot), 0.9);
+  pointer-events: none;
+}
+
+/* Aghanim's Shard (bottom-left diamond) and Scepter (bottom-right circle) markers */
+.aghs-marker {
+  position: absolute;
+  bottom: 3px;
+  z-index: 2;
+  width: 8px;
+  height: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+}
+
+.aghs-marker-shard {
+  left: 3px;
+  border-radius: 2px;
+  transform: rotate(45deg);
+  background: rgba(92, 192, 248, 0.96);
+  box-shadow: 0 0 4px rgba(92, 192, 248, 0.85);
+}
+
+.aghs-marker-scepter {
+  right: 3px;
+  border-radius: 50%;
+  background: rgba(164, 122, 246, 0.96);
+  box-shadow: 0 0 4px rgba(164, 122, 246, 0.85);
+}
+
+/* Round-5 pick_asap: bright gold dashed inner outline */
+.pick-asap {
+  outline: 2px dashed rgba(255, 206, 78, 0.96);
+  outline-offset: -3px;
+}
+
+/* Round-5 combo deny marker: crimson triangle in top-right corner */
+.deny-marker {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 2;
+  width: 0;
+  height: 0;
+  border-top: 10px solid rgba(235, 76, 76, 0.96);
+  border-left: 10px solid transparent;
+  filter: drop-shadow(0 0 2px rgba(235, 76, 76, 0.85));
+  pointer-events: none;
+}
+
+/* User's selected spot ability */
+.my-spot-selected {
+  border: 2px solid rgba(var(--color-my-spot), 1) !important;
+  box-shadow: 0 0 8px 2px rgba(var(--color-my-spot), 0.72) !important;
+  border-radius: 4px;
+}
+
+/* User's selected hero model */
+.is-my-model {
+  border: 2px solid rgba(var(--color-my-model), 1) !important;
+  box-shadow: 0 0 8px 2px rgba(var(--color-my-model), 0.68) !important;
+  border-radius: 4px;
+}
+
+/* Snapshot & Capture Mode Hygiene: every decoration vanishes cleanly during scans */
+.snapshot-hidden-border {
+  border: none !important;
+  animation: none !important;
+  box-shadow: none !important;
+}
+
+.snapshot-hidden-border::after {
+  display: none !important;
+}
+
+.capture-mode .ability-hotspot,
+.capture-mode .hero-model-hotspot {
+  border: none !important;
+  animation: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.capture-mode .ability-hotspot::after,
+.capture-mode .hero-model-hotspot::after,
+.capture-mode .ability-rank-badge,
+.capture-mode .personal-marker,
+.capture-mode .aghs-marker,
+.capture-mode .deny-marker {
+  display: none !important;
+}
+
+.capture-mode .pick-asap {
+  outline: none !important;
+}
+
+.capture-mode .dynamic-btn,
+.capture-mode .top-right-column {
+  visibility: hidden !important;
+}
+
+/* ML could not identify this slot */
+.unknown-slot {
+  border: 2px dashed rgba(232, 174, 52, 0.88);
+  border-radius: 4px;
+}
+
+/* ============================================================
+   Tooltip (Panorama Slate Card)
+   ============================================================ */
+.overlay-tooltip {
+  position: absolute;
+  z-index: 10002;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(22, 29, 40, 0.98) 0%, rgba(12, 16, 23, 0.98) 100%);
+  border: 1px solid var(--hud-gold-border);
+  border-left: 3px solid var(--hud-gold);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
+  color: var(--hud-text-primary);
+  font-size: 13px;
+  line-height: 1.45;
+  max-width: 300px;
+  padding: 10px 14px;
+  white-space: pre-line;
+  will-change: transform;
+}
+
+.tooltip-badge {
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+
+.tooltip-badge-top {
+  color: rgb(var(--color-top-pick-bright));
+}
+
+.tooltip-badge-synergy {
+  color: rgb(var(--color-synergy-bright));
+}
+
+.tooltip-badge-model {
+  color: rgb(var(--color-hero-tier-bright));
+}
+
+.tooltip-badge-personal {
+  color: rgb(var(--color-my-spot));
+}
+
+.tooltip-badge-curated {
+  color: #82bcf2;
+}
+
+.tooltip-title {
+  font-weight: 700;
+  margin-bottom: 5px;
+  color: #ffffff;
+  font-size: 15px;
+}
+
+.tooltip-stat {
+  color: var(--hud-text-secondary);
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+.tooltip-personal {
+  color: rgb(var(--color-my-spot));
+}
+
+.tooltip-personal-up {
+  color: #6fce7e;
+}
+
+.tooltip-personal-down {
+  color: #e27d6c;
+}
+
+.tooltip-role {
+  color: #82bcf2;
+}
+
+.tooltip-role-up {
+  color: #6fce7e;
+}
+
+.tooltip-role-down {
+  color: #e27d6c;
+}
+
+.tooltip-role-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 4px 0;
+}
+
+.tooltip-role-chip {
+  background-color: rgba(54, 92, 134, 0.42);
+  border: 1px solid rgba(130, 188, 242, 0.5);
+  border-radius: 4px;
+  color: #c2dff8;
+  font-size: 11px;
+  line-height: 1;
+  padding: 3px 6px;
+}
+
+.tooltip-role-chip-dup {
+  background-color: rgba(128, 92, 42, 0.42);
+  border-color: rgba(226, 125, 108, 0.55);
+  color: #ecc4b4;
+}
+
+.tooltip-role-chip-curated {
+  background-color: rgba(62, 108, 156, 0.65);
+  border-color: rgba(186, 218, 246, 0.72);
+  color: #e6f2fc;
+}
+
+.tooltip-aghs {
+  color: #8ccbf5;
+}
+
+.tooltip-inert {
+  color: #eec868;
+}
+
+.tooltip-contested {
+  color: #eba65a;
+}
+
+.tooltip-section-title {
+  font-weight: 700;
+  margin-top: 9px;
+  margin-bottom: 4px;
+  color: var(--hud-gold-bright);
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  border-bottom: 1px solid rgba(212, 173, 86, 0.25);
+  padding-bottom: 3px;
+}
+
+.tooltip-combo {
+  font-size: 12px;
+  color: #b7c2d0;
+  padding-left: 10px;
+  margin-bottom: 3px;
+}
+
+.tooltip-combo-winrate {
+  color: var(--color-wr-strong);
+}
+
+.tooltip-combo-weak {
+  color: var(--color-wr-weak);
+}
+
+.tooltip-combo-hero {
+  font-style: italic;
+}
+
+/* ============================================================
+   Combination Panels (OP / Trap Drawers)
+   ============================================================ */
+.combination-panel {
+  z-index: 9999;
+  border-radius: 7px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.78);
+  color: var(--hud-text-primary);
+  font-size: 12px;
+  padding: 10px 12px;
+  width: 256px;
+  max-height: 36vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  will-change: transform;
+}
+
+.combination-panel::-webkit-scrollbar {
   width: 4px;
 }
 
-.top-right-column::-webkit-scrollbar-thumb {
-  background: rgba(93, 53, 102, 0.5);
+.combination-panel::-webkit-scrollbar-thumb {
+  background: rgba(212, 173, 86, 0.4);
   border-radius: 2px;
 }
 
-.top-right-column::-webkit-scrollbar-track {
+.combination-panel::-webkit-scrollbar-track {
   background: transparent;
+}
+
+.combination-panel-op {
+  background: linear-gradient(180deg, rgba(22, 34, 42, 0.96) 0%, rgba(13, 21, 28, 0.96) 100%);
+  border: 1px solid rgba(212, 173, 86, 0.58);
+  border-left: 3px solid var(--color-wr-strong);
+}
+
+.combination-panel-trap {
+  background: linear-gradient(180deg, rgba(42, 20, 24, 0.96) 0%, rgba(25, 13, 16, 0.96) 100%);
+  border: 1px solid rgba(222, 88, 98, 0.6);
+  border-left: 3px solid var(--color-wr-weak);
+}
+
+.combination-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 6px;
+  margin-bottom: 6px;
+  cursor: pointer;
+}
+
+.combination-panel-op .combination-panel-header {
+  border-bottom: 1px solid rgba(212, 173, 86, 0.3);
+}
+
+.combination-panel-trap .combination-panel-header {
+  border-bottom: 1px solid rgba(222, 88, 98, 0.35);
+}
+
+.combination-panel-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.combination-panel-op .combination-panel-title {
+  color: var(--hud-gold-bright);
+}
+
+.combination-panel-trap .combination-panel-title {
+  color: #ff9aa8;
+}
+
+.combination-panel-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 3px 0;
+  line-height: 1.3;
+}
+
+.combination-panel-item span:last-child {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.combination-panel-op .combination-panel-item span:last-child {
+  color: var(--color-wr-strong);
+}
+
+.combination-panel-trap .combination-panel-item span:last-child {
+  color: var(--color-wr-weak);
+}
+
+.combination-panel-hero-synergy {
+  font-style: italic;
+}
+
+.combination-panel-third {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(63, 210, 177, 0.16);
+  border: 1px solid rgba(63, 210, 177, 0.45);
+  color: #9ff0dc;
+  margin-left: 4px;
+}
+
+.combination-panel-trap .combination-panel-third {
+  background: rgba(230, 114, 140, 0.16);
+  border-color: rgba(230, 114, 140, 0.45);
+  color: #ffc2ce;
+}
+
+.combination-panel-inflated {
+  opacity: 0.72;
+}
+
+.combination-panel-separator {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.22);
+  margin: 6px 0;
+}
+
+/* ============================================================
+   Dynamic Anchor Pins (My Spot / My Model)
+   ============================================================ */
+.dynamic-btn {
+  position: absolute;
+  z-index: 9998;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.65);
+  opacity: 0.88;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.15;
+  pointer-events: auto;
+  border-radius: 999px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.dynamic-btn:hover {
+  opacity: 1;
+}
+
+.my-spot-btn {
+  font-size: 11px;
+  min-height: 24px;
+  padding: 3px 9px;
+}
+
+.my-spot-btn-unselected {
+  background: linear-gradient(180deg, rgba(44, 58, 76, 0.92) 0%, rgba(28, 38, 52, 0.94) 100%);
+  border-color: rgba(212, 173, 86, 0.62);
+  color: var(--hud-gold-bright);
+}
+
+.my-spot-btn-selected {
+  background: linear-gradient(180deg, rgba(212, 134, 42, 0.95) 0%, rgba(164, 96, 22, 0.96) 100%);
+  border-color: rgba(255, 210, 130, 0.88);
+  color: #fff8eb;
+}
+
+.my-model-btn {
+  font-size: 10px;
+  min-height: 20px;
+  padding: 2px 7px;
+}
+
+.my-model-btn-unselected {
+  background: linear-gradient(180deg, rgba(36, 48, 64, 0.9) 0%, rgba(22, 30, 42, 0.92) 100%);
+  border-color: rgba(132, 160, 192, 0.55);
+  color: var(--hud-text-primary);
+}
+
+.my-model-btn-selected {
+  background: linear-gradient(180deg, rgba(52, 154, 84, 0.94) 0%, rgba(34, 114, 58, 0.96) 100%);
+  border-color: rgba(132, 232, 162, 0.82);
+  color: #f2fff6;
 }

@@ -6,6 +6,8 @@ interface AbilityHotspotProps {
   scaleFactor: number
   isSelectedAbility: boolean
   isMySpotHero: boolean
+  topRank?: number
+  perspectiveTransform?: string
   onHover: (slot: EnrichedScanSlot, rect: DOMRect) => void
   onLeave: () => void
 }
@@ -15,6 +17,8 @@ export function AbilityHotspot({
   scaleFactor,
   isSelectedAbility,
   isMySpotHero,
+  topRank,
+  perspectiveTransform,
   onHover,
   onLeave,
 }: AbilityHotspotProps): React.ReactElement {
@@ -23,6 +27,7 @@ export function AbilityHotspot({
     top: slot.coord.y / scaleFactor,
     width: slot.coord.width / scaleFactor,
     height: slot.coord.height / scaleFactor,
+    ...(perspectiveTransform ? { transform: perspectiveTransform } : {}),
   }
 
   let className = 'ability-hotspot'
@@ -60,15 +65,17 @@ export function AbilityHotspot({
       data-ability-name={slot.displayName}
       aria-label={slot.displayName}
     >
+      {/* Top-10 pool pick rank pill in top-left corner (hidden in capture mode) */}
+      {!isSelectedAbility && !slot.isUnknown && topRank != null && (
+        <span className="ability-rank-badge">#{topRank}</span>
+      )}
       {/* Corner marker: this slot is recommended because of the linked
           profile's personal stats (composes with any shimmer border) */}
       {slot.isPersonallyDriven && <span className="personal-marker" />}
       {/* Always-on Aghanim's markers (aghsMarkersEnabled setting, payload-
           gated in scan-processor): strong Shard = blue diamond bottom-left,
           strong Scepter = violet dot bottom-right. Pool slots only. */}
-      {!isSelectedAbility && slot.goodShard && (
-        <span className="aghs-marker aghs-marker-shard" />
-      )}
+      {!isSelectedAbility && slot.goodShard && <span className="aghs-marker aghs-marker-shard" />}
       {!isSelectedAbility && slot.goodScepter && (
         <span className="aghs-marker aghs-marker-scepter" />
       )}

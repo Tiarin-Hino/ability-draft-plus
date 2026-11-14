@@ -8,7 +8,6 @@ Object.defineProperty(globalThis, 'window', {
   value: globalThis,
   writable: true,
 })
-
 ;(globalThis as Record<string, unknown>).electronApi = {
   on: vi.fn(() => vi.fn()),
   send: mockSend,
@@ -17,12 +16,17 @@ Object.defineProperty(globalThis, 'window', {
 
 // Import hook AFTER mocking window.electronApi
 let useMousePassthrough: typeof import('../../../../src/renderer/overlay/src/hooks/use-mouse-passthrough').useMousePassthrough
+let acquireMousePassthroughLock: typeof import('../../../../src/renderer/overlay/src/hooks/use-mouse-passthrough').acquireMousePassthroughLock
+let resetMousePassthroughForTests: typeof import('../../../../src/renderer/overlay/src/hooks/use-mouse-passthrough').resetMousePassthroughForTests
 
 describe('useMousePassthrough', () => {
   beforeEach(async () => {
     mockSend.mockClear()
     const mod = await import('../../../../src/renderer/overlay/src/hooks/use-mouse-passthrough')
     useMousePassthrough = mod.useMousePassthrough
+    acquireMousePassthroughLock = mod.acquireMousePassthroughLock
+    resetMousePassthroughForTests = mod.resetMousePassthroughForTests
+    resetMousePassthroughForTests()
   })
 
   it('returns onMouseEnter and onMouseLeave callbacks', () => {
@@ -62,5 +66,62 @@ describe('useMousePassthrough', () => {
 
     expect(enter1).toBe(enter2)
     expect(leave1).toBe(leave2)
+  })
+
+  it('keeps click-through disabled while overlapping interactive elements are hovered', () => {
+    const first = renderHook(() => useMousePassthrough())
+    const second = renderHook(() => useMousePassthrough())
+
+    first.result.current.onMouseEnter()
+    second.result.current.onMouseEnter()
+
+    expect(mockSend).toHaveBeenCalledTimes(1)
+    expect(mockSend).toHaveBeenLastCalledWith('overlay:setMouseIgnore', { ignore: false })
+
+    // Leaving only the first element must NOT re-enable click-through
+    first.result.current.onMouseLeave()
+    expect(mockSend).toHaveBeenCalledTimes(1)
+
+    // Leaving the last active element re-enables click-through
+    second.result.current.onMouseLeave()
+    expect(mockSend).toHaveBeenCalledTimes(2)
+    expect(mockSend).toHaveBeenLastCalledWith('overlay:setMouseIgnore', {
+      ignore: true,
+      forward: true,
+    })
+  })
+
+  it('releases active lock automatically when hook unmounts', () => {
+    const hook = renderHook(() => useMousePassthrough())
+
+    hook.result.current.onMouseEnter()
+    expect(mockSend).toHaveBeenLastCalledWith('overlay:setMouseIgnore', { ignore: false })
+
+    hook.unmount()
+    expect(mockSend).toHaveBeenLastCalledWith('overlay:setMouseIgnore', {
+      ignore: true,
+      forward: true,
+    })
+  })
+
+  it('coordinates acquireMousePassthroughLock with hook hovers cleanly', () => {
+    const hook = renderHook(() => useMousePassthrough())
+
+    const releaseModal = acquireMousePassthroughLock()
+    hook.result.current.onMouseEnter()
+    hook.result.current.onMouseLeave()
+
+    // Modal lock still active -> still capturing mouse
+    expect(mockSend).toHaveBeenCalledTimes(1)
+    expect(mockSend).toHaveBeenLastCalledWith('overlay:setMouseIgnore', { ignore: false })
+
+    // Releasing modal twice is idempotent and restores passthrough once
+    releaseModal()
+    releaseModal()
+    expect(mockSend).toHaveBeenCalledTimes(2)
+    expect(mockSend).toHaveBeenLastCalledWith('overlay:setMouseIgnore', {
+      ignore: true,
+      forward: true,
+    })
   })
 })

@@ -6,6 +6,7 @@ interface HeroModelHotspotProps {
   coord: SlotCoordinate
   scaleFactor: number
   isMyModel: boolean
+  perspectiveTransform?: string
   onHover: (model: HeroModelDisplay, rect: DOMRect) => void
   onLeave: () => void
 }
@@ -15,6 +16,7 @@ export function HeroModelHotspot({
   coord,
   scaleFactor,
   isMyModel,
+  perspectiveTransform,
   onHover,
   onLeave,
 }: HeroModelHotspotProps): React.ReactElement {
@@ -23,6 +25,7 @@ export function HeroModelHotspot({
     top: coord.y / scaleFactor,
     width: coord.width / scaleFactor,
     height: coord.height / scaleFactor,
+    ...(perspectiveTransform ? { transform: perspectiveTransform } : {}),
   }
 
   let className = 'hero-model-hotspot'

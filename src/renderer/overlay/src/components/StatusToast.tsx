@@ -18,7 +18,9 @@ export function StatusToast({
   const subscribersRef = useRef(new Set<() => void>())
   const subscribe = useCallback((cb: () => void) => {
     subscribersRef.current.add(cb)
-    return () => { subscribersRef.current.delete(cb) }
+    return () => {
+      subscribersRef.current.delete(cb)
+    }
   }, [])
   const getSnapshot = useCallback(() => dismissedRef.current, [])
 
@@ -53,13 +55,18 @@ export function StatusToast({
 
   const borderColor =
     variant === 'error'
-      ? 'rgba(200, 0, 0, 0.8)'
+      ? 'rgba(219, 76, 76, 0.95)'
       : variant === 'success'
-        ? 'rgba(0, 150, 50, 0.8)'
-        : 'rgba(106, 60, 118, 0.8)'
+        ? 'rgba(46, 185, 146, 0.95)'
+        : 'rgba(201, 162, 77, 0.95)'
 
   return (
-    <div className="status-toast" role="status" aria-live="polite" style={{ borderLeftColor: borderColor }}>
+    <div
+      className="status-toast"
+      role="status"
+      aria-live="polite"
+      style={{ borderLeftColor: borderColor }}
+    >
       {message}
     </div>
   )

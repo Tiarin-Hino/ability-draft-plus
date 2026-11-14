@@ -32,16 +32,20 @@ export function CombinationPanel({
   const titleKey = variant === 'op' ? 'opCombinations.title' : 'trapCombinations.title'
   const showKey = variant === 'op' ? 'opCombinations.show' : 'trapCombinations.show'
   const hideKey = variant === 'op' ? 'opCombinations.hide' : 'trapCombinations.hide'
+  const tripletTooltipKey =
+    variant === 'op' ? 'opCombinations.tripletTooltip' : 'trapCombinations.tripletTooltip'
+  const totalCount = abilityCombinations.length + heroSynergies.length
 
   if (!visible) {
     return (
       <button
-        className={`overlay-btn overlay-interactive ${variant === 'op' ? 'overlay-btn-purple' : 'overlay-btn-red'}`}
+        className={`overlay-btn overlay-btn-pill overlay-interactive ${variant === 'op' ? 'overlay-btn-purple' : 'overlay-btn-red'}`}
         onClick={onToggle}
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}
       >
-        {t(showKey)}
+        <span>{t(showKey)}</span>
+        <span className="overlay-pill-count">{totalCount}</span>
       </button>
     )
   }
@@ -72,14 +76,14 @@ export function CombinationPanel({
         <div key={`a-${i}`} className="combination-panel-item">
           {itemPrefix}
           <span className={combo.inflatedSynergy ? 'combination-panel-inflated' : ''}>
-            {combo.inflatedSynergy ? '~' : ''}{combo.ability1DisplayName}
+            {combo.inflatedSynergy ? '~' : ''}
+            {combo.ability1DisplayName}
           </span>{' '}
-          + <span>{combo.ability2DisplayName}</span>{' '}
-          ({formatWr(combo.synergyWinrate)})
+          + <span>{combo.ability2DisplayName}</span> ({formatWr(combo.synergyWinrate)})
           {combo.suggestedThird && (
             <span
               className="combination-panel-third"
-              title={t('opCombinations.tripletTooltip', {
+              title={t(tripletTooltipKey, {
                 winrate: formatWr(combo.suggestedThird.tripletWinrate),
               })}
             >
@@ -96,8 +100,8 @@ export function CombinationPanel({
       {heroSynergies.map((syn, i) => (
         <div key={`h-${i}`} className="combination-panel-item combination-panel-hero-synergy">
           {itemPrefix}
-          <span>{syn.heroDisplayName}</span> + <span>{syn.abilityDisplayName}</span>{' '}
-          ({formatWr(syn.synergyWinrate)})
+          <span>{syn.heroDisplayName}</span> + <span>{syn.abilityDisplayName}</span> (
+          {formatWr(syn.synergyWinrate)})
         </div>
       ))}
     </div>

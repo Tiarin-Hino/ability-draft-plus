@@ -108,7 +108,9 @@ export function useOverlayData(): OverlayState & {
 
   const triggerScan = (isInitialScan: boolean): void => {
     if (!overlayData) {
-      console.warn('[overlay] triggerScan called but overlayData is null — initial data not received yet')
+      console.warn(
+        '[overlay] triggerScan called but overlayData is null — initial data not received yet',
+      )
       return
     }
     setScanState('scanning')
@@ -140,7 +142,20 @@ export function useOverlayData(): OverlayState & {
     setScanError(null)
     setSelectedSpotHeroOrder(null)
     setSelectedModelHeroOrder(null)
-    setOverlayData((prev) => prev ? { ...prev, scanData: null, opCombinations: [], trapCombinations: [], heroSynergies: [], heroTraps: [], heroModels: [], heroesForMySpotUI: [] } : null)
+    setOverlayData((prev) =>
+      prev
+        ? {
+            ...prev,
+            scanData: null,
+            opCombinations: [],
+            trapCombinations: [],
+            heroSynergies: [],
+            heroTraps: [],
+            heroModels: [],
+            heroesForMySpotUI: [],
+          }
+        : null,
+    )
     // Clear the main-process draft session too, so a later Rescan doesn't diff
     // against this draft's cached pool.
     window.electronApi.send('overlay:reset')

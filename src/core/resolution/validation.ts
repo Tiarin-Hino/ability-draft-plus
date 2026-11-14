@@ -89,14 +89,10 @@ export function validateCoordinates(
         )
       }
       if (item.x + params.width > screenWidth) {
-        errors.push(
-          `${label}[${i}] hero_order=${item.hero_order}: Extends beyond screen width`,
-        )
+        errors.push(`${label}[${i}] hero_order=${item.hero_order}: Extends beyond screen width`)
       }
       if (item.y + params.height > screenHeight) {
-        errors.push(
-          `${label}[${i}] hero_order=${item.hero_order}: Extends beyond screen height`,
-        )
+        errors.push(`${label}[${i}] hero_order=${item.hero_order}: Extends beyond screen height`)
       }
     }
   }
@@ -105,7 +101,11 @@ export function validateCoordinates(
   for (const [category, expected] of Object.entries(EXPECTED_COUNTS)) {
     const coords = layout[category as keyof ResolutionLayout]
     if (!Array.isArray(coords)) {
-      if (category === 'models_coords' || category === 'heroes_coords' || category === 'selected_abilities_coords') {
+      if (
+        category === 'models_coords' ||
+        category === 'heroes_coords' ||
+        category === 'selected_abilities_coords'
+      ) {
         // These are optional in the ResolutionLayout type but required for a complete mapping
         warnings.push(`Missing optional category: ${category}`)
       } else {

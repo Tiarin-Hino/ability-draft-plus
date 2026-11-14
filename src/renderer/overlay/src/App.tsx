@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useOverlayData } from './hooks/use-overlay-data'
 import { ControlsPanel } from './components/ControlsPanel'
@@ -43,19 +43,8 @@ function App(): React.ReactElement {
 
   const [showScanConfirm, setShowScanConfirm] = useState(false)
   const [showReportConfirm, setShowReportConfirm] = useState(false)
-  const [opPanelVisible, setOpPanelVisible] = useState(true)
-  const [trapPanelVisible, setTrapPanelVisible] = useState(true)
-
-  // Escape key closes overlay
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') {
-        window.electronApi.send('overlay:close')
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
+  const [opPanelVisible, setOpPanelVisible] = useState(false)
+  const [trapPanelVisible, setTrapPanelVisible] = useState(false)
 
   // Sync language from @zubridge appStore
   const language = useAppStore((s) => s.language)
@@ -70,19 +59,59 @@ function App(): React.ReactElement {
   const overlayOpacity = useAppStore((s) => s.overlayOpacity)
   const overlayAnchor = useAppStore((s) => s.overlayAnchor)
 
-  // Global hotkeys (registered in main while the overlay is open). Scan skips the
-  // confirmation dialog — pressing the hotkey is already an explicit intent.
+  const escapeStateRef = useRef({
+    showScanConfirm,
+    showReportConfirm,
+    opPanelVisible,
+    trapPanelVisible,
+  })
+  useEffect(() => {
+    escapeStateRef.current = {
+      showScanConfirm,
+      showReportConfirm,
+      opPanelVisible,
+      trapPanelVisible,
+    }
+  }, [showScanConfirm, showReportConfirm, opPanelVisible, trapPanelVisible])
+
+  // Layered Escape key: close open modal -> collapse open drawer -> close overlay
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      if (e.key !== 'Escape') return
+      const cur = escapeStateRef.current
+      if (cur.showScanConfirm) {
+        setShowScanConfirm(false)
+      } else if (cur.showReportConfirm) {
+        setShowReportConfirm(false)
+      } else if (cur.opPanelVisible || cur.trapPanelVisible) {
+        setOpPanelVisible(false)
+        setTrapPanelVisible(false)
+      } else {
+        window.electronApi.send('overlay:close')
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
+  const hotkeyStateRef = useRef({ scanState, triggerScan })
+  useEffect(() => {
+    hotkeyStateRef.current = { scanState, triggerScan }
+  }, [scanState, triggerScan])
+
+  // Global hotkeys (subscribed once; refs avoid IPC listener churn per render).
   useEffect(() => {
     const unsub = window.electronApi.on('overlay:hotkey', ({ action }) => {
-      if (scanState === 'scanning') return
+      const { scanState: currentScanState, triggerScan: runScan } = hotkeyStateRef.current
+      if (currentScanState === 'scanning') return
       if (action === 'scan') {
-        triggerScan(true)
-      } else if (scanState === 'scanned' || scanState === 'error') {
-        triggerScan(false)
+        runScan(true)
+      } else if (currentScanState === 'scanned' || currentScanState === 'error') {
+        runScan(false)
       }
     })
     return unsub
-  })
+  }, [])
 
   const handleInitialScan = useCallback((): void => {
     const hide = localStorage.getItem(HIDE_SCAN_CONFIRM_KEY) === 'true'
@@ -158,7 +187,7 @@ function App(): React.ReactElement {
         />
       )}
 
-      {/* Top HUD header cluster + OP/Trap panels column; side and opacity are user settings */}
+      {/* Top HUD dock kept compact (y <= 76px) above hero cards so Row 0/5 My Spot never occludes */}
       <div
         className={`top-right-column${overlayAnchor === 'left' ? ' top-right-column-left' : ''}`}
         style={{
@@ -166,15 +195,13 @@ function App(): React.ReactElement {
           ...(overlayAnchor === 'left' ? { left: 12 } : { right: 12 }),
         }}
       >
-        {/* Horizontal header keeps RolePanel and status chips beside ControlsPanel
-            so the top corner stays above the hero cards and never covers Row 0/5 My Spot. */}
         <div
           className={`overlay-header-row${overlayAnchor === 'left' ? ' overlay-header-row-left' : ''}`}
         >
           <div
             className={`overlay-status-cluster${overlayAnchor === 'left' ? ' overlay-status-cluster-left' : ''}`}
           >
-            {/* Role-aware suggestions quick control */}
+            {/* Role-aware suggestions quick pill */}
             <RolePanel
               roleContext={overlayData?.roleContext}
               hasScanData={overlayData?.scanData != null}
@@ -182,27 +209,66 @@ function App(): React.ReactElement {
               autoTracking={overlayData?.autoDraftTrackingEnabled ?? false}
             />
 
-            {((activeResolution && activeResolutionSource) ||
-              (overlayData?.scanData && poolSlots.length > 0)) && (
-              <div className="overlay-info-chips">
-                {/* Resolution + layout source badge */}
-                {activeResolution && activeResolutionSource && (
-                  <div
-                    className={`resolution-badge${activeResolutionSource === 'auto-scaled' ? ' resolution-badge-warn' : ''}`}
-                    title={
-                      activeResolutionSource === 'auto-scaled'
-                        ? t('resolution.autoScaledWarning')
-                        : undefined
-                    }
-                  >
-                    {activeResolution} · {t(`resolution.source.${activeResolutionSource}`)}
+            {(activeResolution ||
+              (overlayData?.scanData && poolSlots.length > 0) ||
+              (overlayData && (!opPanelVisible || !trapPanelVisible))) && (
+              <div className="overlay-meta-row">
+                {((activeResolution && activeResolutionSource) ||
+                  (overlayData?.scanData && poolSlots.length > 0)) && (
+                  <div className="overlay-info-chips">
+                    {activeResolution && activeResolutionSource && (
+                      <div
+                        className={`resolution-badge${activeResolutionSource === 'auto-scaled' ? ' resolution-badge-warn' : ''}`}
+                        title={
+                          activeResolutionSource === 'auto-scaled'
+                            ? t('resolution.autoScaledWarning')
+                            : undefined
+                        }
+                      >
+                        {activeResolution} · {t(`resolution.source.${activeResolutionSource}`)}
+                      </div>
+                    )}
+
+                    {overlayData?.scanData && poolSlots.length > 0 && (
+                      <div
+                        className={`scan-summary${unknownCount > 0 ? ' scan-summary-warn' : ''}`}
+                      >
+                        {t('scanSummary', {
+                          recognized: recognizedCount,
+                          total: poolSlots.length,
+                        })}
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {/* Scan quality summary */}
-                {overlayData?.scanData && poolSlots.length > 0 && (
-                  <div className={`scan-summary${unknownCount > 0 ? ' scan-summary-warn' : ''}`}>
-                    {t('scanSummary', { recognized: recognizedCount, total: poolSlots.length })}
+                {/* Collapsed OP / Trap toggle pills sit inline on the compact meta row */}
+                {overlayData && (!opPanelVisible || !trapPanelVisible) && (
+                  <div className="overlay-combo-pills">
+                    {!opPanelVisible && (
+                      <CombinationPanel
+                        variant="op"
+                        abilityCombinations={overlayData.opCombinations}
+                        heroSynergies={overlayData.heroSynergies}
+                        visible={false}
+                        onToggle={() => {
+                          setOpPanelVisible(true)
+                          setTrapPanelVisible(false)
+                        }}
+                      />
+                    )}
+                    {!trapPanelVisible && (
+                      <CombinationPanel
+                        variant="trap"
+                        abilityCombinations={overlayData.trapCombinations}
+                        heroSynergies={overlayData.heroTraps}
+                        visible={false}
+                        onToggle={() => {
+                          setTrapPanelVisible(true)
+                          setOpPanelVisible(false)
+                        }}
+                      />
+                    )}
                   </div>
                 )}
               </div>
@@ -220,26 +286,28 @@ function App(): React.ReactElement {
           />
         </div>
 
-        {/* OP Combinations Panel - z-index 9999 */}
-        {overlayData && (
-          <CombinationPanel
-            variant="op"
-            abilityCombinations={overlayData.opCombinations}
-            heroSynergies={overlayData.heroSynergies}
-            visible={opPanelVisible}
-            onToggle={() => setOpPanelVisible((v) => !v)}
-          />
-        )}
-
-        {/* Trap Combinations Panel - z-index 9999 */}
-        {overlayData && (
-          <CombinationPanel
-            variant="trap"
-            abilityCombinations={overlayData.trapCombinations}
-            heroSynergies={overlayData.heroTraps}
-            visible={trapPanelVisible}
-            onToggle={() => setTrapPanelVisible((v) => !v)}
-          />
+        {/* Expanded combination drawer offset inward so outer Row 0/5 My Spot gutter stays clear */}
+        {overlayData && (opPanelVisible || trapPanelVisible) && (
+          <div className="overlay-combo-drawers">
+            {opPanelVisible && (
+              <CombinationPanel
+                variant="op"
+                abilityCombinations={overlayData.opCombinations}
+                heroSynergies={overlayData.heroSynergies}
+                visible={true}
+                onToggle={() => setOpPanelVisible(false)}
+              />
+            )}
+            {trapPanelVisible && (
+              <CombinationPanel
+                variant="trap"
+                abilityCombinations={overlayData.trapCombinations}
+                heroSynergies={overlayData.heroTraps}
+                visible={true}
+                onToggle={() => setTrapPanelVisible(false)}
+              />
+            )}
+          </div>
         )}
       </div>
 

@@ -88,12 +88,8 @@ export function applyAffineTransform(
     standard_slots_coords: baseLayout.standard_slots_coords.map((c) =>
       transformSlot(c, params, true),
     ),
-    models_coords: (baseLayout.models_coords ?? []).map((c) =>
-      transformSlot(c, params, true),
-    ),
-    heroes_coords: (baseLayout.heroes_coords ?? []).map((c) =>
-      transformSlot(c, params, false),
-    ),
+    models_coords: (baseLayout.models_coords ?? []).map((c) => transformSlot(c, params, true)),
+    heroes_coords: (baseLayout.heroes_coords ?? []).map((c) => transformSlot(c, params, false)),
     selected_abilities_coords: (baseLayout.selected_abilities_coords ?? []).map((c) =>
       transformSlot(c, params, false),
     ),

@@ -1,6 +1,11 @@
 import { useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { EnrichedScanSlot, HeroModelDisplay, SynergyPairDisplay, HeroSynergyDisplay } from '@shared/types'
+import type {
+  EnrichedScanSlot,
+  HeroModelDisplay,
+  SynergyPairDisplay,
+  HeroSynergyDisplay,
+} from '@shared/types'
 import {
   PERSONAL_SCORE_DELTA_EPSILON,
   ROLE_SCORE_DELTA_EPSILON,
@@ -55,15 +60,9 @@ function PersonalStatLine({
 
   const delta = scoreDelta ?? 0
   const arrow =
-    delta > PERSONAL_SCORE_DELTA_EPSILON
-      ? '▲'
-      : delta < -PERSONAL_SCORE_DELTA_EPSILON
-        ? '▼'
-        : null
+    delta > PERSONAL_SCORE_DELTA_EPSILON ? '▲' : delta < -PERSONAL_SCORE_DELTA_EPSILON ? '▼' : null
   const arrowClass =
-    delta > PERSONAL_SCORE_DELTA_EPSILON
-      ? 'tooltip-personal-up'
-      : 'tooltip-personal-down'
+    delta > PERSONAL_SCORE_DELTA_EPSILON ? 'tooltip-personal-up' : 'tooltip-personal-down'
 
   return (
     <div className="tooltip-stat tooltip-personal">
@@ -95,10 +94,7 @@ function RoleStatLine({
   return (
     <div className="tooltip-stat tooltip-role">
       {t('tooltip.roleFit', { position: String(position) })}
-      <span className={up ? 'tooltip-role-up' : 'tooltip-role-down'}>
-        {' '}
-        {up ? '▲' : '▼'}
-      </span>
+      <span className={up ? 'tooltip-role-up' : 'tooltip-role-down'}> {up ? '▲' : '▼'}</span>
     </div>
   )
 }
@@ -119,10 +115,7 @@ function PairingStatLine({
   return (
     <div className="tooltip-stat tooltip-role">
       {t('tooltip.pairingFit')}
-      <span className={up ? 'tooltip-role-up' : 'tooltip-role-down'}>
-        {' '}
-        {up ? '▲' : '▼'}
-      </span>
+      <span className={up ? 'tooltip-role-up' : 'tooltip-role-down'}> {up ? '▲' : '▼'}</span>
     </div>
   )
 }
@@ -266,9 +259,7 @@ function AbilityTooltipContent({
             &#x2605; {t('tooltip.personalPick')}
           </div>
         ) : (
-          <div className="tooltip-badge tooltip-badge-top">
-            &#x2605; {t('tooltip.topPick')}
-          </div>
+          <div className="tooltip-badge tooltip-badge-top">&#x2605; {t('tooltip.topPick')}</div>
         ))}
 
       <div className="tooltip-title">{slot.displayName}</div>
@@ -284,11 +275,7 @@ function AbilityTooltipContent({
         scoreDelta={slot.personalScoreDelta}
         t={t}
       />
-      <RoleStatLine
-        scoreDelta={slot.roleScoreDelta}
-        position={slot.roleBestPosition}
-        t={t}
-      />
+      <RoleStatLine scoreDelta={slot.roleScoreDelta} position={slot.roleBestPosition} t={t} />
       <RoleReasonChips reasons={slot.roleReasons} t={t} />
       <PairingStatLine scoreDelta={slot.pairingScoreDelta} t={t} />
       {slot.inertOnModel && (
@@ -321,9 +308,7 @@ function AbilityTooltipContent({
           {t('tooltip.shardStack', { names: slot.shardStackWith.join(', ') })}
         </div>
       ) : (
-        slot.goodShard && (
-          <div className="tooltip-stat tooltip-aghs">{t('tooltip.goodShard')}</div>
-        )
+        slot.goodShard && <div className="tooltip-stat tooltip-aghs">{t('tooltip.goodShard')}</div>
       )}
       {slot.scepterStackWith ? (
         <div className="tooltip-stat tooltip-aghs">
@@ -345,9 +330,7 @@ function AbilityTooltipContent({
         <div className="tooltip-stat tooltip-aghs">
           {slot.dispelDemand.against.length > 0
             ? t(
-                slot.dispelDemand.kind === 'purge'
-                  ? 'tooltip.purgeDemand'
-                  : 'tooltip.dispelDemand',
+                slot.dispelDemand.kind === 'purge' ? 'tooltip.purgeDemand' : 'tooltip.dispelDemand',
                 { names: slot.dispelDemand.against.join(', ') },
               )
             : t('tooltip.dispelDemandPool', { n: slot.dispelDemand.poolCount })}
@@ -373,18 +356,17 @@ function AbilityTooltipContent({
       {/* Round-5 combo deny: boosted reads as a recommendation, unboosted as
           a warning (the deny would be a weak pick for you) */}
       {slot.denyCombo && (
-        <div className={`tooltip-stat ${slot.denyCombo.boosted ? 'tooltip-aghs' : 'tooltip-inert'}`}>
+        <div
+          className={`tooltip-stat ${slot.denyCombo.boosted ? 'tooltip-aghs' : 'tooltip-inert'}`}
+        >
           {t(slot.denyCombo.boosted ? 'tooltip.denyCombo' : 'tooltip.denyComboWeak', {
             names: slot.denyCombo.completes.join(', '),
           })}
         </div>
       )}
-      {slot.contestedSoon &&
-        (slot.isGeneralTopTier || slot.isSynergySuggestionForMySpot) && (
-          <div className="tooltip-stat tooltip-contested">
-            {t('tooltip.contestedSoon')}
-          </div>
-        )}
+      {slot.contestedSoon && (slot.isGeneralTopTier || slot.isSynergySuggestionForMySpot) && (
+        <div className="tooltip-stat tooltip-contested">{t('tooltip.contestedSoon')}</div>
+      )}
 
       <SynergySection
         title={t('tooltip.strongSynergies')}
@@ -430,9 +412,7 @@ function HeroTooltipContent({
             &#x2605; {t('tooltip.personalPick')}
           </div>
         ) : (
-          <div className="tooltip-badge tooltip-badge-model">
-            &#x2605; {t('tooltip.topModel')}
-          </div>
+          <div className="tooltip-badge tooltip-badge-model">&#x2605; {t('tooltip.topModel')}</div>
         ))}
 
       <div className="tooltip-title">{model.heroDisplayName}</div>
@@ -448,11 +428,7 @@ function HeroTooltipContent({
         scoreDelta={model.personalScoreDelta}
         t={t}
       />
-      <RoleStatLine
-        scoreDelta={model.roleScoreDelta}
-        position={model.roleBestPosition}
-        t={t}
-      />
+      <RoleStatLine scoreDelta={model.roleScoreDelta} position={model.roleBestPosition} t={t} />
       <PairingStatLine scoreDelta={model.pairingScoreDelta} t={t} />
       {model.roleAvoided && (
         <div className="tooltip-stat tooltip-inert">{t('tooltip.roleAvoided')}</div>
@@ -523,9 +499,7 @@ function renderAbilitySynergy(item: SynergyPairDisplay, i: number): React.ReactE
   return (
     <div key={i} className="tooltip-combo">
       - {item.ability2DisplayName}{' '}
-      <span className="tooltip-combo-winrate">
-        ({formatSynergyWr(item.synergyWinrate)} WR)
-      </span>
+      <span className="tooltip-combo-winrate">({formatSynergyWr(item.synergyWinrate)} WR)</span>
     </div>
   )
 }
@@ -534,9 +508,7 @@ function renderWeakAbilitySynergy(item: SynergyPairDisplay, i: number): React.Re
   return (
     <div key={i} className="tooltip-combo tooltip-combo-weak">
       - {item.ability2DisplayName}{' '}
-      <span className="tooltip-combo-weak">
-        ({formatSynergyWr(item.synergyWinrate)} WR)
-      </span>
+      <span className="tooltip-combo-weak">({formatSynergyWr(item.synergyWinrate)} WR)</span>
     </div>
   )
 }

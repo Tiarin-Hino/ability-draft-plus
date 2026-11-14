@@ -71,10 +71,7 @@ export function calculateAbilitySpacing(ability1X: number, ability2X: number): n
  * Generate all 5 left-side hero coordinates (hero_order 0-4)
  * from the first two hero boxes.
  */
-export function generateHeroes(
-  hero0: Rect,
-  hero1: Rect,
-): SlotCoordinate[] {
+export function generateHeroes(hero0: Rect, hero1: Rect): SlotCoordinate[] {
   const spacing = calculateHeroSpacing(hero0.y, hero1.y)
 
   const heroes: SlotCoordinate[] = [
@@ -165,7 +162,11 @@ export function mirrorElementsToRight(
     let newHeroOrder = elem.hero_order
     if (elem.hero_order === 10) {
       newHeroOrder = 11
-    } else if (elementType === 'heroes' || elementType === 'models' || elementType === 'selected_abilities') {
+    } else if (
+      elementType === 'heroes' ||
+      elementType === 'models' ||
+      elementType === 'selected_abilities'
+    ) {
       newHeroOrder = elem.hero_order + offset
     }
 
@@ -217,9 +218,7 @@ export function applyUltimateHeroOrders(
   ultimates: SlotCoordinate[],
   isLeftSide: boolean,
 ): SlotCoordinate[] {
-  const orders = isLeftSide
-    ? [0, 1, 2, 3, 4, 10]
-    : [7, 6, 5, 11, 9, 8]
+  const orders = isLeftSide ? [0, 1, 2, 3, 4, 10] : [7, 6, 5, 11, 9, 8]
 
   for (let i = 0; i < ultimates.length; i++) {
     ultimates[i].hero_order = orders[i]
@@ -239,9 +238,7 @@ export function applyStandardHeroOrders(
   standards: SlotCoordinate[],
   isLeftSide: boolean,
 ): SlotCoordinate[] {
-  const heroOrders = isLeftSide
-    ? [0, 1, 2, 3, 4, 10]
-    : [5, 6, 7, 8, 9, 11]
+  const heroOrders = isLeftSide ? [0, 1, 2, 3, 4, 10] : [5, 6, 7, 8, 9, 11]
 
   for (let rowIdx = 0; rowIdx < 6; rowIdx++) {
     for (let colIdx = 0; colIdx < 3; colIdx++) {

@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useMousePassthrough } from '../hooks/use-mouse-passthrough'
+import { acquireMousePassthroughLock, useMousePassthrough } from '../hooks/use-mouse-passthrough'
 
 interface ConfirmModalProps {
   open: boolean
@@ -24,19 +24,11 @@ export function ConfirmModal({
 }: ConfirmModalProps): React.ReactElement | null {
   const { onMouseEnter, onMouseLeave } = useMousePassthrough()
 
-  // Disable click-through when modal is open
+  // Hold a ref-counted lock while modal is open so pointer exits from nested
+  // controls cannot re-enable click-through until the modal closes.
   useEffect(() => {
-    if (open) {
-      window.electronApi.send('overlay:setMouseIgnore', { ignore: false })
-    }
-    return () => {
-      if (open) {
-        window.electronApi.send('overlay:setMouseIgnore', {
-          ignore: true,
-          forward: true,
-        })
-      }
-    }
+    if (!open) return
+    return acquireMousePassthroughLock()
   }, [open])
 
   if (!open) return null
@@ -51,7 +43,9 @@ export function ConfirmModal({
       onMouseLeave={onMouseLeave}
     >
       <div className="confirm-modal-card">
-        <p id="confirm-modal-title" className="confirm-modal-message">{message}</p>
+        <p id="confirm-modal-title" className="confirm-modal-message">
+          {message}
+        </p>
         <div className="confirm-modal-buttons">
           <button className="overlay-btn overlay-btn-green" onClick={onConfirm}>
             {confirmLabel}

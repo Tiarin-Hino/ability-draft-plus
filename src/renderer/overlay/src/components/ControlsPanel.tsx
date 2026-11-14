@@ -55,10 +55,7 @@ export function ControlsPanel({
             >
               {t('rescan')}
             </button>
-            <button
-              className="overlay-btn overlay-btn-yellow"
-              onClick={onReset}
-            >
+            <button className="overlay-btn overlay-btn-yellow" onClick={onReset}>
               {t('reset')}
             </button>
           </>

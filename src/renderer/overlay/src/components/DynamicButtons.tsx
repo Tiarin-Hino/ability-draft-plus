@@ -18,14 +18,8 @@ export function DynamicButtons({
   // buttons would only clutter (and fight) the automated flow
   if (overlayData.autoDraftTrackingEnabled) return null
 
-  const {
-    heroesForMySpotUI,
-    heroesCoords,
-    heroesParams,
-    heroModels,
-    modelsCoords,
-    scaleFactor,
-  } = overlayData
+  const { heroesForMySpotUI, heroesCoords, heroesParams, heroModels, modelsCoords, scaleFactor } =
+    overlayData
 
   const anySpotSelected = selectedSpotHeroOrder !== null
   const anyModelSelected = selectedModelHeroOrder !== null

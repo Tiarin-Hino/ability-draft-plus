@@ -123,8 +123,10 @@ export function RolePanel({
         >
           {t('role.auto')}
         </button>
+        <span className="role-status" title={status}>
+          {status}
+        </span>
       </div>
-      <div className="role-status">{status}</div>
     </div>
   )
 }
