@@ -1,4 +1,5 @@
-import type { WindrunApiClient } from './windrun-api-client'
+import { WindrunBrowserError } from '@shared/windrun-browser-error'
+import { WindrunApiError, type WindrunApiClient } from './windrun-api-client'
 import type { ScraperProgress, ScraperResult, ScraperOptions } from './types'
 import {
   transformAbilitiesAndHeroes,
@@ -260,7 +261,13 @@ export async function performFullScrape(
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     onProgress({ phase: 'error', message: `Scrape failed: ${message}` })
-    return { success: false, error: message }
+    return {
+      success: false,
+      error: message,
+      browserRequired: err instanceof WindrunApiError && err.status === 403,
+      browserError: err instanceof WindrunBrowserError ? err.code
+        : err instanceof WindrunApiError && err.status === 403 ? 'forbidden' : undefined,
+    }
   }
 }
 

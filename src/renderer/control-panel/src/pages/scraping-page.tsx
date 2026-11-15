@@ -9,6 +9,9 @@ import { useAppStore } from '@/hooks/use-app-store'
 export function ScrapingPage() {
   const { t } = useTranslation('data')
   const scraperStatus = useAppStore((s) => s.scraperStatus)
+  const browserRequired = useAppStore((s) => s.scraperBrowserRequired)
+  const browserError = useAppStore((s) => s.scraperBrowserError)
+  const browserOpen = useAppStore((s) => s.scraperBrowserOpen)
   const scraperMessage = useAppStore((s) => s.scraperMessage)
   const scraperLastUpdated = useAppStore((s) => s.scraperLastUpdated)
   const liquipediaStatus = useAppStore((s) => s.liquipediaStatus)
@@ -55,6 +58,29 @@ export function ScrapingPage() {
             {isWindrunRunning ? t('scraping.running') : t('scraping.updateButton')}
           </Button>
 
+          {(browserRequired || browserOpen) && (
+            <div className="space-y-2 rounded-md border p-3 text-sm">
+              <p>{t('scraping.browserHelp')}</p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={isWindrunRunning}
+                  onClick={() => window.electronApi.send('scraper:openBrowser')}
+                >
+                  {t('scraping.openBrowser')}
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={isWindrunRunning || !browserOpen}
+                  onClick={() => window.electronApi.send('scraper:startBrowser')}
+                >
+                  {t('scraping.continueBrowser')}
+                </Button>
+              </div>
+            </div>
+          )}
+
           {scraperMessage && (
             <div className={`flex items-start gap-2 text-sm ${isWindrunError ? 'text-destructive' : 'text-muted-foreground'}`}>
               {isWindrunError ? (
@@ -64,7 +90,7 @@ export function ScrapingPage() {
               ) : (
                 <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" />
               )}
-              <p>{scraperMessage}</p>
+              <p>{browserError ? t(`scraping.browserErrors.${browserError}`) : scraperMessage}</p>
             </div>
           )}
 

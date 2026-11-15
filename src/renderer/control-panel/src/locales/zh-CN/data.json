@@ -78,7 +78,21 @@
       "running": "正在补充...",
       "warning": "由于 Liquipedia 的频率限制，处理全部英雄约需 67 分钟。",
       "lastUpdated": "上次补充："
-    }
+    },
+    "browserErrors": {
+      "unsupported": "Windrun 浏览器不支持此请求。",
+      "openRequired": "请先打开 Windrun 浏览器并完成 Cloudflare 验证。",
+      "loading": "请等待 Windrun 页面加载完毕后再继续。",
+      "timeout": "浏览器请求已取消或超时，请重试。",
+      "closed": "Windrun 窗口已关闭，请重新打开并重试。",
+      "verification": "Windrun 返回了验证页面。请在浏览器中完成 Cloudflare 验证后重试。",
+      "failed": "浏览器请求失败。请等待页面加载完毕，完成 Cloudflare 验证后重试。",
+      "openFailed": "无法打开 Windrun 浏览器，请重试。",
+      "forbidden": "Windrun 拒绝访问（403）。请在浏览器中完成 Cloudflare 验证后重试。"
+    },
+    "browserHelp": "Windrun 返回了 403 错误。请打开浏览器，完成 Cloudflare 验证，直到显示 JSON 数据，然后在此继续下载。如果仍无法访问，请稍后重试。",
+    "openBrowser": "打开 Windrun 浏览器",
+    "continueBrowser": "通过浏览器继续"
   },
   "mapper": {
     "title": "分辨率映射器",

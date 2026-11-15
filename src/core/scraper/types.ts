@@ -1,3 +1,4 @@
+import type { WindrunBrowserErrorCode } from '@shared/windrun-browser-error'
 import type { MlModelGaps } from '@core/ml/staleness-detector'
 
 // ── Windrun API response types ────────────────────────────────────────────────
@@ -259,6 +260,8 @@ export interface ScraperProgress {
 // ── Orchestrator types ───────────────────────────────────────────────────────
 
 export interface ScraperResult {
+  browserRequired?: boolean
+  browserError?: WindrunBrowserErrorCode
   success: boolean
   error?: string
   modelGaps?: MlModelGaps | null
