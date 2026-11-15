@@ -175,6 +175,7 @@ function App(): React.ReactElement {
           overlayData={overlayData}
           selectedSpotHeroOrder={selectedSpotHeroOrder}
           selectedModelHeroOrder={selectedModelHeroOrder}
+          layoutSource={activeResolutionSource}
         />
       )}
 
@@ -184,10 +185,11 @@ function App(): React.ReactElement {
           overlayData={overlayData}
           selectedSpotHeroOrder={selectedSpotHeroOrder}
           selectedModelHeroOrder={selectedModelHeroOrder}
+          layoutSource={activeResolutionSource}
         />
       )}
 
-      {/* Top HUD dock kept compact (y <= 76px) above hero cards so Row 0/5 My Spot never occludes */}
+      {/* Top HUD dock stacked vertically within <= 268px right/left gutter so topbar picks & Row 0/5 cards stay clear */}
       <div
         className={`top-right-column${overlayAnchor === 'left' ? ' top-right-column-left' : ''}`}
         style={{
@@ -198,6 +200,16 @@ function App(): React.ReactElement {
         <div
           className={`overlay-header-row${overlayAnchor === 'left' ? ' overlay-header-row-left' : ''}`}
         >
+          {/* Controls Panel - z-index 10000 */}
+          <ControlsPanel
+            scanState={scanState}
+            onInitialScan={handleInitialScan}
+            onRescan={handleRescan}
+            onReset={resetOverlay}
+            onClose={handleClose}
+            onReportFailed={handleReportFailed}
+          />
+
           <div
             className={`overlay-status-cluster${overlayAnchor === 'left' ? ' overlay-status-cluster-left' : ''}`}
           >
@@ -274,16 +286,6 @@ function App(): React.ReactElement {
               </div>
             )}
           </div>
-
-          {/* Controls Panel - z-index 10000 */}
-          <ControlsPanel
-            scanState={scanState}
-            onInitialScan={handleInitialScan}
-            onRescan={handleRescan}
-            onReset={resetOverlay}
-            onClose={handleClose}
-            onReportFailed={handleReportFailed}
-          />
         </div>
 
         {/* Expanded combination drawer offset inward so outer Row 0/5 My Spot gutter stays clear */}

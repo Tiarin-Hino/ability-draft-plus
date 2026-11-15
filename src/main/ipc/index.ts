@@ -1,5 +1,6 @@
 import { ipcMain, nativeTheme, screen, app, shell, globalShortcut } from 'electron'
 import log from 'electron-log/main'
+import sharp from 'sharp'
 import type { WindowManager } from '../services/window-manager'
 import type { DatabaseService } from '../services/database-service'
 import type { BackupService } from '../services/backup-service'
@@ -366,6 +367,59 @@ export function registerIpcHandlers(
     getScanCount: () => scanCount,
     isAutoDraftTrackingEnabled: () =>
       dbService.metadata.getSettings().experimentalAutoDraftTracking === true,
+    captureScreen: async (options) => {
+      const overlayWin = windowManager.getOverlayWindow()
+      const hideOverlay =
+        Boolean(options?.hideOverlay) &&
+        windowManager.isOverlayVisible() &&
+        overlayWin !== null &&
+        !overlayWin.isDestroyed()
+      if (hideOverlay) {
+        overlayWin.setOpacity(0)
+        await new Promise((resolve) => setTimeout(resolve, 120))
+      }
+      try {
+        const raw = await screenshotService.capture()
+        return await sharp(raw.data, {
+          raw: { width: raw.width, height: raw.height, channels: 3 },
+        })
+          .png()
+          .toBuffer()
+      } finally {
+        if (hideOverlay && !overlayWin.isDestroyed()) {
+          overlayWin.setOpacity(1)
+        }
+      }
+    },
+    setAutoDraftTracking: (enabled) => {
+      dbService.metadata.setSettings({ experimentalAutoDraftTracking: enabled })
+      dbService.persistDebounced()
+      if (pendingOverlayData) {
+        pendingOverlayData = { ...pendingOverlayData, autoDraftTrackingEnabled: enabled }
+      }
+      scanProcessingService.recomputeFromCache()
+    },
+    selectSpot: (heroOrder) => {
+      const dbHeroId =
+        heroOrder === null
+          ? null
+          : (draftStore.getState().identifiedHeroModelsCache.find((m) => m.heroOrder === heroOrder)
+              ?.dbHeroId ?? 1)
+      draftStore.getState().selectMySpot(dbHeroId, heroOrder)
+      const payload = { selectedHeroOrderForDrafting: heroOrder }
+      const cp = windowManager.getControlPanelWindow()
+      const overlay = windowManager.getOverlayWindow()
+      if (cp && !cp.isDestroyed()) cp.webContents.send('draft:selectMySpot', payload)
+      if (overlay && !overlay.isDestroyed()) overlay.webContents.send('draft:selectMySpot', payload)
+      scanProcessingService.recomputeFromCache()
+    },
+    setDebugFrames: async (enabled) => {
+      const win = windowManager.getOverlayWindow()
+      if (!win || win.isDestroyed() || !windowManager.isOverlayVisible()) return
+      await win.webContents.executeJavaScript(
+        `document.querySelector('.overlay-root')?.classList.toggle('debug-calibration-frames', ${Boolean(enabled)}); true`,
+      )
+    },
   })
 
   ipcMain.on('overlay:close', () => {

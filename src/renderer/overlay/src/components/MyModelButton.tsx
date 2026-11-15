@@ -1,42 +1,31 @@
-import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { SlotBounds } from '@core/resolution/visual-geometry'
 import { useMousePassthrough } from '../hooks/use-mouse-passthrough'
-import type { HeroModelDisplay, SlotCoordinate } from '@shared/types'
+import type { HeroModelDisplay } from '@shared/types'
 
-const MY_MODEL_MARGIN = 4
 const VIEWPORT_EDGE_MARGIN = 8
 const ESTIMATED_BUTTON_WIDTH = 66
 const ESTIMATED_HALF_HEIGHT = 16
 
 interface MyModelButtonProps {
   model: HeroModelDisplay
-  coord: SlotCoordinate
-  scaleFactor: number
+  resolvedBounds: SlotBounds
+  horizontalOverhangPx: number
+  viewport: { width: number; height: number }
   isSelected: boolean
   anySelected: boolean
 }
 
 export function MyModelButton({
   model,
-  coord,
-  scaleFactor,
+  resolvedBounds,
+  horizontalOverhangPx,
+  viewport,
   isSelected,
   anySelected,
 }: MyModelButtonProps): React.ReactElement | null {
   const { t } = useTranslation()
   const { onMouseEnter, onMouseLeave } = useMousePassthrough()
-  const [viewport, setViewport] = useState(() => ({
-    width: typeof window !== 'undefined' ? window.innerWidth : 1920,
-    height: typeof window !== 'undefined' ? window.innerHeight : 1080,
-  }))
-
-  useEffect(() => {
-    const onResize = (): void => {
-      setViewport({ width: window.innerWidth, height: window.innerHeight })
-    }
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
-  }, [])
 
   // Hide if another model is selected (not this one)
   if (anySelected && !isSelected) return null
@@ -46,12 +35,13 @@ export function MyModelButton({
 
   const isLeftSide = model.heroOrder <= 4 || model.heroOrder === 10
 
-  const boxX = coord.x / scaleFactor
-  const boxY = coord.y / scaleFactor
-  const boxWidth = coord.width / scaleFactor
-  const boxHeight = coord.height / scaleFactor
+  const boxX = resolvedBounds.x - horizontalOverhangPx
+  const boxY = resolvedBounds.y
+  const boxWidth = resolvedBounds.width + horizontalOverhangPx * 2
+  const boxHeight = resolvedBounds.height
 
-  const rawLeft = isLeftSide ? boxX - MY_MODEL_MARGIN : boxX + boxWidth + MY_MODEL_MARGIN
+  const pedestalMargin = Math.max(8, Math.round(resolvedBounds.width * 0.19))
+  const rawLeft = isLeftSide ? boxX - pedestalMargin : boxX + boxWidth + pedestalMargin
   const clampedLeft = isLeftSide
     ? Math.max(
         ESTIMATED_BUTTON_WIDTH + VIEWPORT_EDGE_MARGIN,

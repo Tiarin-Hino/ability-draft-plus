@@ -30,7 +30,11 @@ export { validateCoordinates } from './validation'
 
 export {
   computeBoardPerspectiveStyle,
+  resolveLogicalOverlayViewport,
+  resolveVisualSlotLayout,
   type VisualSlotCategory,
   type SlotBounds,
   type BoardPerspectiveStyle,
+  type ResolvedVisualSlot,
+  type VisualSlotInput,
 } from './visual-geometry'

@@ -1,64 +1,45 @@
-import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { SlotBounds } from '@core/resolution/visual-geometry'
 import { useMousePassthrough } from '../hooks/use-mouse-passthrough'
-import type { HeroSpotDisplay, SlotCoordinate } from '@shared/types'
+import type { HeroSpotDisplay } from '@shared/types'
 
 const MY_SPOT_MARGIN = 6
 const VIEWPORT_EDGE_MARGIN = 8
+const COMPACT_EDGE_MARGIN = 4
 const ESTIMATED_BUTTON_WIDTH = 74
 const ESTIMATED_HALF_HEIGHT = 18
+const COMPACT_GUTTER_THRESHOLD = MY_SPOT_MARGIN + ESTIMATED_BUTTON_WIDTH + VIEWPORT_EDGE_MARGIN
 
 interface MySpotButtonProps {
   hero: HeroSpotDisplay
-  heroCoord: SlotCoordinate
-  heroesParams: { width: number; height: number }
-  scaleFactor: number
+  resolvedBounds: SlotBounds
+  viewport: { width: number; height: number }
   isSelected: boolean
   anySelected: boolean
 }
 
 export function MySpotButton({
   hero,
-  heroCoord,
-  heroesParams,
-  scaleFactor,
+  resolvedBounds,
+  viewport,
   isSelected,
   anySelected,
 }: MySpotButtonProps): React.ReactElement | null {
   const { t } = useTranslation()
   const { onMouseEnter, onMouseLeave } = useMousePassthrough()
-  const [viewport, setViewport] = useState(() => ({
-    width: typeof window !== 'undefined' ? window.innerWidth : 1920,
-    height: typeof window !== 'undefined' ? window.innerHeight : 1080,
-  }))
-
-  useEffect(() => {
-    const onResize = (): void => {
-      setViewport({ width: window.innerWidth, height: window.innerHeight })
-    }
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
-  }, [])
 
   // Hide if another hero is selected (not this one)
   if (anySelected && !isSelected) return null
 
-  const heroBoxX = heroCoord.x / scaleFactor
-  const heroBoxY = heroCoord.y / scaleFactor
-  const heroBoxWidth = heroesParams.width / scaleFactor
-  const heroBoxHeight = heroesParams.height / scaleFactor
+  const heroBoxX = resolvedBounds.x
+  const heroBoxY = resolvedBounds.y
+  const heroBoxWidth = resolvedBounds.width
+  const heroBoxHeight = resolvedBounds.height
 
   const isLeftSide = hero.heroOrder <= 4
-  const rawLeft = isLeftSide ? heroBoxX - MY_SPOT_MARGIN : heroBoxX + heroBoxWidth + MY_SPOT_MARGIN
-  const clampedLeft = isLeftSide
-    ? Math.max(
-        ESTIMATED_BUTTON_WIDTH + VIEWPORT_EDGE_MARGIN,
-        Math.min(rawLeft, viewport.width - VIEWPORT_EDGE_MARGIN),
-      )
-    : Math.max(
-        VIEWPORT_EDGE_MARGIN,
-        Math.min(rawLeft, viewport.width - ESTIMATED_BUTTON_WIDTH - VIEWPORT_EDGE_MARGIN),
-      )
+  const availableGutter = isLeftSide ? heroBoxX : viewport.width - (heroBoxX + heroBoxWidth)
+  const isNarrowGutter = availableGutter < COMPACT_GUTTER_THRESHOLD
+
   const clampedTop = Math.max(
     ESTIMATED_HALF_HEIGHT + VIEWPORT_EDGE_MARGIN,
     Math.min(
@@ -67,10 +48,38 @@ export function MySpotButton({
     ),
   )
 
-  const style: React.CSSProperties = {
-    top: clampedTop,
-    transform: `translateY(-50%)${isLeftSide ? ' translateX(-100%)' : ''}`,
-    left: clampedLeft,
+  let style: React.CSSProperties
+  if (isNarrowGutter) {
+    // 16:10 / 4:3 shrink the outer gutter below full pill width; hug the screen edge compactly.
+    style = isLeftSide
+      ? {
+          top: clampedTop,
+          left: COMPACT_EDGE_MARGIN,
+          transform: 'translateY(-50%)',
+        }
+      : {
+          top: clampedTop,
+          right: COMPACT_EDGE_MARGIN,
+          transform: 'translateY(-50%)',
+        }
+  } else {
+    const rawLeft = isLeftSide
+      ? heroBoxX - MY_SPOT_MARGIN
+      : heroBoxX + heroBoxWidth + MY_SPOT_MARGIN
+    const clampedLeft = isLeftSide
+      ? Math.max(
+          ESTIMATED_BUTTON_WIDTH + VIEWPORT_EDGE_MARGIN,
+          Math.min(rawLeft, viewport.width - VIEWPORT_EDGE_MARGIN),
+        )
+      : Math.max(
+          VIEWPORT_EDGE_MARGIN,
+          Math.min(rawLeft, viewport.width - ESTIMATED_BUTTON_WIDTH - VIEWPORT_EDGE_MARGIN),
+        )
+    style = {
+      top: clampedTop,
+      transform: `translateY(-50%)${isLeftSide ? ' translateX(-100%)' : ''}`,
+      left: clampedLeft,
+    }
   }
 
   const handleClick = (): void => {
@@ -81,10 +90,11 @@ export function MySpotButton({
   }
 
   const stateClass = isSelected ? 'my-spot-btn-selected' : 'my-spot-btn-unselected'
+  const compactClass = isNarrowGutter ? ' my-spot-btn-compact' : ''
 
   return (
     <button
-      className={`dynamic-btn overlay-btn my-spot-btn ${stateClass} overlay-interactive`}
+      className={`dynamic-btn overlay-btn my-spot-btn ${stateClass}${compactClass} overlay-interactive`}
       style={style}
       onClick={handleClick}
       onMouseEnter={onMouseEnter}

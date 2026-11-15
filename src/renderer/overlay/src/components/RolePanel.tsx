@@ -95,6 +95,7 @@ export function RolePanel({
       className="role-panel overlay-interactive"
       role="toolbar"
       aria-label={t('role.aria')}
+      title={status}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
@@ -123,10 +124,12 @@ export function RolePanel({
         >
           {t('role.auto')}
         </button>
-        <span className="role-status" title={status}>
-          {status}
-        </span>
       </div>
+      {mode !== 'off' && (
+        <div className="role-status" title={status}>
+          {status}
+        </div>
+      )}
     </div>
   )
 }

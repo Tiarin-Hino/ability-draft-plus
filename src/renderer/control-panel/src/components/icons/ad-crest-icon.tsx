@@ -1,5 +1,7 @@
-// @DEV-GUIDE: Custom Ability Draft Plus brand mark (faceted arcane shield + gold prism core).
-// Renders cleanly across Warm Alabaster Light and Arcane Obsidian Dark sidebar headers.
+// @DEV-GUIDE: Ability Draft Plus "3+1 Draft Loadout" brand mark — 3 framed standard ability
+// sockets + 1 bold arcane-teal ultimate `+` node. Uses theme CSS tokens (`--color-primary` and
+// `--color-brand-teal`) plus dark-variant socket fill so it adapts cleanly between Warm Alabaster
+// Light and Arcane Obsidian Dark without duplicate SVG gradient IDs.
 
 interface AdCrestIconProps {
   className?: string
@@ -14,64 +16,38 @@ export function AdCrestIcon({ className = 'h-6 w-6' }: AdCrestIconProps): React.
       className={className}
       aria-hidden="true"
     >
-      <defs>
-        <linearGradient
-          id="adCrestShield"
-          x1="4"
-          y1="3"
-          x2="28"
-          y2="29"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop offset="0%" stopColor="#1e2938" />
-          <stop offset="100%" stopColor="#0f141c" />
-        </linearGradient>
-        <linearGradient
-          id="adCrestGold"
-          x1="7"
-          y1="5"
-          x2="25"
-          y2="27"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop offset="0%" stopColor="#f3d47d" />
-          <stop offset="55%" stopColor="#d4ad56" />
-          <stop offset="100%" stopColor="#9c7322" />
-        </linearGradient>
-        <linearGradient
-          id="adCrestCore"
-          x1="16"
-          y1="8"
-          x2="16"
-          y2="23"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop offset="0%" stopColor="#46e0be" />
-          <stop offset="100%" stopColor="#1c8f78" />
-        </linearGradient>
-      </defs>
-      <path
-        d="M16 2.5L27 6.8V15.4C27 22.1 22.2 27.3 16 29.5C9.8 27.3 5 22.1 5 15.4V6.8L16 2.5Z"
-        fill="url(#adCrestShield)"
-        stroke="url(#adCrestGold)"
+      <rect
+        x="3"
+        y="3"
+        width="11"
+        height="11"
+        rx="2.2"
+        className="fill-[#fffdf8] dark:fill-[#192230]"
+        stroke="var(--color-primary)"
         strokeWidth="1.8"
-        strokeLinejoin="round"
       />
-      <path
-        d="M16 6.2L22.5 13.5L16 24.2L9.5 13.5L16 6.2Z"
-        fill="url(#adCrestCore)"
-        fillOpacity="0.92"
-        stroke="url(#adCrestGold)"
-        strokeWidth="1.2"
-        strokeLinejoin="round"
+      <rect
+        x="18"
+        y="3"
+        width="11"
+        height="11"
+        rx="2.2"
+        className="fill-[#fffdf8] dark:fill-[#192230]"
+        stroke="var(--color-primary)"
+        strokeWidth="1.8"
       />
-      <path
-        d="M16 6.2V24.2M9.5 13.5H22.5"
-        stroke="#f8e8b0"
-        strokeOpacity="0.7"
-        strokeWidth="1.1"
-        strokeLinecap="round"
+      <rect
+        x="3"
+        y="18"
+        width="11"
+        height="11"
+        rx="2.2"
+        className="fill-[#fffdf8] dark:fill-[#192230]"
+        stroke="var(--color-primary)"
+        strokeWidth="1.8"
       />
+      <rect x="21.75" y="18" width="3.5" height="11" rx="0.7" fill="var(--color-brand-teal)" />
+      <rect x="18" y="21.75" width="11" height="3.5" rx="0.7" fill="var(--color-brand-teal)" />
     </svg>
   )
 }

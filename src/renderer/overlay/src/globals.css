@@ -21,9 +21,9 @@
   --color-wr-weak: #e6728c;
 
   /* Dota 2 Panorama Slate & Burnished Gold HUD surfaces (solid/alpha rgba only) */
-  --hud-bg: rgba(13, 18, 25, 0.94);
-  --hud-bg-elevated: rgba(20, 27, 37, 0.96);
-  --hud-bg-chip: rgba(16, 22, 31, 0.9);
+  --hud-bg: rgba(11, 16, 23, 0.96);
+  --hud-bg-elevated: rgba(18, 25, 35, 0.98);
+  --hud-bg-chip: rgba(12, 17, 25, 0.96);
   --hud-gold: #d4ad56;
   --hud-gold-bright: #eccb79;
   --hud-gold-border: rgba(212, 173, 86, 0.48);
@@ -73,7 +73,7 @@ body {
 }
 
 /* ============================================================
-   Top HUD Dock (stays <= 76px tall above hero cards)
+   Top HUD Dock (vertical compact gutter <= 268px wide)
    ============================================================ */
 .top-right-column {
   position: fixed;
@@ -83,7 +83,8 @@ body {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 6px;
+  gap: 5px;
+  max-width: 268px;
   max-height: calc(100vh - 16px);
   overflow: visible;
   pointer-events: none;
@@ -95,16 +96,15 @@ body {
 
 .overlay-header-row {
   display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  flex-wrap: nowrap;
-  gap: 8px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
   flex-shrink: 0;
   pointer-events: none;
 }
 
 .overlay-header-row-left {
-  flex-direction: row-reverse;
+  align-items: flex-start;
 }
 
 .overlay-status-cluster {
@@ -123,9 +123,15 @@ body {
 .overlay-meta-row {
   display: flex;
   align-items: center;
-  flex-wrap: nowrap;
-  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+  max-width: 268px;
   pointer-events: none;
+}
+
+.top-right-column-left .overlay-meta-row {
+  justify-content: flex-start;
 }
 
 .overlay-info-chips,
@@ -299,7 +305,9 @@ body {
   border-radius: 6px;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.55);
   display: inline-flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 3px;
   flex-shrink: 0;
   padding: 4px 8px;
 }
@@ -325,10 +333,10 @@ body {
 }
 
 .role-btn {
-  background-color: rgba(28, 37, 50, 0.85);
-  border: 1px solid rgba(114, 134, 158, 0.35);
+  background-color: rgba(24, 33, 46, 0.94);
+  border: 1px solid rgba(114, 134, 158, 0.38);
   border-radius: 4px;
-  color: var(--hud-text-secondary);
+  color: #d6dfec;
   cursor: pointer;
   font-size: 11px;
   font-weight: 600;
@@ -354,14 +362,12 @@ body {
 }
 
 .role-status {
-  margin-left: 5px;
-  padding-left: 6px;
-  border-left: 1px solid rgba(124, 144, 168, 0.28);
   color: var(--hud-text-secondary);
   font-size: 10px;
   font-weight: 500;
-  line-height: 1.1;
-  max-width: 145px;
+  line-height: 1.15;
+  max-width: 230px;
+  text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -502,8 +508,8 @@ body {
 .shimmer-gold::after {
   content: '';
   position: absolute;
-  inset: -2px;
-  border-radius: 5px;
+  inset: 0;
+  border-radius: 4px;
   pointer-events: none;
   animation: hudPulseOpacity 1.4s ease-in-out infinite;
   will-change: opacity;
@@ -659,6 +665,36 @@ body {
 .unknown-slot {
   border: 2px dashed rgba(232, 174, 52, 0.88);
   border-radius: 4px;
+}
+
+/* Dev-only live geometry calibration mode: highlights ALL 100 sockets with crisp 2px borders */
+.debug-calibration-frames:not(.capture-mode) .ability-hotspot[data-slot-category='ultimate'] {
+  border: 2px solid rgba(0, 232, 255, 0.96) !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.debug-calibration-frames:not(.capture-mode) .ability-hotspot[data-slot-category='standard'] {
+  border: 2px solid rgba(56, 236, 188, 0.96) !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.debug-calibration-frames:not(.capture-mode) .ability-hotspot[data-slot-category='selected'] {
+  border: 2px solid rgba(255, 166, 58, 0.94) !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.debug-calibration-frames:not(.capture-mode) .hero-model-hotspot {
+  border: 2px solid rgba(98, 232, 122, 0.96) !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.debug-calibration-frames:not(.capture-mode) .ability-hotspot::after,
+.debug-calibration-frames:not(.capture-mode) .hero-model-hotspot::after {
+  display: none !important;
 }
 
 /* ============================================================
@@ -954,7 +990,7 @@ body {
   z-index: 9998;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.65);
   opacity: 0.88;
-  white-space: normal;
+  white-space: nowrap;
   text-align: center;
   line-height: 1.15;
   pointer-events: auto;
@@ -971,6 +1007,12 @@ body {
   font-size: 11px;
   min-height: 24px;
   padding: 3px 9px;
+}
+
+.my-spot-btn-compact {
+  font-size: 10px;
+  min-height: 20px;
+  padding: 2px 7px;
 }
 
 .my-spot-btn-unselected {

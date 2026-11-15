@@ -258,8 +258,8 @@ export function createWindowManager(): WindowManager {
       win.showInactive()
       loadWindowContent(win, 'overlay/index.html')
 
-      // Detached devtools would be a visible window — never in background mode.
-      if (!app.isPackaged) {
+      // Detached devtools would be a visible window — only open when explicitly opted in.
+      if (!app.isPackaged && process.env['OPEN_OVERLAY_DEVTOOLS'] === '1') {
         win.webContents.openDevTools({ mode: 'detach' })
       }
     } else {

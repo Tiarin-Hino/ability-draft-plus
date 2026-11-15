@@ -1,4 +1,4 @@
-import { createServer, type Server } from 'http'
+import { createServer, type IncomingMessage, type Server } from 'http'
 import { app } from 'electron'
 import log from 'electron-log/main'
 import type { AppStore } from '../store/app-store'
@@ -8,10 +8,14 @@ import type { AppStore } from '../store/app-store'
 // app between automated Dota 2 restarts. Every diagnostic iteration kills and
 // relaunches the game, which invalidates the overlay session — a one-time
 // manual "Activate overlay" cannot survive an 11-draft run (2026-08-18 run
-// produced zero scans for exactly this reason). Endpoints (JSON):
-//   GET  /status              — overlay/ML/auto-rescan state + scans this session
-//   POST /overlay/activate    — same as the control panel button
-//   POST /scan/initial        — force an initial scan now
+// produced zero scans for exactly this reason). Endpoints:
+//   GET  /status                   — overlay/ML/auto-rescan state + scans this session
+//   GET  /capture                  — PNG screenshot (?hideOverlay=1 hides visible overlay cleanly)
+//   POST /overlay/activate         — same as the control panel button
+//   POST /scan/initial             — force an initial scan now
+//   POST /settings/auto-tracking   — toggle experimentalAutoDraftTracking ({ enabled })
+//   POST /draft/select-spot        — set/clear manual My Spot row ({ heroOrder })
+//   POST /overlay/debug-frames     — toggle .debug-calibration-frames wireframe outline ({ enabled })
 // Never registered in packaged builds; binds 127.0.0.1 only; no auth because
 // it is loopback-only and dev-only.
 
@@ -26,6 +30,20 @@ export interface DevControlHooks {
   /** Read from the DB — the auto-rescan service gates on the persisted value,
    *  and the AppStore settings snapshot is not authoritative for this key. */
   isAutoDraftTrackingEnabled(): boolean
+  captureScreen(options?: { hideOverlay?: boolean }): Promise<Buffer>
+  setAutoDraftTracking(enabled: boolean): void
+  selectSpot(heroOrder: number | null): void
+  setDebugFrames(enabled: boolean): Promise<void>
+}
+
+async function readJsonBody(req: IncomingMessage): Promise<Record<string, unknown>> {
+  const chunks: Buffer[] = []
+  for await (const chunk of req) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
+  }
+  const raw = Buffer.concat(chunks).toString('utf-8').trim()
+  if (!raw) return {}
+  return JSON.parse(raw) as Record<string, unknown>
 }
 
 export function startDevControlServer(appStore: AppStore, hooks: DevControlHooks): Server | null {
@@ -36,7 +54,8 @@ export function startDevControlServer(appStore: AppStore, hooks: DevControlHooks
       res.writeHead(status, { 'Content-Type': 'application/json' })
       res.end(JSON.stringify(body))
     }
-    const path = (req.url ?? '/').split('?')[0]
+    const url = new URL(req.url ?? '/', 'http://127.0.0.1')
+    const path = url.pathname
     try {
       if (req.method === 'GET' && path === '/status') {
         const s = appStore.getState()
@@ -47,6 +66,13 @@ export function startDevControlServer(appStore: AppStore, hooks: DevControlHooks
           autoDraftTracking: hooks.isAutoDraftTrackingEnabled(),
           scansThisSession: hooks.getScanCount(),
         })
+        return
+      }
+      if (req.method === 'GET' && path === '/capture') {
+        const hideOverlay = url.searchParams.get('hideOverlay') === '1'
+        const png = await hooks.captureScreen({ hideOverlay })
+        res.writeHead(200, { 'Content-Type': 'image/png', 'Content-Length': String(png.length) })
+        res.end(png)
         return
       }
       if (req.method === 'POST' && path === '/overlay/activate') {
@@ -66,6 +92,27 @@ export function startDevControlServer(appStore: AppStore, hooks: DevControlHooks
         }
         await hooks.performInitialScan()
         send(200, { success: true })
+        return
+      }
+      if (req.method === 'POST' && path === '/settings/auto-tracking') {
+        const body = await readJsonBody(req)
+        const enabled = body.enabled === true
+        hooks.setAutoDraftTracking(enabled)
+        send(200, { success: true, autoDraftTracking: enabled })
+        return
+      }
+      if (req.method === 'POST' && path === '/draft/select-spot') {
+        const body = await readJsonBody(req)
+        const heroOrder = typeof body.heroOrder === 'number' ? body.heroOrder : null
+        hooks.selectSpot(heroOrder)
+        send(200, { success: true, heroOrder })
+        return
+      }
+      if (req.method === 'POST' && path === '/overlay/debug-frames') {
+        const body = await readJsonBody(req)
+        const enabled = body.enabled === true
+        await hooks.setDebugFrames(enabled)
+        send(200, { success: true, debugFrames: enabled })
         return
       }
       send(404, { error: 'unknown endpoint' })

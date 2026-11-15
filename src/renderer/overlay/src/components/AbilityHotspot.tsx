@@ -1,9 +1,12 @@
 import { useCallback } from 'react'
+import type { SlotBounds } from '@core/resolution/visual-geometry'
 import type { EnrichedScanSlot } from '@shared/types'
 
 interface AbilityHotspotProps {
   slot: EnrichedScanSlot
   scaleFactor: number
+  resolvedBounds?: SlotBounds
+  slotCategory?: 'ultimate' | 'standard' | 'selected'
   isSelectedAbility: boolean
   isMySpotHero: boolean
   topRank?: number
@@ -15,6 +18,8 @@ interface AbilityHotspotProps {
 export function AbilityHotspot({
   slot,
   scaleFactor,
+  resolvedBounds,
+  slotCategory,
   isSelectedAbility,
   isMySpotHero,
   topRank,
@@ -23,10 +28,10 @@ export function AbilityHotspot({
   onLeave,
 }: AbilityHotspotProps): React.ReactElement {
   const style: React.CSSProperties = {
-    left: slot.coord.x / scaleFactor,
-    top: slot.coord.y / scaleFactor,
-    width: slot.coord.width / scaleFactor,
-    height: slot.coord.height / scaleFactor,
+    left: resolvedBounds ? resolvedBounds.x : slot.coord.x / scaleFactor,
+    top: resolvedBounds ? resolvedBounds.y : slot.coord.y / scaleFactor,
+    width: resolvedBounds ? resolvedBounds.width : slot.coord.width / scaleFactor,
+    height: resolvedBounds ? resolvedBounds.height : slot.coord.height / scaleFactor,
     ...(perspectiveTransform ? { transform: perspectiveTransform } : {}),
   }
 
@@ -63,6 +68,7 @@ export function AbilityHotspot({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={onLeave}
       data-ability-name={slot.displayName}
+      data-slot-category={slotCategory}
       aria-label={slot.displayName}
     >
       {/* Top-10 pool pick rank pill in top-left corner (hidden in capture mode) */}
