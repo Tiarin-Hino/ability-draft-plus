@@ -9,6 +9,7 @@ import { CombinationPanel } from './components/CombinationPanel'
 import { DynamicButtons } from './components/DynamicButtons'
 import { RolePanel } from './components/RolePanel'
 import { useAppStore } from './hooks/use-app-store'
+import { releaseAllHoverPassthroughLocks } from './hooks/use-mouse-passthrough'
 import i18n from './i18n'
 
 // @DEV-GUIDE: Root component for the overlay renderer. Renders on a transparent, click-through
@@ -98,6 +99,14 @@ function App(): React.ReactElement {
   useEffect(() => {
     hotkeyStateRef.current = { scanState, triggerScan }
   }, [scanState, triggerScan])
+
+  // .capture-mode hides interactive panels with visibility: hidden during scans,
+  // which suppresses onMouseLeave; release any hover locks so clicks never stick.
+  useEffect(() => {
+    if (scanState === 'scanning') {
+      releaseAllHoverPassthroughLocks()
+    }
+  }, [scanState])
 
   // Global hotkeys (subscribed once; refs avoid IPC listener churn per render).
   useEffect(() => {

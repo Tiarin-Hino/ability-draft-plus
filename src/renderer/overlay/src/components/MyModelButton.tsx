@@ -25,13 +25,11 @@ export function MyModelButton({
   anySelected,
 }: MyModelButtonProps): React.ReactElement | null {
   const { t } = useTranslation()
-  const { onMouseEnter, onMouseLeave } = useMousePassthrough()
+  const isVisible = !(anySelected && !isSelected) && model.dbHeroId !== null
+  const { onMouseEnter, onMouseLeave } = useMousePassthrough(isVisible)
 
-  // Hide if another model is selected (not this one)
-  if (anySelected && !isSelected) return null
-
-  // Can't select models with no DB entry
-  if (model.dbHeroId === null) return null
+  // Hide if another model is selected (not this one) or model has no DB entry
+  if (!isVisible) return null
 
   const isLeftSide = model.heroOrder <= 4 || model.heroOrder === 10
 

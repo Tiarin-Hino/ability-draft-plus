@@ -1,5 +1,8 @@
 import { useEffect } from 'react'
-import { acquireMousePassthroughLock, useMousePassthrough } from '../hooks/use-mouse-passthrough'
+import {
+  acquireMousePassthroughLock,
+  releaseAllHoverPassthroughLocks,
+} from '../hooks/use-mouse-passthrough'
 
 interface ConfirmModalProps {
   open: boolean
@@ -22,13 +25,13 @@ export function ConfirmModal({
   dontShowLabel,
   onDontShowAgain,
 }: ConfirmModalProps): React.ReactElement | null {
-  const { onMouseEnter, onMouseLeave } = useMousePassthrough()
-
-  // Hold a ref-counted lock while modal is open so pointer exits from nested
-  // controls cannot re-enable click-through until the modal closes.
+  // Hold a ref-counted modal lock while open and clear any underlying hover locks
+  // so dismissing the modal always restores click-through immediately.
   useEffect(() => {
     if (!open) return
-    return acquireMousePassthroughLock()
+    const releaseModal = acquireMousePassthroughLock()
+    releaseAllHoverPassthroughLocks()
+    return releaseModal
   }, [open])
 
   if (!open) return null
@@ -39,8 +42,6 @@ export function ConfirmModal({
       role="alertdialog"
       aria-modal="true"
       aria-labelledby="confirm-modal-title"
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
     >
       <div className="confirm-modal-card">
         <p id="confirm-modal-title" className="confirm-modal-message">

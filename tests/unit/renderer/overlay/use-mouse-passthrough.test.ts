@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
+import { createElement } from 'react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { renderHook } from '@testing-library/react'
+import { render, renderHook, fireEvent } from '@testing-library/react'
+import { ConfirmModal } from '../../../../src/renderer/overlay/src/components/ConfirmModal'
 
 const mockSend = vi.fn()
 
@@ -17,6 +19,7 @@ Object.defineProperty(globalThis, 'window', {
 // Import hook AFTER mocking window.electronApi
 let useMousePassthrough: typeof import('../../../../src/renderer/overlay/src/hooks/use-mouse-passthrough').useMousePassthrough
 let acquireMousePassthroughLock: typeof import('../../../../src/renderer/overlay/src/hooks/use-mouse-passthrough').acquireMousePassthroughLock
+let releaseAllHoverPassthroughLocks: typeof import('../../../../src/renderer/overlay/src/hooks/use-mouse-passthrough').releaseAllHoverPassthroughLocks
 let resetMousePassthroughForTests: typeof import('../../../../src/renderer/overlay/src/hooks/use-mouse-passthrough').resetMousePassthroughForTests
 
 describe('useMousePassthrough', () => {
@@ -25,6 +28,7 @@ describe('useMousePassthrough', () => {
     const mod = await import('../../../../src/renderer/overlay/src/hooks/use-mouse-passthrough')
     useMousePassthrough = mod.useMousePassthrough
     acquireMousePassthroughLock = mod.acquireMousePassthroughLock
+    releaseAllHoverPassthroughLocks = mod.releaseAllHoverPassthroughLocks
     resetMousePassthroughForTests = mod.resetMousePassthroughForTests
     resetMousePassthroughForTests()
   })
@@ -119,6 +123,150 @@ describe('useMousePassthrough', () => {
     releaseModal()
     releaseModal()
     expect(mockSend).toHaveBeenCalledTimes(2)
+    expect(mockSend).toHaveBeenLastCalledWith('overlay:setMouseIgnore', {
+      ignore: true,
+      forward: true,
+    })
+  })
+
+  it('releases lock immediately when enabled flips to false without unmounting', () => {
+    const hook = renderHook(({ enabled }) => useMousePassthrough(enabled), {
+      initialProps: { enabled: true },
+    })
+
+    hook.result.current.onMouseEnter()
+    expect(mockSend).toHaveBeenLastCalledWith('overlay:setMouseIgnore', { ignore: false })
+
+    hook.rerender({ enabled: false })
+    expect(mockSend).toHaveBeenCalledTimes(2)
+    expect(mockSend).toHaveBeenLastCalledWith('overlay:setMouseIgnore', {
+      ignore: true,
+      forward: true,
+    })
+
+    // Further enters while disabled are ignored
+    hook.result.current.onMouseEnter()
+    expect(mockSend).toHaveBeenCalledTimes(2)
+  })
+
+  it('releaseAllHoverPassthroughLocks clears hover locks, preserves modal locks, and lets hooks re-acquire', () => {
+    const hook = renderHook(() => useMousePassthrough())
+
+    hook.result.current.onMouseEnter()
+    expect(mockSend).toHaveBeenLastCalledWith('overlay:setMouseIgnore', { ignore: false })
+
+    releaseAllHoverPassthroughLocks()
+    expect(mockSend).toHaveBeenLastCalledWith('overlay:setMouseIgnore', {
+      ignore: true,
+      forward: true,
+    })
+
+    // Same hook can re-acquire on next hover
+    hook.result.current.onMouseEnter()
+    expect(mockSend).toHaveBeenLastCalledWith('overlay:setMouseIgnore', { ignore: false })
+
+    // Modal lock survives releaseAllHoverPassthroughLocks
+    const releaseModal = acquireMousePassthroughLock()
+    releaseAllHoverPassthroughLocks()
+    expect(mockSend).toHaveBeenLastCalledWith('overlay:setMouseIgnore', { ignore: false })
+
+    releaseModal()
+    expect(mockSend).toHaveBeenLastCalledWith('overlay:setMouseIgnore', {
+      ignore: true,
+      forward: true,
+    })
+  })
+
+  it('ConfirmModal never leaks hover lock when open toggles true -> false while mounted', () => {
+    const underlyingControl = renderHook(() => useMousePassthrough())
+    underlyingControl.result.current.onMouseEnter()
+    expect(mockSend).toHaveBeenLastCalledWith('overlay:setMouseIgnore', { ignore: false })
+
+    const { rerender, container, unmount } = render(
+      createElement(ConfirmModal, {
+        open: true,
+        message: 'Confirm?',
+        confirmLabel: 'Proceed',
+        cancelLabel: 'Cancel',
+        onConfirm: vi.fn(),
+        onCancel: vi.fn(),
+      }),
+    )
+
+    const scrim = container.querySelector('.confirm-modal-scrim')
+    expect(scrim).not.toBeNull()
+    fireEvent.mouseEnter(scrim!)
+
+    rerender(
+      createElement(ConfirmModal, {
+        open: false,
+        message: 'Confirm?',
+        confirmLabel: 'Proceed',
+        cancelLabel: 'Cancel',
+        onConfirm: vi.fn(),
+        onCancel: vi.fn(),
+      }),
+    )
+
+    expect(mockSend).toHaveBeenLastCalledWith('overlay:setMouseIgnore', {
+      ignore: true,
+      forward: true,
+    })
+    unmount()
+  })
+
+  it('pointermove reconciler releases stale hover locks over non-interactive areas unless dragging or modal-locked', () => {
+    const interactiveEl = document.createElement('div')
+    interactiveEl.className = 'overlay-interactive'
+    const childEl = document.createElement('button')
+    interactiveEl.appendChild(childEl)
+    const emptyEl = document.createElement('div')
+    document.body.append(interactiveEl, emptyEl)
+
+    try {
+      const hook = renderHook(() => useMousePassthrough())
+      hook.result.current.onMouseEnter()
+      expect(mockSend).toHaveBeenCalledTimes(1)
+
+      // Moving over interactive descendant keeps capture active
+      const overChild = new MouseEvent('pointermove', { bubbles: true, buttons: 0 })
+      childEl.dispatchEvent(overChild)
+      expect(mockSend).toHaveBeenCalledTimes(1)
+
+      // Dragging (buttons !== 0) over empty area keeps capture active
+      const draggingOverEmpty = new MouseEvent('pointermove', { bubbles: true, buttons: 1 })
+      emptyEl.dispatchEvent(draggingOverEmpty)
+      expect(mockSend).toHaveBeenCalledTimes(1)
+
+      // Modal lock protects against pointermove over empty area
+      const releaseModal = acquireMousePassthroughLock()
+      const overEmptyWithModal = new MouseEvent('pointermove', { bubbles: true, buttons: 0 })
+      emptyEl.dispatchEvent(overEmptyWithModal)
+      expect(mockSend).toHaveBeenCalledTimes(1)
+      releaseModal()
+
+      // Moving with buttons=0 over non-interactive area reconciles stale hover lock
+      hook.result.current.onMouseEnter()
+      mockSend.mockClear()
+      const overEmpty = new MouseEvent('pointermove', { bubbles: true, buttons: 0 })
+      emptyEl.dispatchEvent(overEmpty)
+      expect(mockSend).toHaveBeenCalledTimes(1)
+      expect(mockSend).toHaveBeenLastCalledWith('overlay:setMouseIgnore', {
+        ignore: true,
+        forward: true,
+      })
+    } finally {
+      interactiveEl.remove()
+      emptyEl.remove()
+    }
+  })
+
+  it('window blur releases stale hover locks when no modal lock is active', () => {
+    const hook = renderHook(() => useMousePassthrough())
+    hook.result.current.onMouseEnter()
+    expect(mockSend).toHaveBeenLastCalledWith('overlay:setMouseIgnore', { ignore: false })
+
+    window.dispatchEvent(new Event('blur'))
     expect(mockSend).toHaveBeenLastCalledWith('overlay:setMouseIgnore', {
       ignore: true,
       forward: true,

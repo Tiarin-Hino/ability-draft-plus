@@ -26,10 +26,11 @@ export function MySpotButton({
   anySelected,
 }: MySpotButtonProps): React.ReactElement | null {
   const { t } = useTranslation()
-  const { onMouseEnter, onMouseLeave } = useMousePassthrough()
+  const isVisible = !(anySelected && !isSelected)
+  const { onMouseEnter, onMouseLeave } = useMousePassthrough(isVisible)
 
   // Hide if another hero is selected (not this one)
-  if (anySelected && !isSelected) return null
+  if (!isVisible) return null
 
   const heroBoxX = resolvedBounds.x
   const heroBoxY = resolvedBounds.y

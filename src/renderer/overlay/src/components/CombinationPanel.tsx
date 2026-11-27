@@ -24,9 +24,9 @@ export function CombinationPanel({
   onToggle,
 }: CombinationPanelProps): React.ReactElement | null {
   const { t } = useTranslation()
-  const { onMouseEnter, onMouseLeave } = useMousePassthrough()
-
   const hasContent = abilityCombinations.length > 0 || heroSynergies.length > 0
+  const { onMouseEnter, onMouseLeave } = useMousePassthrough(hasContent)
+
   if (!hasContent) return null
 
   const titleKey = variant === 'op' ? 'opCombinations.title' : 'trapCombinations.title'
