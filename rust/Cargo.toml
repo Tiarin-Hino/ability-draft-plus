@@ -13,14 +13,18 @@ members = [
 version = "0.1.0"
 edition = "2021"
 license = "ISC"
-authors = ["Tiarin Hino"]
 
 [workspace.dependencies]
 anyhow = "1.0"
 axum = "0.7"
+futures-core = "0.3"
+rusqlite = { version = "0.33", features = ["bundled"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 thiserror = "2.0"
 tokio = { version = "1.43", features = ["full"] }
+tokio-stream = { version = "0.1", features = ["sync"] }
+tower = { version = "0.5", features = ["util"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+windows = "0.58"

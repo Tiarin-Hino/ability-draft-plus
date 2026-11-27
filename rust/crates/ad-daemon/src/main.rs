@@ -1,60 +1,45 @@
 //! Headless Ability Draft Plus daemon hosting GSI ingestion, OBS streams,
 //! local web Control Panel assets, SQLite storage, ML/OCR pipeline, and overlay IPC.
 
-use std::net::SocketAddr;
+mod app;
+mod db;
 
-use ad_core::gsi::GamePhase;
-use axum::{
-    extract::State,
-    http::StatusCode,
-    routing::{get, post},
-    Json, Router,
+use std::{
+    net::SocketAddr,
+    path::{Path, PathBuf},
+    time::Duration,
 };
-use serde::{Deserialize, Serialize};
-use tracing::info;
 
-#[derive(Clone, Default)]
-struct DaemonState;
+use tracing::{info, warn};
 
-#[derive(Serialize)]
-struct HealthResponse {
-    status: &'static str,
-    capture_backend: &'static str,
-    protocol_version: u32,
-}
+use crate::{
+    app::{build_router, DaemonState},
+    db::{AdDatabase, DbSummary},
+};
 
-#[derive(Deserialize)]
-struct RawGsiPayload {
-    map: Option<RawGsiMap>,
-}
-
-#[derive(Deserialize)]
-struct RawGsiMap {
-    matchid: Option<String>,
-    game_state: Option<String>,
-}
-
-async fn health() -> Json<HealthResponse> {
-    Json(HealthResponse {
-        status: "ok",
-        capture_backend: ad_capture::platform::BACKEND_NAME,
-        protocol_version: ad_protocol::PROTOCOL_VERSION,
-    })
-}
-
-async fn ingest_gsi(
-    State(_state): State<DaemonState>,
-    Json(payload): Json<RawGsiPayload>,
-) -> StatusCode {
-    if let Some(map) = payload.map {
-        let phase = map
-            .game_state
-            .as_deref()
-            .map(GamePhase::from_dota_str)
-            .unwrap_or(GamePhase::Unknown);
-        tracing::debug!(match_id = ?map.matchid, ?phase, "Received GSI snapshot");
+fn resolve_db_summary() -> Option<DbSummary> {
+    let candidate = std::env::var("AD_DB_PATH")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| Path::new("resources/dota_ad_data.db").to_path_buf());
+    if !candidate.exists() {
+        info!(path = %candidate.display(), "Database file not found at startup path");
+        return None;
     }
-    StatusCode::OK
+    match AdDatabase::open_readonly(&candidate).and_then(|db| db.summary()) {
+        Ok(summary) => {
+            info!(
+                path = %candidate.display(),
+                heroes = summary.heroes_count,
+                abilities = summary.abilities_count,
+                "Loaded SQLite database summary"
+            );
+            Some(summary)
+        }
+        Err(err) => {
+            warn!(path = %candidate.display(), %err, "Failed to open SQLite database");
+            None
+        }
+    }
 }
 
 #[tokio::main]
@@ -66,19 +51,33 @@ async fn main() -> anyhow::Result<()> {
         )
         .init();
 
+    let state = DaemonState::new(resolve_db_summary());
+    let window_state = state.dota_window.clone();
+    tokio::spawn(async move {
+        let mut ticker = tokio::time::interval(Duration::from_secs(2));
+        loop {
+            ticker.tick().await;
+            let bounds = tokio::task::spawn_blocking(|| {
+                ad_capture::default_window_tracker()
+                    .find_dota_window()
+                    .ok()
+                    .flatten()
+            })
+            .await
+            .ok()
+            .flatten();
+            *window_state.write().await = bounds;
+        }
+    });
+
     let port: u16 = std::env::var("AD_DAEMON_PORT")
         .ok()
         .and_then(|v| v.parse().ok())
         .unwrap_or(41234);
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
 
-    let app = Router::new()
-        .route("/health", get(health))
-        .route("/gsi", post(ingest_gsi))
-        .with_state(DaemonState);
-
     let listener = tokio::net::TcpListener::bind(addr).await?;
     info!(%addr, backend = ad_capture::platform::BACKEND_NAME, "ad-daemon listening");
-    axum::serve(listener, app).await?;
+    axum::serve(listener, build_router(state)).await?;
     Ok(())
 }
