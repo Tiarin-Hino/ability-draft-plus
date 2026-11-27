@@ -1,3 +1,4 @@
+import { WindrunBrowserError } from '@shared/windrun-browser-error'
 import { app } from 'electron'
 import { join } from 'path'
 import { readFileSync } from 'fs'
@@ -12,6 +13,7 @@ import type { MlModelGaps } from '@core/ml/staleness-detector'
 import type { DatabaseService } from './database-service'
 import type { AppStore } from '../store/app-store'
 import { loadClientTag } from './api-config'
+import { createWindrunBrowser } from './windrun-browser'
 
 // @DEV-GUIDE: Orchestrates data scraping from Windrun.io (ability/hero stats, synergy pairs,
 // triplets) and Liquipedia (ability_order, is_ultimate enrichment).
@@ -30,7 +32,8 @@ import { loadClientTag } from './api-config'
 const logger = log.scope('scraper')
 
 export interface ScraperService {
-  startScrape(): void
+  openBrowser(): void
+  startScrape(useBrowser?: boolean): void
   startLiquipedia(): void
   restorePersistedState(): void
 }
@@ -63,6 +66,9 @@ export function createScraperService(
 ): ScraperService {
   let isWindrunRunning = false
   let isLiquipediaRunning = false
+  const browser = createWindrunBrowser((open) => {
+    appStore.setState({ scraperBrowserOpen: open })
+  })
 
   return {
     restorePersistedState() {
@@ -84,7 +90,20 @@ export function createScraperService(
       }
     },
 
-    startScrape() {
+    openBrowser() {
+      if (isWindrunRunning) return
+      try {
+        browser.open(loadClientTag())
+      } catch {
+        appStore.setState({
+          scraperStatus: 'error',
+          scraperMessage: 'Could not open Windrun browser.',
+          scraperBrowserError: 'openFailed',
+        })
+      }
+    },
+
+    startScrape(useBrowser = false) {
       if (isWindrunRunning) {
         logger.warn('Scrape already in progress, ignoring request')
         return
@@ -94,9 +113,15 @@ export function createScraperService(
       appStore.setState({
         scraperStatus: 'running',
         scraperMessage: 'Starting scrape...',
+        scraperBrowserRequired: false,
+        scraperBrowserError: null,
       })
 
-      const apiClient = createWindrunApiClient(undefined, loadClientTag())
+      const apiClient = createWindrunApiClient(
+        undefined,
+        loadClientTag(),
+        useBrowser ? browser.fetchRequest : undefined,
+      )
       const classNames = loadClassNames()
 
       const deps: ScraperDeps = {
@@ -141,10 +166,13 @@ export function createScraperService(
                 logger.info('ML model class names are in sync with scraped abilities')
               }
             }
+            if (useBrowser) browser.close()
           } else {
             appStore.setState({
               scraperStatus: 'error',
               scraperMessage: result.error ?? 'Unknown error',
+              scraperBrowserRequired: result.browserRequired ?? false,
+              scraperBrowserError: result.browserError ?? null,
             })
           }
         })
@@ -153,6 +181,7 @@ export function createScraperService(
           appStore.setState({
             scraperStatus: 'error',
             scraperMessage: err instanceof Error ? err.message : String(err),
+            scraperBrowserError: err instanceof WindrunBrowserError ? err.code : null,
           })
         })
         .finally(() => {

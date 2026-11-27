@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { createWindrunApiClient } from '@core/scraper/windrun-api-client'
+import { createWindrunApiClient, WindrunApiError } from '@core/scraper/windrun-api-client'
 import type {
   WindrunAbilitiesResponse,
   WindrunStaticAbilitiesResponse,
@@ -186,6 +186,27 @@ describe('WindrunApiClient', () => {
     const url = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string
     expect(url).toBe('https://api.windrun.io/api/v2/ability-shifts?patch=7.41d')
     expect(result.data.abilityShifts[0].gpmShift).toBe(0.56)
+  })
+
+  it('preserves the HTTP status for the browser recovery flow', async () => {
+    mockFetchError(403, 'Forbidden')
+    const client = createWindrunApiClient()
+    await expect(client.fetchStaticHeroes()).rejects.toMatchObject({
+      name: 'WindrunApiError', status: 403,
+    })
+    expect(new WindrunApiError(403, 'Forbidden', 'static/heroes')).toBeInstanceOf(Error)
+  })
+
+  it('uses the browser transport for all endpoints, retaining query params and timeout', async () => {
+    const transport = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ data: [] }) })
+    const client = createWindrunApiClient(undefined, 'test-tag', transport)
+    await client.fetchStaticHeroes()
+    await client.fetchAbilities('7.40c')
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+    expect(transport).toHaveBeenNthCalledWith(2,
+      'https://api.windrun.io/api/v2/abilities?patch=7.40c&idf=test-tag',
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    )
   })
 
   it('throws on HTTP error response', async () => {

@@ -1,8 +1,9 @@
+import { WindrunBrowserError } from '@shared/windrun-browser-error'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { performFullScrape, performLiquipediaEnrichment } from '@core/scraper/orchestrator'
 import type { ScraperDeps, LiquipediaDeps } from '@core/scraper/orchestrator'
 import type { ScraperProgress } from '@core/scraper/types'
-import type { WindrunApiClient } from '@core/scraper/windrun-api-client'
+import { WindrunApiError, type WindrunApiClient } from '@core/scraper/windrun-api-client'
 
 function createMockApiClient(): WindrunApiClient {
   return {
@@ -279,6 +280,24 @@ describe('performFullScrape', () => {
     expect(result.success).toBe(true)
     expect(deps.abilities.applyAbilityShifts).not.toHaveBeenCalled()
     expect(progress.some((p) => p.message.includes('Ability shifts unavailable'))).toBe(true)
+  })
+
+  it.each([403, 429, 500])('offers browser recovery only for 403 (status %i)', async (status) => {
+    const client = createMockApiClient()
+    client.fetchStaticHeroes = vi.fn().mockRejectedValue(new WindrunApiError(status, 'Denied', 'static/heroes'))
+    deps = createMockDeps(client)
+    const result = await performFullScrape(deps, onProgress)
+    expect(result.success).toBe(false)
+    expect(result.browserRequired).toBe(status === 403)
+    expect(result.browserError).toBe(status === 403 ? 'forbidden' : undefined)
+    expect(deps.metadata.setLastScrapeDate).not.toHaveBeenCalled()
+  })
+
+  it('preserves browser error codes for renderer localization', async () => {
+    const client = createMockApiClient()
+    client.fetchStaticHeroes = vi.fn().mockRejectedValue(new WindrunBrowserError('closed'))
+    const result = await performFullScrape(createMockDeps(client), onProgress)
+    expect(result).toMatchObject({ success: false, browserError: 'closed' })
   })
 
   it('returns error on API failure', async () => {
