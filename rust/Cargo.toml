@@ -1,0 +1,26 @@
+[workspace]
+resolver = "2"
+members = [
+  "crates/ad-protocol",
+  "crates/ad-core",
+  "crates/ad-capture",
+  "crates/ad-ml",
+  "crates/ad-daemon",
+  "crates/ad-overlay",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "ISC"
+authors = ["Tiarin Hino"]
+
+[workspace.dependencies]
+anyhow = "1.0"
+axum = "0.7"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+tokio = { version = "1.43", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }

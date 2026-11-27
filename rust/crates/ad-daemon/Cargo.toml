@@ -1,0 +1,18 @@
+[package]
+name = "ad-daemon"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+ad-capture = { path = "../ad-capture" }
+ad-core = { path = "../ad-core" }
+ad-ml = { path = "../ad-ml" }
+ad-protocol = { path = "../ad-protocol" }
+anyhow.workspace = true
+axum.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true

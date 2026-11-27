@@ -73,3 +73,6 @@ colab/**
 # Python bytecode (training pipeline)
 __pycache__/
 twitch/frontend/certs/
+
+# Rust Cargo workspace build output
+/rust/target/
