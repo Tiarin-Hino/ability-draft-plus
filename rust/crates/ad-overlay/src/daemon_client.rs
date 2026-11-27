@@ -5,7 +5,7 @@ use std::{
     time::Duration,
 };
 
-use ad_protocol::{OverlayCommand, OverlaySnapshot, ResolutionSource, PROTOCOL_VERSION};
+use ad_protocol::{OverlayCommand, OverlaySnapshot, ResolutionSource, RoleMode, PROTOCOL_VERSION};
 use tokio::sync::mpsc;
 use tokio_stream::StreamExt;
 use tracing::{debug, warn};
@@ -27,6 +27,11 @@ pub fn empty_snapshot() -> OverlaySnapshot {
         slots: Vec::new(),
         selected_spot_hero_order: None,
         selected_model_hero_order: None,
+        op_combinations: Vec::new(),
+        trap_combinations: Vec::new(),
+        role_mode: RoleMode::Off,
+        role_fixed_positions: Vec::new(),
+        dota_window: None,
     }
 }
 

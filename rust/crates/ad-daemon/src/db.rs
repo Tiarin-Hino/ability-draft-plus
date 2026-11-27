@@ -36,6 +36,15 @@ pub struct AbilityRow {
     pub healing_shift: Option<f64>,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct AbilitySynergyRow {
+    pub base_ability_id: i64,
+    pub synergy_ability_id: i64,
+    pub synergy_winrate: f64,
+    pub synergy_increase: Option<f64>,
+    pub is_op: bool,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct DbSummary {
     pub heroes_count: i64,
@@ -142,6 +151,24 @@ impl AdDatabase {
         })?;
         rows.collect()
     }
+
+    pub fn load_ability_synergies(&self) -> rusqlite::Result<Vec<AbilitySynergyRow>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT base_ability_id, synergy_ability_id, synergy_winrate, synergy_increase, COALESCE(is_op, 0)
+             FROM AbilitySynergies",
+        )?;
+        let rows = stmt.query_map([], |row| {
+            let op_int: i64 = row.get(4)?;
+            Ok(AbilitySynergyRow {
+                base_ability_id: row.get(0)?,
+                synergy_ability_id: row.get(1)?,
+                synergy_winrate: row.get(2)?,
+                synergy_increase: row.get(3)?,
+                is_op: op_int != 0,
+            })
+        })?;
+        rows.collect()
+    }
 }
 
 #[cfg(test)]
@@ -163,7 +190,7 @@ mod tests {
         let summary = db.summary().expect("query DB summary");
         assert_eq!(summary.heroes_count, 127);
         assert!(summary.abilities_count >= 500);
-        assert!(summary.ability_synergies_count > 0);
+        assert!(summary.ability_synergies_count > 2000);
         assert!(summary.hero_ability_synergies_count > 0);
         assert!(summary.ability_triplets_count > 0);
         assert!(summary.hero_ability_triplets_count > 0);
@@ -173,5 +200,11 @@ mod tests {
 
         let abilities = db.load_abilities().expect("load abilities");
         assert_eq!(i64::try_from(abilities.len()).ok(), Some(summary.abilities_count));
+
+        let synergies = db.load_ability_synergies().expect("load ability synergies");
+        assert_eq!(
+            i64::try_from(synergies.len()).ok(),
+            Some(summary.ability_synergies_count)
+        );
     }
 }

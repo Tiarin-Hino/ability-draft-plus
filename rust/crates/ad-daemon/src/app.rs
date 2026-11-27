@@ -1,10 +1,18 @@
 //! Shared Axum router and daemon state for `ad-daemon`.
 
-use std::{convert::Infallible, sync::Arc};
+use std::{
+    convert::Infallible,
+    path::PathBuf,
+    sync::Arc,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use ad_capture::WindowBounds;
 use ad_core::gsi::{parse_gsi_payload, GsiSnapshot};
-use ad_protocol::{OverlayCommand, OverlaySnapshot, ResolutionSource, RoleMode, PROTOCOL_VERSION};
+use ad_protocol::{
+    OverlayCommand, OverlaySnapshot, Rect, ResolutionSource, RoleMode, StreamBoardSummary,
+    StreamEnvelope, PROTOCOL_VERSION, STREAM_PROTOCOL_VERSION,
+};
 use axum::{
     extract::State,
     http::StatusCode,
@@ -17,6 +25,7 @@ use serde::Serialize;
 use serde_json::Value;
 use tokio::sync::{broadcast, RwLock};
 use tokio_stream::{wrappers::BroadcastStream, StreamExt};
+use tower_http::{cors::CorsLayer, services::ServeDir};
 use tracing::warn;
 
 use crate::{
@@ -24,20 +33,35 @@ use crate::{
     scanner::{ScanOptions, ScanPipeline},
 };
 
+fn now_epoch_ms() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0)
+}
+
 #[derive(Clone)]
 pub struct DaemonState {
     pub db_summary: Option<DbSummary>,
     pub pipeline: Option<Arc<ScanPipeline>>,
+    pub web_dir: Option<PathBuf>,
     pub latest_gsi: Arc<RwLock<Option<GsiSnapshot>>>,
     pub latest_snapshot: Arc<RwLock<OverlaySnapshot>>,
     pub overlay_tx: broadcast::Sender<OverlaySnapshot>,
+    pub stream_tx: broadcast::Sender<StreamEnvelope<StreamBoardSummary>>,
+    pub picks_snapshot: Arc<RwLock<Option<Value>>>,
+    pub stream_layout: Arc<RwLock<Value>>,
     pub dota_window: Arc<RwLock<Option<WindowBounds>>>,
     pub role_mode: Arc<RwLock<RoleMode>>,
     pub role_fixed_positions: Arc<RwLock<Vec<u8>>>,
 }
 
 impl DaemonState {
-    pub fn new(db_summary: Option<DbSummary>, pipeline: Option<Arc<ScanPipeline>>) -> Self {
+    pub fn new(
+        db_summary: Option<DbSummary>,
+        pipeline: Option<Arc<ScanPipeline>>,
+        web_dir: Option<PathBuf>,
+    ) -> Self {
         let initial_snapshot = OverlaySnapshot {
             protocol_version: PROTOCOL_VERSION,
             sequence: 0,
@@ -47,18 +71,62 @@ impl DaemonState {
             slots: Vec::new(),
             selected_spot_hero_order: None,
             selected_model_hero_order: None,
+            op_combinations: Vec::new(),
+            trap_combinations: Vec::new(),
+            role_mode: RoleMode::Off,
+            role_fixed_positions: Vec::new(),
+            dota_window: None,
         };
         let (overlay_tx, _) = broadcast::channel(32);
+        let (stream_tx, _) = broadcast::channel(32);
         Self {
             db_summary,
             pipeline,
+            web_dir,
             latest_gsi: Arc::new(RwLock::new(None)),
             latest_snapshot: Arc::new(RwLock::new(initial_snapshot)),
             overlay_tx,
+            stream_tx,
+            picks_snapshot: Arc::new(RwLock::new(None)),
+            stream_layout: Arc::new(RwLock::new(serde_json::json!({}))),
             dota_window: Arc::new(RwLock::new(None)),
             role_mode: Arc::new(RwLock::new(RoleMode::Off)),
             role_fixed_positions: Arc::new(RwLock::new(Vec::new())),
         }
+    }
+
+    pub async fn build_stream_envelope(&self) -> StreamEnvelope<StreamBoardSummary> {
+        let snap = self.latest_snapshot.read().await;
+        let gsi = self.latest_gsi.read().await;
+        let status = if snap.slots.is_empty() {
+            "waiting".to_string()
+        } else {
+            "drafting".to_string()
+        };
+        StreamEnvelope {
+            v: STREAM_PROTOCOL_VERSION,
+            kind: "state".to_string(),
+            ts: now_epoch_ms(),
+            payload: StreamBoardSummary {
+                status,
+                pool_count: snap.slots.iter().filter(|s| !s.is_unknown).count(),
+                op_combos: snap.op_combinations.clone(),
+                trap_combos: snap.trap_combinations.clone(),
+                gsi_connected: gsi.is_some(),
+                game_phase: gsi
+                    .as_ref()
+                    .and_then(|g| g.game_phase.map(|p| format!("{p:?}"))),
+            },
+        }
+    }
+}
+
+pub fn window_bounds_to_rect(bounds: WindowBounds) -> Rect {
+    Rect {
+        x: bounds.x,
+        y: bounds.y,
+        width: bounds.width,
+        height: bounds.height,
     }
 }
 
@@ -101,6 +169,8 @@ async fn ingest_gsi(State(state): State<DaemonState>, Json(payload): Json<Value>
         "Received GSI snapshot"
     );
     *state.latest_gsi.write().await = Some(snapshot);
+    let envelope = state.build_stream_envelope().await;
+    let _ = state.stream_tx.send(envelope);
     StatusCode::OK
 }
 
@@ -132,6 +202,56 @@ async fn overlay_events(
     Sse::new(initial.chain(updates)).keep_alive(KeepAlive::default())
 }
 
+async fn stream_events(
+    State(state): State<DaemonState>,
+) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
+    let initial_env = state.build_stream_envelope().await;
+    let initial = tokio_stream::once(Ok::<Event, Infallible>(
+        Event::default()
+            .event("state")
+            .data(serde_json::to_string(&initial_env).unwrap_or_default()),
+    ));
+
+    let updates = BroadcastStream::new(state.stream_tx.subscribe()).filter_map(|msg| match msg {
+        Ok(env) => serde_json::to_string(&env)
+            .ok()
+            .map(|data| Ok(Event::default().event("state").data(data))),
+        Err(_) => None,
+    });
+
+    Sse::new(initial.chain(updates)).keep_alive(KeepAlive::default())
+}
+
+async fn picks_events(
+    State(state): State<DaemonState>,
+) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
+    let current_picks = state.picks_snapshot.read().await.clone();
+    let env = StreamEnvelope {
+        v: STREAM_PROTOCOL_VERSION,
+        kind: "picks".to_string(),
+        ts: now_epoch_ms(),
+        payload: current_picks,
+    };
+    let initial = tokio_stream::once(Ok::<Event, Infallible>(
+        Event::default()
+            .event("picks")
+            .data(serde_json::to_string(&env).unwrap_or_default()),
+    ));
+    Sse::new(initial).keep_alive(KeepAlive::default())
+}
+
+async fn get_stream_layout(State(state): State<DaemonState>) -> Json<Value> {
+    Json(state.stream_layout.read().await.clone())
+}
+
+async fn set_stream_layout(
+    State(state): State<DaemonState>,
+    Json(layout): Json<Value>,
+) -> Json<Value> {
+    *state.stream_layout.write().await = layout.clone();
+    Json(layout)
+}
+
 async fn overlay_command(
     State(state): State<DaemonState>,
     Json(cmd): Json<OverlayCommand>,
@@ -151,9 +271,16 @@ async fn overlay_command(
         _ => {}
     }
 
+    let current_role_mode = *state.role_mode.read().await;
+    let current_role_positions = state.role_fixed_positions.read().await.clone();
+    let current_window = (*state.dota_window.read().await).map(window_bounds_to_rect);
+
     let updated = {
         let mut snap = state.latest_snapshot.write().await;
         snap.sequence += 1;
+        snap.role_mode = current_role_mode;
+        snap.role_fixed_positions = current_role_positions.clone();
+        snap.dota_window = current_window;
         match cmd {
             OverlayCommand::TriggerScan { .. } => {
                 snap.scanning = true;
@@ -167,6 +294,8 @@ async fn overlay_command(
             OverlayCommand::ResetDraft => {
                 snap.scanning = false;
                 snap.slots.clear();
+                snap.op_combinations.clear();
+                snap.trap_combinations.clear();
                 snap.selected_spot_hero_order = None;
                 snap.selected_model_hero_order = None;
             }
@@ -178,15 +307,17 @@ async fn overlay_command(
     };
 
     let _ = state.overlay_tx.send(updated.clone());
+    let _ = state.stream_tx.send(state.build_stream_envelope().await);
 
     if trigger_scan {
         if let Some(pipeline) = state.pipeline.clone() {
             let state_bg = state.clone();
             let options = ScanOptions {
-                role_mode: *state.role_mode.read().await,
-                role_fixed_positions: state.role_fixed_positions.read().await.clone(),
+                role_mode: current_role_mode,
+                role_fixed_positions: current_role_positions,
                 selected_spot_hero_order: updated.selected_spot_hero_order,
                 selected_model_hero_order: updated.selected_model_hero_order,
+                dota_window: current_window,
             };
             let next_seq = updated.sequence + 1;
             tokio::spawn(async move {
@@ -212,6 +343,9 @@ async fn overlay_command(
                 };
                 *state_bg.latest_snapshot.write().await = final_snap.clone();
                 let _ = state_bg.overlay_tx.send(final_snap);
+                let _ = state_bg
+                    .stream_tx
+                    .send(state_bg.build_stream_envelope().await);
             });
         }
     }
@@ -220,14 +354,35 @@ async fn overlay_command(
 }
 
 pub fn build_router(state: DaemonState) -> Router {
-    Router::new()
+    let web_dir = state.web_dir.clone();
+    let mut router = Router::new()
         .route("/health", get(health))
         .route("/gsi", post(ingest_gsi))
         .route("/api/gsi", get(get_gsi))
+        .route("/events", get(stream_events))
+        .route("/picks/events", get(picks_events))
+        .route("/stream/layout", get(get_stream_layout).post(set_stream_layout))
         .route("/overlay/snapshot", get(get_overlay_snapshot))
         .route("/overlay/events", get(overlay_events))
         .route("/overlay/command", post(overlay_command))
-        .with_state(state)
+        .with_state(state);
+
+    if let Some(root) = web_dir {
+        let stream_dir = root.join("stream");
+        if stream_dir.is_dir() {
+            router = router.nest_service("/stream", ServeDir::new(stream_dir));
+        }
+        let picks_dir = root.join("picks");
+        if picks_dir.is_dir() {
+            router = router.nest_service("/picks", ServeDir::new(picks_dir));
+        }
+        let cp_dir = root.join("control-panel");
+        if cp_dir.is_dir() {
+            router = router.nest_service("/app", ServeDir::new(cp_dir));
+        }
+    }
+
+    router.layer(CorsLayer::permissive())
 }
 
 #[cfg(test)]
@@ -244,7 +399,7 @@ mod tests {
 
     #[tokio::test]
     async fn health_endpoint_reports_ok() {
-        let app = build_router(DaemonState::new(None, None));
+        let app = build_router(DaemonState::new(None, None, None));
         let res = app
             .oneshot(Request::get("/health").body(Body::empty()).unwrap())
             .await
@@ -260,7 +415,7 @@ mod tests {
 
     #[tokio::test]
     async fn post_gsi_updates_latest_snapshot_exposed_on_api_gsi() {
-        let app = build_router(DaemonState::new(None, None));
+        let app = build_router(DaemonState::new(None, None, None));
         let payload = json!({
             "map": {
                 "matchid": "12345",
@@ -304,7 +459,7 @@ mod tests {
 
     #[tokio::test]
     async fn overlay_command_updates_snapshot_and_resets_cleanly() {
-        let app = build_router(DaemonState::new(None, None));
+        let app = build_router(DaemonState::new(None, None, None));
 
         let select_cmd = OverlayCommand::SelectMySpot {
             hero_order: 3,
@@ -352,5 +507,61 @@ mod tests {
         let snap3: OverlaySnapshot =
             serde_json::from_slice(&to_bytes(res3.into_body(), 1024 * 64).await.unwrap()).unwrap();
         assert_eq!(snap3.sequence, 2);
+    }
+
+    #[tokio::test]
+    async fn stream_layout_and_sse_endpoints_respond_cleanly() {
+        let app = build_router(DaemonState::new(None, None, None));
+
+        let layout = json!({ "scale": 0.9, "offsetX": 12 });
+        let post_layout = app
+            .clone()
+            .oneshot(
+                Request::post("/stream/layout")
+                    .header("content-type", "application/json")
+                    .body(Body::from(layout.to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(post_layout.status(), StatusCode::OK);
+
+        let get_layout = app
+            .clone()
+            .oneshot(Request::get("/stream/layout").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(get_layout.status(), StatusCode::OK);
+        let parsed: Value =
+            serde_json::from_slice(&to_bytes(get_layout.into_body(), 1024 * 64).await.unwrap())
+                .unwrap();
+        assert_eq!(parsed, layout);
+
+        let sse_stream = app
+            .clone()
+            .oneshot(Request::get("/events").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(sse_stream.status(), StatusCode::OK);
+        assert!(sse_stream
+            .headers()
+            .get("content-type")
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .contains("text/event-stream"));
+
+        let sse_picks = app
+            .oneshot(Request::get("/picks/events").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(sse_picks.status(), StatusCode::OK);
+        assert!(sse_picks
+            .headers()
+            .get("content-type")
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .contains("text/event-stream"));
     }
 }

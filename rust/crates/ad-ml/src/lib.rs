@@ -7,6 +7,8 @@
 
 use thiserror::Error;
 
+#[cfg(not(target_os = "windows"))]
+pub mod fallback_ocr;
 pub mod hero_matcher;
 pub mod onnx;
 pub mod template_matcher;
@@ -74,4 +76,26 @@ pub trait OcrEngine: Send + Sync {
         width: u32,
         height: u32,
     ) -> Result<String, MlError>;
+}
+
+pub fn default_ocr_engine() -> Result<Box<dyn OcrEngine>, MlError> {
+    #[cfg(target_os = "windows")]
+    {
+        Ok(Box::new(windows_ocr::WindowsOcrEngine::new()?))
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        Ok(Box::new(fallback_ocr::FallbackOcrEngine))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_ocr_engine_constructs() {
+        let engine = default_ocr_engine();
+        assert!(engine.is_ok(), "unexpected OCR init error: {:?}", engine.err());
+    }
 }

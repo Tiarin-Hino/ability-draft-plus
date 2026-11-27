@@ -1,8 +1,9 @@
-//! Versioned IPC protocol between `ad-daemon` and `ad-overlay`.
+//! Versioned IPC protocol between `ad-daemon`, `ad-overlay`, and OBS stream consumers.
 
 use serde::{Deserialize, Serialize};
 
 pub const PROTOCOL_VERSION: u32 = 1;
+pub const STREAM_PROTOCOL_VERSION: u32 = 2;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -12,9 +13,10 @@ pub enum ResolutionSource {
     AutoScaled,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum RoleMode {
+    #[default]
     Off,
     Fixed,
     Dynamic,
@@ -26,6 +28,14 @@ pub struct Rect {
     pub y: i32,
     pub width: u32,
     pub height: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SynergyCombo {
+    pub ability1_name: String,
+    pub ability2_name: String,
+    pub synergy_winrate: f64,
+    pub synergy_increase: Option<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -52,6 +62,16 @@ pub struct OverlaySnapshot {
     pub slots: Vec<SlotHighlight>,
     pub selected_spot_hero_order: Option<u8>,
     pub selected_model_hero_order: Option<u8>,
+    #[serde(default)]
+    pub op_combinations: Vec<SynergyCombo>,
+    #[serde(default)]
+    pub trap_combinations: Vec<SynergyCombo>,
+    #[serde(default)]
+    pub role_mode: RoleMode,
+    #[serde(default)]
+    pub role_fixed_positions: Vec<u8>,
+    #[serde(default)]
+    pub dota_window: Option<Rect>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -64,4 +84,23 @@ pub enum OverlayCommand {
     ResetDraft,
     CloseOverlay,
     ReportFailedScan,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StreamEnvelope<T> {
+    pub v: u32,
+    #[serde(rename = "type")]
+    pub kind: String,
+    pub ts: u64,
+    pub payload: T,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StreamBoardSummary {
+    pub status: String,
+    pub pool_count: usize,
+    pub op_combos: Vec<SynergyCombo>,
+    pub trap_combos: Vec<SynergyCombo>,
+    pub gsi_connected: bool,
+    pub game_phase: Option<String>,
 }

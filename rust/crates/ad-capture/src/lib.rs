@@ -1,7 +1,7 @@
 //! Cross-platform game screen capture and window-bounds tracking abstractions.
 //!
 //! Native backends:
-//! - Windows: Win32 GDI/WGC capture + `windows-rs` window tracking
+//! - Windows: Win32 GDI + Windows Graphics Capture capability probe + `windows-rs` window tracking
 //! - macOS: `ScreenCaptureKit` + `CGWindowListCopyWindowInfo`
 //! - Linux: X11 MIT-SHM + `xdg-desktop-portal` / PipeWire
 
@@ -9,10 +9,25 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 pub mod crop;
+#[cfg(target_os = "linux")]
+mod linux_capture;
+#[cfg(target_os = "macos")]
+mod macos_capture;
 #[cfg(target_os = "windows")]
 mod windows_capture;
 #[cfg(target_os = "windows")]
 mod windows_tracker;
+#[cfg(target_os = "windows")]
+mod windows_wgc;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum DisplayBackend {
+    WindowsWgc,
+    WindowsGdi,
+    MacOsScreenCaptureKit,
+    LinuxX11,
+    LinuxWaylandPortal,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PixelFormat {
@@ -54,25 +69,27 @@ pub trait GameWindowTracker: Send + Sync {
     fn find_dota_window(&self) -> Result<Option<WindowBounds>, CaptureError>;
 }
 
-#[cfg(not(target_os = "windows"))]
-#[derive(Debug, Default)]
-struct StubWindowTracker;
-
-#[cfg(not(target_os = "windows"))]
-impl GameWindowTracker for StubWindowTracker {
-    fn find_dota_window(&self) -> Result<Option<WindowBounds>, CaptureError> {
-        Ok(None)
+pub fn active_display_backend() -> DisplayBackend {
+    #[cfg(target_os = "windows")]
+    {
+        if windows_wgc::is_wgc_supported() {
+            DisplayBackend::WindowsWgc
+        } else {
+            DisplayBackend::WindowsGdi
+        }
     }
-}
-
-#[cfg(not(target_os = "windows"))]
-#[derive(Debug, Default)]
-struct StubScreenCapturer;
-
-#[cfg(not(target_os = "windows"))]
-impl ScreenCapturer for StubScreenCapturer {
-    fn capture_game_frame(&mut self) -> Result<RawFrame, CaptureError> {
-        Err(CaptureError::Unsupported(platform::BACKEND_NAME))
+    #[cfg(target_os = "macos")]
+    {
+        DisplayBackend::MacOsScreenCaptureKit
+    }
+    #[cfg(target_os = "linux")]
+    {
+        match linux_capture::detect_display_server() {
+            linux_capture::LinuxDisplayServer::Wayland => DisplayBackend::LinuxWaylandPortal,
+            linux_capture::LinuxDisplayServer::X11 | linux_capture::LinuxDisplayServer::Headless => {
+                DisplayBackend::LinuxX11
+            }
+        }
     }
 }
 
@@ -81,21 +98,28 @@ pub fn default_window_tracker() -> Box<dyn GameWindowTracker> {
     {
         Box::new(windows_tracker::WindowsGameWindowTracker)
     }
-    #[cfg(not(target_os = "windows"))]
+    #[cfg(target_os = "macos")]
     {
-        Box::new(StubWindowTracker)
+        Box::new(macos_capture::MacOsWindowTracker)
+    }
+    #[cfg(target_os = "linux")]
+    {
+        Box::new(linux_capture::LinuxWindowTracker)
     }
 }
 
-#[cfg_attr(not(test), allow(dead_code))]
 pub fn default_screen_capturer() -> Box<dyn ScreenCapturer> {
     #[cfg(target_os = "windows")]
     {
         Box::new(windows_capture::WindowsGdiCapturer)
     }
-    #[cfg(not(target_os = "windows"))]
+    #[cfg(target_os = "macos")]
     {
-        Box::new(StubScreenCapturer)
+        Box::new(macos_capture::MacOsScreenCapturer)
+    }
+    #[cfg(target_os = "linux")]
+    {
+        Box::new(linux_capture::LinuxScreenCapturer)
     }
 }
 
@@ -136,5 +160,22 @@ mod tests {
             ),
             "unexpected capturer result: {res:?}"
         );
+    }
+
+    #[test]
+    fn active_display_backend_matches_host_platform() {
+        let backend = active_display_backend();
+        #[cfg(target_os = "windows")]
+        assert!(matches!(
+            backend,
+            DisplayBackend::WindowsWgc | DisplayBackend::WindowsGdi
+        ));
+        #[cfg(target_os = "macos")]
+        assert_eq!(backend, DisplayBackend::MacOsScreenCaptureKit);
+        #[cfg(target_os = "linux")]
+        assert!(matches!(
+            backend,
+            DisplayBackend::LinuxX11 | DisplayBackend::LinuxWaylandPortal
+        ));
     }
 }

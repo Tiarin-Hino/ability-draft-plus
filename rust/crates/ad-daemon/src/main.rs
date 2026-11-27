@@ -15,7 +15,7 @@ use std::{
 use tracing::{info, warn};
 
 use crate::{
-    app::{build_router, DaemonState},
+    app::{build_router, window_bounds_to_rect, DaemonState},
     db::{AdDatabase, DbSummary},
     scanner::ScanPipeline,
 };
@@ -24,6 +24,18 @@ fn resolve_resources_dir() -> PathBuf {
     std::env::var("AD_RESOURCES_DIR")
         .map(PathBuf::from)
         .unwrap_or_else(|_| Path::new("resources").to_path_buf())
+}
+
+fn resolve_web_dir() -> Option<PathBuf> {
+    let candidate = std::env::var("AD_WEB_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| Path::new("out/renderer").to_path_buf());
+    if candidate.is_dir() {
+        info!(dir = %candidate.display(), "Serving built renderer web assets");
+        Some(candidate)
+    } else {
+        None
+    }
 }
 
 fn resolve_db_summary(resources_dir: &Path) -> Option<DbSummary> {
@@ -84,8 +96,9 @@ async fn main() -> anyhow::Result<()> {
     let state = DaemonState::new(
         resolve_db_summary(&resources_dir),
         resolve_pipeline(&resources_dir),
+        resolve_web_dir(),
     );
-    let window_state = state.dota_window.clone();
+    let tracker_state = state.clone();
     tokio::spawn(async move {
         let mut ticker = tokio::time::interval(Duration::from_secs(2));
         loop {
@@ -99,7 +112,25 @@ async fn main() -> anyhow::Result<()> {
             .await
             .ok()
             .flatten();
-            *window_state.write().await = bounds;
+
+            let changed = {
+                let mut guard = tracker_state.dota_window.write().await;
+                if *guard != bounds {
+                    *guard = bounds;
+                    true
+                } else {
+                    false
+                }
+            };
+            if changed {
+                let updated = {
+                    let mut snap = tracker_state.latest_snapshot.write().await;
+                    snap.sequence += 1;
+                    snap.dota_window = bounds.map(window_bounds_to_rect);
+                    snap.clone()
+                };
+                let _ = tracker_state.overlay_tx.send(updated);
+            }
         }
     });
 
@@ -110,7 +141,11 @@ async fn main() -> anyhow::Result<()> {
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
-    info!(%addr, backend = ad_capture::platform::BACKEND_NAME, "ad-daemon listening");
+    info!(
+        %addr,
+        backend = ?ad_capture::active_display_backend(),
+        "ad-daemon listening"
+    );
     axum::serve(listener, build_router(state)).await?;
     Ok(())
 }
