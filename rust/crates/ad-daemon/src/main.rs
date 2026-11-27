@@ -3,10 +3,12 @@
 
 mod app;
 mod db;
+mod scanner;
 
 use std::{
     net::SocketAddr,
     path::{Path, PathBuf},
+    sync::Arc,
     time::Duration,
 };
 
@@ -15,17 +17,24 @@ use tracing::{info, warn};
 use crate::{
     app::{build_router, DaemonState},
     db::{AdDatabase, DbSummary},
+    scanner::ScanPipeline,
 };
 
-fn resolve_db_summary() -> Option<DbSummary> {
+fn resolve_resources_dir() -> PathBuf {
+    std::env::var("AD_RESOURCES_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| Path::new("resources").to_path_buf())
+}
+
+fn resolve_db_summary(resources_dir: &Path) -> Option<DbSummary> {
     let candidate = std::env::var("AD_DB_PATH")
         .map(PathBuf::from)
-        .unwrap_or_else(|_| Path::new("resources/dota_ad_data.db").to_path_buf());
+        .unwrap_or_else(|_| resources_dir.join("dota_ad_data.db"));
     if !candidate.exists() {
         info!(path = %candidate.display(), "Database file not found at startup path");
         return None;
     }
-    match AdDatabase::open_readonly(&candidate).and_then(|db| db.summary()) {
+    match AdDatabase::open_immutable_readonly(&candidate).and_then(|db| db.summary()) {
         Ok(summary) => {
             info!(
                 path = %candidate.display(),
@@ -42,6 +51,26 @@ fn resolve_db_summary() -> Option<DbSummary> {
     }
 }
 
+fn resolve_pipeline(resources_dir: &Path) -> Option<Arc<ScanPipeline>> {
+    if !resources_dir.join("config/layout_coordinates.json").exists() {
+        info!(dir = %resources_dir.display(), "Resources dir missing layout_coordinates.json; scan pipeline disabled");
+        return None;
+    }
+    match ScanPipeline::from_resources_dir(resources_dir) {
+        Ok(pipeline) => {
+            info!(
+                layouts = pipeline.layout_count(),
+                "ScanPipeline initialized"
+            );
+            Some(Arc::new(pipeline))
+        }
+        Err(err) => {
+            warn!(%err, "Failed to initialize ScanPipeline");
+            None
+        }
+    }
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
@@ -51,7 +80,11 @@ async fn main() -> anyhow::Result<()> {
         )
         .init();
 
-    let state = DaemonState::new(resolve_db_summary());
+    let resources_dir = resolve_resources_dir();
+    let state = DaemonState::new(
+        resolve_db_summary(&resources_dir),
+        resolve_pipeline(&resources_dir),
+    );
     let window_state = state.dota_window.clone();
     tokio::spawn(async move {
         let mut ticker = tokio::time::interval(Duration::from_secs(2));

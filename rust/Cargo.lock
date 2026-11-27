@@ -139,8 +139,10 @@ dependencies = [
 name = "ad-core"
 version = "0.1.0"
 dependencies = [
+ "ad-protocol",
  "serde",
  "serde_json",
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -149,6 +151,7 @@ version = "0.1.0"
 dependencies = [
  "ad-capture",
  "ad-core",
+ "ad-ml",
  "ad-protocol",
  "anyhow",
  "axum",

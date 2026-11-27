@@ -4,7 +4,7 @@ use std::{convert::Infallible, sync::Arc};
 
 use ad_capture::WindowBounds;
 use ad_core::gsi::{parse_gsi_payload, GsiSnapshot};
-use ad_protocol::{OverlayCommand, OverlaySnapshot, ResolutionSource, PROTOCOL_VERSION};
+use ad_protocol::{OverlayCommand, OverlaySnapshot, ResolutionSource, RoleMode, PROTOCOL_VERSION};
 use axum::{
     extract::State,
     http::StatusCode,
@@ -17,20 +17,27 @@ use serde::Serialize;
 use serde_json::Value;
 use tokio::sync::{broadcast, RwLock};
 use tokio_stream::{wrappers::BroadcastStream, StreamExt};
+use tracing::warn;
 
-use crate::db::DbSummary;
+use crate::{
+    db::DbSummary,
+    scanner::{ScanOptions, ScanPipeline},
+};
 
 #[derive(Clone)]
 pub struct DaemonState {
     pub db_summary: Option<DbSummary>,
+    pub pipeline: Option<Arc<ScanPipeline>>,
     pub latest_gsi: Arc<RwLock<Option<GsiSnapshot>>>,
     pub latest_snapshot: Arc<RwLock<OverlaySnapshot>>,
     pub overlay_tx: broadcast::Sender<OverlaySnapshot>,
     pub dota_window: Arc<RwLock<Option<WindowBounds>>>,
+    pub role_mode: Arc<RwLock<RoleMode>>,
+    pub role_fixed_positions: Arc<RwLock<Vec<u8>>>,
 }
 
 impl DaemonState {
-    pub fn new(db_summary: Option<DbSummary>) -> Self {
+    pub fn new(db_summary: Option<DbSummary>, pipeline: Option<Arc<ScanPipeline>>) -> Self {
         let initial_snapshot = OverlaySnapshot {
             protocol_version: PROTOCOL_VERSION,
             sequence: 0,
@@ -44,10 +51,13 @@ impl DaemonState {
         let (overlay_tx, _) = broadcast::channel(32);
         Self {
             db_summary,
+            pipeline,
             latest_gsi: Arc::new(RwLock::new(None)),
             latest_snapshot: Arc::new(RwLock::new(initial_snapshot)),
             overlay_tx,
             dota_window: Arc::new(RwLock::new(None)),
+            role_mode: Arc::new(RwLock::new(RoleMode::Off)),
+            role_fixed_positions: Arc::new(RwLock::new(Vec::new())),
         }
     }
 }
@@ -58,6 +68,7 @@ struct HealthResponse {
     capture_backend: &'static str,
     protocol_version: u32,
     gsi_connected: bool,
+    layouts_loaded: usize,
     db_summary: Option<DbSummary>,
     dota_window: Option<WindowBounds>,
 }
@@ -65,11 +76,17 @@ struct HealthResponse {
 async fn health(State(state): State<DaemonState>) -> Json<HealthResponse> {
     let gsi_connected = state.latest_gsi.read().await.is_some();
     let dota_window = *state.dota_window.read().await;
+    let layouts_loaded = state
+        .pipeline
+        .as_ref()
+        .map(|p| p.layout_count())
+        .unwrap_or(0);
     Json(HealthResponse {
         status: "ok",
         capture_backend: ad_capture::platform::BACKEND_NAME,
         protocol_version: PROTOCOL_VERSION,
         gsi_connected,
+        layouts_loaded,
         db_summary: state.db_summary.clone(),
         dota_window,
     })
@@ -119,6 +136,21 @@ async fn overlay_command(
     State(state): State<DaemonState>,
     Json(cmd): Json<OverlayCommand>,
 ) -> Json<OverlaySnapshot> {
+    let mut trigger_scan = false;
+    match &cmd {
+        OverlayCommand::SetRoleMode {
+            mode,
+            fixed_positions,
+        } => {
+            *state.role_mode.write().await = *mode;
+            *state.role_fixed_positions.write().await = fixed_positions.clone();
+        }
+        OverlayCommand::TriggerScan { .. } => {
+            trigger_scan = true;
+        }
+        _ => {}
+    }
+
     let updated = {
         let mut snap = state.latest_snapshot.write().await;
         snap.sequence += 1;
@@ -146,6 +178,44 @@ async fn overlay_command(
     };
 
     let _ = state.overlay_tx.send(updated.clone());
+
+    if trigger_scan {
+        if let Some(pipeline) = state.pipeline.clone() {
+            let state_bg = state.clone();
+            let options = ScanOptions {
+                role_mode: *state.role_mode.read().await,
+                role_fixed_positions: state.role_fixed_positions.read().await.clone(),
+                selected_spot_hero_order: updated.selected_spot_hero_order,
+                selected_model_hero_order: updated.selected_model_hero_order,
+            };
+            let next_seq = updated.sequence + 1;
+            tokio::spawn(async move {
+                let res =
+                    tokio::task::spawn_blocking(move || pipeline.scan_live_game(&options, next_seq))
+                        .await;
+                let final_snap = match res {
+                    Ok(Ok(scanned)) => scanned,
+                    Ok(Err(err)) => {
+                        warn!(%err, "Live scan failed");
+                        let mut guard = state_bg.latest_snapshot.write().await;
+                        guard.sequence = guard.sequence.max(next_seq);
+                        guard.scanning = false;
+                        guard.clone()
+                    }
+                    Err(err) => {
+                        warn!(%err, "Scan task panicked");
+                        let mut guard = state_bg.latest_snapshot.write().await;
+                        guard.sequence = guard.sequence.max(next_seq);
+                        guard.scanning = false;
+                        guard.clone()
+                    }
+                };
+                *state_bg.latest_snapshot.write().await = final_snap.clone();
+                let _ = state_bg.overlay_tx.send(final_snap);
+            });
+        }
+    }
+
     Json(updated)
 }
 
@@ -174,7 +244,7 @@ mod tests {
 
     #[tokio::test]
     async fn health_endpoint_reports_ok() {
-        let app = build_router(DaemonState::new(None));
+        let app = build_router(DaemonState::new(None, None));
         let res = app
             .oneshot(Request::get("/health").body(Body::empty()).unwrap())
             .await
@@ -190,7 +260,7 @@ mod tests {
 
     #[tokio::test]
     async fn post_gsi_updates_latest_snapshot_exposed_on_api_gsi() {
-        let app = build_router(DaemonState::new(None));
+        let app = build_router(DaemonState::new(None, None));
         let payload = json!({
             "map": {
                 "matchid": "12345",
@@ -234,7 +304,7 @@ mod tests {
 
     #[tokio::test]
     async fn overlay_command_updates_snapshot_and_resets_cleanly() {
-        let app = build_router(DaemonState::new(None));
+        let app = build_router(DaemonState::new(None, None));
 
         let select_cmd = OverlayCommand::SelectMySpot {
             hero_order: 3,

@@ -5,5 +5,7 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+ad-protocol = { path = "../ad-protocol" }
 serde.workspace = true
 serde_json.workspace = true
+thiserror.workspace = true

@@ -16,7 +16,6 @@ pub struct HeroRow {
     pub windrun_id: Option<i64>,
 }
 
-#[cfg_attr(not(test), allow(dead_code))]
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct AbilityRow {
     pub ability_id: i64,
@@ -28,6 +27,13 @@ pub struct AbilityRow {
     pub is_ultimate: bool,
     pub ability_order: Option<i64>,
     pub windrun_id: Option<i64>,
+    pub kills_shift: Option<f64>,
+    pub deaths_shift: Option<f64>,
+    pub ka_shift: Option<f64>,
+    pub gpm_shift: Option<f64>,
+    pub xpm_shift: Option<f64>,
+    pub dmg_shift: Option<f64>,
+    pub healing_shift: Option<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -46,13 +52,6 @@ pub struct AdDatabase {
 }
 
 impl AdDatabase {
-    pub fn open_readonly(path: &Path) -> rusqlite::Result<Self> {
-        let flags = OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX;
-        let conn = Connection::open_with_flags(path, flags)?;
-        Ok(Self { conn })
-    }
-
-    #[cfg(test)]
     pub fn open_immutable_readonly(path: &Path) -> rusqlite::Result<Self> {
         let canonical = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
         let raw = canonical.to_string_lossy().replace('\\', "/");
@@ -112,11 +111,11 @@ impl AdDatabase {
         rows.collect()
     }
 
-    #[cfg_attr(not(test), allow(dead_code))]
     pub fn load_abilities(&self) -> rusqlite::Result<Vec<AbilityRow>> {
         let mut stmt = self.conn.prepare(
             "SELECT ability_id, name, display_name, hero_id, winrate, pick_rate,
-                    COALESCE(is_ultimate, 0), ability_order, windrun_id
+                    COALESCE(is_ultimate, 0), ability_order, windrun_id,
+                    kills_shift, deaths_shift, ka_shift, gpm_shift, xpm_shift, dmg_shift, healing_shift
              FROM Abilities
              ORDER BY ability_id ASC",
         )?;
@@ -132,6 +131,13 @@ impl AdDatabase {
                 is_ultimate: ult_int != 0,
                 ability_order: row.get(7)?,
                 windrun_id: row.get(8)?,
+                kills_shift: row.get(9)?,
+                deaths_shift: row.get(10)?,
+                ka_shift: row.get(11)?,
+                gpm_shift: row.get(12)?,
+                xpm_shift: row.get(13)?,
+                dmg_shift: row.get(14)?,
+                healing_shift: row.get(15)?,
             })
         })?;
         rows.collect()
