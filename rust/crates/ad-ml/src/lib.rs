@@ -7,10 +7,31 @@
 
 use thiserror::Error;
 
+pub mod hero_matcher;
+pub mod onnx;
+pub mod template_matcher;
+#[cfg(target_os = "windows")]
+pub mod windows_ocr;
+
 pub const INPUT_SIZE: u32 = 96;
 pub const DEFAULT_POOL_CONFIDENCE_THRESHOLD: f32 = 0.90;
-pub const PICK_TEMPLATE_FALLBACK_MIN_NCC: f32 = 0.70;
+pub const PICK_TEMPLATE_COMPARE_SIZE: u32 = 48;
+pub const PICK_TEMPLATE_CROP_INSET_RATIO: f32 = 0.08;
+pub const PICK_TEMPLATE_MIN_NCC: f32 = 0.45;
+pub const PICK_TEMPLATE_MIN_MARGIN: f32 = 0.02;
+pub const PICK_TEMPLATE_FALLBACK_MIN_NCC: f32 = 0.85;
+pub const PICK_TEMPLATE_EMPTY_STD: f32 = 25.0;
+pub const OCR_MIN_SIMILARITY: f32 = 0.60;
 pub const OCR_UNSCOPED_MIN_SIMILARITY: f32 = 0.85;
+
+pub fn class_threshold_override(class_name: &str) -> Option<f32> {
+    match class_name {
+        "crystal_maiden_crystal_nova"
+        | "medusa_gorgon_grasp"
+        | "nevermore_shadowraze2" => Some(0.50),
+        _ => None,
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct SlotCrop<'a> {
@@ -25,12 +46,7 @@ pub struct Prediction {
     pub slot_index: usize,
     pub class_name: Option<String>,
     pub confidence: f32,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct TemplateMatch {
-    pub ability_name: String,
-    pub ncc_score: f32,
+    pub class_index: usize,
 }
 
 #[derive(Debug, Error)]
@@ -52,5 +68,10 @@ pub trait MlClassifier: Send + Sync {
 }
 
 pub trait OcrEngine: Send + Sync {
-    fn recognize_hero_card_text(&mut self, image_bytes: &[u8], width: u32, height: u32) -> Result<String, MlError>;
+    fn recognize_hero_card_text(
+        &mut self,
+        rgba_bytes: &[u8],
+        width: u32,
+        height: u32,
+    ) -> Result<String, MlError>;
 }

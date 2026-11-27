@@ -17,7 +17,10 @@ license = "ISC"
 [workspace.dependencies]
 anyhow = "1.0"
 axum = "0.7"
+eframe = "0.37.0"
 futures-core = "0.3"
+ort = "2.0.0-rc.15"
+reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls"] }
 rusqlite = { version = "0.33", features = ["bundled"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -27,4 +30,4 @@ tokio-stream = { version = "0.1", features = ["sync"] }
 tower = { version = "0.5", features = ["util"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-windows = "0.58"
+windows = "0.62"

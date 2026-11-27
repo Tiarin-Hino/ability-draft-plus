@@ -81,7 +81,7 @@ pub fn run_demo_window(bounds: Rect, hit_tester: Arc<RwLock<HitTester>>) -> anyh
             bounds.height as i32,
             None,
             None,
-            hinstance,
+            Some(hinstance.into()),
             None,
         )
         .context("CreateWindowExW failed")?;
@@ -93,7 +93,7 @@ pub fn run_demo_window(bounds: Rect, hit_tester: Arc<RwLock<HitTester>>) -> anyh
         let _ = ShowWindow(hwnd, SW_SHOWNOACTIVATE);
 
         let mut msg = MSG::default();
-        while GetMessageW(&mut msg, HWND(std::ptr::null_mut()), 0, 0).as_bool() {
+        while GetMessageW(&mut msg, None, 0, 0).as_bool() {
             let _ = TranslateMessage(&msg);
             DispatchMessageW(&msg);
         }

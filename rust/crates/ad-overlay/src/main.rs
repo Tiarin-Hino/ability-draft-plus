@@ -1,11 +1,12 @@
 //! Native transparent overlay binary for Ability Draft Plus.
 //!
-//! Renders recommendations and HUD controls directly via native GPU surfaces (`egui`/`wgpu`)
-//! without an embedded browser, using stateless OS hit-testing (`WM_NCHITTEST` on Windows,
-//! `NSWindow` region tracking on macOS, `XShape` / `wlr-layer-shell` or Vulkan layer on Linux)
-//! so empty pixels can never get stuck blocking Dota 2 mouse input.
+//! Renders recommendations and HUD controls directly via native GPU surfaces (`eframe`/`wgpu`)
+//! without an embedded browser, using stateless hit-testing so empty pixels can never get
+//! stuck blocking Dota 2 mouse input.
 
+mod daemon_client;
 mod hit_test;
+mod hud;
 #[cfg(target_os = "windows")]
 mod win32_surface;
 
@@ -39,16 +40,23 @@ fn main() -> anyhow::Result<()> {
 
     let daemon_url =
         std::env::var("AD_DAEMON_URL").unwrap_or_else(|_| "http://127.0.0.1:41234".to_string());
-    let demo_mode = std::env::args().any(|arg| arg == "--demo");
+    let headless = std::env::args().any(|arg| arg == "--headless");
+    let win32_demo = std::env::args().any(|arg| arg == "--win32-demo");
 
     info!(
         protocol_version = PROTOCOL_VERSION,
         %daemon_url,
-        demo_mode,
+        headless,
+        win32_demo,
         "ad-overlay host initialized"
     );
 
-    if demo_mode {
+    if headless {
+        let _ = build_demo_hit_tester();
+        return Ok(());
+    }
+
+    if win32_demo {
         #[cfg(target_os = "windows")]
         {
             let bounds = Rect {
@@ -62,11 +70,10 @@ fn main() -> anyhow::Result<()> {
         #[cfg(not(target_os = "windows"))]
         {
             let _ = build_demo_hit_tester();
-            anyhow::bail!("--demo Win32 surface is only available on Windows");
+            anyhow::bail!("--win32-demo surface is only available on Windows");
         }
-    } else {
-        let _ = build_demo_hit_tester();
+        return Ok(());
     }
 
-    Ok(())
+    hud::run_hud(daemon_url)
 }

@@ -91,6 +91,10 @@ async fn get_gsi(State(state): State<DaemonState>) -> Json<Option<GsiSnapshot>> 
     Json(state.latest_gsi.read().await.clone())
 }
 
+async fn get_overlay_snapshot(State(state): State<DaemonState>) -> Json<OverlaySnapshot> {
+    Json(state.latest_snapshot.read().await.clone())
+}
+
 async fn overlay_events(
     State(state): State<DaemonState>,
 ) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
@@ -150,6 +154,7 @@ pub fn build_router(state: DaemonState) -> Router {
         .route("/health", get(health))
         .route("/gsi", post(ingest_gsi))
         .route("/api/gsi", get(get_gsi))
+        .route("/overlay/snapshot", get(get_overlay_snapshot))
         .route("/overlay/events", get(overlay_events))
         .route("/overlay/command", post(overlay_command))
         .with_state(state)
@@ -252,6 +257,7 @@ mod tests {
         assert_eq!(snap1.selected_spot_hero_order, Some(3));
 
         let res2 = app
+            .clone()
             .oneshot(
                 Request::post("/overlay/command")
                     .header("content-type", "application/json")
@@ -267,5 +273,14 @@ mod tests {
             serde_json::from_slice(&to_bytes(res2.into_body(), 1024 * 64).await.unwrap()).unwrap();
         assert_eq!(snap2.sequence, 2);
         assert_eq!(snap2.selected_spot_hero_order, None);
+
+        let res3 = app
+            .oneshot(Request::get("/overlay/snapshot").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(res3.status(), StatusCode::OK);
+        let snap3: OverlaySnapshot =
+            serde_json::from_slice(&to_bytes(res3.into_body(), 1024 * 64).await.unwrap()).unwrap();
+        assert_eq!(snap3.sequence, 2);
     }
 }

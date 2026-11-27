@@ -1,13 +1,16 @@
 //! Cross-platform game screen capture and window-bounds tracking abstractions.
 //!
 //! Native backends:
-//! - Windows: Windows Graphics Capture (`windows-capture`) + Win32 `windows-rs`
+//! - Windows: Win32 GDI/WGC capture + `windows-rs` window tracking
 //! - macOS: `ScreenCaptureKit` + `CGWindowListCopyWindowInfo`
 //! - Linux: X11 MIT-SHM + `xdg-desktop-portal` / PipeWire
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+pub mod crop;
+#[cfg(target_os = "windows")]
+mod windows_capture;
 #[cfg(target_os = "windows")]
 mod windows_tracker;
 
@@ -62,6 +65,17 @@ impl GameWindowTracker for StubWindowTracker {
     }
 }
 
+#[cfg(not(target_os = "windows"))]
+#[derive(Debug, Default)]
+struct StubScreenCapturer;
+
+#[cfg(not(target_os = "windows"))]
+impl ScreenCapturer for StubScreenCapturer {
+    fn capture_game_frame(&mut self) -> Result<RawFrame, CaptureError> {
+        Err(CaptureError::Unsupported(platform::BACKEND_NAME))
+    }
+}
+
 pub fn default_window_tracker() -> Box<dyn GameWindowTracker> {
     #[cfg(target_os = "windows")]
     {
@@ -70,6 +84,18 @@ pub fn default_window_tracker() -> Box<dyn GameWindowTracker> {
     #[cfg(not(target_os = "windows"))]
     {
         Box::new(StubWindowTracker)
+    }
+}
+
+#[cfg_attr(not(test), allow(dead_code))]
+pub fn default_screen_capturer() -> Box<dyn ScreenCapturer> {
+    #[cfg(target_os = "windows")]
+    {
+        Box::new(windows_capture::WindowsGdiCapturer)
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        Box::new(StubScreenCapturer)
     }
 }
 
@@ -97,5 +123,18 @@ mod tests {
         let tracker = default_window_tracker();
         let res = tracker.find_dota_window();
         assert!(res.is_ok(), "unexpected tracker error: {res:?}");
+    }
+
+    #[test]
+    fn default_screen_capturer_handles_absent_window_cleanly() {
+        let mut capturer = default_screen_capturer();
+        let res = capturer.capture_game_frame();
+        assert!(
+            matches!(
+                res,
+                Ok(_) | Err(CaptureError::WindowNotFound | CaptureError::Unsupported(_))
+            ),
+            "unexpected capturer result: {res:?}"
+        );
     }
 }
