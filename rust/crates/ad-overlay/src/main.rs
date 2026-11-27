@@ -66,13 +66,13 @@ fn main() -> anyhow::Result<()> {
                 height: 360,
             };
             win32_surface::run_demo_window(bounds, build_demo_hit_tester())?;
+            return Ok(());
         }
         #[cfg(not(target_os = "windows"))]
         {
             let _ = build_demo_hit_tester();
             anyhow::bail!("--win32-demo surface is only available on Windows");
         }
-        return Ok(());
     }
 
     hud::run_hud(daemon_url)
