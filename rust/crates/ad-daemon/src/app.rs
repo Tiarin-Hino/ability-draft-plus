@@ -27,7 +27,7 @@ use serde_json::Value;
 use tokio::sync::{broadcast, RwLock};
 use tokio_stream::{wrappers::BroadcastStream, StreamExt};
 use tower_http::{cors::CorsLayer, services::ServeDir};
-use tracing::warn;
+use tracing::{info, warn};
 
 use crate::{
     auto_rescan::{AutoRescanController, RescanAction},
@@ -51,6 +51,7 @@ pub struct DaemonState {
     pub latest_snapshot: Arc<RwLock<OverlaySnapshot>>,
     pub overlay_tx: broadcast::Sender<OverlaySnapshot>,
     pub stream_tx: broadcast::Sender<StreamEnvelope<StreamBoardSummary>>,
+    pub picks_tx: broadcast::Sender<Value>,
     pub picks_snapshot: Arc<RwLock<Option<Value>>>,
     pub stream_layout: Arc<RwLock<Value>>,
     pub dota_window: Arc<RwLock<Option<WindowBounds>>>,
@@ -68,6 +69,10 @@ impl DaemonState {
         let auto_rescan_default = std::env::var("AD_AUTO_RESCAN")
             .ok()
             .is_some_and(|v| v == "1" || v.eq_ignore_ascii_case("true"));
+        let pick_templates_loaded = pipeline
+            .as_ref()
+            .map(|p| p.pick_template_count())
+            .unwrap_or(0);
         let initial_snapshot = OverlaySnapshot {
             protocol_version: PROTOCOL_VERSION,
             sequence: 0,
@@ -86,9 +91,13 @@ impl DaemonState {
             role_fixed_positions: Vec::new(),
             auto_rescan_enabled: auto_rescan_default,
             dota_window: None,
+            gsi_connected: false,
+            game_phase: None,
+            pick_templates_loaded,
         };
         let (overlay_tx, _) = broadcast::channel(32);
         let (stream_tx, _) = broadcast::channel(32);
+        let (picks_tx, _) = broadcast::channel(32);
         Self {
             db_summary,
             pipeline,
@@ -97,6 +106,7 @@ impl DaemonState {
             latest_snapshot: Arc::new(RwLock::new(initial_snapshot)),
             overlay_tx,
             stream_tx,
+            picks_tx,
             picks_snapshot: Arc::new(RwLock::new(None)),
             stream_layout: Arc::new(RwLock::new(serde_json::json!({}))),
             dota_window: Arc::new(RwLock::new(None)),
@@ -130,6 +140,26 @@ impl DaemonState {
             },
         }
     }
+    pub async fn build_picks_payload(&self) -> Value {
+        let custom = self.picks_snapshot.read().await.clone();
+        if let Some(value) = custom {
+            return value;
+        }
+        let snap = self.latest_snapshot.read().await;
+        let gsi = self.latest_gsi.read().await;
+        serde_json::json!({
+            "sequence": snap.sequence,
+            "target_resolution": snap.target_resolution,
+            "gsi_connected": gsi.is_some(),
+            "match_id": gsi.as_ref().and_then(|g| g.match_id.clone()),
+            "game_phase": gsi.as_ref().and_then(|g| g.game_phase.map(|p| format!("{p:?}"))),
+            "local_slot_index": gsi.as_ref().and_then(|g| g.local_slot_index),
+            "hero_spots": snap.hero_spots,
+            "hero_models": snap.hero_models,
+            "picked_abilities": snap.picked_abilities,
+            "players": gsi.as_ref().map(|g| &g.players),
+        })
+    }
 }
 
 pub fn window_bounds_to_rect(bounds: WindowBounds) -> Rect {
@@ -141,10 +171,10 @@ pub fn window_bounds_to_rect(bounds: WindowBounds) -> Rect {
     }
 }
 
-async fn gsi_local_context(state: &DaemonState) -> (Option<String>, Option<u8>) {
+async fn gsi_local_context(state: &DaemonState) -> (Option<String>, Option<u8>, bool, Option<String>) {
     let gsi_guard = state.latest_gsi.read().await;
     let Some(gsi) = gsi_guard.as_ref() else {
-        return (None, None);
+        return (None, None, false, None);
     };
     let hero = gsi
         .local_player
@@ -153,7 +183,8 @@ async fn gsi_local_context(state: &DaemonState) -> (Option<String>, Option<u8>) 
     let half = gsi
         .local_slot_index
         .map(|slot| if slot < 5 { 0 } else { 5 });
-    (hero, half)
+    let phase = gsi.game_phase.map(|p| format!("{p:?}"));
+    (hero, half, true, phase)
 }
 
 fn clear_snapshot_draft_fields(snap: &mut OverlaySnapshot) {
@@ -181,6 +212,7 @@ pub async fn reset_draft_state(state: &DaemonState) -> OverlaySnapshot {
     };
     let _ = state.overlay_tx.send(updated.clone());
     let _ = state.stream_tx.send(state.build_stream_envelope().await);
+    let _ = state.picks_tx.send(state.build_picks_payload().await);
     updated
 }
 
@@ -192,7 +224,8 @@ pub async fn spawn_background_scan(state: &DaemonState) {
     let current_role_positions = state.role_fixed_positions.read().await.clone();
     let current_window = (*state.dota_window.read().await).map(window_bounds_to_rect);
     let auto_enabled = state.auto_rescan.read().await.enabled;
-    let (gsi_local_hero, gsi_team_half_start) = gsi_local_context(state).await;
+    let (gsi_local_hero, gsi_team_half_start, gsi_connected, game_phase) =
+        gsi_local_context(state).await;
 
     let (next_seq, options) = {
         let mut snap = state.latest_snapshot.write().await;
@@ -200,6 +233,8 @@ pub async fn spawn_background_scan(state: &DaemonState) {
         snap.scanning = true;
         snap.auto_rescan_enabled = auto_enabled;
         snap.dota_window = current_window;
+        snap.gsi_connected = gsi_connected;
+        snap.game_phase = game_phase.clone();
         let opts = ScanOptions {
             role_mode: current_role_mode,
             role_fixed_positions: current_role_positions,
@@ -209,6 +244,8 @@ pub async fn spawn_background_scan(state: &DaemonState) {
             dota_window: current_window,
             gsi_local_hero,
             gsi_team_half_start,
+            gsi_connected,
+            game_phase,
         };
         let copy = snap.clone();
         let _ = state.overlay_tx.send(copy);
@@ -254,6 +291,9 @@ pub async fn spawn_background_scan(state: &DaemonState) {
         let _ = state_bg
             .stream_tx
             .send(state_bg.build_stream_envelope().await);
+        let _ = state_bg
+            .picks_tx
+            .send(state_bg.build_picks_payload().await);
     });
 }
 
@@ -264,6 +304,7 @@ struct HealthResponse {
     protocol_version: u32,
     gsi_connected: bool,
     layouts_loaded: usize,
+    pick_templates_loaded: usize,
     db_summary: Option<DbSummary>,
     dota_window: Option<WindowBounds>,
 }
@@ -276,12 +317,18 @@ async fn health(State(state): State<DaemonState>) -> Json<HealthResponse> {
         .as_ref()
         .map(|p| p.layout_count())
         .unwrap_or(0);
+    let pick_templates_loaded = state
+        .pipeline
+        .as_ref()
+        .map(|p| p.pick_template_count())
+        .unwrap_or(0);
     Json(HealthResponse {
         status: "ok",
         capture_backend: ad_capture::platform::BACKEND_NAME,
         protocol_version: PROTOCOL_VERSION,
         gsi_connected,
         layouts_loaded,
+        pick_templates_loaded,
         db_summary: state.db_summary.clone(),
         dota_window,
     })
@@ -289,12 +336,26 @@ async fn health(State(state): State<DaemonState>) -> Json<HealthResponse> {
 
 async fn ingest_gsi(State(state): State<DaemonState>, Json(payload): Json<Value>) -> StatusCode {
     let snapshot = parse_gsi_payload(&payload);
-    tracing::debug!(
-        match_id = ?snapshot.match_id,
-        game_phase = ?snapshot.game_phase,
-        mode = ?snapshot.mode,
-        "Received GSI snapshot"
-    );
+    let next_phase = snapshot.game_phase.map(|p| format!("{p:?}"));
+    let (prev_match_id, prev_phase) = {
+        let prev = state.latest_gsi.read().await;
+        match prev.as_ref() {
+            Some(g) => (g.match_id.clone(), g.game_phase.map(|p| format!("{p:?}"))),
+            None => (None, None),
+        }
+    };
+    if prev_phase.is_none() && !state.latest_snapshot.read().await.gsi_connected
+        || prev_match_id != snapshot.match_id
+        || prev_phase != next_phase
+    {
+        info!(
+            match_id = ?snapshot.match_id,
+            game_phase = ?snapshot.game_phase,
+            mode = ?snapshot.mode,
+            "GSI state transition"
+        );
+    }
+
     let action = state
         .auto_rescan
         .write()
@@ -306,14 +367,31 @@ async fn ingest_gsi(State(state): State<DaemonState>, Json(payload): Json<Value>
         if let Some(pipeline) = &state.pipeline {
             pipeline.reset_session();
         }
+    }
+
+    let should_broadcast_overlay = {
         let mut snap = state.latest_snapshot.write().await;
-        snap.sequence += 1;
-        clear_snapshot_draft_fields(&mut snap);
-        let _ = state.overlay_tx.send(snap.clone());
+        let meta_changed = !snap.gsi_connected || snap.game_phase != next_phase;
+        snap.gsi_connected = true;
+        snap.game_phase = next_phase;
+        if action == RescanAction::ResetDraft {
+            snap.sequence += 1;
+            clear_snapshot_draft_fields(&mut snap);
+            Some(snap.clone())
+        } else if meta_changed {
+            snap.sequence += 1;
+            Some(snap.clone())
+        } else {
+            None
+        }
+    };
+    if let Some(updated_overlay) = should_broadcast_overlay {
+        let _ = state.overlay_tx.send(updated_overlay);
     }
 
     let envelope = state.build_stream_envelope().await;
     let _ = state.stream_tx.send(envelope);
+    let _ = state.picks_tx.send(state.build_picks_payload().await);
     StatusCode::OK
 }
 
@@ -336,7 +414,8 @@ async fn debug_scan_image(
     let current_role_positions = state.role_fixed_positions.read().await.clone();
     let current_window = (*state.dota_window.read().await).map(window_bounds_to_rect);
     let auto_enabled = state.auto_rescan.read().await.enabled;
-    let (gsi_local_hero, gsi_team_half_start) = gsi_local_context(&state).await;
+    let (gsi_local_hero, gsi_team_half_start, gsi_connected, game_phase) =
+        gsi_local_context(&state).await;
 
     let (next_seq, options) = {
         let snap = state.latest_snapshot.read().await;
@@ -351,6 +430,8 @@ async fn debug_scan_image(
                 dota_window: current_window,
                 gsi_local_hero,
                 gsi_team_half_start,
+                gsi_connected,
+                game_phase,
             },
         )
     };
@@ -365,6 +446,7 @@ async fn debug_scan_image(
     *state.latest_snapshot.write().await = scanned.clone();
     let _ = state.overlay_tx.send(scanned.clone());
     let _ = state.stream_tx.send(state.build_stream_envelope().await);
+    let _ = state.picks_tx.send(state.build_picks_payload().await);
     Ok(Json(scanned))
 }
 
@@ -411,19 +493,33 @@ async fn stream_events(
 async fn picks_events(
     State(state): State<DaemonState>,
 ) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
-    let current_picks = state.picks_snapshot.read().await.clone();
+    let initial_picks = state.build_picks_payload().await;
     let env = StreamEnvelope {
         v: STREAM_PROTOCOL_VERSION,
         kind: "picks".to_string(),
         ts: now_epoch_ms(),
-        payload: current_picks,
+        payload: Some(initial_picks),
     };
     let initial = tokio_stream::once(Ok::<Event, Infallible>(
         Event::default()
             .event("picks")
             .data(serde_json::to_string(&env).unwrap_or_default()),
     ));
-    Sse::new(initial).keep_alive(KeepAlive::default())
+    let updates = BroadcastStream::new(state.picks_tx.subscribe()).filter_map(|msg| match msg {
+        Ok(payload) => {
+            let env = StreamEnvelope {
+                v: STREAM_PROTOCOL_VERSION,
+                kind: "picks".to_string(),
+                ts: now_epoch_ms(),
+                payload: Some(payload),
+            };
+            serde_json::to_string(&env)
+                .ok()
+                .map(|data| Ok(Event::default().event("picks").data(data)))
+        }
+        Err(_) => None,
+    });
+    Sse::new(initial.chain(updates)).keep_alive(KeepAlive::default())
 }
 
 async fn get_stream_layout(State(state): State<DaemonState>) -> Json<Value> {
@@ -472,7 +568,8 @@ async fn overlay_command(
     let current_role_positions = state.role_fixed_positions.read().await.clone();
     let current_window = (*state.dota_window.read().await).map(window_bounds_to_rect);
     let auto_enabled = state.auto_rescan.read().await.enabled;
-    let (gsi_local_hero, gsi_team_half_start) = gsi_local_context(&state).await;
+    let (gsi_local_hero, gsi_team_half_start, gsi_connected, game_phase) =
+        gsi_local_context(&state).await;
 
     let updated = {
         let mut snap = state.latest_snapshot.write().await;
@@ -481,6 +578,8 @@ async fn overlay_command(
         snap.role_fixed_positions = current_role_positions.clone();
         snap.auto_rescan_enabled = auto_enabled;
         snap.dota_window = current_window;
+        snap.gsi_connected = gsi_connected;
+        snap.game_phase = game_phase.clone();
         match &cmd {
             OverlayCommand::SelectMySpot { hero_order, .. } => {
                 snap.selected_spot_hero_order = Some(*hero_order);
@@ -509,6 +608,8 @@ async fn overlay_command(
                     dota_window: current_window,
                     gsi_local_hero,
                     gsi_team_half_start,
+                    gsi_connected,
+                    game_phase,
                 };
                 if let Some(rescored) = pipeline.rescore_cached(&opts, snap.sequence) {
                     *snap = rescored;
@@ -520,6 +621,7 @@ async fn overlay_command(
 
     let _ = state.overlay_tx.send(updated.clone());
     let _ = state.stream_tx.send(state.build_stream_envelope().await);
+    let _ = state.picks_tx.send(state.build_picks_payload().await);
 
     if trigger_scan {
         spawn_background_scan(&state).await;
@@ -783,5 +885,45 @@ mod tests {
             .to_str()
             .unwrap()
             .contains("text/event-stream"));
+    }
+
+    #[tokio::test]
+    async fn picks_tx_and_snapshot_track_gsi_connection_and_phase() {
+        let state = DaemonState::new(None, None, None);
+        let mut rx = state.picks_tx.subscribe();
+        let app = build_router(state);
+
+        let payload = json!({
+            "map": {
+                "matchid": "999",
+                "game_state": "DOTA_GAMERULES_STATE_HERO_SELECTION",
+                "clock_time": -40
+            }
+        });
+        let res = app
+            .clone()
+            .oneshot(
+                Request::post("/gsi")
+                    .header("content-type", "application/json")
+                    .body(Body::from(payload.to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+
+        let broadcasted = rx.try_recv().expect("expected picks_tx broadcast on GSI update");
+        assert_eq!(broadcasted["gsi_connected"], true);
+        assert_eq!(broadcasted["game_phase"], "HeroSelection");
+
+        let snap_res = app
+            .oneshot(Request::get("/overlay/snapshot").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        let snap: OverlaySnapshot =
+            serde_json::from_slice(&to_bytes(snap_res.into_body(), 1024 * 64).await.unwrap())
+                .unwrap();
+        assert!(snap.gsi_connected);
+        assert_eq!(snap.game_phase.as_deref(), Some("HeroSelection"));
     }
 }

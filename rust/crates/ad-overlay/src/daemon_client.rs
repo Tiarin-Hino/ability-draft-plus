@@ -36,6 +36,9 @@ pub fn empty_snapshot() -> OverlaySnapshot {
         role_fixed_positions: Vec::new(),
         auto_rescan_enabled: false,
         dota_window: None,
+        gsi_connected: false,
+        game_phase: None,
+        pick_templates_loaded: 0,
     }
 }
 

@@ -38,8 +38,10 @@ fn main() -> anyhow::Result<()> {
         )
         .init();
 
-    let daemon_url =
-        std::env::var("AD_DAEMON_URL").unwrap_or_else(|_| "http://127.0.0.1:41234".to_string());
+    let daemon_url = std::env::var("AD_DAEMON_URL").unwrap_or_else(|_| {
+        let port = std::env::var("AD_DAEMON_PORT").unwrap_or_else(|_| "41234".to_string());
+        format!("http://127.0.0.1:{port}")
+    });
     let headless = std::env::args().any(|arg| arg == "--headless");
     let win32_demo = std::env::args().any(|arg| arg == "--win32-demo");
 

@@ -60,6 +60,7 @@ use crate::db::{AbilityRow, AdDatabase};
 pub const DEFAULT_OP_THRESHOLD: f64 = 0.13;
 pub const DEFAULT_TRAP_THRESHOLD: f64 = 0.05;
 pub const MAX_COMBO_ENTRIES: usize = 15;
+pub const POOL_RETRY_MAX_ATTEMPTS: u8 = 3;
 
 #[derive(Debug, Clone)]
 pub struct ScanOptions {
@@ -71,6 +72,8 @@ pub struct ScanOptions {
     pub dota_window: Option<Rect>,
     pub gsi_local_hero: Option<String>,
     pub gsi_team_half_start: Option<u8>,
+    pub gsi_connected: bool,
+    pub game_phase: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -118,6 +121,8 @@ struct DraftSessionState {
     last_analysis: Option<CachedFrameAnalysis>,
     ocr_strip_sigs: HashMap<u8, Vec<u8>>,
     ocr_hero_names_by_row: HashMap<u8, OcrHeroRead>,
+    pool_slot_cache: HashMap<usize, (String, f64)>,
+    pool_retry_counts: HashMap<usize, u8>,
 }
 
 pub struct ScanPipeline {
@@ -355,8 +360,37 @@ impl ScanPipeline {
         )
         .ok();
 
-        let pick_templates = std::env::var_os("AD_ICON_CACHE_DIR")
-            .map(PathBuf::from)
+fn discover_icon_cache_dir(resources_dir: &Path) -> Option<PathBuf> {
+    if let Some(dir) = std::env::var_os("AD_ICON_CACHE_DIR").map(PathBuf::from) {
+        if dir.is_dir() {
+            return Some(dir);
+        }
+    }
+
+    let mut candidates = Vec::new();
+    #[cfg(target_os = "windows")]
+    if let Some(appdata) = std::env::var_os("APPDATA").map(PathBuf::from) {
+        candidates.push(appdata.join("ability-draft-plus/stream-icons/abilities"));
+    }
+    #[cfg(target_os = "macos")]
+    if let Some(home) = std::env::var_os("HOME").map(PathBuf::from) {
+        candidates.push(home.join("Library/Application Support/ability-draft-plus/stream-icons/abilities"));
+    }
+    #[cfg(target_os = "linux")]
+    {
+        if let Some(xdg) = std::env::var_os("XDG_CONFIG_HOME").map(PathBuf::from) {
+            candidates.push(xdg.join("ability-draft-plus/stream-icons/abilities"));
+        }
+        if let Some(home) = std::env::var_os("HOME").map(PathBuf::from) {
+            candidates.push(home.join(".config/ability-draft-plus/stream-icons/abilities"));
+        }
+    }
+    candidates.push(resources_dir.join("stream-icons/abilities"));
+
+    candidates.into_iter().find(|dir| dir.is_dir())
+}
+
+        let pick_templates = discover_icon_cache_dir(resources_dir)
             .map(|dir| load_pick_templates_from_dir(&dir))
             .unwrap_or_default();
 
@@ -384,6 +418,65 @@ impl ScanPipeline {
 
     pub fn layout_count(&self) -> usize {
         self.layouts.resolutions.len()
+    }
+
+    pub fn pick_template_count(&self) -> usize {
+        self.pick_templates.len()
+    }
+
+    fn infer_dynamic_positions(&self, my_picks: &[String]) -> Vec<u8> {
+        if my_picks.is_empty() {
+            return Vec::new();
+        }
+        let mut pos_scores: Vec<(u8, f64)> = Vec::with_capacity(5);
+        for pos in 1..=5u8 {
+            let ctx = RoleContext {
+                effective_positions: vec![pos],
+                my_pick_count: 0,
+                team_greed: None,
+            };
+            let mut sum = 0.0;
+            for name in my_picks {
+                let tag_entry = self
+                    .tags
+                    .as_ref()
+                    .and_then(|ds| ds.abilities.get(name));
+                let delta = compute_role_score(
+                    self.shift_axes.get(name),
+                    Some(&ctx),
+                    tag_entry
+                        .map(|entry| RoleTagInput {
+                            candidate_tags: Some(&entry.tags),
+                            candidate_role_must: if entry.role_must.is_empty() {
+                                None
+                            } else {
+                                Some(&entry.role_must)
+                            },
+                            my_pick_tags: &[],
+                            need_scarcity: None,
+                            pool_has_hard_cc: false,
+                        })
+                        .as_ref(),
+                )
+                .map(|r| r.delta)
+                .unwrap_or(0.0);
+                sum += delta;
+            }
+            pos_scores.push((pos, sum / (my_picks.len() as f64)));
+        }
+        let best = pos_scores
+            .iter()
+            .map(|&(_, s)| s)
+            .fold(f64::NEG_INFINITY, f64::max);
+        pos_scores.sort_by(|a, b| b.1.total_cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+        let mut chosen: Vec<u8> = pos_scores
+            .into_iter()
+            .filter(|&(_, s)| s >= best - 0.02)
+            .take(2)
+            .map(|(p, _)| p)
+            .collect();
+        chosen.sort_unstable();
+        chosen
     }
 
     pub fn reset_session(&self) {
@@ -750,16 +843,22 @@ impl ScanPipeline {
             })
         });
 
-        let role_ctx = if options.role_mode == RoleMode::Fixed
-            && !options.role_fixed_positions.is_empty()
-        {
+        let effective_positions = if options.role_mode == RoleMode::Fixed {
+            options.role_fixed_positions.clone()
+        } else if options.role_mode == RoleMode::Dynamic {
+            self.infer_dynamic_positions(&my_picks)
+        } else {
+            Vec::new()
+        };
+
+        let role_ctx = if effective_positions.is_empty() {
+            None
+        } else {
             Some(RoleContext {
-                effective_positions: options.role_fixed_positions.clone(),
+                effective_positions,
                 my_pick_count: my_picks.len(),
                 team_greed: None,
             })
-        } else {
-            None
         };
 
         let mut scored_entities =
@@ -955,6 +1054,9 @@ impl ScanPipeline {
             role_fixed_positions: options.role_fixed_positions.clone(),
             auto_rescan_enabled: options.auto_rescan_enabled,
             dota_window: options.dota_window,
+            gsi_connected: options.gsi_connected,
+            game_phase: options.game_phase.clone(),
+            pick_templates_loaded: self.pick_templates.len(),
         }
     }
 
@@ -1002,9 +1104,20 @@ impl ScanPipeline {
             pool_coords.push((c, false));
         }
 
+        let (cached_pool_slots, prev_retries) = {
+            let guard = self
+                .session
+                .lock()
+                .map_err(|_| anyhow::anyhow!("session mutex poisoned"))?;
+            (guard.pool_slot_cache.clone(), guard.pool_retry_counts.clone())
+        };
+
         let mut crops = Vec::with_capacity(pool_coords.len());
         let mut valid_indices = Vec::with_capacity(pool_coords.len());
         let mut pool_slots = Vec::with_capacity(pool_coords.len());
+        let mut recognized_by_slot: HashMap<usize, Option<String>> =
+            HashMap::with_capacity(pool_coords.len());
+        let mut conf_by_slot: HashMap<usize, f64> = HashMap::with_capacity(pool_coords.len());
 
         for (idx, (coord, is_ult)) in pool_coords.iter().enumerate() {
             let x = coord.x.max(0) as u32;
@@ -1020,6 +1133,16 @@ impl ScanPipeline {
                 },
                 is_ult: *is_ult,
             });
+            if let Some((cached_name, cached_conf)) = cached_pool_slots.get(&idx) {
+                recognized_by_slot.insert(idx, Some(cached_name.clone()));
+                conf_by_slot.insert(idx, *cached_conf);
+                continue;
+            }
+            if prev_retries.get(&idx).copied().unwrap_or(0) >= POOL_RETRY_MAX_ATTEMPTS {
+                recognized_by_slot.insert(idx, None);
+                conf_by_slot.insert(idx, 0.0);
+                continue;
+            }
             if w == 0 || h == 0 {
                 continue;
             }
@@ -1049,23 +1172,31 @@ impl ScanPipeline {
             .map_err(|e| anyhow::anyhow!("ONNX classification failed: {e}"))?
         };
 
-        let mut recognized_by_slot: HashMap<usize, Option<String>> =
-            HashMap::with_capacity(pool_coords.len());
-        let mut conf_by_slot: HashMap<usize, f64> = HashMap::with_capacity(pool_coords.len());
+        let mut newly_recognized: Vec<(usize, String, f64)> = Vec::new();
+        let mut newly_missed: Vec<usize> = Vec::new();
+        for (&slot_idx, pred) in valid_indices.iter().zip(preds.iter()) {
+            let conf = f64::from(pred.confidence);
+            conf_by_slot.insert(slot_idx, conf);
+            recognized_by_slot.insert(slot_idx, pred.class_name.clone());
+            if let Some(name) = &pred.class_name {
+                newly_recognized.push((slot_idx, name.clone(), conf));
+            } else {
+                newly_missed.push(slot_idx);
+            }
+        }
+
         let mut pool_names = HashSet::new();
         let mut pool_std_names = HashSet::new();
         let mut pool_ult_names = HashSet::new();
-        for (&slot_idx, pred) in valid_indices.iter().zip(preds.iter()) {
-            if let Some(name) = &pred.class_name {
+        for (slot_idx, maybe_name) in &recognized_by_slot {
+            if let Some(name) = maybe_name {
                 pool_names.insert(name.clone());
-                if pool_slots[slot_idx].is_ult {
+                if pool_slots.get(*slot_idx).is_some_and(|s| s.is_ult) {
                     pool_ult_names.insert(name.clone());
                 } else {
                     pool_std_names.insert(name.clone());
                 }
             }
-            conf_by_slot.insert(slot_idx, f64::from(pred.confidence));
-            recognized_by_slot.insert(slot_idx, pred.class_name.clone());
         }
 
         let mut defining_abilities = Vec::new();
@@ -1143,6 +1274,15 @@ impl ScanPipeline {
             .session
             .lock()
             .map_err(|_| anyhow::anyhow!("session mutex poisoned"))?;
+
+        for (slot_idx, name, conf) in newly_recognized {
+            session.pool_slot_cache.insert(slot_idx, (name, conf));
+            session.pool_retry_counts.remove(&slot_idx);
+        }
+        for slot_idx in newly_missed {
+            let entry = session.pool_retry_counts.entry(slot_idx).or_insert(0);
+            *entry = entry.saturating_add(1);
+        }
 
         if !pick_readings.is_empty() && !self.pick_templates.is_empty() {
             let upd = reconcile_ability_picks(&session.timeline, &pick_readings, None, None);
@@ -1249,6 +1389,8 @@ mod tests {
             dota_window: None,
             gsi_local_hero: None,
             gsi_team_half_start: None,
+            gsi_connected: false,
+            game_phase: None,
         }
     }
 
@@ -1381,6 +1523,8 @@ mod tests {
             dota_window: None,
             gsi_local_hero: Some(axe_rec.name.clone()),
             gsi_team_half_start: Some(0),
+            gsi_connected: false,
+            game_phase: None,
         };
         let snap1 = pipeline.rescore_cached(&auto_row_opts, 2).expect("cached snapshot");
         assert!(snap1.hero_models[0].is_top_tier);
@@ -1443,9 +1587,101 @@ mod tests {
             dota_window: None,
             gsi_local_hero: None,
             gsi_team_half_start: None,
+            gsi_connected: false,
+            game_phase: None,
         };
         let snap = pipeline.build_snapshot(&analysis, &[], &HashMap::new(), &opts, 5);
         assert!(snap.slots[0].is_synergy_pick);
         assert_eq!(snap.slots[0].top_rank, Some(1));
+    }
+
+    #[test]
+    fn pool_slot_cache_retains_known_slots_and_caps_unknown_retries() {
+        let pipeline = test_pipeline();
+        let known_name = pipeline.abilities_by_name.keys().next().unwrap().clone();
+        {
+            let mut session = pipeline.session.lock().unwrap();
+            session.pool_slot_cache.insert(0, (known_name.clone(), 0.99));
+            session.pool_retry_counts.insert(1, POOL_RETRY_MAX_ATTEMPTS);
+        }
+
+        let frame = RawFrame {
+            width: 1920,
+            height: 1080,
+            format: PixelFormat::Bgra8,
+            bytes: vec![0u8; 1920 * 1080 * 4],
+        };
+        let snap = pipeline
+            .scan_frame(&frame, &base_scan_options(), 10)
+            .expect("scan with cached pool slot");
+        assert!(!snap.slots[0].is_unknown);
+        assert!(snap.slots[1].is_unknown);
+        let session = pipeline.session.lock().unwrap();
+        assert_eq!(
+            session.pool_retry_counts.get(&1).copied(),
+            Some(POOL_RETRY_MAX_ATTEMPTS)
+        );
+        assert_eq!(session.pool_retry_counts.get(&2).copied(), Some(1));
+    }
+
+    #[test]
+    fn dynamic_role_mode_stays_neutral_empty_and_infers_from_picks() {
+        let pipeline = test_pipeline();
+        let carry_pick = pipeline
+            .shift_axes
+            .iter()
+            .max_by(|a, b| a.1.greed.total_cmp(&b.1.greed))
+            .map(|(n, _)| n.clone())
+            .unwrap();
+        let candidate = pipeline
+            .abilities_by_name
+            .keys()
+            .find(|n| *n != &carry_pick && pipeline.shift_axes.contains_key(*n))
+            .unwrap()
+            .clone();
+
+        let analysis = CachedFrameAnalysis {
+            target_resolution: "1920x1080".into(),
+            resolution_source: ResolutionSource::Preset,
+            pool_slots: vec![PoolSlotMeta {
+                bounds: Rect { x: 10, y: 10, width: 40, height: 40 },
+                is_ult: false,
+            }],
+            recognized_by_slot: HashMap::from([(0, Some(candidate.clone()))]),
+            pool_names: HashSet::from([candidate.clone()]),
+            identified_models: Vec::new(),
+            hero_spots: Vec::new(),
+            picked_abilities: Vec::new(),
+            op_combinations: Vec::new(),
+            trap_combinations: Vec::new(),
+        };
+
+        let dyn_opts = ScanOptions {
+            role_mode: RoleMode::Dynamic,
+            role_fixed_positions: vec![],
+            selected_spot_hero_order: Some(0),
+            selected_model_hero_order: None,
+            auto_rescan_enabled: false,
+            dota_window: None,
+            gsi_local_hero: None,
+            gsi_team_half_start: None,
+            gsi_connected: false,
+            game_phase: None,
+        };
+        let off_opts = ScanOptions {
+            role_mode: RoleMode::Off,
+            ..dyn_opts.clone()
+        };
+
+        let snap_empty_dyn = pipeline.build_snapshot(&analysis, &[], &HashMap::new(), &dyn_opts, 1);
+        let snap_empty_off = pipeline.build_snapshot(&analysis, &[], &HashMap::new(), &off_opts, 1);
+        assert_eq!(
+            snap_empty_dyn.slots[0].consolidated_score,
+            snap_empty_off.slots[0].consolidated_score
+        );
+
+        let inferred = pipeline.infer_dynamic_positions(&[carry_pick]);
+        assert!(!inferred.is_empty());
+        assert!(inferred.len() <= 2);
     }
 }

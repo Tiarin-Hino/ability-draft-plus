@@ -114,6 +114,12 @@ pub struct OverlaySnapshot {
     pub auto_rescan_enabled: bool,
     #[serde(default)]
     pub dota_window: Option<Rect>,
+    #[serde(default)]
+    pub gsi_connected: bool,
+    #[serde(default)]
+    pub game_phase: Option<String>,
+    #[serde(default)]
+    pub pick_templates_loaded: usize,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

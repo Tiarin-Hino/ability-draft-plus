@@ -1,6 +1,6 @@
 # Rust Daemon + Native Overlay Architecture Blueprint
 
-Status: **Scaffolded** on branch `feat/rust-daemon-native-overlay`  
+Status: **Implemented & CI-Verified (M1–M7 Complete — Ready for Live Testing)** on branch `feat/rust-daemon-native-overlay`  
 Scope: Long-term replacement of the Electron runtime with a two-process Rust architecture (`ad-daemon` + `ad-overlay`) plus the shared web surface for the Control Panel and OBS Browser Sources (`/stream`, `/picks`).
 
 ---
@@ -76,5 +76,23 @@ rust/
    - Export golden JSON fixtures from the existing TypeScript Vitest suite (`scoring`, `role-scoring`, `pick-attribution`, `slot-row-correlation`, `gsi/parser`) and assert bit-identical outputs in `cargo test -p ad-core`.
 4. **M4 — Web Control Panel & OBS Bridge (`ad-daemon`):**
    - Serve the existing React Control Panel and OBS `/stream` + `/picks` bundles from `ad-daemon` over HTTP + WebSocket/SSE, decoupling them from Electron IPC.
-5. **M5 — macOS & Linux Backends:**
-   - Implement `ScreenCaptureKit` + `Vision` + `NSWindow` (macOS) and X11 SHM/`XShape` + PipeWire + `ocrs` (Linux), followed by the Wayland/Vulkan overlay path.
+5. **M5 — Hero/Pick Scanning, Auto-Rescan Clock & TS Golden Parity (`ad-core`, `ad-daemon`, `ad-overlay`):**
+   - Ported serpentine `draft_clock`, `hero_identification`, `My Spot`/`Model` HUD controls, and golden parity fixtures (`scripts/generate-rust-parity-fixtures.mjs`).
+6. **M6 — Native Capture & Card OCR (`ad-capture`, `ad-ml`, `ad-daemon`):**
+   - Windows `PrintWindow(PW_CLIENTONLY | PW_RENDERFULLCONTENT)` + `BitBlt` hybrid capture, Linux `x11rb` X11 capture, macOS `CoreGraphics` capture, 3-pass `card_ocr` cascade (`WinRT` + `tesseract` fallback), `own_row_detection`, `model_picks_from_ocr`, and `POST /debug/scan-image`.
+7. **M7 — Windows Full-Monitor `WS_EX_LAYERED` Hit-Testing, Global Hotkeys & Daemon Polish (`ad-overlay`, `ad-daemon`, `scripts/`):**
+   - Initialize the Windows overlay at full monitor width `- 1px` before `WS_EX_LAYERED` locks hit-test bounds (eliminating both white backdrop regressions and frozen `800x600` regions), toggle `WS_EX_TRANSPARENT` + `SWP_FRAMECHANGED` from an OS cursor watcher with `GetAsyncKeyState(VK_LBUTTON)`, register `Ctrl+Shift+S`/`Ctrl+Shift+R`, auto-discover icon caches & GSI `.cfg` ports, infer `RoleMode::Dynamic`, and stream live `/picks/events` updates.
+
+---
+
+## 4. Quick Start (Windows Live Testing)
+
+From the repository root in PowerShell:
+
+```powershell
+# Build & start both ad-daemon and ad-overlay on default port 41234
+.\scripts\rust-kit-start.ps1
+
+# Optional flags: enable GSI auto-rescan, release build, or custom port
+.\scripts\rust-kit-start.ps1 -AutoRescan -Release -Port 41234
+```

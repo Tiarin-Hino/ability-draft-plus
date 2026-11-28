@@ -450,6 +450,20 @@ impl OverlayHudApp {
                             db_hero_id: 0,
                         });
                     }
+                    let row_picks: Vec<&str> = snap
+                        .picked_abilities
+                        .iter()
+                        .filter(|p| p.hero_order == spot.hero_order)
+                        .filter_map(|p| p.ability_name.as_ref().map(|_| p.display_name.as_str()))
+                        .collect();
+                    if !row_picks.is_empty() {
+                        let summary = if row_picks.len() <= 2 {
+                            row_picks.join(", ")
+                        } else {
+                            format!("{} picks ({}, …)", row_picks.len(), row_picks[0])
+                        };
+                        ui.small(egui::RichText::new(summary).color(TEAL_PICK));
+                    }
                 });
             Self::push_rect_region(
                 regions,
@@ -595,13 +609,42 @@ impl eframe::App for OverlayHudApp {
                             };
                             ui.colored_label(status_color, "●");
 
+                            let gsi_label = if snap.gsi_connected {
+                                match snap.game_phase.as_deref() {
+                                    Some("HeroSelection") => "GSI:Draft",
+                                    Some("StrategyTime") => "GSI:Strat",
+                                    Some("GameInProgress") => "GSI:Game",
+                                    Some("PostGame") => "GSI:Post",
+                                    Some(_) => "GSI:On",
+                                    None => "GSI",
+                                }
+                            } else {
+                                "GSI:Off"
+                            };
+                            let gsi_color = if snap.gsi_connected {
+                                TEAL_PICK
+                            } else {
+                                Color32::from_rgb(130, 140, 155)
+                            };
+                            ui.colored_label(gsi_color, gsi_label);
+
+                            if !snap.slots.is_empty() {
+                                let known_slots = snap.slots.iter().filter(|s| !s.is_unknown).count();
+                                let known_picks = snap
+                                    .picked_abilities
+                                    .iter()
+                                    .filter(|p| p.ability_name.is_some())
+                                    .count();
+                                ui.label(format!("{known_slots}/{} · {known_picks}p", snap.slots.len()));
+                            }
+
                             if snap.scanning {
                                 ui.label("Scanning...");
-                            } else if ui.button("Scan").clicked() {
+                            } else if ui.button("Scan").on_hover_text("Ctrl+Shift+S").clicked() {
                                 self.send_cmd(OverlayCommand::TriggerScan { is_initial: true });
                             }
 
-                            if ui.button("Reset").clicked() {
+                            if ui.button("Reset").on_hover_text("Ctrl+Shift+R").clicked() {
                                 self.send_cmd(OverlayCommand::ResetDraft);
                             }
 

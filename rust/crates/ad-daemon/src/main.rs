@@ -25,21 +25,133 @@ use crate::{
     scanner::ScanPipeline,
 };
 
+fn push_unique_path(list: &mut Vec<PathBuf>, p: PathBuf) {
+    if !list.iter().any(|existing| existing == &p) {
+        list.push(p);
+    }
+}
+
 fn resolve_resources_dir() -> PathBuf {
-    std::env::var("AD_RESOURCES_DIR")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| Path::new("resources").to_path_buf())
+    if let Ok(env_dir) = std::env::var("AD_RESOURCES_DIR") {
+        let p = PathBuf::from(env_dir);
+        if p.exists() {
+            return p;
+        }
+    }
+
+    let mut candidates = Vec::new();
+    push_unique_path(&mut candidates, PathBuf::from("resources"));
+    push_unique_path(&mut candidates, PathBuf::from("../resources"));
+    if let Ok(exe) = std::env::current_exe() {
+        let mut cur = exe.parent().map(Path::to_path_buf);
+        for _ in 0..4 {
+            if let Some(dir) = cur {
+                push_unique_path(&mut candidates, dir.join("resources"));
+                cur = dir.parent().map(Path::to_path_buf);
+            }
+        }
+    }
+
+    for candidate in &candidates {
+        if candidate.join("config/layout_coordinates.json").exists() {
+            info!(dir = %candidate.display(), "Resolved resources directory");
+            return candidate.clone();
+        }
+    }
+    PathBuf::from("resources")
 }
 
 fn resolve_web_dir() -> Option<PathBuf> {
-    let candidate = std::env::var("AD_WEB_DIR")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| Path::new("out/renderer").to_path_buf());
-    if candidate.is_dir() {
-        info!(dir = %candidate.display(), "Serving built renderer web assets");
-        Some(candidate)
-    } else {
-        None
+    let mut candidates = Vec::new();
+    if let Ok(env_dir) = std::env::var("AD_WEB_DIR") {
+        push_unique_path(&mut candidates, PathBuf::from(env_dir));
+    }
+    push_unique_path(&mut candidates, PathBuf::from("out/renderer"));
+    push_unique_path(&mut candidates, PathBuf::from("../out/renderer"));
+    if let Ok(exe) = std::env::current_exe() {
+        let mut cur = exe.parent().map(Path::to_path_buf);
+        for _ in 0..4 {
+            if let Some(dir) = cur {
+                push_unique_path(&mut candidates, dir.join("out/renderer"));
+                cur = dir.parent().map(Path::to_path_buf);
+            }
+        }
+    }
+
+    for candidate in candidates {
+        if candidate.is_dir() {
+            info!(dir = %candidate.display(), "Serving built renderer web assets");
+            return Some(candidate);
+        }
+    }
+    None
+}
+
+fn extract_gsi_cfg_port(contents: &str) -> Option<u16> {
+    for line in contents.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("//") {
+            continue;
+        }
+        for host in ["127.0.0.1:", "localhost:"] {
+            if let Some(pos) = trimmed.find(host) {
+                let after = &trimmed[pos + host.len()..];
+                let digits: String = after.chars().take_while(|c| c.is_ascii_digit()).collect();
+                if let Ok(port) = digits.parse::<u16>() {
+                    return Some(port);
+                }
+            }
+        }
+    }
+    None
+}
+
+fn check_dota_gsi_cfg_port(daemon_port: u16) {
+    let mut cfg_candidates = Vec::new();
+    if let Ok(explicit) = std::env::var("AD_DOTA_GSI_CFG") {
+        cfg_candidates.push(PathBuf::from(explicit));
+    }
+    #[cfg(target_os = "windows")]
+    {
+        cfg_candidates.push(PathBuf::from(
+            r"C:\Program Files (x86)\Steam\steamapps\common\dota 2 beta\game\dota\cfg\gamestate_integration\gamestate_integration_ability_draft_plus.cfg",
+        ));
+    }
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    if let Ok(home) = std::env::var("HOME") {
+        let h = PathBuf::from(home);
+        cfg_candidates.push(h.join(".local/share/Steam/steamapps/common/dota 2 beta/game/dota/cfg/gamestate_integration/gamestate_integration_ability_draft_plus.cfg"));
+        cfg_candidates.push(h.join("Library/Application Support/Steam/steamapps/common/dota 2 beta/game/dota/cfg/gamestate_integration/gamestate_integration_ability_draft_plus.cfg"));
+    }
+
+    let Some(cfg_path) = cfg_candidates.into_iter().find(|p| p.is_file()) else {
+        info!(
+            daemon_port,
+            "No Dota 2 GSI config file found at default Steam path (set AD_DOTA_GSI_CFG to check custom Steam library)"
+        );
+        return;
+    };
+
+    match std::fs::read_to_string(&cfg_path) {
+        Ok(contents) => match extract_gsi_cfg_port(&contents) {
+            Some(cfg_port) if cfg_port == daemon_port => {
+                info!(path = %cfg_path.display(), port = cfg_port, "Dota 2 GSI config port matches daemon");
+            }
+            Some(cfg_port) => {
+                warn!(
+                    path = %cfg_path.display(),
+                    cfg_port,
+                    daemon_port,
+                    "Dota 2 GSI config port mismatch: update the .cfg URI or pass -Port matching Dota 2"
+                );
+            }
+            None => {
+                warn!(path = %cfg_path.display(), "Could not parse URI port from Dota 2 GSI config");
+            }
+        },
+        Err(err) => {
+            warn!(path = %cfg_path.display(), %err, "Failed to read Dota 2 GSI config");
+        }
     }
 }
 
@@ -77,6 +189,7 @@ fn resolve_pipeline(resources_dir: &Path) -> Option<Arc<ScanPipeline>> {
         Ok(pipeline) => {
             info!(
                 layouts = pipeline.layout_count(),
+                pick_templates = pipeline.pick_template_count(),
                 "ScanPipeline initialized"
             );
             Some(Arc::new(pipeline))
@@ -169,6 +282,7 @@ async fn main() -> anyhow::Result<()> {
         .ok()
         .and_then(|v| v.parse().ok())
         .unwrap_or(41234);
+    check_dota_gsi_cfg_port(port);
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
