@@ -12,3 +12,4 @@ pub mod scoring;
 pub mod shift_axes;
 pub mod tags;
 pub mod top_tier;
+pub mod visual_geometry;

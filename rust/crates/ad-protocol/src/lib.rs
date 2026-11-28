@@ -50,6 +50,8 @@ pub struct SlotHighlight {
     pub winrate: Option<f64>,
     pub pick_rate: Option<f64>,
     pub top_rank: Option<u8>,
+    #[serde(default)]
+    pub skew_x_deg: f32,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -66,6 +68,8 @@ pub struct HeroModelHighlight {
     pub winrate: Option<f64>,
     pub pick_rate: Option<f64>,
     pub consolidated_score: Option<f64>,
+    #[serde(default)]
+    pub skew_x_deg: f32,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

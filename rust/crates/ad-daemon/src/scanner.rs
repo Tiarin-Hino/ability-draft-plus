@@ -36,6 +36,7 @@ use ad_core::{
     shift_axes::{compute_shift_axes, AbilityShiftRow, ShiftAxes},
     tags::{AbilityTag, TagsDataset},
     top_tier::{determine_top_tier_entities, EntityType, ScoredEntity},
+    visual_geometry::{resolve_visual_slot_layout, SlotBoundsF64, VisualSlotCategory, VisualSlotInput},
 };
 use ad_ml::{
     card_ocr::{
@@ -99,12 +100,16 @@ struct ResolvedHeroSynergy {
 struct PoolSlotMeta {
     bounds: Rect,
     is_ult: bool,
+    hero_order: u8,
+    ability_order: Option<u8>,
 }
 
 #[derive(Debug, Clone)]
 struct CachedFrameAnalysis {
     target_resolution: String,
     resolution_source: ResolutionSource,
+    viewport_width: u32,
+    viewport_height: u32,
     pool_slots: Vec<PoolSlotMeta>,
     recognized_by_slot: HashMap<usize, Option<String>>,
     pool_names: HashSet<String>,
@@ -948,8 +953,50 @@ fn discover_icon_cache_dir(resources_dir: &Path) -> Option<PathBuf> {
                 ));
         }
 
+        let resolve_visual = |fallback: Rect,
+                              category: VisualSlotCategory,
+                              hero_order: Option<u8>,
+                              ability_order: Option<u8>,
+                              is_ultimate: Option<bool>| {
+            let resolved = resolve_visual_slot_layout(&VisualSlotInput {
+                fallback: SlotBoundsF64 {
+                    x: f64::from(fallback.x),
+                    y: f64::from(fallback.y),
+                    width: f64::from(fallback.width),
+                    height: f64::from(fallback.height),
+                },
+                category,
+                hero_order,
+                ability_order,
+                is_ultimate,
+                box_index: None,
+                viewport_width: f64::from(analysis.viewport_width),
+                viewport_height: f64::from(analysis.viewport_height),
+                layout_source: Some(analysis.resolution_source),
+            });
+            let rect = Rect {
+                x: resolved.bounds.x.round() as i32,
+                y: resolved.bounds.y.round() as i32,
+                width: resolved.bounds.width.round().max(1.0) as u32,
+                height: resolved.bounds.height.round().max(1.0) as u32,
+            };
+            (rect, resolved.perspective.skew_x_deg as f32)
+        };
+
         let mut slots = Vec::with_capacity(analysis.pool_slots.len());
         for (slot_idx, slot_meta) in analysis.pool_slots.iter().enumerate() {
+            let category = if slot_meta.is_ult {
+                VisualSlotCategory::Ultimate
+            } else {
+                VisualSlotCategory::Standard
+            };
+            let (visual_bounds, skew_x_deg) = resolve_visual(
+                slot_meta.bounds,
+                category,
+                Some(slot_meta.hero_order),
+                slot_meta.ability_order,
+                Some(slot_meta.is_ult),
+            );
             let internal_name = analysis
                 .recognized_by_slot
                 .get(&slot_idx)
@@ -963,7 +1010,7 @@ fn discover_icon_cache_dir(resources_dir: &Path) -> Option<PathBuf> {
                     .unwrap_or((None, false, false));
                 slots.push(SlotHighlight {
                     slot_index: slot_idx,
-                    bounds: slot_meta.bounds,
+                    bounds: visual_bounds,
                     display_name: display_name.clone(),
                     is_unknown: false,
                     is_top_tier,
@@ -972,11 +1019,12 @@ fn discover_icon_cache_dir(resources_dir: &Path) -> Option<PathBuf> {
                     winrate: *winrate,
                     pick_rate: *pick_rate,
                     top_rank,
+                    skew_x_deg,
                 });
             } else {
                 slots.push(SlotHighlight {
                     slot_index: slot_idx,
-                    bounds: slot_meta.bounds,
+                    bounds: visual_bounds,
                     display_name: "Unknown".to_string(),
                     is_unknown: true,
                     is_top_tier: false,
@@ -985,6 +1033,7 @@ fn discover_icon_cache_dir(resources_dir: &Path) -> Option<PathBuf> {
                     winrate: None,
                     pick_rate: None,
                     top_rank: None,
+                    skew_x_deg,
                 });
             }
         }
@@ -1003,9 +1052,16 @@ fn discover_icon_cache_dir(resources_dir: &Path) -> Option<PathBuf> {
                         .map(|&(rank, top, _)| (Some(rank), top))
                         .unwrap_or((None, false))
                 };
+                let (visual_bounds, skew_x_deg) = resolve_visual(
+                    *bounds,
+                    VisualSlotCategory::Model,
+                    Some(model.hero_order),
+                    None,
+                    None,
+                );
                 HeroModelHighlight {
                     hero_order: model.hero_order,
-                    bounds: *bounds,
+                    bounds: visual_bounds,
                     db_hero_id: model.db_hero_id,
                     hero_name: model.hero_name.clone(),
                     display_name: model.hero_display_name.clone(),
@@ -1016,6 +1072,7 @@ fn discover_icon_cache_dir(resources_dir: &Path) -> Option<PathBuf> {
                     winrate: model.winrate,
                     pick_rate: model.pick_rate,
                     consolidated_score: model_scores.get(&model.hero_name).copied(),
+                    skew_x_deg,
                 }
             })
             .collect();
@@ -1023,16 +1080,25 @@ fn discover_icon_cache_dir(resources_dir: &Path) -> Option<PathBuf> {
         let hero_spots = analysis
             .hero_spots
             .iter()
-            .map(|&(hero_order, bounds)| PlayerSpotHighlight {
-                hero_order,
-                bounds,
-                is_my_spot: effective_spot_order == Some(hero_order),
-                ocr_hero_name: ocr_reads.get(&hero_order).map(|r| {
-                    self.heroes_display_by_name
-                        .get(&r.name)
-                        .cloned()
-                        .unwrap_or_else(|| r.name.clone())
-                }),
+            .map(|&(hero_order, bounds)| {
+                let (visual_bounds, _) = resolve_visual(
+                    bounds,
+                    VisualSlotCategory::HeroCard,
+                    Some(hero_order),
+                    None,
+                    None,
+                );
+                PlayerSpotHighlight {
+                    hero_order,
+                    bounds: visual_bounds,
+                    is_my_spot: effective_spot_order == Some(hero_order),
+                    ocr_hero_name: ocr_reads.get(&hero_order).map(|r| {
+                        self.heroes_display_by_name
+                            .get(&r.name)
+                            .cloned()
+                            .unwrap_or_else(|| r.name.clone())
+                    }),
+                }
             })
             .collect();
 
@@ -1132,6 +1198,8 @@ fn discover_icon_cache_dir(resources_dir: &Path) -> Option<PathBuf> {
                     height: h,
                 },
                 is_ult: *is_ult,
+                hero_order: coord.hero_order,
+                ability_order: coord.ability_order,
             });
             if let Some((cached_name, cached_conf)) = cached_pool_slots.get(&idx) {
                 recognized_by_slot.insert(idx, Some(cached_name.clone()));
@@ -1260,6 +1328,8 @@ fn discover_icon_cache_dir(resources_dir: &Path) -> Option<PathBuf> {
         let analysis = CachedFrameAnalysis {
             target_resolution: format!("{}x{}", frame.width, frame.height),
             resolution_source: source,
+            viewport_width: frame.width,
+            viewport_height: frame.height,
             pool_slots,
             recognized_by_slot,
             pool_names,
@@ -1469,14 +1539,20 @@ mod tests {
         let analysis = CachedFrameAnalysis {
             target_resolution: "1920x1080".into(),
             resolution_source: ResolutionSource::Preset,
+            viewport_width: 1920,
+            viewport_height: 1080,
             pool_slots: vec![
                 PoolSlotMeta {
                     bounds: Rect { x: 10, y: 10, width: 40, height: 40 },
                     is_ult: false,
+                    hero_order: 0,
+                    ability_order: Some(1),
                 },
                 PoolSlotMeta {
                     bounds: Rect { x: 60, y: 10, width: 40, height: 40 },
                     is_ult: false,
+                    hero_order: 5,
+                    ability_order: Some(1),
                 },
             ],
             recognized_by_slot: HashMap::from([(0, Some(ab1.clone())), (1, Some(ab2.clone()))]),
@@ -1527,6 +1603,8 @@ mod tests {
             game_phase: None,
         };
         let snap1 = pipeline.rescore_cached(&auto_row_opts, 2).expect("cached snapshot");
+        assert!(snap1.slots[0].skew_x_deg < -4.0);
+        assert!(snap1.slots[1].skew_x_deg > 0.0);
         assert!(snap1.hero_models[0].is_top_tier);
         assert_eq!(snap1.selected_spot_hero_order, Some(4));
         assert!(snap1.hero_spots[1].is_my_spot);
@@ -1559,9 +1637,13 @@ mod tests {
         let analysis = CachedFrameAnalysis {
             target_resolution: "1920x1080".into(),
             resolution_source: ResolutionSource::Preset,
+            viewport_width: 1920,
+            viewport_height: 1080,
             pool_slots: vec![PoolSlotMeta {
                 bounds: Rect { x: 10, y: 10, width: 40, height: 40 },
                 is_ult: false,
+                hero_order: 0,
+                ability_order: Some(1),
             }],
             recognized_by_slot: HashMap::from([(0, Some(pair.internal2.clone()))]),
             pool_names: HashSet::from([pair.internal2.clone()]),
@@ -1643,9 +1725,13 @@ mod tests {
         let analysis = CachedFrameAnalysis {
             target_resolution: "1920x1080".into(),
             resolution_source: ResolutionSource::Preset,
+            viewport_width: 1920,
+            viewport_height: 1080,
             pool_slots: vec![PoolSlotMeta {
                 bounds: Rect { x: 10, y: 10, width: 40, height: 40 },
                 is_ult: false,
+                hero_order: 0,
+                ability_order: Some(1),
             }],
             recognized_by_slot: HashMap::from([(0, Some(candidate.clone()))]),
             pool_names: HashSet::from([candidate.clone()]),

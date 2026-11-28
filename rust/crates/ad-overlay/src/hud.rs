@@ -228,8 +228,16 @@ impl OverlayHudApp {
         }
     }
 
-    fn draw_rank_pill(painter: &egui::Painter, rect: egui::Rect, rank: u8) {
-        let pill_rect = egui::Rect::from_min_size(rect.min, Vec2::new(26.0, 16.0));
+    fn draw_rank_pill(painter: &egui::Painter, rect: egui::Rect, skew_x_deg: f32, rank: u8) {
+        let dx_half = if skew_x_deg.abs() < 0.05 {
+            0.0
+        } else {
+            (rect.height() * 0.5) * skew_x_deg.to_radians().tan()
+        };
+        let pill_rect = egui::Rect::from_min_size(
+            Pos2::new(rect.min.x - dx_half, rect.min.y),
+            Vec2::new(26.0, 16.0),
+        );
         painter.rect_filled(pill_rect, CornerRadius::same(3), BG_SLATE);
         painter.text(
             pill_rect.center(),
@@ -238,6 +246,30 @@ impl OverlayHudApp {
             FontId::proportional(11.0),
             GOLD_BORDER,
         );
+    }
+
+    fn draw_skewed_border(
+        painter: &egui::Painter,
+        rect: egui::Rect,
+        skew_x_deg: f32,
+        stroke: Stroke,
+    ) {
+        if skew_x_deg.abs() < 0.05 {
+            painter.rect_stroke(
+                rect,
+                CornerRadius::same(4),
+                stroke,
+                StrokeKind::Inside,
+            );
+            return;
+        }
+        let r = rect.shrink(stroke.width * 0.5);
+        let dx_half = (r.height() * 0.5) * skew_x_deg.to_radians().tan();
+        let tl = Pos2::new(r.min.x - dx_half, r.min.y);
+        let tr = Pos2::new(r.max.x - dx_half, r.min.y);
+        let br = Pos2::new(r.max.x + dx_half, r.max.y);
+        let bl = Pos2::new(r.min.x + dx_half, r.max.y);
+        painter.add(egui::Shape::closed_line(vec![tl, tr, br, bl], stroke));
     }
 
     fn draw_card_tooltip(
@@ -330,15 +362,15 @@ impl OverlayHudApp {
             };
 
             if let Some(stroke_color) = color {
-                painter.rect_stroke(
+                Self::draw_skewed_border(
+                    &painter,
                     r,
-                    CornerRadius::same(4),
+                    slot.skew_x_deg,
                     Stroke::new(2.0, stroke_color),
-                    StrokeKind::Inside,
                 );
             }
             if let Some(rank) = slot.top_rank {
-                Self::draw_rank_pill(&painter, r, rank);
+                Self::draw_rank_pill(&painter, r, slot.skew_x_deg, rank);
             }
             if let Some(pt) = pointer {
                 if r.contains(pt) {
@@ -360,15 +392,10 @@ impl OverlayHudApp {
             };
 
             if let Some(c) = stroke_color {
-                painter.rect_stroke(
-                    r,
-                    CornerRadius::same(4),
-                    Stroke::new(2.0, c),
-                    StrokeKind::Inside,
-                );
+                Self::draw_skewed_border(&painter, r, model.skew_x_deg, Stroke::new(2.0, c));
             }
             if let Some(rank) = model.top_rank {
-                Self::draw_rank_pill(&painter, r, rank);
+                Self::draw_rank_pill(&painter, r, model.skew_x_deg, rank);
             }
             if let Some(pt) = pointer {
                 if r.contains(pt) {
