@@ -2,10 +2,9 @@
 //! DPI-aligned coordinates, Role Mode quick bar, OP/Trap combo drawers, and
 //! My Spot / My Model selection.
 
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc, RwLock,
-};
+#[cfg(target_os = "windows")]
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, RwLock};
 
 use ad_protocol::{
     HeroModelHighlight, OverlayCommand, OverlaySnapshot, Rect, RoleMode, SlotHighlight,
@@ -55,7 +54,9 @@ pub struct OverlayHudApp {
     hit_tester: Arc<RwLock<HitTester>>,
     hover_rects: Arc<RwLock<Vec<Rect>>>,
     cursor_phys: Arc<RwLock<Option<(i32, i32)>>>,
-    os_interactive: Arc<AtomicBool>,
+    #[cfg(target_os = "windows")]
+    pointer_down: Arc<AtomicBool>,
+    #[cfg(not(target_os = "windows"))]
     last_passthrough: Option<bool>,
     last_window_bounds: Option<Rect>,
     show_op_drawer: bool,
@@ -80,7 +81,8 @@ impl OverlayHudApp {
         let hit_tester = Arc::new(RwLock::new(HitTester::new()));
         let hover_rects = Arc::new(RwLock::new(Vec::new()));
         let cursor_phys = Arc::new(RwLock::new(None));
-        let os_interactive = Arc::new(AtomicBool::new(false));
+        #[cfg(target_os = "windows")]
+        let pointer_down = Arc::new(AtomicBool::new(false));
         let (cmd_tx, cmd_rx) = mpsc::unbounded_channel();
 
         let egui_ctx = cc.egui_ctx.clone();
@@ -100,7 +102,7 @@ impl OverlayHudApp {
                 hit_tester.clone(),
                 hover_rects.clone(),
                 cursor_phys.clone(),
-                os_interactive.clone(),
+                pointer_down.clone(),
                 Arc::new(move || repaint_ctx.request_repaint()),
             );
         }
@@ -112,7 +114,9 @@ impl OverlayHudApp {
             hit_tester,
             hover_rects,
             cursor_phys,
-            os_interactive,
+            #[cfg(target_os = "windows")]
+            pointer_down,
+            #[cfg(not(target_os = "windows"))]
             last_passthrough: None,
             last_window_bounds: None,
             show_op_drawer: false,
@@ -147,6 +151,7 @@ impl OverlayHudApp {
                 rect.width = rect.width.saturating_sub(1);
             }
         }
+        ctx.send_viewport_cmd(egui::ViewportCommand::Maximized(false));
         ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(Pos2::new(
             rect.x as f32 / ppp,
             rect.y as f32 / ppp,
@@ -157,26 +162,35 @@ impl OverlayHudApp {
         )));
     }
 
-    fn sync_passthrough(&mut self, ctx: &egui::Context, ppp: f32) {
-        let os_hit = if cfg!(target_os = "windows") {
-            self.os_interactive.load(Ordering::Relaxed)
-        } else {
-            ctx.input(|i| i.pointer.latest_pos())
+    fn sync_passthrough(&mut self, ctx: &egui::Context, _ppp: f32) {
+        #[cfg(target_os = "windows")]
+        {
+            // Never call ViewportCommand::MousePassthrough on Windows: winit strips WS_EX_LAYERED
+            // when IGNORE_CURSOR_EVENT turns off, turning the transparent surface solid white.
+            // win32_surface::spawn_cursor_passthrough_watcher toggles WS_EX_TRANSPARENT directly.
+            let down = ctx.input(|i| i.pointer.any_down());
+            self.pointer_down.store(down, Ordering::Relaxed);
+        }
+
+        #[cfg(not(target_os = "windows"))]
+        {
+            let os_hit = ctx
+                .input(|i| i.pointer.latest_pos())
                 .and_then(|p| {
-                    let px = (p.x * ppp).round() as i32;
-                    let py = (p.y * ppp).round() as i32;
+                    let px = (p.x * _ppp).round() as i32;
+                    let py = (p.y * _ppp).round() as i32;
                     self.hit_tester
                         .read()
                         .ok()
                         .map(|guard| guard.is_interactive(px, py))
                 })
-                .unwrap_or(false)
-        };
-        let interactive = os_hit || ctx.egui_wants_pointer_input();
-        let passthrough = !interactive;
-        if self.last_passthrough != Some(passthrough) {
-            ctx.send_viewport_cmd(egui::ViewportCommand::MousePassthrough(passthrough));
-            self.last_passthrough = Some(passthrough);
+                .unwrap_or(false);
+            let interactive = os_hit || ctx.egui_wants_pointer_input();
+            let passthrough = !interactive;
+            if self.last_passthrough != Some(passthrough) {
+                ctx.send_viewport_cmd(egui::ViewportCommand::MousePassthrough(passthrough));
+                self.last_passthrough = Some(passthrough);
+            }
         }
     }
 

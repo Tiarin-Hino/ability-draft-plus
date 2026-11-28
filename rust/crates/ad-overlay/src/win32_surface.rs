@@ -42,13 +42,14 @@ fn find_window_by_title(wide_title: &[u16]) -> Option<HWND> {
 }
 
 /// Polls OS cursor position independently of `WM_MOUSEMOVE` (which Windows stops sending when
-/// `WS_EX_TRANSPARENT` is set) and toggles `WS_EX_TRANSPARENT` statelessly on hit-region entry/exit.
+/// `WS_EX_TRANSPARENT` is set) and toggles ONLY `WS_EX_TRANSPARENT` while keeping `WS_EX_LAYERED`
+/// permanently set so DWM per-pixel alpha transparency never breaks.
 pub fn spawn_cursor_passthrough_watcher(
     window_title: &str,
     hit_tester: Arc<RwLock<HitTester>>,
     hover_rects: Arc<RwLock<Vec<Rect>>>,
     cursor_phys: Arc<RwLock<Option<(i32, i32)>>>,
-    interactive_flag: Arc<AtomicBool>,
+    pointer_down: Arc<AtomicBool>,
     request_repaint: Arc<dyn Fn() + Send + Sync>,
 ) {
     let wide_title: Vec<u16> = window_title
@@ -61,6 +62,9 @@ pub fn spawn_cursor_passthrough_watcher(
         let mut last_interactive: Option<bool> = None;
         let mut last_hovered: Option<usize> = None;
         let mut last_cursor: Option<(i32, i32)> = None;
+
+        let layered_bit = WS_EX_LAYERED.0 as isize;
+        let transparent_bit = WS_EX_TRANSPARENT.0 as isize;
 
         loop {
             std::thread::sleep(std::time::Duration::from_millis(16));
@@ -81,31 +85,30 @@ pub fn spawn_cursor_passthrough_watcher(
                 continue;
             }
 
-            let interactive = hit_tester
+            let hit_interactive = hit_tester
                 .read()
                 .map(|guard| guard.is_interactive(pt.x, pt.y))
                 .unwrap_or(false);
+            let interactive = hit_interactive || pointer_down.load(Ordering::Relaxed);
             let hovered = hover_rects
                 .read()
                 .ok()
                 .and_then(|rects| rects.iter().position(|r| point_in_rect(pt.x, pt.y, r)));
 
-            interactive_flag.store(interactive, Ordering::Relaxed);
+            unsafe {
+                let ex = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
+                let next_ex = if interactive {
+                    (ex | layered_bit) & !transparent_bit
+                } else {
+                    ex | layered_bit | transparent_bit
+                };
+                if next_ex != ex {
+                    SetWindowLongPtrW(hwnd, GWL_EXSTYLE, next_ex);
+                }
+            }
 
             if last_interactive != Some(interactive) {
                 last_interactive = Some(interactive);
-                unsafe {
-                    let ex = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
-                    let transparent_bit = WS_EX_TRANSPARENT.0 as isize;
-                    let next_ex = if interactive {
-                        ex & !transparent_bit
-                    } else {
-                        ex | transparent_bit
-                    };
-                    if next_ex != ex {
-                        SetWindowLongPtrW(hwnd, GWL_EXSTYLE, next_ex);
-                    }
-                }
                 if let Ok(mut guard) = cursor_phys.write() {
                     *guard = Some((pt.x, pt.y));
                 }
