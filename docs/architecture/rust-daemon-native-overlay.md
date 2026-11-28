@@ -1,11 +1,11 @@
 # Rust Daemon + Native Overlay Architecture Blueprint
 
 Status: **Implemented & CI-Verified (M1–M7 Complete — Ready for Live Testing)** on branch `feat/rust-daemon-native-overlay`  
-Scope: Long-term replacement of the Electron runtime with a two-process Rust architecture (`ad-daemon` + `ad-overlay`) plus the shared web surface for the Control Panel and OBS Browser Sources (`/stream`, `/picks`).
+Scope: Long-term replacement of the Electron runtime with a native Rust architecture (`ad-daemon` + `ad-control-panel` + `ad-overlay`) plus OBS Browser Sources (`/stream`, `/picks`).
 
 ---
 
-## 1. Why Two Processes (`ad-daemon` + `ad-overlay`)
+## 1. Why Native Rust Processes (`ad-daemon` + `ad-control-panel` + `ad-overlay`)
 
 1. **Zero Chromium over Dota 2:** The in-game HUD is rendered by `ad-overlay` using a lightweight native surface (`egui` / `wgpu` on Windows/macOS/Linux X11, and a future `wlr-layer-shell` or Vulkan implicit layer on Linux Wayland). No `getUserMedia` capture bridge, no `overlayBackgroundMode` hidden window workaround, and no async DOM `mouseenter`/`mouseleave` click-through lock state.
 2. **Stateless OS Hit-Testing:** Instead of toggling `setIgnoreMouseEvents` via IPC, the overlay answers OS hit-tests synchronously per cursor position (`WM_NCHITTEST` returning `HTTRANSPARENT` vs `HTCLIENT` on Windows, `NSWindow` region/hit-testing on macOS, `XShapeCombineRectangles` on Linux X11). Empty pixels can never get stuck swallowing game clicks.
@@ -22,9 +22,10 @@ rust/
     ├── ad-protocol   # Versioned daemon <-> overlay IPC messages & snapshots
     ├── ad-core       # Pure domain logic (zero OS/GUI deps): scoring, GSI, tags, geometry
     ├── ad-capture    # OS screen capture & game window tracking traits + per-OS backends
-    ├── ad-ml         # ONNX FP16 MobileNetV2, SIMD NCC template matcher, native OCR
-    ├── ad-daemon     # Tokio/Axum server: GSI, SQLite, OBS /stream & /picks, Control Panel, ML loop
-    └── ad-overlay    # Native HUD process (egui/wgpu + OS click-through window surface)
+    ├── ad-ml             # ONNX FP16 MobileNetV2, SIMD NCC template matcher, native OCR
+    ├── ad-daemon         # Tokio/Axum server: GSI, SQLite, OBS /stream & /picks, catalog/settings, ML loop
+    ├── ad-overlay        # Native HUD process (egui/wgpu + OS click-through window surface)
+    └── ad-control-panel  # Standalone native desktop Control Panel (Dashboard, Abilities, Heroes, OBS, Settings)
 ```
 
 ### `ad-protocol`
@@ -82,6 +83,9 @@ rust/
    - Windows `PrintWindow(PW_CLIENTONLY | PW_RENDERFULLCONTENT)` + `BitBlt` hybrid capture, Linux `x11rb` X11 capture, macOS `CoreGraphics` capture, 3-pass `card_ocr` cascade (`WinRT` + `tesseract` fallback), `own_row_detection`, `model_picks_from_ocr`, and `POST /debug/scan-image`.
 7. **M7 — Windows Full-Monitor `WS_EX_LAYERED` Hit-Testing, Global Hotkeys & Daemon Polish (`ad-overlay`, `ad-daemon`, `scripts/`):**
    - Initialize the Windows overlay at full monitor width `- 1px` before `WS_EX_LAYERED` locks hit-test bounds (eliminating both white backdrop regressions and frozen `800x600` regions), toggle `WS_EX_TRANSPARENT` + `SWP_FRAMECHANGED` from an OS cursor watcher with `GetAsyncKeyState(VK_LBUTTON)`, register `Ctrl+Shift+S`/`Ctrl+Shift+R`, auto-discover icon caches & GSI `.cfg` ports, infer `RoleMode::Dynamic`, and stream live `/picks/events` updates.
+8. **M8 — Standalone Native Control Panel & 3D Perspective Edges (`ad-control-panel`, `ad-core/visual_geometry`):**
+   - Ported `visual-geometry.ts` (`compute_panorama_projection`, `resolve_visual_slot_layout`, `compute_board_perspective`) and skewed quad border rendering so overlay highlights hug Dota 2's 3D slanted plinths and ultimates cleanly across all aspect ratios.
+   - Added `ad-control-panel` standalone native `egui`/`wgpu` desktop app (Dashboard, Abilities/Heroes catalogs, OBS Streaming, Settings, and overlay launch/stop controls) backed by `/api/{abilities,heroes,settings,overlay/*}` on `ad-daemon`.
 
 ---
 
@@ -90,9 +94,12 @@ rust/
 From the repository root in PowerShell:
 
 ```powershell
-# Build & start both ad-daemon and ad-overlay on default port 41234
+# Build & start ad-daemon + standalone native Control Panel (launch overlay from Dashboard)
 .\scripts\rust-kit-start.ps1
 
-# Optional flags: enable GSI auto-rescan, release build, or custom port
-.\scripts\rust-kit-start.ps1 -AutoRescan -Release -Port 41234
+# Also auto-launch the in-game overlay immediately + enable GSI auto-rescan
+.\scripts\rust-kit-start.ps1 -WithOverlay -AutoRescan
+
+# Overlay only (legacy mode)
+.\scripts\rust-kit-start.ps1 -OverlayOnly -AutoRescan
 ```

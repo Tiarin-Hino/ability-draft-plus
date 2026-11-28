@@ -3,15 +3,17 @@
 use std::{
     convert::Infallible,
     path::PathBuf,
-    sync::Arc,
+    process::{Child, Command},
+    sync::{Arc, Mutex},
     time::{SystemTime, UNIX_EPOCH},
 };
 
 use ad_capture::WindowBounds;
 use ad_core::gsi::{parse_gsi_payload, GsiSnapshot};
 use ad_protocol::{
-    OverlayCommand, OverlaySnapshot, Rect, ResolutionSource, RoleMode, StreamBoardSummary,
-    StreamEnvelope, PROTOCOL_VERSION, STREAM_PROTOCOL_VERSION,
+    AbilityCatalogEntry, DaemonSettings, HeroCatalogEntry, OverlayCommand, OverlayProcessStatus,
+    OverlaySnapshot, Rect, ResolutionSource, RoleMode, StreamBoardSummary, StreamEnvelope,
+    PROTOCOL_VERSION, STREAM_PROTOCOL_VERSION,
 };
 use axum::{
     body::Bytes,
@@ -58,6 +60,75 @@ pub struct DaemonState {
     pub role_mode: Arc<RwLock<RoleMode>>,
     pub role_fixed_positions: Arc<RwLock<Vec<u8>>>,
     pub auto_rescan: Arc<RwLock<AutoRescanController>>,
+    pub daemon_port: Arc<RwLock<u16>>,
+    pub settings: Arc<RwLock<DaemonSettings>>,
+    pub settings_path: Option<PathBuf>,
+    pub overlay_child: Arc<Mutex<Option<Child>>>,
+}
+
+fn resolve_settings_path() -> Option<PathBuf> {
+    if let Some(explicit) = std::env::var_os("AD_SETTINGS_PATH").map(PathBuf::from) {
+        return Some(explicit);
+    }
+    if cfg!(test) {
+        return None;
+    }
+    #[cfg(target_os = "windows")]
+    if let Some(appdata) = std::env::var_os("APPDATA").map(PathBuf::from) {
+        return Some(appdata.join("ability-draft-plus/rust-daemon-settings.json"));
+    }
+    #[cfg(target_os = "macos")]
+    if let Some(home) = std::env::var_os("HOME").map(PathBuf::from) {
+        return Some(home.join("Library/Application Support/ability-draft-plus/rust-daemon-settings.json"));
+    }
+    #[cfg(target_os = "linux")]
+    {
+        if let Some(xdg) = std::env::var_os("XDG_CONFIG_HOME").map(PathBuf::from) {
+            return Some(xdg.join("ability-draft-plus/rust-daemon-settings.json"));
+        }
+        if let Some(home) = std::env::var_os("HOME").map(PathBuf::from) {
+            return Some(home.join(".config/ability-draft-plus/rust-daemon-settings.json"));
+        }
+    }
+    None
+}
+
+fn load_persisted_settings(path: Option<&PathBuf>) -> Option<DaemonSettings> {
+    let p = path?;
+    let raw = std::fs::read_to_string(p).ok()?;
+    serde_json::from_str(&raw).ok()
+}
+
+fn save_persisted_settings(path: Option<&PathBuf>, settings: &DaemonSettings) {
+    let Some(p) = path else {
+        return;
+    };
+    if let Some(parent) = p.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    if let Ok(json) = serde_json::to_string_pretty(settings) {
+        let _ = std::fs::write(p, json);
+    }
+}
+
+fn find_overlay_binary() -> Option<PathBuf> {
+    let exe_name = if cfg!(target_os = "windows") {
+        "ad-overlay.exe"
+    } else {
+        "ad-overlay"
+    };
+    let mut candidates = Vec::new();
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            candidates.push(dir.join(exe_name));
+            if let Some(parent) = dir.parent() {
+                candidates.push(parent.join(exe_name));
+            }
+        }
+    }
+    candidates.push(PathBuf::from(format!("rust/target/debug/{exe_name}")));
+    candidates.push(PathBuf::from(format!("target/debug/{exe_name}")));
+    candidates.into_iter().find(|p| p.is_file())
 }
 
 impl DaemonState {
@@ -66,9 +137,12 @@ impl DaemonState {
         pipeline: Option<Arc<ScanPipeline>>,
         web_dir: Option<PathBuf>,
     ) -> Self {
-        let auto_rescan_default = std::env::var("AD_AUTO_RESCAN")
-            .ok()
-            .is_some_and(|v| v == "1" || v.eq_ignore_ascii_case("true"));
+        let settings_path = resolve_settings_path();
+        let mut settings = load_persisted_settings(settings_path.as_ref()).unwrap_or_default();
+        if let Ok(v) = std::env::var("AD_AUTO_RESCAN") {
+            settings.auto_rescan_enabled = v == "1" || v.eq_ignore_ascii_case("true");
+        }
+        let auto_rescan_default = settings.auto_rescan_enabled;
         let pick_templates_loaded = pipeline
             .as_ref()
             .map(|p| p.pick_template_count())
@@ -87,8 +161,8 @@ impl DaemonState {
             selected_model_hero_order: None,
             op_combinations: Vec::new(),
             trap_combinations: Vec::new(),
-            role_mode: RoleMode::Off,
-            role_fixed_positions: Vec::new(),
+            role_mode: settings.role_mode,
+            role_fixed_positions: settings.role_fixed_positions.clone(),
             auto_rescan_enabled: auto_rescan_default,
             dota_window: None,
             gsi_connected: false,
@@ -110,9 +184,13 @@ impl DaemonState {
             picks_snapshot: Arc::new(RwLock::new(None)),
             stream_layout: Arc::new(RwLock::new(serde_json::json!({}))),
             dota_window: Arc::new(RwLock::new(None)),
-            role_mode: Arc::new(RwLock::new(RoleMode::Off)),
-            role_fixed_positions: Arc::new(RwLock::new(Vec::new())),
+            role_mode: Arc::new(RwLock::new(settings.role_mode)),
+            role_fixed_positions: Arc::new(RwLock::new(settings.role_fixed_positions.clone())),
             auto_rescan: Arc::new(RwLock::new(AutoRescanController::new(auto_rescan_default))),
+            daemon_port: Arc::new(RwLock::new(41234)),
+            settings: Arc::new(RwLock::new(settings)),
+            settings_path,
+            overlay_child: Arc::new(Mutex::new(None)),
         }
     }
 
@@ -630,12 +708,170 @@ async fn overlay_command(
     Json(updated)
 }
 
+async fn get_abilities(State(state): State<DaemonState>) -> Json<Vec<AbilityCatalogEntry>> {
+    let entries = state
+        .pipeline
+        .as_ref()
+        .map(|p| p.ability_catalog())
+        .unwrap_or_default();
+    Json(entries)
+}
+
+async fn get_heroes(State(state): State<DaemonState>) -> Json<Vec<HeroCatalogEntry>> {
+    let entries = state
+        .pipeline
+        .as_ref()
+        .map(|p| p.hero_catalog())
+        .unwrap_or_default();
+    Json(entries)
+}
+
+async fn get_settings(State(state): State<DaemonState>) -> Json<DaemonSettings> {
+    Json(state.settings.read().await.clone())
+}
+
+async fn set_settings(
+    State(state): State<DaemonState>,
+    Json(next): Json<DaemonSettings>,
+) -> Json<DaemonSettings> {
+    *state.settings.write().await = next.clone();
+    *state.role_mode.write().await = next.role_mode;
+    *state.role_fixed_positions.write().await = next.role_fixed_positions.clone();
+    state.auto_rescan.write().await.enabled = next.auto_rescan_enabled;
+    save_persisted_settings(state.settings_path.as_ref(), &next);
+
+    let current_window = (*state.dota_window.read().await).map(window_bounds_to_rect);
+    let (gsi_local_hero, gsi_team_half_start, gsi_connected, game_phase) =
+        gsi_local_context(&state).await;
+
+    let updated = {
+        let mut snap = state.latest_snapshot.write().await;
+        snap.sequence += 1;
+        snap.role_mode = next.role_mode;
+        snap.role_fixed_positions = next.role_fixed_positions.clone();
+        snap.auto_rescan_enabled = next.auto_rescan_enabled;
+        snap.dota_window = current_window;
+        snap.gsi_connected = gsi_connected;
+        snap.game_phase = game_phase.clone();
+        if let Some(pipeline) = &state.pipeline {
+            let opts = ScanOptions {
+                role_mode: next.role_mode,
+                role_fixed_positions: next.role_fixed_positions.clone(),
+                selected_spot_hero_order: snap.selected_spot_hero_order,
+                selected_model_hero_order: snap.selected_model_hero_order,
+                auto_rescan_enabled: next.auto_rescan_enabled,
+                dota_window: current_window,
+                gsi_local_hero,
+                gsi_team_half_start,
+                gsi_connected,
+                game_phase,
+            };
+            if let Some(rescored) = pipeline.rescore_cached(&opts, snap.sequence) {
+                *snap = rescored;
+            }
+        }
+        snap.clone()
+    };
+
+    let _ = state.overlay_tx.send(updated);
+    let _ = state.stream_tx.send(state.build_stream_envelope().await);
+    let _ = state.picks_tx.send(state.build_picks_payload().await);
+    Json(next)
+}
+
+fn current_overlay_status(state: &DaemonState) -> OverlayProcessStatus {
+    let binary_found = find_overlay_binary().is_some();
+    let mut guard = state.overlay_child.lock().unwrap_or_else(|e| e.into_inner());
+    let mut pid = None;
+    let mut running = false;
+    if let Some(child) = guard.as_mut() {
+        match child.try_wait() {
+            Ok(None) => {
+                running = true;
+                pid = Some(child.id());
+            }
+            _ => {
+                *guard = None;
+            }
+        }
+    }
+    OverlayProcessStatus {
+        running,
+        pid,
+        binary_found,
+    }
+}
+
+async fn get_overlay_status(State(state): State<DaemonState>) -> Json<OverlayProcessStatus> {
+    Json(current_overlay_status(&state))
+}
+
+async fn launch_overlay(State(state): State<DaemonState>) -> Json<OverlayProcessStatus> {
+    let existing = current_overlay_status(&state);
+    if existing.running {
+        return Json(existing);
+    }
+    let Some(bin_path) = find_overlay_binary() else {
+        warn!("Could not find ad-overlay binary alongside daemon");
+        return Json(OverlayProcessStatus {
+            running: false,
+            pid: None,
+            binary_found: false,
+        });
+    };
+    let port = *state.daemon_port.read().await;
+    let mut cmd = Command::new(&bin_path);
+    cmd.env("AD_DAEMON_URL", format!("http://127.0.0.1:{port}"));
+    match cmd.spawn() {
+        Ok(child) => {
+            let pid = child.id();
+            info!(pid, path = %bin_path.display(), "Launched native ad-overlay process");
+            let mut guard = state.overlay_child.lock().unwrap_or_else(|e| e.into_inner());
+            *guard = Some(child);
+            Json(OverlayProcessStatus {
+                running: true,
+                pid: Some(pid),
+                binary_found: true,
+            })
+        }
+        Err(err) => {
+            warn!(%err, path = %bin_path.display(), "Failed to spawn ad-overlay");
+            Json(OverlayProcessStatus {
+                running: false,
+                pid: None,
+                binary_found: true,
+            })
+        }
+    }
+}
+
+async fn stop_overlay(State(state): State<DaemonState>) -> Json<OverlayProcessStatus> {
+    let binary_found = find_overlay_binary().is_some();
+    let mut guard = state.overlay_child.lock().unwrap_or_else(|e| e.into_inner());
+    if let Some(mut child) = guard.take() {
+        let _ = child.kill();
+        let _ = child.wait();
+        info!("Stopped managed ad-overlay process");
+    }
+    Json(OverlayProcessStatus {
+        running: false,
+        pid: None,
+        binary_found,
+    })
+}
+
 pub fn build_router(state: DaemonState) -> Router {
     let web_dir = state.web_dir.clone();
     let mut router = Router::new()
         .route("/health", get(health))
         .route("/gsi", post(ingest_gsi))
         .route("/api/gsi", get(get_gsi))
+        .route("/api/abilities", get(get_abilities))
+        .route("/api/heroes", get(get_heroes))
+        .route("/api/settings", get(get_settings).post(set_settings))
+        .route("/api/overlay/status", get(get_overlay_status))
+        .route("/api/overlay/launch", post(launch_overlay))
+        .route("/api/overlay/stop", post(stop_overlay))
         .route("/events", get(stream_events))
         .route("/picks/events", get(picks_events))
         .route("/stream/layout", get(get_stream_layout).post(set_stream_layout))
@@ -925,5 +1161,86 @@ mod tests {
                 .unwrap();
         assert!(snap.gsi_connected);
         assert_eq!(snap.game_phase.as_deref(), Some("HeroSelection"));
+    }
+
+    #[tokio::test]
+    async fn catalog_settings_and_overlay_status_endpoints_respond_cleanly() {
+        let resources_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../resources");
+        let pipe = Arc::new(ScanPipeline::from_resources_dir(&resources_dir).unwrap());
+        let app = build_router(DaemonState::new(None, Some(pipe), None));
+
+        let abilities_res = app
+            .clone()
+            .oneshot(Request::get("/api/abilities").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(abilities_res.status(), StatusCode::OK);
+        let abilities: Vec<AbilityCatalogEntry> = serde_json::from_slice(
+            &to_bytes(abilities_res.into_body(), 4 * 1024 * 1024)
+                .await
+                .unwrap(),
+        )
+        .unwrap();
+        assert!(abilities.len() > 400);
+
+        let heroes_res = app
+            .clone()
+            .oneshot(Request::get("/api/heroes").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(heroes_res.status(), StatusCode::OK);
+        let heroes: Vec<HeroCatalogEntry> = serde_json::from_slice(
+            &to_bytes(heroes_res.into_body(), 1024 * 1024)
+                .await
+                .unwrap(),
+        )
+        .unwrap();
+        assert!(heroes.len() > 100);
+
+        let updated_settings = DaemonSettings {
+            role_mode: RoleMode::Fixed,
+            role_fixed_positions: vec![1, 3],
+            auto_rescan_enabled: true,
+            op_threshold: 0.14,
+            trap_threshold: 0.06,
+        };
+        let post_settings = app
+            .clone()
+            .oneshot(
+                Request::post("/api/settings")
+                    .header("content-type", "application/json")
+                    .body(Body::from(serde_json::to_string(&updated_settings).unwrap()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(post_settings.status(), StatusCode::OK);
+
+        let get_settings_res = app
+            .clone()
+            .oneshot(Request::get("/api/settings").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        let persisted: DaemonSettings = serde_json::from_slice(
+            &to_bytes(get_settings_res.into_body(), 64 * 1024)
+                .await
+                .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(persisted, updated_settings);
+
+        let ov_res = app
+            .oneshot(
+                Request::get("/api/overlay/status")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(ov_res.status(), StatusCode::OK);
+        let ov_status: OverlayProcessStatus =
+            serde_json::from_slice(&to_bytes(ov_res.into_body(), 64 * 1024).await.unwrap())
+                .unwrap();
+        assert!(!ov_status.running);
     }
 }

@@ -1,15 +1,19 @@
 <#
 .SYNOPSIS
-    Builds and launches the Ability Draft Plus Rust Daemon (`ad-daemon`) + Native Overlay (`ad-overlay`).
+    Builds and launches the standalone Ability Draft Plus Rust Suite
+    (ad-control-panel + ad-daemon + optional ad-overlay).
 .EXAMPLE
     .\scripts\rust-kit-start.ps1
-    .\scripts\rust-kit-start.ps1 -Port 41234 -AutoRescan
-    .\scripts\rust-kit-start.ps1 -Release -DaemonOnly
+    .\scripts\rust-kit-start.ps1 -WithOverlay -AutoRescan
+    .\scripts\rust-kit-start.ps1 -OverlayOnly -AutoRescan
+    .\scripts\rust-kit-start.ps1 -Release -DaemonOnly -Port 41234
 #>
 [CmdletBinding()]
 param(
     [int]$Port = 41234,
     [switch]$Release,
+    [switch]$WithOverlay,
+    [switch]$OverlayOnly,
     [switch]$DaemonOnly,
     [switch]$AutoRescan
 )
@@ -20,8 +24,8 @@ $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $rustDir = Join-Path $repoRoot "rust"
 $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"
 
-Write-Host "Stopping any existing ad-overlay / ad-daemon processes..." -ForegroundColor Yellow
-Stop-Process -Name "ad-overlay", "ad-daemon" -Force -ErrorAction SilentlyContinue
+Write-Host "Stopping any existing ad-control-panel / ad-overlay / ad-daemon processes..." -ForegroundColor Yellow
+Stop-Process -Name "ad-control-panel", "ad-overlay", "ad-daemon" -Force -ErrorAction SilentlyContinue
 Start-Sleep -Milliseconds 300
 
 $buildArgs = @("build", "--workspace")
@@ -45,6 +49,7 @@ try {
 $targetDir = Join-Path $rustDir "target\$profileDir"
 $daemonExe = Join-Path $targetDir "ad-daemon.exe"
 $overlayExe = Join-Path $targetDir "ad-overlay.exe"
+$panelExe = Join-Path $targetDir "ad-control-panel.exe"
 
 if (-not (Test-Path $daemonExe)) {
     throw "Missing daemon binary: $daemonExe"
@@ -61,6 +66,7 @@ if ($AutoRescan) {
 
 Write-Host "Starting ad-daemon on http://127.0.0.1:$Port ..." -ForegroundColor Cyan
 $daemonProc = [System.Diagnostics.Process]::Start($daemonPsi)
+$overlayProc = $null
 
 try {
     $healthUrl = "http://127.0.0.1:$Port/health"
@@ -96,20 +102,51 @@ try {
         return
     }
 
-    if (-not (Test-Path $overlayExe)) {
-        throw "Missing overlay binary: $overlayExe"
+    if ($OverlayOnly) {
+        if (-not (Test-Path $overlayExe)) {
+            throw "Missing overlay binary: $overlayExe"
+        }
+        Write-Host "Starting ad-overlay (Ctrl+Shift+S = Scan, Ctrl+Shift+R = Reset)..." -ForegroundColor Cyan
+        $overlayPsi = New-Object System.Diagnostics.ProcessStartInfo
+        $overlayPsi.FileName = $overlayExe
+        $overlayPsi.WorkingDirectory = $repoRoot
+        $overlayPsi.UseShellExecute = $false
+        $overlayPsi.EnvironmentVariables["AD_DAEMON_URL"] = "http://127.0.0.1:$Port"
+        $overlayProc = [System.Diagnostics.Process]::Start($overlayPsi)
+        $overlayProc.WaitForExit()
+        return
     }
 
-    Write-Host "Starting ad-overlay (Ctrl+Shift+S = Scan, Ctrl+Shift+R = Reset)..." -ForegroundColor Cyan
-    $overlayPsi = New-Object System.Diagnostics.ProcessStartInfo
-    $overlayPsi.FileName = $overlayExe
-    $overlayPsi.WorkingDirectory = $repoRoot
-    $overlayPsi.UseShellExecute = $false
-    $overlayPsi.EnvironmentVariables["AD_DAEMON_URL"] = "http://127.0.0.1:$Port"
+    if ($WithOverlay) {
+        if (-not (Test-Path $overlayExe)) {
+            throw "Missing overlay binary: $overlayExe"
+        }
+        Write-Host "Starting ad-overlay alongside Control Panel..." -ForegroundColor Cyan
+        $overlayPsi = New-Object System.Diagnostics.ProcessStartInfo
+        $overlayPsi.FileName = $overlayExe
+        $overlayPsi.WorkingDirectory = $repoRoot
+        $overlayPsi.UseShellExecute = $false
+        $overlayPsi.EnvironmentVariables["AD_DAEMON_URL"] = "http://127.0.0.1:$Port"
+        $overlayProc = [System.Diagnostics.Process]::Start($overlayPsi)
+    }
 
-    $overlayProc = [System.Diagnostics.Process]::Start($overlayPsi)
-    $overlayProc.WaitForExit()
+    if (-not (Test-Path $panelExe)) {
+        throw "Missing Control Panel binary: $panelExe"
+    }
+    Write-Host "Starting native ad-control-panel (use 'Launch Overlay' button inside Dashboard)..." -ForegroundColor Cyan
+    $panelPsi = New-Object System.Diagnostics.ProcessStartInfo
+    $panelPsi.FileName = $panelExe
+    $panelPsi.WorkingDirectory = $repoRoot
+    $panelPsi.UseShellExecute = $false
+    $panelPsi.EnvironmentVariables["AD_DAEMON_PORT"] = "$Port"
+    $panelPsi.EnvironmentVariables["AD_DAEMON_URL"] = "http://127.0.0.1:$Port"
+    $panelProc = [System.Diagnostics.Process]::Start($panelPsi)
+    $panelProc.WaitForExit()
 } finally {
+    if ($overlayProc -and -not $overlayProc.HasExited) {
+        Stop-Process -Id $overlayProc.Id -Force -ErrorAction SilentlyContinue
+    }
+    Stop-Process -Name "ad-overlay" -Force -ErrorAction SilentlyContinue
     if ($daemonProc -and -not $daemonProc.HasExited) {
         Write-Host "Stopping ad-daemon..." -ForegroundColor Yellow
         Stop-Process -Id $daemonProc.Id -Force -ErrorAction SilentlyContinue

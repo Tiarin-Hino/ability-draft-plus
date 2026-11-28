@@ -139,6 +139,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "ad-control-panel"
+version = "0.1.0"
+dependencies = [
+ "ad-protocol",
+ "anyhow",
+ "eframe",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "ad-core"
 version = "0.1.0"
 dependencies = [

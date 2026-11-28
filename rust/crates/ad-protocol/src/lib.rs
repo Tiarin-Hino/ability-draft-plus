@@ -157,3 +157,69 @@ pub struct StreamBoardSummary {
     pub gsi_connected: bool,
     pub game_phase: Option<String>,
 }
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AbilityCatalogEntry {
+    pub ability_id: i64,
+    pub name: String,
+    pub display_name: String,
+    pub hero_id: Option<i64>,
+    pub hero_display_name: Option<String>,
+    pub winrate: Option<f64>,
+    pub pick_rate: Option<f64>,
+    pub is_ultimate: bool,
+    pub consolidated_score: f64,
+    #[serde(default)]
+    pub tags: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct HeroCatalogEntry {
+    pub hero_id: i64,
+    pub name: String,
+    pub display_name: String,
+    pub winrate: Option<f64>,
+    pub pick_rate: Option<f64>,
+    pub consolidated_score: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DaemonSettings {
+    #[serde(default)]
+    pub role_mode: RoleMode,
+    #[serde(default)]
+    pub role_fixed_positions: Vec<u8>,
+    #[serde(default)]
+    pub auto_rescan_enabled: bool,
+    #[serde(default = "default_op_threshold")]
+    pub op_threshold: f64,
+    #[serde(default = "default_trap_threshold")]
+    pub trap_threshold: f64,
+}
+
+fn default_op_threshold() -> f64 {
+    0.13
+}
+
+fn default_trap_threshold() -> f64 {
+    0.05
+}
+
+impl Default for DaemonSettings {
+    fn default() -> Self {
+        Self {
+            role_mode: RoleMode::Off,
+            role_fixed_positions: Vec::new(),
+            auto_rescan_enabled: false,
+            op_threshold: default_op_threshold(),
+            trap_threshold: default_trap_threshold(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct OverlayProcessStatus {
+    pub running: bool,
+    pub pid: Option<u32>,
+    pub binary_found: bool,
+}

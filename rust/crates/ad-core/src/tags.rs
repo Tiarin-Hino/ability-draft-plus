@@ -102,6 +102,51 @@ impl AbilityTag {
         }
     }
 
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::HardCc => "hard_cc",
+            Self::SoftCc => "soft_cc",
+            Self::SetupCc => "setup_cc",
+            Self::Aoe => "aoe",
+            Self::Nuke => "nuke",
+            Self::Waveclear => "waveclear",
+            Self::FarmTool => "farm_tool",
+            Self::Steroid => "steroid",
+            Self::SustainSelf => "sustain_self",
+            Self::SaveAlly => "save_ally",
+            Self::TeamAura => "team_aura",
+            Self::Mobility => "mobility",
+            Self::Initiation => "initiation",
+            Self::Summon => "summon",
+            Self::TeamfightUlt => "teamfight_ult",
+            Self::PassiveValue => "passive_value",
+            Self::MeleeOnly => "melee_only",
+            Self::RangedOnly => "ranged_only",
+            Self::GrantsRanged => "grants_ranged",
+            Self::GoodWithRearm => "good_with_rearm",
+            Self::ManaHungry => "mana_hungry",
+            Self::Channeled => "channeled",
+            Self::GoodShard => "good_shard",
+            Self::GoodAghanims => "good_aghanims",
+            Self::SkillPointSink => "skill_point_sink",
+            Self::DebuffDispellable => "debuff_dispellable",
+            Self::DebuffStrongOnly => "debuff_strong_only",
+            Self::BkbPiercing => "bkb_piercing",
+            Self::RepositionEnemy => "reposition_enemy",
+            Self::RepositionAlly => "reposition_ally",
+            Self::Knockback => "knockback",
+            Self::DispelSelf => "dispel_self",
+            Self::DispelAlly => "dispel_ally",
+            Self::PurgeEnemy => "purge_enemy",
+            Self::SpellSteroid => "spell_steroid",
+            Self::AmpPhysical => "amp_physical",
+            Self::AmpMagical => "amp_magical",
+            Self::AmpAll => "amp_all",
+            Self::GoodDeny => "good_deny",
+            Self::PickAsap => "pick_asap",
+        }
+    }
+
     pub fn is_mechanical(self) -> bool {
         matches!(
             self,

@@ -282,6 +282,7 @@ async fn main() -> anyhow::Result<()> {
         .ok()
         .and_then(|v| v.parse().ok())
         .unwrap_or(41234);
+    *state.daemon_port.write().await = port;
     check_dota_gsi_cfg_port(port);
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
 

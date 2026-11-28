@@ -51,8 +51,9 @@ use ad_ml::{
     PICK_TEMPLATE_CROP_INSET_RATIO, PICK_TEMPLATE_FALLBACK_MIN_NCC,
 };
 use ad_protocol::{
-    HeroModelHighlight, OverlaySnapshot, PickedAbilitySlot, PlayerSpotHighlight, Rect,
-    ResolutionSource, RoleMode, SlotHighlight, SynergyCombo, PROTOCOL_VERSION,
+    AbilityCatalogEntry, HeroCatalogEntry, HeroModelHighlight, OverlaySnapshot, PickedAbilitySlot,
+    PlayerSpotHighlight, Rect, ResolutionSource, RoleMode, SlotHighlight, SynergyCombo,
+    PROTOCOL_VERSION,
 };
 use anyhow::Context;
 
@@ -427,6 +428,69 @@ fn discover_icon_cache_dir(resources_dir: &Path) -> Option<PathBuf> {
 
     pub fn pick_template_count(&self) -> usize {
         self.pick_templates.len()
+    }
+
+    pub fn ability_catalog(&self) -> Vec<AbilityCatalogEntry> {
+        let mut entries: Vec<AbilityCatalogEntry> = self
+            .abilities_by_name
+            .values()
+            .map(|row| {
+                let display_name = row
+                    .display_name
+                    .clone()
+                    .unwrap_or_else(|| row.name.clone());
+                let hero_display_name = row
+                    .hero_id
+                    .and_then(|hid| self.heroes_by_id.get(&hid))
+                    .map(|h| h.display_name.clone());
+                let mut tag_names: Vec<String> = self
+                    .tags
+                    .as_ref()
+                    .and_then(|ds| ds.abilities.get(&row.name))
+                    .map(|entry| entry.tags.iter().map(|t| t.as_str().to_string()).collect())
+                    .unwrap_or_default();
+                tag_names.sort();
+                AbilityCatalogEntry {
+                    ability_id: row.ability_id,
+                    name: row.name.clone(),
+                    display_name,
+                    hero_id: row.hero_id,
+                    hero_display_name,
+                    winrate: row.winrate,
+                    pick_rate: row.pick_rate,
+                    is_ultimate: row.is_ultimate,
+                    consolidated_score: calculate_consolidated_score(row.winrate, row.pick_rate),
+                    tags: tag_names,
+                }
+            })
+            .collect();
+        entries.sort_by(|a, b| {
+            b.consolidated_score
+                .total_cmp(&a.consolidated_score)
+                .then_with(|| a.display_name.cmp(&b.display_name))
+        });
+        entries
+    }
+
+    pub fn hero_catalog(&self) -> Vec<HeroCatalogEntry> {
+        let mut entries: Vec<HeroCatalogEntry> = self
+            .heroes_by_id
+            .values()
+            .map(|hero| HeroCatalogEntry {
+                hero_id: hero.hero_id,
+                name: hero.name.clone(),
+                display_name: hero.display_name.clone(),
+                winrate: hero.winrate,
+                pick_rate: hero.pick_rate,
+                consolidated_score: calculate_consolidated_score(hero.winrate, hero.pick_rate),
+            })
+            .collect();
+        entries.sort_by(|a, b| {
+            b.consolidated_score
+                .total_cmp(&a.consolidated_score)
+                .then_with(|| a.display_name.cmp(&b.display_name))
+        });
+        entries
     }
 
     fn infer_dynamic_positions(&self, my_picks: &[String]) -> Vec<u8> {
