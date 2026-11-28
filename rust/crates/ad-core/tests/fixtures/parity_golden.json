@@ -1221,5 +1221,160 @@
         ]
       }
     }
-  ]
+  ],
+  "ownRowCases": [
+    {
+      "input": {
+        "ocrByRow": {
+          "2": "zuus",
+          "6": "axe",
+          "7": "axe"
+        },
+        "localHeroNpcName": "zeus",
+        "teamHalfStart": 0
+      },
+      "token": "zeus",
+      "resolvedRow": 2
+    },
+    {
+      "input": {
+        "ocrByRow": {
+          "2": "zuus",
+          "6": "axe",
+          "7": "axe"
+        },
+        "localHeroNpcName": "zeus",
+        "teamHalfStart": 5
+      },
+      "token": "zeus",
+      "resolvedRow": null
+    },
+    {
+      "input": {
+        "ocrByRow": {
+          "2": "zuus",
+          "6": "axe",
+          "7": "axe"
+        },
+        "localHeroNpcName": "axe",
+        "teamHalfStart": 5
+      },
+      "token": "axe",
+      "resolvedRow": null
+    },
+    {
+      "input": {
+        "ocrByRow": {
+          "2": "drow_ranger"
+        },
+        "localHeroNpcName": "drowranger",
+        "teamHalfStart": null
+      },
+      "token": "drowranger",
+      "resolvedRow": 2
+    }
+  ],
+  "modelPicksCase": {
+    "poolModels": [
+      {
+        "heroOrder": 0,
+        "heroName": "axe"
+      },
+      {
+        "heroOrder": 1,
+        "heroName": "unknown_model_1"
+      },
+      {
+        "heroOrder": 2,
+        "heroName": "puck"
+      }
+    ],
+    "ocrByRow": {
+      "0": {
+        "name": "axe",
+        "similarity": 0.7
+      },
+      "3": {
+        "name": "axe",
+        "similarity": 0.95
+      },
+      "4": {
+        "name": "lion",
+        "similarity": 0.92
+      },
+      "6": {
+        "name": "axe",
+        "similarity": 1
+      }
+    },
+    "local": {
+      "heroName": "puck",
+      "row": 6
+    },
+    "assignments": [
+      {
+        "poolHeroOrder": 0,
+        "playerIndex": 3
+      },
+      {
+        "poolHeroOrder": 1,
+        "playerIndex": 4
+      },
+      {
+        "poolHeroOrder": 2,
+        "playerIndex": 6
+      }
+    ],
+    "initialTimeline": [
+      {
+        "seq": 0,
+        "playerIndex": 1,
+        "abilityName": null,
+        "kind": "modelSelectionMarker",
+        "poolHeroOrder": 0,
+        "clockTime": -10,
+        "seenAtS": 12
+      }
+    ],
+    "update": {
+      "timeline": [
+        {
+          "seq": 0,
+          "playerIndex": 3,
+          "abilityName": null,
+          "kind": "modelSelectionMarker",
+          "poolHeroOrder": 0,
+          "clockTime": -10,
+          "seenAtS": 20
+        }
+      ],
+      "added": [
+        {
+          "playerIndex": 4,
+          "abilityName": null,
+          "kind": "modelSelectionMarker",
+          "poolHeroOrder": 1,
+          "clockTime": -15,
+          "seenAtS": 20
+        },
+        {
+          "playerIndex": 6,
+          "abilityName": null,
+          "kind": "modelSelectionMarker",
+          "poolHeroOrder": 2,
+          "clockTime": -15,
+          "seenAtS": 20
+        }
+      ],
+      "corrected": [
+        {
+          "poolHeroOrder": 0,
+          "fromRow": 1,
+          "toRow": 3,
+          "fromModel": 0
+        }
+      ],
+      "dropped": 0
+    }
+  }
 }

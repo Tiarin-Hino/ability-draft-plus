@@ -5,7 +5,12 @@
 //! - Accepts raw `0.0..=255.0` `f32` `[batch, 96, 96, 3]` NHWC tensors.
 //! - Supports active-pool class masking and per-class threshold overrides.
 
-use std::{collections::HashSet, fs, path::Path};
+use std::{
+    collections::HashSet,
+    fs,
+    path::Path,
+    sync::OnceLock,
+};
 
 use ort::{
     environment::Environment,
@@ -15,8 +20,19 @@ use ort::{
 
 use crate::{class_threshold_override, MlClassifier, MlError, Prediction, SlotCrop, INPUT_SIZE};
 
+static ORT_ENV: OnceLock<Result<Environment, String>> = OnceLock::new();
+
+fn shared_ort_env() -> Result<&'static Environment, MlError> {
+    let res = ORT_ENV.get_or_init(|| ort::init().build().map_err(|e| e.to_string()));
+    match res {
+        Ok(env) => Ok(env),
+        Err(msg) => Err(MlError::Inference(format!(
+            "failed to initialize ONNX environment: {msg}"
+        ))),
+    }
+}
+
 pub struct OnnxPoolClassifier {
-    _env: Environment,
     session: Session,
     class_names: Vec<String>,
     input_name: String,
@@ -33,11 +49,9 @@ impl OnnxPoolClassifier {
             return Err(MlError::Inference("class_names.json is empty".to_string()));
         }
 
-        let env = ort::init()
-            .build()
-            .map_err(|e| MlError::Inference(format!("failed to initialize ONNX environment: {e}")))?;
+        let env = shared_ort_env()?;
 
-        let mut session = Session::builder(&env)
+        let mut session = Session::builder(env)
             .map_err(|e| MlError::Inference(format!("failed to create ONNX session builder: {e}")))?
             .with_optimization_level(GraphOptimizationLevel::Level3)
             .map_err(|e| MlError::Inference(format!("failed to set ONNX optimization level: {e}")))?
@@ -77,7 +91,6 @@ impl OnnxPoolClassifier {
         }
 
         Ok(Self {
-            _env: env,
             session,
             class_names,
             input_name,

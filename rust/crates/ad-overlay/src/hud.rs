@@ -335,7 +335,12 @@ impl OverlayHudApp {
             let resp = egui::Area::new(self.spot_base_id.with(spot.hero_order))
                 .fixed_pos(pos)
                 .show(ctx, |ui| {
-                    let label = if spot.is_my_spot { "★ My Spot" } else { "My Spot" };
+                    let label = match (spot.is_my_spot, &spot.ocr_hero_name) {
+                        (true, Some(hero)) => format!("★ My Spot ({hero})"),
+                        (true, None) => "★ My Spot".to_string(),
+                        (false, Some(hero)) => format!("My Spot · {hero}"),
+                        (false, None) => "My Spot".to_string(),
+                    };
                     if ui.selectable_label(spot.is_my_spot, label).clicked() {
                         self.send_cmd(OverlayCommand::SelectMySpot {
                             hero_order: spot.hero_order,

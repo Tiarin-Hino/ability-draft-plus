@@ -130,9 +130,12 @@ dependencies = [
 name = "ad-capture"
 version = "0.1.0"
 dependencies = [
+ "core-foundation 0.9.4",
+ "core-graphics",
  "serde",
  "thiserror 2.0.21",
  "windows",
+ "x11rb",
 ]
 
 [[package]]

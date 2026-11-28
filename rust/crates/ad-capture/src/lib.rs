@@ -111,7 +111,7 @@ pub fn default_window_tracker() -> Box<dyn GameWindowTracker> {
 pub fn default_screen_capturer() -> Box<dyn ScreenCapturer> {
     #[cfg(target_os = "windows")]
     {
-        Box::new(windows_capture::WindowsGdiCapturer)
+        Box::new(windows_capture::WindowsHybridCapturer)
     }
     #[cfg(target_os = "macos")]
     {

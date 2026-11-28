@@ -7,6 +7,7 @@
 
 use thiserror::Error;
 
+pub mod card_ocr;
 #[cfg(not(target_os = "windows"))]
 pub mod fallback_ocr;
 pub mod hero_matcher;

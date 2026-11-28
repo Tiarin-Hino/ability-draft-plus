@@ -8,6 +8,12 @@ use ad_core::{
         is_preview_clock, is_round_break, HeroSelectionReentry, DEFAULT_AD_DRAFT_CLOCK,
     },
     gsi::{parse_gsi_payload, GamePhase, GsiMode},
+    model_picks_from_ocr::{
+        reconcile_model_markers, resolve_model_assignments, LocalModelAnchor, OcrHeroRead,
+        PoolModelRef,
+    },
+    own_row_detection::{hero_name_token, resolve_own_row_from_ocr},
+    pick_attribution::{PickEvent, PickKind},
     role_scoring::{compute_role_score, RoleContext, RoleTagInput},
     scoring::{
         calculate_consolidated_score, calculate_personalized_score, normalize_pick_order,
@@ -33,6 +39,82 @@ struct GoldenFixture {
     top_tier: Vec<TopTierEntityOut>,
     draft_clock: DraftClockGolden,
     gsi_payloads: Vec<GsiGolden>,
+    own_row_cases: Vec<OwnRowCase>,
+    model_picks_case: ModelPicksCase,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct OwnRowInputJson {
+    ocr_by_row: HashMap<String, String>,
+    local_hero_npc_name: String,
+    team_half_start: Option<u8>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct OwnRowCase {
+    input: OwnRowInputJson,
+    token: String,
+    resolved_row: Option<u8>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PoolModelJson {
+    hero_order: u8,
+    hero_name: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct OcrReadJson {
+    name: String,
+    similarity: f64,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct LocalAnchorJson {
+    hero_name: String,
+    row: u8,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ModelAssignJson {
+    pool_hero_order: u8,
+    player_index: u8,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ModelPickEventJson {
+    #[serde(default)]
+    seq: usize,
+    player_index: u8,
+    pool_hero_order: Option<u8>,
+    clock_time: Option<i64>,
+    seen_at_s: Option<f64>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ModelUpdateJson {
+    timeline: Vec<ModelPickEventJson>,
+    added: Vec<ModelPickEventJson>,
+    dropped: usize,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ModelPicksCase {
+    pool_models: Vec<PoolModelJson>,
+    ocr_by_row: HashMap<String, OcrReadJson>,
+    local: LocalAnchorJson,
+    assignments: Vec<ModelAssignJson>,
+    initial_timeline: Vec<ModelPickEventJson>,
+    update: ModelUpdateJson,
 }
 
 #[derive(Deserialize)]
@@ -458,5 +540,92 @@ fn draft_clock_and_gsi_parser_match_typescript_golden() {
             assert_eq!(rp.account_id, tp.account_id);
             assert_eq!(rp.hero_npc_name, tp.hero_npc_name);
         }
+    }
+}
+
+#[test]
+fn own_row_and_model_picks_match_typescript_golden() {
+    let golden = load_golden();
+
+    for c in &golden.own_row_cases {
+        assert_eq!(hero_name_token(&c.input.local_hero_npc_name), c.token);
+        let ocr_map: HashMap<u8, String> = c
+            .input
+            .ocr_by_row
+            .iter()
+            .map(|(k, v)| (k.parse::<u8>().unwrap(), v.clone()))
+            .collect();
+        assert_eq!(
+            resolve_own_row_from_ocr(
+                &ocr_map,
+                &c.input.local_hero_npc_name,
+                c.input.team_half_start
+            ),
+            c.resolved_row
+        );
+    }
+
+    let mp = &golden.model_picks_case;
+    let pool_models: Vec<PoolModelRef> = mp
+        .pool_models
+        .iter()
+        .map(|m| PoolModelRef {
+            hero_order: m.hero_order,
+            hero_name: m.hero_name.clone(),
+        })
+        .collect();
+    let ocr_by_row: HashMap<u8, OcrHeroRead> = mp
+        .ocr_by_row
+        .iter()
+        .map(|(k, v)| {
+            (
+                k.parse::<u8>().unwrap(),
+                OcrHeroRead {
+                    name: v.name.clone(),
+                    similarity: v.similarity,
+                },
+            )
+        })
+        .collect();
+    let local = LocalModelAnchor {
+        hero_name: mp.local.hero_name.clone(),
+        row: mp.local.row,
+    };
+
+    let assigns = resolve_model_assignments(&pool_models, &ocr_by_row, Some(&local));
+    assert_eq!(assigns.len(), mp.assignments.len());
+    for (a, b) in assigns.iter().zip(mp.assignments.iter()) {
+        assert_eq!(a.pool_hero_order, b.pool_hero_order);
+        assert_eq!(a.player_index, b.player_index);
+    }
+
+    let timeline: Vec<PickEvent> = mp
+        .initial_timeline
+        .iter()
+        .map(|e| PickEvent {
+            seq: e.seq,
+            player_index: e.player_index,
+            ability_name: None,
+            kind: PickKind::Model,
+            pool_hero_order: e.pool_hero_order,
+            clock_time: e.clock_time,
+            box_group: None,
+            seen_at_s: e.seen_at_s,
+            vacated: false,
+        })
+        .collect();
+    let upd = reconcile_model_markers(&timeline, &assigns, Some(-15), Some(20.0));
+    assert_eq!(upd.dropped, mp.update.dropped);
+    assert_eq!(upd.timeline.len(), mp.update.timeline.len());
+    for (a, b) in upd.timeline.iter().zip(mp.update.timeline.iter()) {
+        assert_eq!(a.player_index, b.player_index);
+        assert_eq!(a.pool_hero_order, b.pool_hero_order);
+        assert_eq!(a.seen_at_s, b.seen_at_s);
+    }
+    assert_eq!(upd.added.len(), mp.update.added.len());
+    for (a, b) in upd.added.iter().zip(mp.update.added.iter()) {
+        assert_eq!(a.player_index, b.player_index);
+        assert_eq!(a.pool_hero_order, b.pool_hero_order);
+        assert_eq!(a.seen_at_s, b.seen_at_s);
     }
 }

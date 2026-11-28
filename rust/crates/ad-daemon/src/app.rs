@@ -14,6 +14,7 @@ use ad_protocol::{
     StreamEnvelope, PROTOCOL_VERSION, STREAM_PROTOCOL_VERSION,
 };
 use axum::{
+    body::Bytes,
     extract::State,
     http::StatusCode,
     response::sse::{Event, KeepAlive, Sse},
@@ -140,6 +141,21 @@ pub fn window_bounds_to_rect(bounds: WindowBounds) -> Rect {
     }
 }
 
+async fn gsi_local_context(state: &DaemonState) -> (Option<String>, Option<u8>) {
+    let gsi_guard = state.latest_gsi.read().await;
+    let Some(gsi) = gsi_guard.as_ref() else {
+        return (None, None);
+    };
+    let hero = gsi
+        .local_player
+        .as_ref()
+        .and_then(|p| p.hero_npc_name.clone());
+    let half = gsi
+        .local_slot_index
+        .map(|slot| if slot < 5 { 0 } else { 5 });
+    (hero, half)
+}
+
 fn clear_snapshot_draft_fields(snap: &mut OverlaySnapshot) {
     snap.scanning = false;
     snap.slots.clear();
@@ -176,6 +192,7 @@ pub async fn spawn_background_scan(state: &DaemonState) {
     let current_role_positions = state.role_fixed_positions.read().await.clone();
     let current_window = (*state.dota_window.read().await).map(window_bounds_to_rect);
     let auto_enabled = state.auto_rescan.read().await.enabled;
+    let (gsi_local_hero, gsi_team_half_start) = gsi_local_context(state).await;
 
     let (next_seq, options) = {
         let mut snap = state.latest_snapshot.write().await;
@@ -190,6 +207,8 @@ pub async fn spawn_background_scan(state: &DaemonState) {
             selected_model_hero_order: snap.selected_model_hero_order,
             auto_rescan_enabled: auto_enabled,
             dota_window: current_window,
+            gsi_local_hero,
+            gsi_team_half_start,
         };
         let copy = snap.clone();
         let _ = state.overlay_tx.send(copy);
@@ -306,6 +325,49 @@ async fn get_overlay_snapshot(State(state): State<DaemonState>) -> Json<OverlayS
     Json(state.latest_snapshot.read().await.clone())
 }
 
+async fn debug_scan_image(
+    State(state): State<DaemonState>,
+    body: Bytes,
+) -> Result<Json<OverlaySnapshot>, StatusCode> {
+    let Some(pipeline) = state.pipeline.clone() else {
+        return Err(StatusCode::SERVICE_UNAVAILABLE);
+    };
+    let current_role_mode = *state.role_mode.read().await;
+    let current_role_positions = state.role_fixed_positions.read().await.clone();
+    let current_window = (*state.dota_window.read().await).map(window_bounds_to_rect);
+    let auto_enabled = state.auto_rescan.read().await.enabled;
+    let (gsi_local_hero, gsi_team_half_start) = gsi_local_context(&state).await;
+
+    let (next_seq, options) = {
+        let snap = state.latest_snapshot.read().await;
+        (
+            snap.sequence + 1,
+            ScanOptions {
+                role_mode: current_role_mode,
+                role_fixed_positions: current_role_positions,
+                selected_spot_hero_order: snap.selected_spot_hero_order,
+                selected_model_hero_order: snap.selected_model_hero_order,
+                auto_rescan_enabled: auto_enabled,
+                dota_window: current_window,
+                gsi_local_hero,
+                gsi_team_half_start,
+            },
+        )
+    };
+
+    let scanned = tokio::task::spawn_blocking(move || {
+        pipeline.scan_png_bytes(&body, &options, next_seq)
+    })
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+    .map_err(|_| StatusCode::BAD_REQUEST)?;
+
+    *state.latest_snapshot.write().await = scanned.clone();
+    let _ = state.overlay_tx.send(scanned.clone());
+    let _ = state.stream_tx.send(state.build_stream_envelope().await);
+    Ok(Json(scanned))
+}
+
 async fn overlay_events(
     State(state): State<DaemonState>,
 ) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
@@ -410,6 +472,7 @@ async fn overlay_command(
     let current_role_positions = state.role_fixed_positions.read().await.clone();
     let current_window = (*state.dota_window.read().await).map(window_bounds_to_rect);
     let auto_enabled = state.auto_rescan.read().await.enabled;
+    let (gsi_local_hero, gsi_team_half_start) = gsi_local_context(&state).await;
 
     let updated = {
         let mut snap = state.latest_snapshot.write().await;
@@ -444,6 +507,8 @@ async fn overlay_command(
                     selected_model_hero_order: snap.selected_model_hero_order,
                     auto_rescan_enabled: auto_enabled,
                     dota_window: current_window,
+                    gsi_local_hero,
+                    gsi_team_half_start,
                 };
                 if let Some(rescored) = pipeline.rescore_cached(&opts, snap.sequence) {
                     *snap = rescored;
@@ -475,6 +540,7 @@ pub fn build_router(state: DaemonState) -> Router {
         .route("/overlay/snapshot", get(get_overlay_snapshot))
         .route("/overlay/events", get(overlay_events))
         .route("/overlay/command", post(overlay_command))
+        .route("/debug/scan-image", post(debug_scan_image))
         .with_state(state);
 
     if let Some(root) = web_dir {
@@ -521,6 +587,33 @@ mod tests {
         assert_eq!(json["status"], "ok");
         assert_eq!(json["gsi_connected"], false);
         assert_eq!(json["protocol_version"], PROTOCOL_VERSION);
+    }
+
+    #[tokio::test]
+    async fn debug_scan_image_handles_disabled_pipeline_and_invalid_png() {
+        let app_no_pipe = build_router(DaemonState::new(None, None, None));
+        let res_503 = app_no_pipe
+            .oneshot(
+                Request::post("/debug/scan-image")
+                    .body(Body::from(vec![1, 2, 3]))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(res_503.status(), StatusCode::SERVICE_UNAVAILABLE);
+
+        let resources_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../resources");
+        let pipe = Arc::new(ScanPipeline::from_resources_dir(&resources_dir).unwrap());
+        let app_with_pipe = build_router(DaemonState::new(None, Some(pipe), None));
+        let res_400 = app_with_pipe
+            .oneshot(
+                Request::post("/debug/scan-image")
+                    .body(Body::from(b"not a png".to_vec()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(res_400.status(), StatusCode::BAD_REQUEST);
     }
 
     #[tokio::test]

@@ -25,6 +25,8 @@ import {
   isPreviewClock,
   classifyHeroSelectionReentry,
 } from './src/core/gsi/draft-clock.ts'
+import { heroNameToken, resolveOwnRowFromOcr } from './src/core/domain/own-row-detection.ts'
+import { resolveModelAssignments, reconcileModelMarkers } from './src/core/domain/model-picks-from-ocr.ts'
 import { parseGsiPayload, gsiSnapshotMode } from './src/core/gsi/parser.ts'
 
 export function generateParityGolden() {
@@ -239,6 +241,69 @@ export function generateParityGolden() {
     }
   })
 
+  const ownRowCases = [
+    {
+      ocrByRow: { 2: 'zuus', 6: 'axe', 7: 'axe' },
+      localHeroNpcName: 'zeus',
+      teamHalfStart: 0,
+    },
+    {
+      ocrByRow: { 2: 'zuus', 6: 'axe', 7: 'axe' },
+      localHeroNpcName: 'zeus',
+      teamHalfStart: 5,
+    },
+    {
+      ocrByRow: { 2: 'zuus', 6: 'axe', 7: 'axe' },
+      localHeroNpcName: 'axe',
+      teamHalfStart: 5,
+    },
+    {
+      ocrByRow: { 2: 'drow_ranger' },
+      localHeroNpcName: 'drowranger',
+      teamHalfStart: null,
+    },
+  ].map((c) => ({
+    input: c,
+    token: heroNameToken(c.localHeroNpcName),
+    resolvedRow: resolveOwnRowFromOcr({
+      ocrHeroNamesByRow: Object.fromEntries(
+        Object.entries(c.ocrByRow).map(([k, v]) => [Number(k), { name: v }]),
+      ),
+      localHeroNpcName: c.localHeroNpcName,
+      teamHalfStart: c.teamHalfStart,
+    }),
+  }))
+
+  const modelPoolModels = [
+    { heroOrder: 0, heroName: 'axe' },
+    { heroOrder: 1, heroName: 'unknown_model_1' },
+    { heroOrder: 2, heroName: 'puck' },
+  ]
+  const modelOcrByRow = {
+    0: { name: 'axe', similarity: 0.7 },
+    3: { name: 'axe', similarity: 0.95 },
+    4: { name: 'lion', similarity: 0.92 },
+    6: { name: 'axe', similarity: 1.0 },
+  }
+  const modelLocalAnchor = { heroName: 'puck', row: 6 }
+  const modelAssignments = resolveModelAssignments({
+    poolModels: modelPoolModels,
+    ocrByRow: modelOcrByRow,
+    local: modelLocalAnchor,
+  })
+  const initialModelTimeline = [
+    {
+      seq: 0,
+      playerIndex: 1,
+      abilityName: null,
+      kind: 'modelSelectionMarker',
+      poolHeroOrder: 0,
+      clockTime: -10,
+      seenAtS: 12.0,
+    },
+  ]
+  const modelMarkerUpdate = reconcileModelMarkers(initialModelTimeline, modelAssignments, -15, 20.0)
+
   return {
     scoringCases,
     shiftRows,
@@ -248,6 +313,15 @@ export function generateParityGolden() {
     topTier,
     draftClock,
     gsiPayloads,
+    ownRowCases,
+    modelPicksCase: {
+      poolModels: modelPoolModels,
+      ocrByRow: modelOcrByRow,
+      local: modelLocalAnchor,
+      assignments: modelAssignments,
+      initialTimeline: initialModelTimeline,
+      update: modelMarkerUpdate,
+    },
   }
 }
 `

@@ -1,12 +1,16 @@
 //! End-to-end draft board scan pipeline:
-//! frame -> aspect-aware layout -> bilinear crop -> ONNX FP16 + pick NCC -> role/top-tier/synergies -> OverlaySnapshot.
+//! frame -> aspect-aware layout -> bilinear crop -> ONNX FP16 + pick NCC + 3-pass card OCR
+//! -> model attribution + own-row detection -> role/top-tier/synergies -> OverlaySnapshot.
 
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
     fs::File,
-    io::BufReader,
+    io::{BufReader, Cursor},
     path::{Path, PathBuf},
-    sync::Mutex,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Mutex,
+    },
 };
 
 use ad_capture::{
@@ -21,6 +25,11 @@ use ad_core::{
         IdentifiedHeroModel,
     },
     layout::{LayoutDatabase, ResolutionLayout, SlotCoordinate},
+    model_picks_from_ocr::{
+        reconcile_model_markers, resolve_model_assignments, LocalModelAnchor, OcrHeroRead,
+        PoolModelRef,
+    },
+    own_row_detection::resolve_own_row_from_ocr,
     pick_attribution::{reconcile_ability_picks, CardSlotReading, PickEvent, PickKind},
     role_scoring::{compute_role_score, RoleContext, RoleTagInput},
     scoring::calculate_consolidated_score,
@@ -29,9 +38,15 @@ use ad_core::{
     top_tier::{determine_top_tier_entities, EntityType, ScoredEntity},
 };
 use ad_ml::{
+    card_ocr::{
+        compute_strip_signature, extract_hero_name_strip_rgba, recognize_card_hero_name,
+        strip_pixels_changed, OCR_STRIP_DIFF_THRESHOLD, OCR_STRIP_TARGET_WIDTH,
+    },
+    default_ocr_engine,
+    hero_matcher::HeroNameCandidate,
     onnx::OnnxPoolClassifier,
     template_matcher::{make_icon_template, match_pick_slot_scoped, IconTemplate},
-    DEFAULT_POOL_CONFIDENCE_THRESHOLD, INPUT_SIZE, PICK_TEMPLATE_COMPARE_SIZE,
+    OcrEngine, DEFAULT_POOL_CONFIDENCE_THRESHOLD, INPUT_SIZE, PICK_TEMPLATE_COMPARE_SIZE,
     PICK_TEMPLATE_CROP_INSET_RATIO, PICK_TEMPLATE_FALLBACK_MIN_NCC,
 };
 use ad_protocol::{
@@ -54,6 +69,8 @@ pub struct ScanOptions {
     pub selected_model_hero_order: Option<u8>,
     pub auto_rescan_enabled: bool,
     pub dota_window: Option<Rect>,
+    pub gsi_local_hero: Option<String>,
+    pub gsi_team_half_start: Option<u8>,
 }
 
 #[derive(Debug, Clone)]
@@ -99,6 +116,8 @@ struct CachedFrameAnalysis {
 struct DraftSessionState {
     timeline: Vec<PickEvent>,
     last_analysis: Option<CachedFrameAnalysis>,
+    ocr_strip_sigs: HashMap<u8, Vec<u8>>,
+    ocr_hero_names_by_row: HashMap<u8, OcrHeroRead>,
 }
 
 pub struct ScanPipeline {
@@ -106,6 +125,8 @@ pub struct ScanPipeline {
     abilities_by_name: HashMap<String, AbilityRow>,
     ability_to_hero_id: HashMap<String, i64>,
     heroes_by_id: HashMap<i64, HeroRecord>,
+    heroes_display_by_name: HashMap<String, String>,
+    full_hero_roster: Vec<HeroNameCandidate>,
     active_class_names: HashSet<String>,
     shift_axes: HashMap<String, ShiftAxes>,
     synergies: Vec<ResolvedSynergy>,
@@ -113,21 +134,23 @@ pub struct ScanPipeline {
     tags: Option<TagsDataset>,
     pick_templates: Vec<IconTemplate>,
     classifier: Mutex<Option<OnnxPoolClassifier>>,
+    ocr_engine: Mutex<Option<Box<dyn OcrEngine>>>,
+    ocr_init_attempted: AtomicBool,
     session: Mutex<DraftSessionState>,
     model_path: PathBuf,
     class_names_path: PathBuf,
 }
 
-fn load_png_template(path: &Path) -> Option<IconTemplate> {
-    let stem = path.file_stem()?.to_str()?.to_string();
-    let file = File::open(path).ok()?;
-    let mut decoder = png::Decoder::new(BufReader::new(file));
+fn decode_png_rgba_from_reader<R: std::io::BufRead + std::io::Seek>(
+    reader_in: R,
+) -> Option<(Vec<u8>, u32, u32)> {
+    let mut decoder = png::Decoder::new(reader_in);
     decoder.set_transformations(png::Transformations::EXPAND | png::Transformations::STRIP_16);
     let mut reader = decoder.read_info().ok()?;
     let mut buf = vec![0u8; reader.output_buffer_size()?];
     let info = reader.next_frame(&mut buf).ok()?;
 
-    let mut rgba = vec![0u8; (info.width * info.height * 4) as usize];
+    let mut rgba = vec![0u8; (info.width as usize) * (info.height as usize) * 4];
     match info.color_type {
         png::ColorType::Rgba => {
             let needed = rgba.len();
@@ -137,7 +160,7 @@ fn load_png_template(path: &Path) -> Option<IconTemplate> {
             rgba.copy_from_slice(&buf[..needed]);
         }
         png::ColorType::Rgb => {
-            let pixels = (info.width * info.height) as usize;
+            let pixels = (info.width as usize) * (info.height as usize);
             if buf.len() < pixels * 3 {
                 return None;
             }
@@ -150,10 +173,17 @@ fn load_png_template(path: &Path) -> Option<IconTemplate> {
         }
         _ => return None,
     }
+    Some((rgba, info.width, info.height))
+}
+
+fn load_png_template(path: &Path) -> Option<IconTemplate> {
+    let stem = path.file_stem()?.to_str()?.to_string();
+    let file = File::open(path).ok()?;
+    let (rgba, width, height) = decode_png_rgba_from_reader(BufReader::new(file))?;
 
     let raw = RawFrame {
-        width: info.width,
-        height: info.height,
+        width,
+        height,
         format: PixelFormat::Rgba8,
         bytes: rgba,
     };
@@ -161,8 +191,8 @@ fn load_png_template(path: &Path) -> Option<IconTemplate> {
         &raw,
         0,
         0,
-        info.width,
-        info.height,
+        width,
+        height,
         PICK_TEMPLATE_CROP_INSET_RATIO,
         PICK_TEMPLATE_COMPARE_SIZE,
     )
@@ -224,15 +254,21 @@ impl ScanPipeline {
             .context("failed to load hero ability synergies")?;
 
         let mut heroes_by_id = HashMap::with_capacity(heroes.len());
+        let mut heroes_display_by_name = HashMap::with_capacity(heroes.len());
+        let mut full_hero_roster = Vec::with_capacity(heroes.len());
         for hero in heroes {
+            let display_name = hero.display_name.unwrap_or_else(|| hero.name.clone());
+            full_hero_roster.push(HeroNameCandidate {
+                name: hero.name.clone(),
+                display_name: display_name.clone(),
+            });
+            heroes_display_by_name.insert(hero.name.clone(), display_name.clone());
             heroes_by_id.insert(
                 hero.hero_id,
                 HeroRecord {
                     hero_id: hero.hero_id,
-                    name: hero.name.clone(),
-                    display_name: hero
-                        .display_name
-                        .unwrap_or_else(|| hero.name.clone()),
+                    name: hero.name,
+                    display_name,
                     winrate: hero.winrate,
                     pick_rate: hero.pick_rate,
                 },
@@ -329,6 +365,8 @@ impl ScanPipeline {
             abilities_by_name,
             ability_to_hero_id,
             heroes_by_id,
+            heroes_display_by_name,
+            full_hero_roster,
             active_class_names,
             shift_axes,
             synergies,
@@ -336,6 +374,8 @@ impl ScanPipeline {
             tags,
             pick_templates,
             classifier: Mutex::new(None),
+            ocr_engine: Mutex::new(None),
+            ocr_init_attempted: AtomicBool::new(false),
             session: Mutex::new(DraftSessionState::default()),
             model_path: resources_dir.join("model/ability_classifier_fp16.onnx"),
             class_names_path: resources_dir.join("model/class_names.json"),
@@ -359,7 +399,13 @@ impl ScanPipeline {
     ) -> Option<OverlaySnapshot> {
         let guard = self.session.lock().ok()?;
         let analysis = guard.last_analysis.as_ref()?;
-        Some(self.build_snapshot(analysis, &guard.timeline, options, sequence))
+        Some(self.build_snapshot(
+            analysis,
+            &guard.timeline,
+            &guard.ocr_hero_names_by_row,
+            options,
+            sequence,
+        ))
     }
 
     pub fn find_pool_combinations(
@@ -418,6 +464,81 @@ impl ScanPipeline {
             *guard = Some(loaded);
         }
         Ok(guard.as_mut().expect("classifier initialized"))
+    }
+
+    fn run_card_ocr_updates(
+        &self,
+        frame: &RawFrame,
+        hero_spots: &[(u8, Rect)],
+        identified_models: &[(Rect, IdentifiedHeroModel)],
+        strip_sigs: &mut HashMap<u8, Vec<u8>>,
+        ocr_reads: &mut HashMap<u8, OcrHeroRead>,
+    ) {
+        if !self.ocr_init_attempted.swap(true, Ordering::Relaxed) {
+            if let Ok(engine) = default_ocr_engine() {
+                if let Ok(mut guard) = self.ocr_engine.lock() {
+                    *guard = Some(engine);
+                }
+            }
+        }
+        let Ok(mut engine_guard) = self.ocr_engine.lock() else {
+            return;
+        };
+        let Some(engine) = engine_guard.as_mut() else {
+            return;
+        };
+
+        let pool_candidates: Vec<HeroNameCandidate> = identified_models
+            .iter()
+            .filter(|(_, m)| !is_unidentified_model(Some(&m.hero_name)))
+            .map(|(_, m)| HeroNameCandidate {
+                name: m.hero_name.clone(),
+                display_name: m.hero_display_name.clone(),
+            })
+            .collect();
+
+        let is_bgra = frame.format == PixelFormat::Bgra8;
+        for &(row, rect) in hero_spots {
+            let Some((strip, sw, sh)) = extract_hero_name_strip_rgba(
+                &frame.bytes,
+                frame.width,
+                frame.height,
+                is_bgra,
+                [
+                    rect.x.max(0) as u32,
+                    rect.y.max(0) as u32,
+                    rect.width,
+                    rect.height,
+                ],
+                OCR_STRIP_TARGET_WIDTH,
+            ) else {
+                continue;
+            };
+
+            let sig = compute_strip_signature(&strip, sw, sh);
+            if !strip_pixels_changed(strip_sigs.get(&row).map(Vec::as_slice), &sig, OCR_STRIP_DIFF_THRESHOLD) {
+                continue;
+            }
+            strip_sigs.insert(row, sig);
+
+            let outcome = recognize_card_hero_name(
+                engine.as_mut(),
+                &strip,
+                sw,
+                sh,
+                &pool_candidates,
+                &self.full_hero_roster,
+            );
+            if let Some(hero) = outcome.hero {
+                ocr_reads.insert(
+                    row,
+                    OcrHeroRead {
+                        name: hero.name,
+                        similarity: hero.similarity,
+                    },
+                );
+            }
+        }
     }
 
     fn scan_picked_slots(
@@ -555,12 +676,24 @@ impl ScanPipeline {
         &self,
         analysis: &CachedFrameAnalysis,
         timeline: &[PickEvent],
+        ocr_reads: &HashMap<u8, OcrHeroRead>,
         options: &ScanOptions,
         sequence: u64,
     ) -> OverlaySnapshot {
+        let ocr_name_map: HashMap<u8, String> = ocr_reads
+            .iter()
+            .map(|(&row, read)| (row, read.name.clone()))
+            .collect();
+        let effective_spot_order = options.selected_spot_hero_order.or_else(|| {
+            options
+                .gsi_local_hero
+                .as_deref()
+                .and_then(|hero| resolve_own_row_from_ocr(&ocr_name_map, hero, options.gsi_team_half_start))
+        });
+
         let mut my_picks: Vec<String> = Vec::new();
         let mut my_spot_has_ult = false;
-        if let Some(spot_order) = options.selected_spot_hero_order {
+        if let Some(spot_order) = effective_spot_order {
             for slot in &analysis.picked_abilities {
                 if slot.hero_order == spot_order {
                     if let Some(name) = &slot.ability_name {
@@ -794,7 +927,13 @@ impl ScanPipeline {
             .map(|&(hero_order, bounds)| PlayerSpotHighlight {
                 hero_order,
                 bounds,
-                is_my_spot: options.selected_spot_hero_order == Some(hero_order),
+                is_my_spot: effective_spot_order == Some(hero_order),
+                ocr_hero_name: ocr_reads.get(&hero_order).map(|r| {
+                    self.heroes_display_by_name
+                        .get(&r.name)
+                        .cloned()
+                        .unwrap_or_else(|| r.name.clone())
+                }),
             })
             .collect();
 
@@ -808,7 +947,7 @@ impl ScanPipeline {
             hero_models,
             hero_spots,
             picked_abilities: analysis.picked_abilities.clone(),
-            selected_spot_hero_order: options.selected_spot_hero_order,
+            selected_spot_hero_order: effective_spot_order,
             selected_model_hero_order: options.selected_model_hero_order,
             op_combinations: analysis.op_combinations.clone(),
             trap_combinations: analysis.trap_combinations.clone(),
@@ -817,6 +956,23 @@ impl ScanPipeline {
             auto_rescan_enabled: options.auto_rescan_enabled,
             dota_window: options.dota_window,
         }
+    }
+
+    pub fn scan_png_bytes(
+        &self,
+        png_bytes: &[u8],
+        options: &ScanOptions,
+        sequence: u64,
+    ) -> anyhow::Result<OverlaySnapshot> {
+        let (bytes, width, height) = decode_png_rgba_from_reader(Cursor::new(png_bytes))
+            .ok_or_else(|| anyhow::anyhow!("invalid or unsupported PNG image"))?;
+        let frame = RawFrame {
+            width,
+            height,
+            format: PixelFormat::Rgba8,
+            bytes,
+        };
+        self.scan_frame(&frame, options, sequence)
     }
 
     pub fn scan_frame(
@@ -987,6 +1143,7 @@ impl ScanPipeline {
             .session
             .lock()
             .map_err(|_| anyhow::anyhow!("session mutex poisoned"))?;
+
         if !pick_readings.is_empty() && !self.pick_templates.is_empty() {
             let upd = reconcile_ability_picks(&session.timeline, &pick_readings, None, None);
             session.timeline = upd.timeline;
@@ -995,7 +1152,67 @@ impl ScanPipeline {
                 session.timeline.push(ev);
             }
         }
-        let snapshot = self.build_snapshot(&analysis, &session.timeline, options, sequence);
+
+        let mut sigs = std::mem::take(&mut session.ocr_strip_sigs);
+        let mut ocr_reads = std::mem::take(&mut session.ocr_hero_names_by_row);
+        self.run_card_ocr_updates(
+            frame,
+            &analysis.hero_spots,
+            &analysis.identified_models,
+            &mut sigs,
+            &mut ocr_reads,
+        );
+        session.ocr_strip_sigs = sigs;
+        session.ocr_hero_names_by_row = ocr_reads;
+
+        let pool_model_refs: Vec<PoolModelRef> = analysis
+            .identified_models
+            .iter()
+            .map(|(_, m)| PoolModelRef {
+                hero_order: m.hero_order,
+                hero_name: Some(m.hero_name.clone()),
+            })
+            .collect();
+        let ocr_raw_map: HashMap<u8, String> = session
+            .ocr_hero_names_by_row
+            .iter()
+            .map(|(&r, rd)| (r, rd.name.clone()))
+            .collect();
+        let own_row = options.selected_spot_hero_order.or_else(|| {
+            options
+                .gsi_local_hero
+                .as_deref()
+                .and_then(|hero| resolve_own_row_from_ocr(&ocr_raw_map, hero, options.gsi_team_half_start))
+        });
+        let local_anchor = match (options.gsi_local_hero.as_ref(), own_row) {
+            (Some(hero_name), Some(row)) => Some(LocalModelAnchor {
+                hero_name: hero_name.clone(),
+                row,
+            }),
+            _ => None,
+        };
+        let assignments = resolve_model_assignments(
+            &pool_model_refs,
+            &session.ocr_hero_names_by_row,
+            local_anchor.as_ref(),
+        );
+        if !assignments.is_empty() {
+            let model_upd =
+                reconcile_model_markers(&session.timeline, &assignments, None, None);
+            session.timeline = model_upd.timeline;
+            for mut ev in model_upd.added {
+                ev.seq = session.timeline.len();
+                session.timeline.push(ev);
+            }
+        }
+
+        let snapshot = self.build_snapshot(
+            &analysis,
+            &session.timeline,
+            &session.ocr_hero_names_by_row,
+            options,
+            sequence,
+        );
         session.last_analysis = Some(analysis);
         Ok(snapshot)
     }
@@ -1022,6 +1239,19 @@ mod tests {
         ScanPipeline::from_resources_dir(&resources_dir).expect("load ScanPipeline")
     }
 
+    fn base_scan_options() -> ScanOptions {
+        ScanOptions {
+            role_mode: RoleMode::Fixed,
+            role_fixed_positions: vec![1, 2],
+            selected_spot_hero_order: Some(0),
+            selected_model_hero_order: None,
+            auto_rescan_enabled: true,
+            dota_window: None,
+            gsi_local_hero: None,
+            gsi_team_half_start: None,
+        }
+    }
+
     #[test]
     fn finds_op_and_trap_combinations_across_real_database() {
         let pipeline = test_pipeline();
@@ -1043,14 +1273,7 @@ mod tests {
             format: PixelFormat::Bgra8,
             bytes: vec![64u8; 1920 * 1080 * 4],
         };
-        let options = ScanOptions {
-            role_mode: RoleMode::Fixed,
-            role_fixed_positions: vec![1, 2],
-            selected_spot_hero_order: Some(0),
-            selected_model_hero_order: None,
-            auto_rescan_enabled: true,
-            dota_window: None,
-        };
+        let options = base_scan_options();
 
         let snapshot = pipeline
             .scan_frame(&frame, &options, 1)
@@ -1067,7 +1290,28 @@ mod tests {
     }
 
     #[test]
-    fn rescore_cached_updates_spot_model_and_suppresses_hero_highlights() {
+    fn scan_png_bytes_decodes_in_memory_1080p_png() {
+        let pipeline = test_pipeline();
+        let mut png_bytes = Vec::new();
+        {
+            let mut encoder = png::Encoder::new(&mut png_bytes, 1920, 1080);
+            encoder.set_color(png::ColorType::Rgba);
+            encoder.set_depth(png::BitDepth::Eight);
+            let mut writer = encoder.write_header().unwrap();
+            let raw = vec![48u8; 1920 * 1080 * 4];
+            writer.write_image_data(&raw).unwrap();
+        }
+
+        let snap = pipeline
+            .scan_png_bytes(&png_bytes, &base_scan_options(), 7)
+            .expect("scan encoded PNG bytes");
+        assert_eq!(snap.sequence, 7);
+        assert_eq!(snap.slots.len(), 48);
+        assert_eq!(snap.target_resolution, "1920x1080");
+    }
+
+    #[test]
+    fn rescore_cached_updates_spot_model_suppresses_hero_and_auto_resolves_own_row() {
         let pipeline = test_pipeline();
         let mut names_iter = pipeline.abilities_by_name.keys().cloned();
         let ab1 = names_iter.next().unwrap();
@@ -1107,7 +1351,10 @@ mod tests {
                     identification_confidence: 0.99,
                 },
             )],
-            hero_spots: vec![(0, Rect { x: 20, y: 20, width: 200, height: 100 })],
+            hero_spots: vec![
+                (0, Rect { x: 20, y: 20, width: 200, height: 100 }),
+                (4, Rect { x: 20, y: 140, width: 200, height: 100 }),
+            ],
             picked_abilities: Vec::new(),
             op_combinations: Vec::new(),
             trap_combinations: Vec::new(),
@@ -1116,24 +1363,38 @@ mod tests {
         {
             let mut session = pipeline.session.lock().unwrap();
             session.last_analysis = Some(analysis);
+            session.ocr_hero_names_by_row.insert(
+                4,
+                OcrHeroRead {
+                    name: axe_rec.name.clone(),
+                    similarity: 1.0,
+                },
+            );
         }
 
-        let no_model_opts = ScanOptions {
+        let auto_row_opts = ScanOptions {
             role_mode: RoleMode::Off,
             role_fixed_positions: vec![],
             selected_spot_hero_order: None,
             selected_model_hero_order: None,
             auto_rescan_enabled: false,
             dota_window: None,
+            gsi_local_hero: Some(axe_rec.name.clone()),
+            gsi_team_half_start: Some(0),
         };
-        let snap1 = pipeline.rescore_cached(&no_model_opts, 2).expect("cached snapshot");
+        let snap1 = pipeline.rescore_cached(&auto_row_opts, 2).expect("cached snapshot");
         assert!(snap1.hero_models[0].is_top_tier);
-        assert!(!snap1.hero_models[0].is_my_model);
+        assert_eq!(snap1.selected_spot_hero_order, Some(4));
+        assert!(snap1.hero_spots[1].is_my_spot);
+        assert_eq!(
+            snap1.hero_spots[1].ocr_hero_name.as_deref(),
+            Some(axe_rec.display_name.as_str())
+        );
 
         let with_model_opts = ScanOptions {
             selected_model_hero_order: Some(3),
             selected_spot_hero_order: Some(0),
-            ..no_model_opts
+            ..auto_row_opts
         };
         let snap2 = pipeline.rescore_cached(&with_model_opts, 3).expect("rescored snapshot");
         assert!(!snap2.hero_models[0].is_top_tier);
@@ -1180,8 +1441,10 @@ mod tests {
             selected_model_hero_order: None,
             auto_rescan_enabled: false,
             dota_window: None,
+            gsi_local_hero: None,
+            gsi_team_half_start: None,
         };
-        let snap = pipeline.build_snapshot(&analysis, &[], &opts, 5);
+        let snap = pipeline.build_snapshot(&analysis, &[], &HashMap::new(), &opts, 5);
         assert!(snap.slots[0].is_synergy_pick);
         assert_eq!(snap.slots[0].top_rank, Some(1));
     }

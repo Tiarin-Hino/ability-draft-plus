@@ -73,6 +73,8 @@ pub struct PlayerSpotHighlight {
     pub hero_order: u8,
     pub bounds: Rect,
     pub is_my_spot: bool,
+    #[serde(default)]
+    pub ocr_hero_name: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
