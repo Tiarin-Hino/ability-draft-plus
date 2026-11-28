@@ -1,8 +1,11 @@
-//! Native GPU overlay (`eframe` / `wgpu`) with stateless pointer passthrough,
-//! Role Mode quick bar, OP/Trap combo drawers, My Spot / My Model selection, and
-//! dynamic Dota 2 window tracking.
+//! Native GPU overlay (`eframe` / `wgpu`) with stateless OS pointer passthrough,
+//! DPI-aligned coordinates, Role Mode quick bar, OP/Trap combo drawers, and
+//! My Spot / My Model selection.
 
-use std::sync::{Arc, RwLock};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc, RwLock,
+};
 
 use ad_protocol::{
     HeroModelHighlight, OverlayCommand, OverlaySnapshot, Rect, RoleMode, SlotHighlight,
@@ -23,11 +26,36 @@ const BLUE_SYNERGY: Color32 = Color32::from_rgb(72, 148, 232);
 const AMBER_UNKNOWN: Color32 = Color32::from_rgb(232, 174, 52);
 const TRAP_RED: Color32 = Color32::from_rgb(230, 114, 140);
 
+pub fn phys_rect_to_egui(rect: Rect, pixels_per_point: f32) -> egui::Rect {
+    let ppp = pixels_per_point.max(0.5);
+    egui::Rect::from_min_size(
+        Pos2::new(rect.x as f32 / ppp, rect.y as f32 / ppp),
+        Vec2::new(rect.width as f32 / ppp, rect.height as f32 / ppp),
+    )
+}
+
+pub fn egui_rect_to_phys(rect: egui::Rect, pixels_per_point: f32, pad_px: i32) -> Rect {
+    let ppp = pixels_per_point.max(0.5);
+    let x = (rect.min.x * ppp).floor() as i32 - pad_px;
+    let y = (rect.min.y * ppp).floor() as i32 - pad_px;
+    let w = (rect.width() * ppp).ceil().max(0.0) as i32 + pad_px.saturating_mul(2);
+    let h = (rect.height() * ppp).ceil().max(0.0) as i32 + pad_px.saturating_mul(2);
+    Rect {
+        x,
+        y,
+        width: w.max(0) as u32,
+        height: h.max(0) as u32,
+    }
+}
+
 pub struct OverlayHudApp {
     snapshot: Arc<RwLock<OverlaySnapshot>>,
     conn_state: Arc<RwLock<DaemonConnectionState>>,
     cmd_tx: mpsc::UnboundedSender<OverlayCommand>,
-    hit_tester: HitTester,
+    hit_tester: Arc<RwLock<HitTester>>,
+    hover_rects: Arc<RwLock<Vec<Rect>>>,
+    cursor_phys: Arc<RwLock<Option<(i32, i32)>>>,
+    os_interactive: Arc<AtomicBool>,
     last_passthrough: Option<bool>,
     last_window_bounds: Option<Rect>,
     show_op_drawer: bool,
@@ -41,14 +69,18 @@ pub struct OverlayHudApp {
 }
 
 enum HoveredCard<'a> {
-    Ability(&'a SlotHighlight),
-    HeroModel(&'a HeroModelHighlight),
+    Ability(&'a SlotHighlight, egui::Rect),
+    HeroModel(&'a HeroModelHighlight, egui::Rect),
 }
 
 impl OverlayHudApp {
     fn new(cc: &eframe::CreationContext<'_>, daemon_url: String) -> Self {
         let snapshot = Arc::new(RwLock::new(empty_snapshot()));
         let conn_state = Arc::new(RwLock::new(DaemonConnectionState::Connecting));
+        let hit_tester = Arc::new(RwLock::new(HitTester::new()));
+        let hover_rects = Arc::new(RwLock::new(Vec::new()));
+        let cursor_phys = Arc::new(RwLock::new(None));
+        let os_interactive = Arc::new(AtomicBool::new(false));
         let (cmd_tx, cmd_rx) = mpsc::unbounded_channel();
 
         let egui_ctx = cc.egui_ctx.clone();
@@ -60,11 +92,27 @@ impl OverlayHudApp {
             Arc::new(move || egui_ctx.request_repaint()),
         );
 
+        #[cfg(target_os = "windows")]
+        {
+            let repaint_ctx = cc.egui_ctx.clone();
+            crate::win32_surface::spawn_cursor_passthrough_watcher(
+                "Ability Draft Plus Overlay",
+                hit_tester.clone(),
+                hover_rects.clone(),
+                cursor_phys.clone(),
+                os_interactive.clone(),
+                Arc::new(move || repaint_ctx.request_repaint()),
+            );
+        }
+
         Self {
             snapshot,
             conn_state,
             cmd_tx,
-            hit_tester: HitTester::new(),
+            hit_tester,
+            hover_rects,
+            cursor_phys,
+            os_interactive,
             last_passthrough: None,
             last_window_bounds: None,
             show_op_drawer: false,
@@ -90,31 +138,41 @@ impl OverlayHudApp {
         let Some(mut rect) = target else {
             return;
         };
+        let ppp = ctx.pixels_per_point().max(0.5);
         if let Some(monitor) = ctx.input(|i| i.viewport().monitor_size) {
-            if rect.width as f32 >= monitor.x && rect.height as f32 >= monitor.y {
+            let mon_phys_w = (monitor.x * ppp).round() as u32;
+            let mon_phys_h = (monitor.y * ppp).round() as u32;
+            if rect.width >= mon_phys_w && rect.height >= mon_phys_h {
                 // Keep Windows DWM click-through forwarding intact by shrinking 1px off full width.
                 rect.width = rect.width.saturating_sub(1);
             }
         }
         ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(Pos2::new(
-            rect.x as f32,
-            rect.y as f32,
+            rect.x as f32 / ppp,
+            rect.y as f32 / ppp,
         )));
         ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(Vec2::new(
-            rect.width as f32,
-            rect.height as f32,
+            rect.width as f32 / ppp,
+            rect.height as f32 / ppp,
         )));
     }
 
-    fn sync_passthrough(&mut self, ctx: &egui::Context) {
-        let pointer_pos = ctx.input(|i| i.pointer.latest_pos());
-        let in_region = pointer_pos
-            .map(|p| {
-                self.hit_tester
-                    .is_interactive(p.x.round() as i32, p.y.round() as i32)
-            })
-            .unwrap_or(false);
-        let interactive = in_region || ctx.egui_wants_pointer_input();
+    fn sync_passthrough(&mut self, ctx: &egui::Context, ppp: f32) {
+        let os_hit = if cfg!(target_os = "windows") {
+            self.os_interactive.load(Ordering::Relaxed)
+        } else {
+            ctx.input(|i| i.pointer.latest_pos())
+                .and_then(|p| {
+                    let px = (p.x * ppp).round() as i32;
+                    let py = (p.y * ppp).round() as i32;
+                    self.hit_tester
+                        .read()
+                        .ok()
+                        .map(|guard| guard.is_interactive(px, py))
+                })
+                .unwrap_or(false)
+        };
+        let interactive = os_hit || ctx.egui_wants_pointer_input();
         let passthrough = !interactive;
         if self.last_passthrough != Some(passthrough) {
             ctx.send_viewport_cmd(egui::ViewportCommand::MousePassthrough(passthrough));
@@ -136,14 +194,14 @@ impl OverlayHudApp {
 
     fn draw_card_tooltip(
         painter: &egui::Painter,
-        anchor: Rect,
+        anchor: egui::Rect,
         badge: Option<(&str, Color32)>,
         title: &str,
         winrate: Option<f64>,
         pick_rate: Option<f64>,
         score: Option<f64>,
     ) {
-        let tip_pos = Pos2::new((anchor.x + anchor.width as i32 + 10) as f32, anchor.y as f32);
+        let tip_pos = Pos2::new(anchor.max.x + 8.0, anchor.min.y);
         let tip_rect = egui::Rect::from_min_size(tip_pos, Vec2::new(220.0, 92.0));
         painter.rect_filled(tip_rect, CornerRadius::same(6), BG_SLATE);
         painter.rect_stroke(
@@ -203,6 +261,7 @@ impl OverlayHudApp {
         ctx: &egui::Context,
         snap: &OverlaySnapshot,
         pointer: Option<Pos2>,
+        ppp: f32,
     ) {
         if snap.scanning {
             return;
@@ -211,10 +270,7 @@ impl OverlayHudApp {
         let mut hovered: Option<HoveredCard<'_>> = None;
 
         for slot in &snap.slots {
-            let r = egui::Rect::from_min_size(
-                Pos2::new(slot.bounds.x as f32, slot.bounds.y as f32),
-                Vec2::new(slot.bounds.width as f32, slot.bounds.height as f32),
-            );
+            let r = phys_rect_to_egui(slot.bounds, ppp);
             let color = if slot.is_unknown {
                 Some(AMBER_UNKNOWN)
             } else if slot.is_synergy_pick {
@@ -238,16 +294,13 @@ impl OverlayHudApp {
             }
             if let Some(pt) = pointer {
                 if r.contains(pt) {
-                    hovered = Some(HoveredCard::Ability(slot));
+                    hovered = Some(HoveredCard::Ability(slot, r));
                 }
             }
         }
 
         for model in &snap.hero_models {
-            let r = egui::Rect::from_min_size(
-                Pos2::new(model.bounds.x as f32, model.bounds.y as f32),
-                Vec2::new(model.bounds.width as f32, model.bounds.height as f32),
-            );
+            let r = phys_rect_to_egui(model.bounds, ppp);
             let stroke_color = if model.is_my_model {
                 Some(TEAL_PICK)
             } else if model.is_top_tier {
@@ -271,13 +324,13 @@ impl OverlayHudApp {
             }
             if let Some(pt) = pointer {
                 if r.contains(pt) {
-                    hovered = Some(HoveredCard::HeroModel(model));
+                    hovered = Some(HoveredCard::HeroModel(model, r));
                 }
             }
         }
 
         match hovered {
-            Some(HoveredCard::Ability(slot)) => {
+            Some(HoveredCard::Ability(slot, rect)) => {
                 let badge = if slot.is_synergy_pick {
                     Some(("SYNERGY PICK", BLUE_SYNERGY))
                 } else if let Some(rank) = slot.top_rank {
@@ -290,7 +343,7 @@ impl OverlayHudApp {
                 };
                 Self::draw_card_tooltip(
                     &painter,
-                    slot.bounds,
+                    rect,
                     badge,
                     &slot.display_name,
                     slot.winrate,
@@ -298,7 +351,7 @@ impl OverlayHudApp {
                     slot.consolidated_score,
                 );
             }
-            Some(HoveredCard::HeroModel(model)) => {
+            Some(HoveredCard::HeroModel(model, rect)) => {
                 let badge = if model.is_my_model {
                     Some(("MY MODEL", TEAL_PICK))
                 } else if model.top_rank.is_some() {
@@ -308,7 +361,7 @@ impl OverlayHudApp {
                 };
                 Self::draw_card_tooltip(
                     &painter,
-                    model.bounds,
+                    rect,
                     badge,
                     &model.display_name,
                     model.winrate,
@@ -324,6 +377,7 @@ impl OverlayHudApp {
         &self,
         ctx: &egui::Context,
         snap: &OverlaySnapshot,
+        ppp: f32,
         regions: &mut Vec<HitRegion>,
     ) {
         if snap.scanning {
@@ -331,7 +385,8 @@ impl OverlayHudApp {
         }
 
         for spot in &snap.hero_spots {
-            let pos = Pos2::new(spot.bounds.x as f32 + 4.0, spot.bounds.y as f32 + 4.0);
+            let r = phys_rect_to_egui(spot.bounds, ppp);
+            let pos = Pos2::new(r.min.x + 4.0, r.min.y + 4.0);
             let resp = egui::Area::new(self.spot_base_id.with(spot.hero_order))
                 .fixed_pos(pos)
                 .show(ctx, |ui| {
@@ -352,6 +407,7 @@ impl OverlayHudApp {
                 regions,
                 &format!("spot_{}", spot.hero_order),
                 resp.response.rect,
+                ppp,
             );
         }
 
@@ -359,10 +415,8 @@ impl OverlayHudApp {
             if model.is_unknown {
                 continue;
             }
-            let pos = Pos2::new(
-                model.bounds.x as f32,
-                (model.bounds.y + model.bounds.height as i32 - 18).max(0) as f32,
-            );
+            let r = phys_rect_to_egui(model.bounds, ppp);
+            let pos = Pos2::new(r.min.x, (r.max.y - 18.0).max(0.0));
             let resp = egui::Area::new(self.model_base_id.with(model.hero_order))
                 .fixed_pos(pos)
                 .show(ctx, |ui| {
@@ -378,19 +432,15 @@ impl OverlayHudApp {
                 regions,
                 &format!("model_{}", model.hero_order),
                 resp.response.rect,
+                ppp,
             );
         }
     }
 
-    fn push_rect_region(regions: &mut Vec<HitRegion>, id: &str, rect: egui::Rect) {
+    fn push_rect_region(regions: &mut Vec<HitRegion>, id: &str, rect: egui::Rect, ppp: f32) {
         regions.push(HitRegion {
             id: id.to_string(),
-            rect: Rect {
-                x: rect.min.x.floor() as i32,
-                y: rect.min.y.floor() as i32,
-                width: rect.width().ceil().max(0.0) as u32,
-                height: rect.height().ceil().max(0.0) as u32,
-            },
+            rect: egui_rect_to_phys(rect, ppp, 2),
         });
     }
 
@@ -445,6 +495,7 @@ impl eframe::App for OverlayHudApp {
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let ctx = ui.ctx();
+        let ppp = ctx.pixels_per_point().max(0.5);
         let snap = self
             .snapshot
             .read()
@@ -457,11 +508,26 @@ impl eframe::App for OverlayHudApp {
             .unwrap_or(DaemonConnectionState::Disconnected);
 
         self.sync_window_bounds(ctx, snap.dota_window);
-        let pointer_pos = ctx.input(|i| i.pointer.latest_pos());
-        self.draw_board_highlights(ctx, &snap, pointer_pos);
+        let os_pointer = self
+            .cursor_phys
+            .read()
+            .ok()
+            .and_then(|g| *g)
+            .map(|(x, y)| Pos2::new(x as f32 / ppp, y as f32 / ppp));
+        let pointer_pos = ctx.input(|i| i.pointer.latest_pos()).or(os_pointer);
+
+        if let Ok(mut hover_guard) = self.hover_rects.write() {
+            hover_guard.clear();
+            if !snap.scanning {
+                hover_guard.extend(snap.slots.iter().map(|s| s.bounds));
+                hover_guard.extend(snap.hero_models.iter().map(|m| m.bounds));
+            }
+        }
+
+        self.draw_board_highlights(ctx, &snap, pointer_pos, ppp);
 
         let mut regions = Vec::new();
-        self.draw_spot_and_model_buttons(ctx, &snap, &mut regions);
+        self.draw_spot_and_model_buttons(ctx, &snap, ppp, &mut regions);
 
         // 1. Controls bar
         let controls_resp = egui::Area::new(self.controls_area_id)
@@ -492,7 +558,7 @@ impl eframe::App for OverlayHudApp {
                             }
 
                             if ui
-                                .selectable_label(snap.auto_rescan_enabled, "Auto")
+                                .selectable_label(snap.auto_rescan_enabled, "Auto-Scan")
                                 .clicked()
                             {
                                 self.send_cmd(OverlayCommand::SetAutoRescan {
@@ -535,7 +601,7 @@ impl eframe::App for OverlayHudApp {
                         });
                     });
             });
-        Self::push_rect_region(&mut regions, "controls_bar", controls_resp.response.rect);
+        Self::push_rect_region(&mut regions, "controls_bar", controls_resp.response.rect, ppp);
 
         // 2. Role Mode quick bar
         let role_y = controls_resp.response.rect.max.y + 4.0;
@@ -602,7 +668,7 @@ impl eframe::App for OverlayHudApp {
                         });
                     });
             });
-        Self::push_rect_region(&mut regions, "role_bar", role_resp.response.rect);
+        Self::push_rect_region(&mut regions, "role_bar", role_resp.response.rect, ppp);
 
         // 3. Collapsible OP / Trap combo drawers
         let drawer_y = role_resp.response.rect.max.y + 6.0;
@@ -616,7 +682,7 @@ impl eframe::App for OverlayHudApp {
                 &snap.op_combinations,
                 &mut self.show_op_drawer,
             );
-            Self::push_rect_region(&mut regions, "op_drawer", rect);
+            Self::push_rect_region(&mut regions, "op_drawer", rect, ppp);
         }
         if self.show_trap_drawer && !snap.trap_combinations.is_empty() {
             let rect = Self::draw_combo_drawer(
@@ -628,11 +694,13 @@ impl eframe::App for OverlayHudApp {
                 &snap.trap_combinations,
                 &mut self.show_trap_drawer,
             );
-            Self::push_rect_region(&mut regions, "trap_drawer", rect);
+            Self::push_rect_region(&mut regions, "trap_drawer", rect, ppp);
         }
 
-        self.hit_tester.set_regions(regions);
-        self.sync_passthrough(ctx);
+        if let Ok(mut guard) = self.hit_tester.write() {
+            guard.set_regions(regions);
+        }
+        self.sync_passthrough(ctx, ppp);
     }
 }
 
@@ -655,4 +723,36 @@ pub fn run_hud(daemon_url: String) -> anyhow::Result<()> {
         Box::new(move |cc| Ok(Box::new(OverlayHudApp::new(cc, daemon_url)))),
     )
     .map_err(|e| anyhow::anyhow!("eframe exited with error: {e}"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn converts_between_physical_pixels_and_egui_logical_points() {
+        let phys = Rect {
+            x: 150,
+            y: 300,
+            width: 300,
+            height: 150,
+        };
+        let logical = phys_rect_to_egui(phys, 1.5);
+        assert!((logical.min.x - 100.0).abs() < 1e-4);
+        assert!((logical.min.y - 200.0).abs() < 1e-4);
+        assert!((logical.width() - 200.0).abs() < 1e-4);
+        assert!((logical.height() - 100.0).abs() < 1e-4);
+
+        let roundtrip = egui_rect_to_phys(logical, 1.5, 2);
+        assert_eq!(roundtrip.x, 148);
+        assert_eq!(roundtrip.y, 298);
+        assert_eq!(roundtrip.width, 304);
+        assert_eq!(roundtrip.height, 154);
+
+        let unity = phys_rect_to_egui(phys, 1.0);
+        assert_eq!(
+            egui_rect_to_phys(unity, 1.0, 0),
+            phys
+        );
+    }
 }
