@@ -1,0 +1,1225 @@
+{
+  "scoringCases": [
+    {
+      "input": {
+        "winrate": null,
+        "pickRate": null,
+        "personal": null
+      },
+      "normalizedWinrate": 0.5,
+      "normalizedPickOrder": 0.5,
+      "consolidatedScore": 0.5,
+      "personalized": {
+        "consolidatedScore": 0.5,
+        "personalGames": null,
+        "personalWinrate": null,
+        "personalScoreDelta": null
+      }
+    },
+    {
+      "input": {
+        "winrate": 0.55,
+        "pickRate": 12.3,
+        "personal": null
+      },
+      "normalizedWinrate": 0.55,
+      "normalizedPickOrder": 0.7693877551020408,
+      "consolidatedScore": 0.6816326530612244,
+      "personalized": {
+        "consolidatedScore": 0.6816326530612244,
+        "personalGames": null,
+        "personalWinrate": null,
+        "personalScoreDelta": null
+      }
+    },
+    {
+      "input": {
+        "winrate": 0,
+        "pickRate": 50,
+        "personal": null
+      },
+      "normalizedWinrate": 0,
+      "normalizedPickOrder": 0,
+      "consolidatedScore": 0,
+      "personalized": {
+        "consolidatedScore": 0,
+        "personalGames": null,
+        "personalWinrate": null,
+        "personalScoreDelta": null
+      }
+    },
+    {
+      "input": {
+        "winrate": 1,
+        "pickRate": 1,
+        "personal": null
+      },
+      "normalizedWinrate": 1,
+      "normalizedPickOrder": 1,
+      "consolidatedScore": 1,
+      "personalized": {
+        "consolidatedScore": 1,
+        "personalGames": null,
+        "personalWinrate": null,
+        "personalScoreDelta": null
+      }
+    },
+    {
+      "input": {
+        "winrate": 0.48,
+        "pickRate": 0.2,
+        "personal": null
+      },
+      "normalizedWinrate": 0.48,
+      "normalizedPickOrder": 1,
+      "consolidatedScore": 0.792,
+      "personalized": {
+        "consolidatedScore": 0.792,
+        "personalGames": null,
+        "personalWinrate": null,
+        "personalScoreDelta": null
+      }
+    },
+    {
+      "input": {
+        "winrate": 0.61,
+        "pickRate": 85,
+        "personal": null
+      },
+      "normalizedWinrate": 0.61,
+      "normalizedPickOrder": 0,
+      "consolidatedScore": 0.244,
+      "personalized": {
+        "consolidatedScore": 0.244,
+        "personalGames": null,
+        "personalWinrate": null,
+        "personalScoreDelta": null
+      }
+    },
+    {
+      "input": {
+        "winrate": 0.5,
+        "pickRate": 25.5,
+        "personal": {
+          "games": 0,
+          "winrate": 0.9,
+          "avgPickPosition": 1
+        }
+      },
+      "normalizedWinrate": 0.5,
+      "normalizedPickOrder": 0.5,
+      "consolidatedScore": 0.5,
+      "personalized": {
+        "consolidatedScore": 0.5,
+        "personalGames": null,
+        "personalWinrate": null,
+        "personalScoreDelta": null
+      }
+    },
+    {
+      "input": {
+        "winrate": 0.5,
+        "pickRate": 25.5,
+        "personal": {
+          "games": 20,
+          "winrate": 0.7,
+          "avgPickPosition": 1
+        }
+      },
+      "normalizedWinrate": 0.5,
+      "normalizedPickOrder": 0.5,
+      "consolidatedScore": 0.5,
+      "personalized": {
+        "consolidatedScore": 0.69,
+        "personalGames": 20,
+        "personalWinrate": 0.7,
+        "personalScoreDelta": 0.18999999999999995
+      }
+    },
+    {
+      "input": {
+        "winrate": 0.52,
+        "pickRate": 15,
+        "personal": {
+          "games": 5,
+          "winrate": 0.4,
+          "avgPickPosition": null
+        }
+      },
+      "normalizedWinrate": 0.52,
+      "normalizedPickOrder": 0.7142857142857143,
+      "consolidatedScore": 0.6365714285714286,
+      "personalized": {
+        "consolidatedScore": 0.6269714285714285,
+        "personalGames": 5,
+        "personalWinrate": 0.4,
+        "personalScoreDelta": -0.009600000000000053
+      }
+    },
+    {
+      "input": {
+        "winrate": null,
+        "pickRate": null,
+        "personal": {
+          "games": 10,
+          "winrate": 0.65,
+          "avgPickPosition": 5
+        }
+      },
+      "normalizedWinrate": 0.5,
+      "normalizedPickOrder": 0.5,
+      "consolidatedScore": 0.5,
+      "personalized": {
+        "consolidatedScore": 0.603673469387755,
+        "personalGames": 10,
+        "personalWinrate": 0.65,
+        "personalScoreDelta": 0.10367346938775501
+      }
+    }
+  ],
+  "shiftRows": [
+    {
+      "name": "low",
+      "killsShift": 0,
+      "deathsShift": null,
+      "kaShift": -0.5,
+      "gpmShift": -1,
+      "xpmShift": 0,
+      "dmgShift": null,
+      "healingShift": 0
+    },
+    {
+      "name": "tie_a",
+      "killsShift": 1,
+      "deathsShift": null,
+      "kaShift": 0.2,
+      "gpmShift": 0.5,
+      "xpmShift": 0,
+      "dmgShift": null,
+      "healingShift": 0
+    },
+    {
+      "name": "tie_b",
+      "killsShift": 1,
+      "deathsShift": null,
+      "kaShift": 0.2,
+      "gpmShift": 0.5,
+      "xpmShift": 0,
+      "dmgShift": null,
+      "healingShift": 0
+    },
+    {
+      "name": "high_heal",
+      "killsShift": 2,
+      "deathsShift": null,
+      "kaShift": 1.4,
+      "gpmShift": 1.2,
+      "xpmShift": 0.8,
+      "dmgShift": null,
+      "healingShift": 3.1
+    },
+    {
+      "name": "null_row",
+      "killsShift": null,
+      "deathsShift": null,
+      "kaShift": null,
+      "gpmShift": null,
+      "xpmShift": null,
+      "dmgShift": null,
+      "healingShift": null
+    }
+  ],
+  "shiftAxes": {
+    "low": {
+      "greed": -1,
+      "killtaking": -1,
+      "playmaking": -1,
+      "enabling": -0.33333333333333337
+    },
+    "tie_a": {
+      "greed": 0,
+      "killtaking": 0,
+      "playmaking": 0,
+      "enabling": -0.33333333333333337
+    },
+    "tie_b": {
+      "greed": 0,
+      "killtaking": 0,
+      "playmaking": 0,
+      "enabling": -0.33333333333333337
+    },
+    "high_heal": {
+      "greed": 1,
+      "killtaking": 1,
+      "playmaking": 1,
+      "enabling": 1
+    },
+    "null_row": {
+      "greed": 0,
+      "killtaking": 0,
+      "playmaking": 0,
+      "enabling": 0
+    }
+  },
+  "roleCases": [
+    {
+      "input": {
+        "name": "null_context_off",
+        "axes": {
+          "greed": 0,
+          "killtaking": 0,
+          "playmaking": 0,
+          "enabling": -0.33333333333333337
+        },
+        "positions": [],
+        "myPickCount": 0,
+        "teamGreed": null,
+        "candidateTags": [
+          "nuke"
+        ],
+        "roleMust": [],
+        "myPickTags": [],
+        "poolHasHardCc": true
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "name": "pos5_via_nuke_and_stun_suppression",
+        "axes": {
+          "greed": -1,
+          "killtaking": -1,
+          "playmaking": -1,
+          "enabling": -0.33333333333333337
+        },
+        "positions": [
+          5
+        ],
+        "myPickCount": 0,
+        "teamGreed": null,
+        "candidateTags": [
+          "nuke",
+          "soft_cc"
+        ],
+        "roleMust": [],
+        "myPickTags": [],
+        "poolHasHardCc": true
+      },
+      "output": {
+        "delta": 0.156,
+        "bestPosition": 5,
+        "reasons": [
+          "covers:waveclear:nuke"
+        ],
+        "curated": false
+      }
+    },
+    {
+      "input": {
+        "name": "pos5_soft_cc_when_no_hard_cc_in_pool",
+        "axes": {
+          "greed": -1,
+          "killtaking": -1,
+          "playmaking": -1,
+          "enabling": -0.33333333333333337
+        },
+        "positions": [
+          5
+        ],
+        "myPickCount": 1,
+        "teamGreed": 0.4,
+        "candidateTags": [
+          "soft_cc"
+        ],
+        "roleMust": [],
+        "myPickTags": [],
+        "poolHasHardCc": false
+      },
+      "output": {
+        "delta": 0.1416,
+        "bestPosition": 5,
+        "reasons": [
+          "partial:hard_cc"
+        ],
+        "curated": false
+      }
+    },
+    {
+      "input": {
+        "name": "pos1_curated_with_mana_budget_excess",
+        "axes": {
+          "greed": 1,
+          "killtaking": 1,
+          "playmaking": 1,
+          "enabling": 1
+        },
+        "positions": [
+          1,
+          2
+        ],
+        "myPickCount": 3,
+        "teamGreed": 0.6,
+        "candidateTags": [
+          "steroid",
+          "mana_hungry"
+        ],
+        "roleMust": [
+          1
+        ],
+        "myPickTags": [
+          [
+            "nuke",
+            "mana_hungry"
+          ],
+          [
+            "mobility",
+            "mana_hungry"
+          ]
+        ],
+        "poolHasHardCc": true
+      },
+      "output": {
+        "delta": 0.1948,
+        "bestPosition": 1,
+        "reasons": [
+          "curated",
+          "covers:steroid",
+          "duplicate:mana_budget"
+        ],
+        "curated": true
+      }
+    }
+  ],
+  "topTierEntities": [
+    {
+      "internalName": "synergy_std",
+      "displayName": "Syn Std",
+      "entityType": "ability",
+      "heroOrder": 0,
+      "abilityOrder": 1,
+      "consolidatedScore": 0.3,
+      "winrate": 0.5,
+      "pickRate": 25,
+      "isUltimateFromCoordSource": false,
+      "isUltimateFromDb": false,
+      "isGeneralTopTier": false,
+      "isSynergySuggestionForMySpot": false,
+      "dbAbilityId": 1
+    },
+    {
+      "internalName": "synergy_ult",
+      "displayName": "Syn Ult",
+      "entityType": "ability",
+      "heroOrder": 0,
+      "abilityOrder": 0,
+      "consolidatedScore": 0.99,
+      "winrate": 0.6,
+      "pickRate": 5,
+      "isUltimateFromCoordSource": true,
+      "isUltimateFromDb": true,
+      "isGeneralTopTier": false,
+      "isSynergySuggestionForMySpot": false,
+      "dbAbilityId": 2
+    },
+    {
+      "internalName": "curated_low",
+      "displayName": "Curated Low",
+      "entityType": "ability",
+      "heroOrder": 1,
+      "abilityOrder": 1,
+      "consolidatedScore": 0.12,
+      "winrate": 0.45,
+      "pickRate": 40,
+      "isUltimateFromCoordSource": false,
+      "isUltimateFromDb": false,
+      "isGeneralTopTier": false,
+      "isSynergySuggestionForMySpot": false,
+      "roleCurated": true,
+      "dbAbilityId": 3
+    },
+    {
+      "internalName": "hero_curated",
+      "displayName": "Hero Curated",
+      "entityType": "hero",
+      "heroOrder": 2,
+      "abilityOrder": -1,
+      "consolidatedScore": 0.95,
+      "winrate": 0.58,
+      "pickRate": 4,
+      "isUltimateFromCoordSource": false,
+      "isUltimateFromDb": false,
+      "isGeneralTopTier": false,
+      "isSynergySuggestionForMySpot": false,
+      "roleCurated": true,
+      "dbHeroId": 10
+    },
+    {
+      "internalName": "pool_ult",
+      "displayName": "Pool Ult",
+      "entityType": "ability",
+      "heroOrder": 3,
+      "abilityOrder": 0,
+      "consolidatedScore": 0.98,
+      "winrate": 0.59,
+      "pickRate": 3,
+      "isUltimateFromCoordSource": true,
+      "isUltimateFromDb": true,
+      "isGeneralTopTier": false,
+      "isSynergySuggestionForMySpot": false,
+      "dbAbilityId": 4
+    },
+    {
+      "internalName": "std_0",
+      "displayName": "Std 0",
+      "entityType": "ability",
+      "heroOrder": 0,
+      "abilityOrder": 1,
+      "consolidatedScore": 0.5,
+      "winrate": 0.5,
+      "pickRate": 20,
+      "isUltimateFromCoordSource": false,
+      "isUltimateFromDb": false,
+      "isGeneralTopTier": false,
+      "isSynergySuggestionForMySpot": false,
+      "dbAbilityId": 100
+    },
+    {
+      "internalName": "std_1",
+      "displayName": "Std 1",
+      "entityType": "ability",
+      "heroOrder": 1,
+      "abilityOrder": 1,
+      "consolidatedScore": 0.52,
+      "winrate": 0.5,
+      "pickRate": 19,
+      "isUltimateFromCoordSource": false,
+      "isUltimateFromDb": false,
+      "isGeneralTopTier": false,
+      "isSynergySuggestionForMySpot": false,
+      "dbAbilityId": 101
+    },
+    {
+      "internalName": "std_2",
+      "displayName": "Std 2",
+      "entityType": "ability",
+      "heroOrder": 2,
+      "abilityOrder": 1,
+      "consolidatedScore": 0.54,
+      "winrate": 0.5,
+      "pickRate": 18,
+      "isUltimateFromCoordSource": false,
+      "isUltimateFromDb": false,
+      "isGeneralTopTier": false,
+      "isSynergySuggestionForMySpot": false,
+      "dbAbilityId": 102
+    },
+    {
+      "internalName": "std_3",
+      "displayName": "Std 3",
+      "entityType": "ability",
+      "heroOrder": 3,
+      "abilityOrder": 1,
+      "consolidatedScore": 0.56,
+      "winrate": 0.5,
+      "pickRate": 17,
+      "isUltimateFromCoordSource": false,
+      "isUltimateFromDb": false,
+      "isGeneralTopTier": false,
+      "isSynergySuggestionForMySpot": false,
+      "dbAbilityId": 103
+    },
+    {
+      "internalName": "std_4",
+      "displayName": "Std 4",
+      "entityType": "ability",
+      "heroOrder": 4,
+      "abilityOrder": 1,
+      "consolidatedScore": 0.58,
+      "winrate": 0.5,
+      "pickRate": 16,
+      "isUltimateFromCoordSource": false,
+      "isUltimateFromDb": false,
+      "isGeneralTopTier": false,
+      "isSynergySuggestionForMySpot": false,
+      "dbAbilityId": 104
+    },
+    {
+      "internalName": "std_5",
+      "displayName": "Std 5",
+      "entityType": "ability",
+      "heroOrder": 5,
+      "abilityOrder": 1,
+      "consolidatedScore": 0.6,
+      "winrate": 0.5,
+      "pickRate": 15,
+      "isUltimateFromCoordSource": false,
+      "isUltimateFromDb": false,
+      "isGeneralTopTier": false,
+      "isSynergySuggestionForMySpot": false,
+      "dbAbilityId": 105
+    },
+    {
+      "internalName": "std_6",
+      "displayName": "Std 6",
+      "entityType": "ability",
+      "heroOrder": 0,
+      "abilityOrder": 1,
+      "consolidatedScore": 0.62,
+      "winrate": 0.5,
+      "pickRate": 14,
+      "isUltimateFromCoordSource": false,
+      "isUltimateFromDb": false,
+      "isGeneralTopTier": false,
+      "isSynergySuggestionForMySpot": false,
+      "dbAbilityId": 106
+    },
+    {
+      "internalName": "std_7",
+      "displayName": "Std 7",
+      "entityType": "ability",
+      "heroOrder": 1,
+      "abilityOrder": 1,
+      "consolidatedScore": 0.64,
+      "winrate": 0.5,
+      "pickRate": 13,
+      "isUltimateFromCoordSource": false,
+      "isUltimateFromDb": false,
+      "isGeneralTopTier": false,
+      "isSynergySuggestionForMySpot": false,
+      "dbAbilityId": 107
+    },
+    {
+      "internalName": "std_8",
+      "displayName": "Std 8",
+      "entityType": "ability",
+      "heroOrder": 2,
+      "abilityOrder": 1,
+      "consolidatedScore": 0.66,
+      "winrate": 0.5,
+      "pickRate": 12,
+      "isUltimateFromCoordSource": false,
+      "isUltimateFromDb": false,
+      "isGeneralTopTier": false,
+      "isSynergySuggestionForMySpot": false,
+      "dbAbilityId": 108
+    },
+    {
+      "internalName": "std_9",
+      "displayName": "Std 9",
+      "entityType": "ability",
+      "heroOrder": 3,
+      "abilityOrder": 1,
+      "consolidatedScore": 0.6799999999999999,
+      "winrate": 0.5,
+      "pickRate": 11,
+      "isUltimateFromCoordSource": false,
+      "isUltimateFromDb": false,
+      "isGeneralTopTier": false,
+      "isSynergySuggestionForMySpot": false,
+      "dbAbilityId": 109
+    },
+    {
+      "internalName": "std_10",
+      "displayName": "Std 10",
+      "entityType": "ability",
+      "heroOrder": 4,
+      "abilityOrder": 1,
+      "consolidatedScore": 0.7,
+      "winrate": 0.5,
+      "pickRate": 10,
+      "isUltimateFromCoordSource": false,
+      "isUltimateFromDb": false,
+      "isGeneralTopTier": false,
+      "isSynergySuggestionForMySpot": false,
+      "dbAbilityId": 110
+    },
+    {
+      "internalName": "std_11",
+      "displayName": "Std 11",
+      "entityType": "ability",
+      "heroOrder": 5,
+      "abilityOrder": 1,
+      "consolidatedScore": 0.72,
+      "winrate": 0.5,
+      "pickRate": 9,
+      "isUltimateFromCoordSource": false,
+      "isUltimateFromDb": false,
+      "isGeneralTopTier": false,
+      "isSynergySuggestionForMySpot": false,
+      "dbAbilityId": 111
+    }
+  ],
+  "topTier": [
+    {
+      "internalName": "synergy_std",
+      "entityType": "ability",
+      "isSynergySuggestionForMySpot": true,
+      "isGeneralTopTier": false,
+      "isCuratedForRole": false
+    },
+    {
+      "internalName": "curated_low",
+      "entityType": "ability",
+      "isSynergySuggestionForMySpot": false,
+      "isGeneralTopTier": true,
+      "isCuratedForRole": true
+    },
+    {
+      "internalName": "std_11",
+      "entityType": "ability",
+      "isSynergySuggestionForMySpot": false,
+      "isGeneralTopTier": true,
+      "isCuratedForRole": false
+    },
+    {
+      "internalName": "std_10",
+      "entityType": "ability",
+      "isSynergySuggestionForMySpot": false,
+      "isGeneralTopTier": true,
+      "isCuratedForRole": false
+    },
+    {
+      "internalName": "std_9",
+      "entityType": "ability",
+      "isSynergySuggestionForMySpot": false,
+      "isGeneralTopTier": true,
+      "isCuratedForRole": false
+    },
+    {
+      "internalName": "std_8",
+      "entityType": "ability",
+      "isSynergySuggestionForMySpot": false,
+      "isGeneralTopTier": true,
+      "isCuratedForRole": false
+    },
+    {
+      "internalName": "std_7",
+      "entityType": "ability",
+      "isSynergySuggestionForMySpot": false,
+      "isGeneralTopTier": true,
+      "isCuratedForRole": false
+    },
+    {
+      "internalName": "std_6",
+      "entityType": "ability",
+      "isSynergySuggestionForMySpot": false,
+      "isGeneralTopTier": true,
+      "isCuratedForRole": false
+    },
+    {
+      "internalName": "std_5",
+      "entityType": "ability",
+      "isSynergySuggestionForMySpot": false,
+      "isGeneralTopTier": true,
+      "isCuratedForRole": false
+    },
+    {
+      "internalName": "std_4",
+      "entityType": "ability",
+      "isSynergySuggestionForMySpot": false,
+      "isGeneralTopTier": true,
+      "isCuratedForRole": false
+    }
+  ],
+  "draftClock": {
+    "schedule": [
+      {
+        "seq": 0,
+        "round": 0,
+        "playerIndex": 0,
+        "startS": 0,
+        "endS": 7
+      },
+      {
+        "seq": 1,
+        "round": 0,
+        "playerIndex": 5,
+        "startS": 7,
+        "endS": 14
+      },
+      {
+        "seq": 2,
+        "round": 0,
+        "playerIndex": 1,
+        "startS": 14,
+        "endS": 21
+      },
+      {
+        "seq": 3,
+        "round": 0,
+        "playerIndex": 6,
+        "startS": 21,
+        "endS": 28
+      },
+      {
+        "seq": 4,
+        "round": 0,
+        "playerIndex": 2,
+        "startS": 28,
+        "endS": 35
+      },
+      {
+        "seq": 5,
+        "round": 0,
+        "playerIndex": 7,
+        "startS": 35,
+        "endS": 42
+      },
+      {
+        "seq": 6,
+        "round": 0,
+        "playerIndex": 3,
+        "startS": 42,
+        "endS": 49
+      },
+      {
+        "seq": 7,
+        "round": 0,
+        "playerIndex": 8,
+        "startS": 49,
+        "endS": 56
+      },
+      {
+        "seq": 8,
+        "round": 0,
+        "playerIndex": 4,
+        "startS": 56,
+        "endS": 63
+      },
+      {
+        "seq": 9,
+        "round": 0,
+        "playerIndex": 9,
+        "startS": 63,
+        "endS": 70
+      },
+      {
+        "seq": 10,
+        "round": 1,
+        "playerIndex": 9,
+        "startS": 75,
+        "endS": 82
+      },
+      {
+        "seq": 11,
+        "round": 1,
+        "playerIndex": 4,
+        "startS": 82,
+        "endS": 89
+      },
+      {
+        "seq": 12,
+        "round": 1,
+        "playerIndex": 8,
+        "startS": 89,
+        "endS": 96
+      },
+      {
+        "seq": 13,
+        "round": 1,
+        "playerIndex": 3,
+        "startS": 96,
+        "endS": 103
+      },
+      {
+        "seq": 14,
+        "round": 1,
+        "playerIndex": 7,
+        "startS": 103,
+        "endS": 110
+      },
+      {
+        "seq": 15,
+        "round": 1,
+        "playerIndex": 2,
+        "startS": 110,
+        "endS": 117
+      },
+      {
+        "seq": 16,
+        "round": 1,
+        "playerIndex": 6,
+        "startS": 117,
+        "endS": 124
+      },
+      {
+        "seq": 17,
+        "round": 1,
+        "playerIndex": 1,
+        "startS": 124,
+        "endS": 131
+      },
+      {
+        "seq": 18,
+        "round": 1,
+        "playerIndex": 5,
+        "startS": 131,
+        "endS": 138
+      },
+      {
+        "seq": 19,
+        "round": 1,
+        "playerIndex": 0,
+        "startS": 138,
+        "endS": 145
+      },
+      {
+        "seq": 20,
+        "round": 2,
+        "playerIndex": 0,
+        "startS": 150,
+        "endS": 157
+      },
+      {
+        "seq": 21,
+        "round": 2,
+        "playerIndex": 5,
+        "startS": 157,
+        "endS": 164
+      },
+      {
+        "seq": 22,
+        "round": 2,
+        "playerIndex": 1,
+        "startS": 164,
+        "endS": 171
+      },
+      {
+        "seq": 23,
+        "round": 2,
+        "playerIndex": 6,
+        "startS": 171,
+        "endS": 178
+      },
+      {
+        "seq": 24,
+        "round": 2,
+        "playerIndex": 2,
+        "startS": 178,
+        "endS": 185
+      },
+      {
+        "seq": 25,
+        "round": 2,
+        "playerIndex": 7,
+        "startS": 185,
+        "endS": 192
+      },
+      {
+        "seq": 26,
+        "round": 2,
+        "playerIndex": 3,
+        "startS": 192,
+        "endS": 199
+      },
+      {
+        "seq": 27,
+        "round": 2,
+        "playerIndex": 8,
+        "startS": 199,
+        "endS": 206
+      },
+      {
+        "seq": 28,
+        "round": 2,
+        "playerIndex": 4,
+        "startS": 206,
+        "endS": 213
+      },
+      {
+        "seq": 29,
+        "round": 2,
+        "playerIndex": 9,
+        "startS": 213,
+        "endS": 220
+      },
+      {
+        "seq": 30,
+        "round": 3,
+        "playerIndex": 9,
+        "startS": 225,
+        "endS": 232
+      },
+      {
+        "seq": 31,
+        "round": 3,
+        "playerIndex": 4,
+        "startS": 232,
+        "endS": 239
+      },
+      {
+        "seq": 32,
+        "round": 3,
+        "playerIndex": 8,
+        "startS": 239,
+        "endS": 246
+      },
+      {
+        "seq": 33,
+        "round": 3,
+        "playerIndex": 3,
+        "startS": 246,
+        "endS": 253
+      },
+      {
+        "seq": 34,
+        "round": 3,
+        "playerIndex": 7,
+        "startS": 253,
+        "endS": 260
+      },
+      {
+        "seq": 35,
+        "round": 3,
+        "playerIndex": 2,
+        "startS": 260,
+        "endS": 267
+      },
+      {
+        "seq": 36,
+        "round": 3,
+        "playerIndex": 6,
+        "startS": 267,
+        "endS": 274
+      },
+      {
+        "seq": 37,
+        "round": 3,
+        "playerIndex": 1,
+        "startS": 274,
+        "endS": 281
+      },
+      {
+        "seq": 38,
+        "round": 3,
+        "playerIndex": 5,
+        "startS": 281,
+        "endS": 288
+      },
+      {
+        "seq": 39,
+        "round": 3,
+        "playerIndex": 0,
+        "startS": 288,
+        "endS": 295
+      },
+      {
+        "seq": 40,
+        "round": 4,
+        "playerIndex": 0,
+        "startS": 300,
+        "endS": 307
+      },
+      {
+        "seq": 41,
+        "round": 4,
+        "playerIndex": 5,
+        "startS": 307,
+        "endS": 314
+      },
+      {
+        "seq": 42,
+        "round": 4,
+        "playerIndex": 1,
+        "startS": 314,
+        "endS": 321
+      },
+      {
+        "seq": 43,
+        "round": 4,
+        "playerIndex": 6,
+        "startS": 321,
+        "endS": 328
+      },
+      {
+        "seq": 44,
+        "round": 4,
+        "playerIndex": 2,
+        "startS": 328,
+        "endS": 335
+      },
+      {
+        "seq": 45,
+        "round": 4,
+        "playerIndex": 7,
+        "startS": 335,
+        "endS": 342
+      },
+      {
+        "seq": 46,
+        "round": 4,
+        "playerIndex": 3,
+        "startS": 342,
+        "endS": 349
+      },
+      {
+        "seq": 47,
+        "round": 4,
+        "playerIndex": 8,
+        "startS": 349,
+        "endS": 356
+      },
+      {
+        "seq": 48,
+        "round": 4,
+        "playerIndex": 4,
+        "startS": 356,
+        "endS": 363
+      },
+      {
+        "seq": 49,
+        "round": 4,
+        "playerIndex": 9,
+        "startS": 363,
+        "endS": 370
+      }
+    ],
+    "countdownTarget": {
+      "row": 1,
+      "deltaS": 0.1999999999999993
+    },
+    "roundBreaks": [
+      {
+        "elapsedS": -10,
+        "isBreak": false
+      },
+      {
+        "elapsedS": 5,
+        "isBreak": false
+      },
+      {
+        "elapsedS": 72,
+        "isBreak": true
+      },
+      {
+        "elapsedS": 370,
+        "isBreak": true
+      }
+    ],
+    "previewClocks": [
+      {
+        "clockTime": -59,
+        "isPreview": true
+      },
+      {
+        "clockTime": -8,
+        "isPreview": true
+      },
+      {
+        "clockTime": -7,
+        "isPreview": false
+      },
+      {
+        "clockTime": 0,
+        "isPreview": false
+      }
+    ],
+    "reentries": [
+      "restart",
+      "resume",
+      "resume"
+    ]
+  },
+  "gsiPayloads": [
+    {
+      "raw": {
+        "map": {
+          "matchid": "8012345678",
+          "game_state": "DOTA_GAMERULES_STATE_HERO_SELECTION",
+          "clock_time": -42
+        },
+        "player": {
+          "name": "Tiarin",
+          "accountid": "45008415",
+          "team_name": "dire",
+          "team_slot": 2
+        },
+        "hero": {
+          "name": "npc_dota_hero_crystal_maiden"
+        }
+      },
+      "parsed": {
+        "matchId": "8012345678",
+        "gamePhase": "DOTA_GAMERULES_STATE_HERO_SELECTION",
+        "clockTime": -42,
+        "mode": "playing",
+        "localSlotIndex": 7,
+        "localHeroNpcName": "crystal_maiden",
+        "players": []
+      }
+    },
+    {
+      "raw": {
+        "map": {
+          "matchid": "9001",
+          "game_state": "DOTA_GAMERULES_STATE_HERO_SELECTION",
+          "clock_time": 12
+        },
+        "player": {
+          "team2": {
+            "player0": {
+              "name": "RadB",
+              "accountid": "10",
+              "team_slot": 3
+            },
+            "player1": {
+              "name": "RadA",
+              "accountid": "11",
+              "team_slot": 0
+            }
+          },
+          "team3": {
+            "player5": {
+              "name": "DireA",
+              "accountid": "20",
+              "team_slot": 1
+            }
+          }
+        },
+        "hero": {
+          "team2": {
+            "player0": {
+              "name": "npc_dota_hero_zuus"
+            },
+            "player1": {
+              "name": "npc_dota_hero_axe"
+            }
+          },
+          "team3": {
+            "player5": {
+              "name": "npc_dota_hero_puck"
+            }
+          }
+        }
+      },
+      "parsed": {
+        "matchId": "9001",
+        "gamePhase": "DOTA_GAMERULES_STATE_HERO_SELECTION",
+        "clockTime": 12,
+        "mode": "spectating",
+        "localSlotIndex": null,
+        "localHeroNpcName": null,
+        "players": [
+          {
+            "slotIndex": 0,
+            "name": "RadA",
+            "accountId": "11",
+            "heroNpcName": "axe"
+          },
+          {
+            "slotIndex": 3,
+            "name": "RadB",
+            "accountId": "10",
+            "heroNpcName": "zuus"
+          },
+          {
+            "slotIndex": 6,
+            "name": "DireA",
+            "accountId": "20",
+            "heroNpcName": "puck"
+          }
+        ]
+      }
+    }
+  ]
+}

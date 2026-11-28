@@ -53,6 +53,38 @@ pub struct SlotHighlight {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct HeroModelHighlight {
+    pub hero_order: u8,
+    pub bounds: Rect,
+    pub db_hero_id: Option<i64>,
+    pub hero_name: String,
+    pub display_name: String,
+    pub is_unknown: bool,
+    pub is_top_tier: bool,
+    pub is_my_model: bool,
+    pub top_rank: Option<u8>,
+    pub winrate: Option<f64>,
+    pub pick_rate: Option<f64>,
+    pub consolidated_score: Option<f64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PlayerSpotHighlight {
+    pub hero_order: u8,
+    pub bounds: Rect,
+    pub is_my_spot: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PickedAbilitySlot {
+    pub hero_order: u8,
+    pub box_index: u8,
+    pub is_ultimate: bool,
+    pub ability_name: Option<String>,
+    pub display_name: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct OverlaySnapshot {
     pub protocol_version: u32,
     pub sequence: u64,
@@ -60,6 +92,12 @@ pub struct OverlaySnapshot {
     pub resolution_source: ResolutionSource,
     pub scanning: bool,
     pub slots: Vec<SlotHighlight>,
+    #[serde(default)]
+    pub hero_models: Vec<HeroModelHighlight>,
+    #[serde(default)]
+    pub hero_spots: Vec<PlayerSpotHighlight>,
+    #[serde(default)]
+    pub picked_abilities: Vec<PickedAbilitySlot>,
     pub selected_spot_hero_order: Option<u8>,
     pub selected_model_hero_order: Option<u8>,
     #[serde(default)]
@@ -71,6 +109,8 @@ pub struct OverlaySnapshot {
     #[serde(default)]
     pub role_fixed_positions: Vec<u8>,
     #[serde(default)]
+    pub auto_rescan_enabled: bool,
+    #[serde(default)]
     pub dota_window: Option<Rect>,
 }
 
@@ -81,6 +121,7 @@ pub enum OverlayCommand {
     SelectMySpot { hero_order: u8, db_hero_id: i64 },
     SelectMyModel { hero_order: u8, db_hero_id: i64 },
     SetRoleMode { mode: RoleMode, fixed_positions: Vec<u8> },
+    SetAutoRescan { enabled: bool },
     ResetDraft,
     CloseOverlay,
     ReportFailedScan,

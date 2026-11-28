@@ -156,6 +156,7 @@ dependencies = [
  "anyhow",
  "axum",
  "futures-core",
+ "png",
  "rusqlite",
  "serde",
  "serde_json",

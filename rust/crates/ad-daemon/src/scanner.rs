@@ -1,26 +1,43 @@
 //! End-to-end draft board scan pipeline:
-//! frame -> aspect-aware layout -> bilinear crop -> ONNX FP16 -> role/top-tier/synergies -> OverlaySnapshot.
+//! frame -> aspect-aware layout -> bilinear crop -> ONNX FP16 + pick NCC -> role/top-tier/synergies -> OverlaySnapshot.
 
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, HashMap, HashSet},
+    fs::File,
+    io::BufReader,
     path::{Path, PathBuf},
     sync::Mutex,
 };
 
 use ad_capture::{
-    crop::{crop_and_resize_bilinear_rgb, rgb_u8_to_f32_batch},
-    RawFrame,
+    crop::{
+        crop_and_resize_bilinear_rgb, crop_inset_and_resize_bilinear_rgb, rgb_u8_to_f32_batch,
+    },
+    PixelFormat, RawFrame,
 };
 use ad_core::{
-    layout::{LayoutDatabase, SlotCoordinate},
+    hero_identification::{
+        identify_hero_models, is_unidentified_model, HeroDefiningAbility, HeroRecord,
+        IdentifiedHeroModel,
+    },
+    layout::{LayoutDatabase, ResolutionLayout, SlotCoordinate},
+    pick_attribution::{reconcile_ability_picks, CardSlotReading, PickEvent, PickKind},
     role_scoring::{compute_role_score, RoleContext, RoleTagInput},
     scoring::calculate_consolidated_score,
     shift_axes::{compute_shift_axes, AbilityShiftRow, ShiftAxes},
-    tags::TagsDataset,
+    tags::{AbilityTag, TagsDataset},
     top_tier::{determine_top_tier_entities, EntityType, ScoredEntity},
 };
-use ad_ml::{onnx::OnnxPoolClassifier, DEFAULT_POOL_CONFIDENCE_THRESHOLD, INPUT_SIZE};
-use ad_protocol::{OverlaySnapshot, Rect, RoleMode, SlotHighlight, SynergyCombo, PROTOCOL_VERSION};
+use ad_ml::{
+    onnx::OnnxPoolClassifier,
+    template_matcher::{make_icon_template, match_pick_slot_scoped, IconTemplate},
+    DEFAULT_POOL_CONFIDENCE_THRESHOLD, INPUT_SIZE, PICK_TEMPLATE_COMPARE_SIZE,
+    PICK_TEMPLATE_CROP_INSET_RATIO, PICK_TEMPLATE_FALLBACK_MIN_NCC,
+};
+use ad_protocol::{
+    HeroModelHighlight, OverlaySnapshot, PickedAbilitySlot, PlayerSpotHighlight, Rect,
+    ResolutionSource, RoleMode, SlotHighlight, SynergyCombo, PROTOCOL_VERSION,
+};
 use anyhow::Context;
 
 use crate::db::{AbilityRow, AdDatabase};
@@ -35,6 +52,7 @@ pub struct ScanOptions {
     pub role_fixed_positions: Vec<u8>,
     pub selected_spot_hero_order: Option<u8>,
     pub selected_model_hero_order: Option<u8>,
+    pub auto_rescan_enabled: bool,
     pub dota_window: Option<Rect>,
 }
 
@@ -49,16 +67,142 @@ struct ResolvedSynergy {
     is_op: bool,
 }
 
+#[derive(Debug, Clone)]
+struct ResolvedHeroSynergy {
+    hero_id: i64,
+    ability_name: String,
+    synergy_increase: Option<f64>,
+    is_op: bool,
+}
+
+#[derive(Debug, Clone)]
+struct PoolSlotMeta {
+    bounds: Rect,
+    is_ult: bool,
+}
+
+#[derive(Debug, Clone)]
+struct CachedFrameAnalysis {
+    target_resolution: String,
+    resolution_source: ResolutionSource,
+    pool_slots: Vec<PoolSlotMeta>,
+    recognized_by_slot: HashMap<usize, Option<String>>,
+    pool_names: HashSet<String>,
+    identified_models: Vec<(Rect, IdentifiedHeroModel)>,
+    hero_spots: Vec<(u8, Rect)>,
+    picked_abilities: Vec<PickedAbilitySlot>,
+    op_combinations: Vec<SynergyCombo>,
+    trap_combinations: Vec<SynergyCombo>,
+}
+
+#[derive(Default)]
+struct DraftSessionState {
+    timeline: Vec<PickEvent>,
+    last_analysis: Option<CachedFrameAnalysis>,
+}
+
 pub struct ScanPipeline {
     layouts: LayoutDatabase,
     abilities_by_name: HashMap<String, AbilityRow>,
+    ability_to_hero_id: HashMap<String, i64>,
+    heroes_by_id: HashMap<i64, HeroRecord>,
     active_class_names: HashSet<String>,
     shift_axes: HashMap<String, ShiftAxes>,
     synergies: Vec<ResolvedSynergy>,
+    hero_synergies: Vec<ResolvedHeroSynergy>,
     tags: Option<TagsDataset>,
+    pick_templates: Vec<IconTemplate>,
     classifier: Mutex<Option<OnnxPoolClassifier>>,
+    session: Mutex<DraftSessionState>,
     model_path: PathBuf,
     class_names_path: PathBuf,
+}
+
+fn load_png_template(path: &Path) -> Option<IconTemplate> {
+    let stem = path.file_stem()?.to_str()?.to_string();
+    let file = File::open(path).ok()?;
+    let mut decoder = png::Decoder::new(BufReader::new(file));
+    decoder.set_transformations(png::Transformations::EXPAND | png::Transformations::STRIP_16);
+    let mut reader = decoder.read_info().ok()?;
+    let mut buf = vec![0u8; reader.output_buffer_size()?];
+    let info = reader.next_frame(&mut buf).ok()?;
+
+    let mut rgba = vec![0u8; (info.width * info.height * 4) as usize];
+    match info.color_type {
+        png::ColorType::Rgba => {
+            let needed = rgba.len();
+            if buf.len() < needed {
+                return None;
+            }
+            rgba.copy_from_slice(&buf[..needed]);
+        }
+        png::ColorType::Rgb => {
+            let pixels = (info.width * info.height) as usize;
+            if buf.len() < pixels * 3 {
+                return None;
+            }
+            for i in 0..pixels {
+                rgba[i * 4] = buf[i * 3];
+                rgba[i * 4 + 1] = buf[i * 3 + 1];
+                rgba[i * 4 + 2] = buf[i * 3 + 2];
+                rgba[i * 4 + 3] = 255;
+            }
+        }
+        _ => return None,
+    }
+
+    let raw = RawFrame {
+        width: info.width,
+        height: info.height,
+        format: PixelFormat::Rgba8,
+        bytes: rgba,
+    };
+    let vec = crop_inset_and_resize_bilinear_rgb(
+        &raw,
+        0,
+        0,
+        info.width,
+        info.height,
+        PICK_TEMPLATE_CROP_INSET_RATIO,
+        PICK_TEMPLATE_COMPARE_SIZE,
+    )
+    .ok()?;
+    Some(make_icon_template(stem, vec))
+}
+
+fn load_pick_templates_from_dir(dir: &Path) -> Vec<IconTemplate> {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return Vec::new();
+    };
+    let expected_rgb_len =
+        (PICK_TEMPLATE_COMPARE_SIZE as usize) * (PICK_TEMPLATE_COMPARE_SIZE as usize) * 3;
+    let mut templates = Vec::new();
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if !path.is_file() {
+            continue;
+        }
+        match path.extension().and_then(|e| e.to_str()) {
+            Some("png") => {
+                if let Some(tpl) = load_png_template(&path) {
+                    templates.push(tpl);
+                }
+            }
+            Some("rgb") => {
+                if let (Some(stem), Ok(bytes)) = (
+                    path.file_stem().and_then(|s| s.to_str()),
+                    std::fs::read(&path),
+                ) {
+                    if bytes.len() == expected_rgb_len {
+                        templates.push(make_icon_template(stem, bytes));
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    templates
 }
 
 impl ScanPipeline {
@@ -70,10 +214,30 @@ impl ScanPipeline {
 
         let db = AdDatabase::open_immutable_readonly(&resources_dir.join("dota_ad_data.db"))
             .context("failed to open dota_ad_data.db")?;
+        let heroes = db.load_heroes().context("failed to load heroes")?;
         let abilities = db.load_abilities().context("failed to load abilities")?;
         let raw_synergies = db
             .load_ability_synergies()
             .context("failed to load ability synergies")?;
+        let raw_hero_synergies = db
+            .load_hero_ability_synergies()
+            .context("failed to load hero ability synergies")?;
+
+        let mut heroes_by_id = HashMap::with_capacity(heroes.len());
+        for hero in heroes {
+            heroes_by_id.insert(
+                hero.hero_id,
+                HeroRecord {
+                    hero_id: hero.hero_id,
+                    name: hero.name.clone(),
+                    display_name: hero
+                        .display_name
+                        .unwrap_or_else(|| hero.name.clone()),
+                    winrate: hero.winrate,
+                    pick_rate: hero.pick_rate,
+                },
+            );
+        }
 
         let shift_rows: Vec<AbilityShiftRow> = abilities
             .iter()
@@ -90,6 +254,7 @@ impl ScanPipeline {
 
         let mut by_id: HashMap<i64, (String, String)> = HashMap::with_capacity(abilities.len());
         let mut abilities_by_name = HashMap::with_capacity(abilities.len());
+        let mut ability_to_hero_id = HashMap::with_capacity(abilities.len());
         let mut active_class_names = HashSet::with_capacity(abilities.len());
         for row in abilities {
             let display = row
@@ -98,6 +263,9 @@ impl ScanPipeline {
                 .unwrap_or_else(|| row.name.clone());
             by_id.insert(row.ability_id, (row.name.clone(), display));
             active_class_names.insert(row.name.clone());
+            if let Some(hero_id) = row.hero_id {
+                ability_to_hero_id.insert(row.name.clone(), hero_id);
+            }
             abilities_by_name.insert(row.name.clone(), row);
         }
 
@@ -132,20 +300,43 @@ impl ScanPipeline {
             });
         }
 
+        let mut hero_synergies = Vec::new();
+        for hs in raw_hero_synergies {
+            let Some((ability_name, _)) = by_id.get(&hs.ability_id) else {
+                continue;
+            };
+            hero_synergies.push(ResolvedHeroSynergy {
+                hero_id: hs.hero_id,
+                ability_name: ability_name.clone(),
+                synergy_increase: hs.synergy_increase,
+                is_op: hs.is_op,
+            });
+        }
+
         let tags = TagsDataset::load(
             &resources_dir.join("data/ability_tags.json"),
             &resources_dir.join("data/hero_meta.json"),
         )
         .ok();
 
+        let pick_templates = std::env::var_os("AD_ICON_CACHE_DIR")
+            .map(PathBuf::from)
+            .map(|dir| load_pick_templates_from_dir(&dir))
+            .unwrap_or_default();
+
         Ok(Self {
             layouts,
             abilities_by_name,
+            ability_to_hero_id,
+            heroes_by_id,
             active_class_names,
             shift_axes,
             synergies,
+            hero_synergies,
             tags,
+            pick_templates,
             classifier: Mutex::new(None),
+            session: Mutex::new(DraftSessionState::default()),
             model_path: resources_dir.join("model/ability_classifier_fp16.onnx"),
             class_names_path: resources_dir.join("model/class_names.json"),
         })
@@ -153,6 +344,22 @@ impl ScanPipeline {
 
     pub fn layout_count(&self) -> usize {
         self.layouts.resolutions.len()
+    }
+
+    pub fn reset_session(&self) {
+        if let Ok(mut guard) = self.session.lock() {
+            *guard = DraftSessionState::default();
+        }
+    }
+
+    pub fn rescore_cached(
+        &self,
+        options: &ScanOptions,
+        sequence: u64,
+    ) -> Option<OverlaySnapshot> {
+        let guard = self.session.lock().ok()?;
+        let analysis = guard.last_analysis.as_ref()?;
+        Some(self.build_snapshot(analysis, &guard.timeline, options, sequence))
     }
 
     pub fn find_pool_combinations(
@@ -213,6 +420,405 @@ impl ScanPipeline {
         Ok(guard.as_mut().expect("classifier initialized"))
     }
 
+    fn scan_picked_slots(
+        &self,
+        frame: &RawFrame,
+        layout: &ResolutionLayout,
+        pool_std_names: &HashSet<String>,
+        pool_ult_names: &HashSet<String>,
+    ) -> (Vec<CardSlotReading>, Vec<PickedAbilitySlot>) {
+        let mut readings = Vec::with_capacity(layout.selected_abilities_coords.len());
+        let mut picked_slots = Vec::with_capacity(layout.selected_abilities_coords.len());
+        let mut box_counters: BTreeMap<(u8, bool), u8> = BTreeMap::new();
+
+        let slot_w = layout.selected_abilities_params.width.max(0) as u32;
+        let slot_h = layout.selected_abilities_params.height.max(0) as u32;
+
+        for coord in &layout.selected_abilities_coords {
+            let is_ult = coord.is_ultimate.unwrap_or(false);
+            let box_index_entry = box_counters.entry((coord.hero_order, is_ult)).or_insert(0);
+            let box_index = *box_index_entry;
+            *box_index_entry = box_index_entry.saturating_add(1);
+
+            let mut matched_name: Option<String> = None;
+            let mut matched_conf = 0.0f64;
+            let mut rejected = false;
+
+            if !self.pick_templates.is_empty() && slot_w > 0 && slot_h > 0 {
+                let x = coord.x.max(0) as u32;
+                let y = coord.y.max(0) as u32;
+                if let Ok(rgb) = crop_inset_and_resize_bilinear_rgb(
+                    frame,
+                    x,
+                    y,
+                    slot_w,
+                    slot_h,
+                    PICK_TEMPLATE_CROP_INSET_RATIO,
+                    PICK_TEMPLATE_COMPARE_SIZE,
+                ) {
+                    let scope = if is_ult {
+                        pool_ult_names
+                    } else {
+                        pool_std_names
+                    };
+                    let res = match_pick_slot_scoped(
+                        &rgb,
+                        &self.pick_templates,
+                        if scope.is_empty() { None } else { Some(scope) },
+                        f64::from(PICK_TEMPLATE_FALLBACK_MIN_NCC),
+                    );
+                    if let Some(name) = res.name {
+                        matched_name = Some(name);
+                        matched_conf = res.score;
+                    } else if !res.is_empty {
+                        matched_conf = res.score.max(0.0);
+                        rejected = true;
+                    }
+                }
+            }
+
+            let display_name = matched_name
+                .as_deref()
+                .and_then(|n| self.abilities_by_name.get(n))
+                .and_then(|row| row.display_name.clone())
+                .or_else(|| matched_name.clone())
+                .unwrap_or_default();
+
+            readings.push(CardSlotReading {
+                hero_order: coord.hero_order,
+                is_ultimate: is_ult,
+                name: matched_name.clone(),
+                confidence: matched_conf,
+                has_rejected_match: rejected,
+            });
+            picked_slots.push(PickedAbilitySlot {
+                hero_order: coord.hero_order,
+                box_index,
+                is_ultimate: is_ult,
+                ability_name: matched_name,
+                display_name,
+            });
+        }
+
+        (readings, picked_slots)
+    }
+
+    fn collect_synergy_partners(
+        &self,
+        pool_names: &HashSet<String>,
+        my_picks: &[String],
+        my_model_db_id: Option<i64>,
+    ) -> HashSet<String> {
+        let mut partners = HashSet::new();
+        let my_pick_set: HashSet<&str> = my_picks.iter().map(String::as_str).collect();
+
+        for syn in &self.synergies {
+            let is_strong = syn.is_op
+                || syn
+                    .synergy_increase
+                    .is_some_and(|inc| inc >= DEFAULT_OP_THRESHOLD);
+            if !is_strong {
+                continue;
+            }
+            if my_pick_set.contains(syn.internal1.as_str())
+                && pool_names.contains(&syn.internal2)
+                && !my_pick_set.contains(syn.internal2.as_str())
+            {
+                partners.insert(syn.internal2.clone());
+            } else if my_pick_set.contains(syn.internal2.as_str())
+                && pool_names.contains(&syn.internal1)
+                && !my_pick_set.contains(syn.internal1.as_str())
+            {
+                partners.insert(syn.internal1.clone());
+            }
+        }
+
+        if let Some(hero_id) = my_model_db_id {
+            for hs in &self.hero_synergies {
+                if hs.hero_id != hero_id {
+                    continue;
+                }
+                let is_strong = hs.is_op
+                    || hs
+                        .synergy_increase
+                        .is_some_and(|inc| inc >= DEFAULT_OP_THRESHOLD);
+                if is_strong && pool_names.contains(&hs.ability_name) {
+                    partners.insert(hs.ability_name.clone());
+                }
+            }
+        }
+
+        partners
+    }
+
+    fn build_snapshot(
+        &self,
+        analysis: &CachedFrameAnalysis,
+        timeline: &[PickEvent],
+        options: &ScanOptions,
+        sequence: u64,
+    ) -> OverlaySnapshot {
+        let mut my_picks: Vec<String> = Vec::new();
+        let mut my_spot_has_ult = false;
+        if let Some(spot_order) = options.selected_spot_hero_order {
+            for slot in &analysis.picked_abilities {
+                if slot.hero_order == spot_order {
+                    if let Some(name) = &slot.ability_name {
+                        if !my_picks.contains(name) {
+                            my_picks.push(name.clone());
+                        }
+                        if slot.is_ultimate {
+                            my_spot_has_ult = true;
+                        }
+                    }
+                }
+            }
+            for ev in timeline {
+                if ev.player_index == spot_order && ev.kind == PickKind::Ability {
+                    if let Some(name) = &ev.ability_name {
+                        if !my_picks.contains(name) {
+                            my_picks.push(name.clone());
+                        }
+                        if self.abilities_by_name.get(name).is_some_and(|r| r.is_ultimate) {
+                            my_spot_has_ult = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        let selected_model_db_id = options.selected_model_hero_order.and_then(|order| {
+            analysis
+                .identified_models
+                .iter()
+                .find(|(_, m)| m.hero_order == order)
+                .and_then(|(_, m)| m.db_hero_id)
+        });
+        let selected_model_filter_id =
+            selected_model_db_id.or_else(|| options.selected_model_hero_order.map(i64::from));
+
+        let synergistic_partners = self.collect_synergy_partners(
+            &analysis.pool_names,
+            &my_picks,
+            selected_model_db_id,
+        );
+
+        let my_pick_tags: Vec<HashSet<AbilityTag>> = my_picks
+            .iter()
+            .filter_map(|name| self.tags.as_ref().and_then(|ds| ds.abilities.get(name)))
+            .map(|entry| entry.tags.clone())
+            .collect();
+
+        let pool_has_hard_cc = self.tags.as_ref().is_some_and(|ds| {
+            analysis.pool_names.iter().any(|name| {
+                ds.abilities
+                    .get(name)
+                    .is_some_and(|e| e.tags.contains(&AbilityTag::HardCc))
+            })
+        });
+
+        let role_ctx = if options.role_mode == RoleMode::Fixed
+            && !options.role_fixed_positions.is_empty()
+        {
+            Some(RoleContext {
+                effective_positions: options.role_fixed_positions.clone(),
+                my_pick_count: my_picks.len(),
+                team_greed: None,
+            })
+        } else {
+            None
+        };
+
+        let mut scored_entities =
+            Vec::with_capacity(analysis.pool_slots.len() + analysis.identified_models.len());
+        let mut slot_scores: HashMap<usize, (f64, Option<f64>, Option<f64>, String)> =
+            HashMap::new();
+
+        for (slot_idx, slot_meta) in analysis.pool_slots.iter().enumerate() {
+            let Some(Some(internal_name)) = analysis.recognized_by_slot.get(&slot_idx) else {
+                continue;
+            };
+            let db_row = self.abilities_by_name.get(internal_name);
+            let winrate = db_row.and_then(|r| r.winrate);
+            let pick_rate = db_row.and_then(|r| r.pick_rate);
+            let display_name = db_row
+                .and_then(|r| r.display_name.clone())
+                .unwrap_or_else(|| internal_name.clone());
+
+            let base = calculate_consolidated_score(winrate, pick_rate);
+            let tag_entry = self
+                .tags
+                .as_ref()
+                .and_then(|ds| ds.abilities.get(internal_name));
+            let role_delta = compute_role_score(
+                self.shift_axes.get(internal_name),
+                role_ctx.as_ref(),
+                tag_entry
+                    .map(|entry| RoleTagInput {
+                        candidate_tags: Some(&entry.tags),
+                        candidate_role_must: if entry.role_must.is_empty() {
+                            None
+                        } else {
+                            Some(&entry.role_must)
+                        },
+                        my_pick_tags: &my_pick_tags,
+                        need_scarcity: None,
+                        pool_has_hard_cc,
+                    })
+                    .as_ref(),
+            );
+            let final_score = base + role_delta.as_ref().map(|r| r.delta).unwrap_or(0.0);
+            let curated = role_delta.as_ref().is_some_and(|r| r.curated);
+
+            scored_entities.push(ScoredEntity {
+                internal_name: internal_name.clone(),
+                entity_type: EntityType::Ability,
+                consolidated_score: final_score,
+                is_ultimate_from_coord_source: slot_meta.is_ult,
+                is_ultimate_from_db: db_row.is_some_and(|r| r.is_ultimate),
+                role_curated: curated,
+            });
+            slot_scores.insert(slot_idx, (final_score, winrate, pick_rate, display_name));
+        }
+
+        let mut model_scores: HashMap<String, f64> = HashMap::new();
+        for (_, model) in &analysis.identified_models {
+            if is_unidentified_model(Some(&model.hero_name)) {
+                continue;
+            }
+            let score = calculate_consolidated_score(model.winrate, model.pick_rate);
+            model_scores.insert(model.hero_name.clone(), score);
+            scored_entities.push(ScoredEntity {
+                internal_name: model.hero_name.clone(),
+                entity_type: EntityType::Hero,
+                consolidated_score: score,
+                is_ultimate_from_coord_source: false,
+                is_ultimate_from_db: false,
+                role_curated: false,
+            });
+        }
+
+        let top_tier = determine_top_tier_entities(
+            &scored_entities,
+            selected_model_filter_id,
+            my_spot_has_ult,
+            &synergistic_partners,
+        );
+        let mut rank_by_key: HashMap<(bool, String), (u8, bool, bool)> = HashMap::new();
+        for (idx, item) in top_tier.into_iter().enumerate() {
+            let is_hero = item.entity.entity_type == EntityType::Hero;
+            rank_by_key
+                .entry((is_hero, item.entity.internal_name))
+                .or_insert((
+                    (idx + 1) as u8,
+                    item.is_general_top_tier,
+                    item.is_synergy_suggestion_for_my_spot,
+                ));
+        }
+
+        let mut slots = Vec::with_capacity(analysis.pool_slots.len());
+        for (slot_idx, slot_meta) in analysis.pool_slots.iter().enumerate() {
+            let internal_name = analysis
+                .recognized_by_slot
+                .get(&slot_idx)
+                .and_then(|opt| opt.as_ref());
+            if let (Some(name), Some((score, winrate, pick_rate, display_name))) =
+                (internal_name, slot_scores.get(&slot_idx))
+            {
+                let (top_rank, is_top_tier, is_synergy_pick) = rank_by_key
+                    .get(&(false, name.clone()))
+                    .map(|&(rank, top, syn)| (Some(rank), top, syn))
+                    .unwrap_or((None, false, false));
+                slots.push(SlotHighlight {
+                    slot_index: slot_idx,
+                    bounds: slot_meta.bounds,
+                    display_name: display_name.clone(),
+                    is_unknown: false,
+                    is_top_tier,
+                    is_synergy_pick,
+                    consolidated_score: Some(*score),
+                    winrate: *winrate,
+                    pick_rate: *pick_rate,
+                    top_rank,
+                });
+            } else {
+                slots.push(SlotHighlight {
+                    slot_index: slot_idx,
+                    bounds: slot_meta.bounds,
+                    display_name: "Unknown".to_string(),
+                    is_unknown: true,
+                    is_top_tier: false,
+                    is_synergy_pick: false,
+                    consolidated_score: None,
+                    winrate: None,
+                    pick_rate: None,
+                    top_rank: None,
+                });
+            }
+        }
+
+        let hero_models = analysis
+            .identified_models
+            .iter()
+            .map(|(bounds, model)| {
+                let unknown = is_unidentified_model(Some(&model.hero_name));
+                let is_my_model = options.selected_model_hero_order == Some(model.hero_order);
+                let (top_rank, is_top_tier) = if unknown {
+                    (None, false)
+                } else {
+                    rank_by_key
+                        .get(&(true, model.hero_name.clone()))
+                        .map(|&(rank, top, _)| (Some(rank), top))
+                        .unwrap_or((None, false))
+                };
+                HeroModelHighlight {
+                    hero_order: model.hero_order,
+                    bounds: *bounds,
+                    db_hero_id: model.db_hero_id,
+                    hero_name: model.hero_name.clone(),
+                    display_name: model.hero_display_name.clone(),
+                    is_unknown: unknown,
+                    is_top_tier,
+                    is_my_model,
+                    top_rank,
+                    winrate: model.winrate,
+                    pick_rate: model.pick_rate,
+                    consolidated_score: model_scores.get(&model.hero_name).copied(),
+                }
+            })
+            .collect();
+
+        let hero_spots = analysis
+            .hero_spots
+            .iter()
+            .map(|&(hero_order, bounds)| PlayerSpotHighlight {
+                hero_order,
+                bounds,
+                is_my_spot: options.selected_spot_hero_order == Some(hero_order),
+            })
+            .collect();
+
+        OverlaySnapshot {
+            protocol_version: PROTOCOL_VERSION,
+            sequence,
+            target_resolution: analysis.target_resolution.clone(),
+            resolution_source: analysis.resolution_source,
+            scanning: false,
+            slots,
+            hero_models,
+            hero_spots,
+            picked_abilities: analysis.picked_abilities.clone(),
+            selected_spot_hero_order: options.selected_spot_hero_order,
+            selected_model_hero_order: options.selected_model_hero_order,
+            op_combinations: analysis.op_combinations.clone(),
+            trap_combinations: analysis.trap_combinations.clone(),
+            role_mode: options.role_mode,
+            role_fixed_positions: options.role_fixed_positions.clone(),
+            auto_rescan_enabled: options.auto_rescan_enabled,
+            dota_window: options.dota_window,
+        }
+    }
+
     pub fn scan_frame(
         &self,
         frame: &RawFrame,
@@ -242,18 +848,21 @@ impl ScanPipeline {
 
         let mut crops = Vec::with_capacity(pool_coords.len());
         let mut valid_indices = Vec::with_capacity(pool_coords.len());
-        let mut slot_rects = Vec::with_capacity(pool_coords.len());
+        let mut pool_slots = Vec::with_capacity(pool_coords.len());
 
-        for (idx, (coord, _is_ult)) in pool_coords.iter().enumerate() {
+        for (idx, (coord, is_ult)) in pool_coords.iter().enumerate() {
             let x = coord.x.max(0) as u32;
             let y = coord.y.max(0) as u32;
             let w = coord.width.unwrap_or(0).max(0) as u32;
             let h = coord.height.unwrap_or(0).max(0) as u32;
-            slot_rects.push(Rect {
-                x: coord.x,
-                y: coord.y,
-                width: w,
-                height: h,
+            pool_slots.push(PoolSlotMeta {
+                bounds: Rect {
+                    x: coord.x,
+                    y: coord.y,
+                    width: w,
+                    height: h,
+                },
+                is_ult: *is_ult,
             });
             if w == 0 || h == 0 {
                 continue;
@@ -286,151 +895,109 @@ impl ScanPipeline {
 
         let mut recognized_by_slot: HashMap<usize, Option<String>> =
             HashMap::with_capacity(pool_coords.len());
+        let mut conf_by_slot: HashMap<usize, f64> = HashMap::with_capacity(pool_coords.len());
         let mut pool_names = HashSet::new();
+        let mut pool_std_names = HashSet::new();
+        let mut pool_ult_names = HashSet::new();
         for (&slot_idx, pred) in valid_indices.iter().zip(preds.iter()) {
             if let Some(name) = &pred.class_name {
                 pool_names.insert(name.clone());
+                if pool_slots[slot_idx].is_ult {
+                    pool_ult_names.insert(name.clone());
+                } else {
+                    pool_std_names.insert(name.clone());
+                }
             }
+            conf_by_slot.insert(slot_idx, f64::from(pred.confidence));
             recognized_by_slot.insert(slot_idx, pred.class_name.clone());
         }
 
-        let (op_combinations, trap_combinations) = self.find_pool_combinations(&pool_names);
-
-        let role_ctx = if options.role_mode == RoleMode::Fixed
-            && !options.role_fixed_positions.is_empty()
-        {
-            Some(RoleContext {
-                effective_positions: options.role_fixed_positions.clone(),
-                my_pick_count: 0,
-                team_greed: None,
-            })
-        } else {
-            None
-        };
-
-        let mut scored_entities = Vec::new();
-        let mut slot_scores: HashMap<usize, (f64, Option<f64>, Option<f64>, String)> =
-            HashMap::new();
-
-        for (slot_idx, (_, is_ult)) in pool_coords.iter().enumerate() {
-            let Some(Some(internal_name)) = recognized_by_slot.get(&slot_idx) else {
-                continue;
-            };
-            let db_row = self.abilities_by_name.get(internal_name);
-            let winrate = db_row.and_then(|r| r.winrate);
-            let pick_rate = db_row.and_then(|r| r.pick_rate);
-            let display_name = db_row
-                .and_then(|r| r.display_name.clone())
-                .unwrap_or_else(|| internal_name.clone());
-
-            let base = calculate_consolidated_score(winrate, pick_rate);
-            let tag_entry = self
-                .tags
-                .as_ref()
-                .and_then(|ds| ds.abilities.get(internal_name));
-            let empty_picks: [HashSet<ad_core::tags::AbilityTag>; 0] = [];
-            let role_delta = compute_role_score(
-                self.shift_axes.get(internal_name),
-                role_ctx.as_ref(),
-                tag_entry.map(|entry| RoleTagInput {
-                    candidate_tags: Some(&entry.tags),
-                    candidate_role_must: if entry.role_must.is_empty() {
-                        None
-                    } else {
-                        Some(&entry.role_must)
-                    },
-                    my_pick_tags: &empty_picks,
-                    need_scarcity: None,
-                    pool_has_hard_cc: false,
-                })
-                .as_ref(),
-            );
-            let final_score = base + role_delta.as_ref().map(|r| r.delta).unwrap_or(0.0);
-            let curated = role_delta.as_ref().is_some_and(|r| r.curated);
-
-            scored_entities.push(ScoredEntity {
-                internal_name: internal_name.clone(),
-                entity_type: EntityType::Ability,
-                consolidated_score: final_score,
-                is_ultimate_from_coord_source: *is_ult,
-                is_ultimate_from_db: db_row.is_some_and(|r| r.is_ultimate),
-                role_curated: curated,
-            });
-            slot_scores.insert(slot_idx, (final_score, winrate, pick_rate, display_name));
-        }
-
-        let top_tier = determine_top_tier_entities(
-            &scored_entities,
-            options.selected_model_hero_order.map(i64::from),
-            false,
-            &HashSet::new(),
-        );
-        let mut rank_by_name: HashMap<String, (u8, bool, bool)> = HashMap::new();
-        for (idx, item) in top_tier.into_iter().enumerate() {
-            rank_by_name
-                .entry(item.entity.internal_name)
-                .or_insert((
-                    (idx + 1) as u8,
-                    item.is_general_top_tier,
-                    item.is_synergy_suggestion_for_my_spot,
-                ));
-        }
-
-        let mut slots = Vec::with_capacity(pool_coords.len());
-        for (slot_idx, bounds) in slot_rects.into_iter().enumerate() {
-            let internal_name = recognized_by_slot
-                .get(&slot_idx)
-                .and_then(|opt| opt.as_ref());
-            if let (Some(name), Some((score, winrate, pick_rate, display_name))) =
-                (internal_name, slot_scores.get(&slot_idx))
-            {
-                let (top_rank, is_top_tier, is_synergy_pick) = rank_by_name
-                    .get(name)
-                    .map(|&(rank, top, syn)| (Some(rank), top, syn))
-                    .unwrap_or((None, false, false));
-                slots.push(SlotHighlight {
-                    slot_index: slot_idx,
-                    bounds,
-                    display_name: display_name.clone(),
-                    is_unknown: false,
-                    is_top_tier,
-                    is_synergy_pick,
-                    consolidated_score: Some(*score),
-                    winrate: *winrate,
-                    pick_rate: *pick_rate,
-                    top_rank,
-                });
-            } else {
-                slots.push(SlotHighlight {
-                    slot_index: slot_idx,
-                    bounds,
-                    display_name: "Unknown".to_string(),
-                    is_unknown: true,
-                    is_top_tier: false,
-                    is_synergy_pick: false,
-                    consolidated_score: None,
-                    winrate: None,
-                    pick_rate: None,
-                    top_rank: None,
+        let mut defining_abilities = Vec::new();
+        for (slot_idx, (coord, is_ult)) in pool_coords.iter().enumerate() {
+            if !*is_ult && coord.ability_order == Some(2) {
+                defining_abilities.push(HeroDefiningAbility {
+                    name: recognized_by_slot
+                        .get(&slot_idx)
+                        .and_then(|opt| opt.clone()),
+                    confidence: conf_by_slot.get(&slot_idx).copied().unwrap_or(0.0),
+                    hero_order: coord.hero_order,
                 });
             }
         }
 
-        Ok(OverlaySnapshot {
-            protocol_version: PROTOCOL_VERSION,
-            sequence,
+        let models = identify_hero_models(
+            &defining_abilities,
+            &layout.models_coords,
+            &self.ability_to_hero_id,
+            &self.heroes_by_id,
+        );
+        let identified_models: Vec<(Rect, IdentifiedHeroModel)> = layout
+            .models_coords
+            .iter()
+            .zip(models)
+            .map(|(coord, model)| {
+                (
+                    Rect {
+                        x: coord.x,
+                        y: coord.y,
+                        width: coord.width.unwrap_or(0).max(0) as u32,
+                        height: coord.height.unwrap_or(0).max(0) as u32,
+                    },
+                    model,
+                )
+            })
+            .collect();
+
+        let spot_w = layout.heroes_params.width.max(0) as u32;
+        let spot_h = layout.heroes_params.height.max(0) as u32;
+        let hero_spots: Vec<(u8, Rect)> = layout
+            .heroes_coords
+            .iter()
+            .map(|coord| {
+                (
+                    coord.hero_order,
+                    Rect {
+                        x: coord.x,
+                        y: coord.y,
+                        width: spot_w,
+                        height: spot_h,
+                    },
+                )
+            })
+            .collect();
+
+        let (pick_readings, picked_abilities) =
+            self.scan_picked_slots(frame, &layout, &pool_std_names, &pool_ult_names);
+        let (op_combinations, trap_combinations) = self.find_pool_combinations(&pool_names);
+
+        let analysis = CachedFrameAnalysis {
             target_resolution: format!("{}x{}", frame.width, frame.height),
             resolution_source: source,
-            scanning: false,
-            slots,
-            selected_spot_hero_order: options.selected_spot_hero_order,
-            selected_model_hero_order: options.selected_model_hero_order,
+            pool_slots,
+            recognized_by_slot,
+            pool_names,
+            identified_models,
+            hero_spots,
+            picked_abilities,
             op_combinations,
             trap_combinations,
-            role_mode: options.role_mode,
-            role_fixed_positions: options.role_fixed_positions.clone(),
-            dota_window: options.dota_window,
-        })
+        };
+
+        let mut session = self
+            .session
+            .lock()
+            .map_err(|_| anyhow::anyhow!("session mutex poisoned"))?;
+        if !pick_readings.is_empty() && !self.pick_templates.is_empty() {
+            let upd = reconcile_ability_picks(&session.timeline, &pick_readings, None, None);
+            session.timeline = upd.timeline;
+            for mut ev in upd.added {
+                ev.seq = session.timeline.len();
+                session.timeline.push(ev);
+            }
+        }
+        let snapshot = self.build_snapshot(&analysis, &session.timeline, options, sequence);
+        session.last_analysis = Some(analysis);
+        Ok(snapshot)
     }
 
     pub fn scan_live_game(
@@ -448,16 +1015,16 @@ impl ScanPipeline {
 
 #[cfg(test)]
 mod tests {
-    use ad_capture::PixelFormat;
-    use ad_protocol::ResolutionSource;
-
     use super::*;
+
+    fn test_pipeline() -> ScanPipeline {
+        let resources_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../resources");
+        ScanPipeline::from_resources_dir(&resources_dir).expect("load ScanPipeline")
+    }
 
     #[test]
     fn finds_op_and_trap_combinations_across_real_database() {
-        let resources_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../resources");
-        let pipeline =
-            ScanPipeline::from_resources_dir(&resources_dir).expect("load ScanPipeline");
+        let pipeline = test_pipeline();
         let (ops, traps) = pipeline.find_pool_combinations(&pipeline.active_class_names);
         assert!(!ops.is_empty(), "expected real OP combinations in seed DB");
         assert!(!traps.is_empty(), "expected real Trap combinations in seed DB");
@@ -466,10 +1033,8 @@ mod tests {
     }
 
     #[test]
-    fn scans_synthetic_1920x1080_frame_into_48_pool_slot_highlights() {
-        let resources_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../resources");
-        let pipeline =
-            ScanPipeline::from_resources_dir(&resources_dir).expect("load ScanPipeline");
+    fn scans_synthetic_1920x1080_frame_into_pool_spots_and_hero_models() {
+        let pipeline = test_pipeline();
         assert!(pipeline.layout_count() >= 20);
 
         let frame = RawFrame {
@@ -481,8 +1046,9 @@ mod tests {
         let options = ScanOptions {
             role_mode: RoleMode::Fixed,
             role_fixed_positions: vec![1, 2],
-            selected_spot_hero_order: None,
+            selected_spot_hero_order: Some(0),
             selected_model_hero_order: None,
+            auto_rescan_enabled: true,
             dota_window: None,
         };
 
@@ -493,7 +1059,130 @@ mod tests {
         assert_eq!(snapshot.resolution_source, ResolutionSource::Preset);
         assert!(!snapshot.scanning);
         assert_eq!(snapshot.slots.len(), 48);
-        assert_eq!(snapshot.role_mode, RoleMode::Fixed);
-        assert_eq!(snapshot.role_fixed_positions, vec![1, 2]);
+        assert_eq!(snapshot.hero_spots.len(), 10);
+        assert_eq!(snapshot.hero_models.len(), 12);
+        assert_eq!(snapshot.picked_abilities.len(), 40);
+        assert!(snapshot.hero_spots.iter().any(|s| s.hero_order == 0 && s.is_my_spot));
+        assert!(snapshot.auto_rescan_enabled);
+    }
+
+    #[test]
+    fn rescore_cached_updates_spot_model_and_suppresses_hero_highlights() {
+        let pipeline = test_pipeline();
+        let mut names_iter = pipeline.abilities_by_name.keys().cloned();
+        let ab1 = names_iter.next().unwrap();
+        let ab2 = names_iter.next().unwrap();
+
+        let (axe_id, axe_rec) = pipeline
+            .heroes_by_id
+            .iter()
+            .find(|(_, h)| h.winrate.unwrap_or(0.0) > 0.5)
+            .map(|(&id, h)| (id, h.clone()))
+            .unwrap();
+
+        let analysis = CachedFrameAnalysis {
+            target_resolution: "1920x1080".into(),
+            resolution_source: ResolutionSource::Preset,
+            pool_slots: vec![
+                PoolSlotMeta {
+                    bounds: Rect { x: 10, y: 10, width: 40, height: 40 },
+                    is_ult: false,
+                },
+                PoolSlotMeta {
+                    bounds: Rect { x: 60, y: 10, width: 40, height: 40 },
+                    is_ult: false,
+                },
+            ],
+            recognized_by_slot: HashMap::from([(0, Some(ab1.clone())), (1, Some(ab2.clone()))]),
+            pool_names: HashSet::from([ab1, ab2]),
+            identified_models: vec![(
+                Rect { x: 200, y: 200, width: 44, height: 44 },
+                IdentifiedHeroModel {
+                    hero_order: 3,
+                    hero_name: axe_rec.name.clone(),
+                    hero_display_name: axe_rec.display_name.clone(),
+                    db_hero_id: Some(axe_id),
+                    winrate: Some(0.99),
+                    pick_rate: Some(1.0),
+                    identification_confidence: 0.99,
+                },
+            )],
+            hero_spots: vec![(0, Rect { x: 20, y: 20, width: 200, height: 100 })],
+            picked_abilities: Vec::new(),
+            op_combinations: Vec::new(),
+            trap_combinations: Vec::new(),
+        };
+
+        {
+            let mut session = pipeline.session.lock().unwrap();
+            session.last_analysis = Some(analysis);
+        }
+
+        let no_model_opts = ScanOptions {
+            role_mode: RoleMode::Off,
+            role_fixed_positions: vec![],
+            selected_spot_hero_order: None,
+            selected_model_hero_order: None,
+            auto_rescan_enabled: false,
+            dota_window: None,
+        };
+        let snap1 = pipeline.rescore_cached(&no_model_opts, 2).expect("cached snapshot");
+        assert!(snap1.hero_models[0].is_top_tier);
+        assert!(!snap1.hero_models[0].is_my_model);
+
+        let with_model_opts = ScanOptions {
+            selected_model_hero_order: Some(3),
+            selected_spot_hero_order: Some(0),
+            ..no_model_opts
+        };
+        let snap2 = pipeline.rescore_cached(&with_model_opts, 3).expect("rescored snapshot");
+        assert!(!snap2.hero_models[0].is_top_tier);
+        assert!(snap2.hero_models[0].is_my_model);
+        assert!(snap2.hero_spots[0].is_my_spot);
+    }
+
+    #[test]
+    fn synergy_partner_lookup_marks_strong_partners_for_my_spot() {
+        let pipeline = test_pipeline();
+        let pair = pipeline
+            .synergies
+            .iter()
+            .find(|s| s.is_op || s.synergy_increase.is_some_and(|v| v >= DEFAULT_OP_THRESHOLD))
+            .expect("expected at least one strong synergy pair in seed DB")
+            .clone();
+
+        let analysis = CachedFrameAnalysis {
+            target_resolution: "1920x1080".into(),
+            resolution_source: ResolutionSource::Preset,
+            pool_slots: vec![PoolSlotMeta {
+                bounds: Rect { x: 10, y: 10, width: 40, height: 40 },
+                is_ult: false,
+            }],
+            recognized_by_slot: HashMap::from([(0, Some(pair.internal2.clone()))]),
+            pool_names: HashSet::from([pair.internal2.clone()]),
+            identified_models: Vec::new(),
+            hero_spots: Vec::new(),
+            picked_abilities: vec![PickedAbilitySlot {
+                hero_order: 2,
+                box_index: 0,
+                is_ultimate: false,
+                ability_name: Some(pair.internal1.clone()),
+                display_name: pair.display1.clone(),
+            }],
+            op_combinations: Vec::new(),
+            trap_combinations: Vec::new(),
+        };
+
+        let opts = ScanOptions {
+            role_mode: RoleMode::Off,
+            role_fixed_positions: vec![],
+            selected_spot_hero_order: Some(2),
+            selected_model_hero_order: None,
+            auto_rescan_enabled: false,
+            dota_window: None,
+        };
+        let snap = pipeline.build_snapshot(&analysis, &[], &opts, 5);
+        assert!(snap.slots[0].is_synergy_pick);
+        assert_eq!(snap.slots[0].top_rank, Some(1));
     }
 }

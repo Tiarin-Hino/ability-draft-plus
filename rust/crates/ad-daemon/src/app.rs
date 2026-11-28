@@ -29,11 +29,12 @@ use tower_http::{cors::CorsLayer, services::ServeDir};
 use tracing::warn;
 
 use crate::{
+    auto_rescan::{AutoRescanController, RescanAction},
     db::DbSummary,
     scanner::{ScanOptions, ScanPipeline},
 };
 
-fn now_epoch_ms() -> u64 {
+pub fn now_epoch_ms() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_millis() as u64)
@@ -54,6 +55,7 @@ pub struct DaemonState {
     pub dota_window: Arc<RwLock<Option<WindowBounds>>>,
     pub role_mode: Arc<RwLock<RoleMode>>,
     pub role_fixed_positions: Arc<RwLock<Vec<u8>>>,
+    pub auto_rescan: Arc<RwLock<AutoRescanController>>,
 }
 
 impl DaemonState {
@@ -62,6 +64,9 @@ impl DaemonState {
         pipeline: Option<Arc<ScanPipeline>>,
         web_dir: Option<PathBuf>,
     ) -> Self {
+        let auto_rescan_default = std::env::var("AD_AUTO_RESCAN")
+            .ok()
+            .is_some_and(|v| v == "1" || v.eq_ignore_ascii_case("true"));
         let initial_snapshot = OverlaySnapshot {
             protocol_version: PROTOCOL_VERSION,
             sequence: 0,
@@ -69,12 +74,16 @@ impl DaemonState {
             resolution_source: ResolutionSource::Preset,
             scanning: false,
             slots: Vec::new(),
+            hero_models: Vec::new(),
+            hero_spots: Vec::new(),
+            picked_abilities: Vec::new(),
             selected_spot_hero_order: None,
             selected_model_hero_order: None,
             op_combinations: Vec::new(),
             trap_combinations: Vec::new(),
             role_mode: RoleMode::Off,
             role_fixed_positions: Vec::new(),
+            auto_rescan_enabled: auto_rescan_default,
             dota_window: None,
         };
         let (overlay_tx, _) = broadcast::channel(32);
@@ -92,6 +101,7 @@ impl DaemonState {
             dota_window: Arc::new(RwLock::new(None)),
             role_mode: Arc::new(RwLock::new(RoleMode::Off)),
             role_fixed_positions: Arc::new(RwLock::new(Vec::new())),
+            auto_rescan: Arc::new(RwLock::new(AutoRescanController::new(auto_rescan_default))),
         }
     }
 
@@ -128,6 +138,104 @@ pub fn window_bounds_to_rect(bounds: WindowBounds) -> Rect {
         width: bounds.width,
         height: bounds.height,
     }
+}
+
+fn clear_snapshot_draft_fields(snap: &mut OverlaySnapshot) {
+    snap.scanning = false;
+    snap.slots.clear();
+    snap.hero_models.clear();
+    snap.hero_spots.clear();
+    snap.picked_abilities.clear();
+    snap.op_combinations.clear();
+    snap.trap_combinations.clear();
+    snap.selected_spot_hero_order = None;
+    snap.selected_model_hero_order = None;
+}
+
+pub async fn reset_draft_state(state: &DaemonState) -> OverlaySnapshot {
+    if let Some(pipeline) = &state.pipeline {
+        pipeline.reset_session();
+    }
+    state.auto_rescan.write().await.reset_draft();
+    let updated = {
+        let mut snap = state.latest_snapshot.write().await;
+        snap.sequence += 1;
+        clear_snapshot_draft_fields(&mut snap);
+        snap.clone()
+    };
+    let _ = state.overlay_tx.send(updated.clone());
+    let _ = state.stream_tx.send(state.build_stream_envelope().await);
+    updated
+}
+
+pub async fn spawn_background_scan(state: &DaemonState) {
+    let Some(pipeline) = state.pipeline.clone() else {
+        return;
+    };
+    let current_role_mode = *state.role_mode.read().await;
+    let current_role_positions = state.role_fixed_positions.read().await.clone();
+    let current_window = (*state.dota_window.read().await).map(window_bounds_to_rect);
+    let auto_enabled = state.auto_rescan.read().await.enabled;
+
+    let (next_seq, options) = {
+        let mut snap = state.latest_snapshot.write().await;
+        snap.sequence += 1;
+        snap.scanning = true;
+        snap.auto_rescan_enabled = auto_enabled;
+        snap.dota_window = current_window;
+        let opts = ScanOptions {
+            role_mode: current_role_mode,
+            role_fixed_positions: current_role_positions,
+            selected_spot_hero_order: snap.selected_spot_hero_order,
+            selected_model_hero_order: snap.selected_model_hero_order,
+            auto_rescan_enabled: auto_enabled,
+            dota_window: current_window,
+        };
+        let copy = snap.clone();
+        let _ = state.overlay_tx.send(copy);
+        (snap.sequence + 1, opts)
+    };
+
+    let state_bg = state.clone();
+    tokio::spawn(async move {
+        let res =
+            tokio::task::spawn_blocking(move || pipeline.scan_live_game(&options, next_seq))
+                .await;
+        let final_snap = match res {
+            Ok(Ok(scanned)) => {
+                let picked_count = scanned
+                    .picked_abilities
+                    .iter()
+                    .filter(|p| p.ability_name.is_some())
+                    .count();
+                state_bg
+                    .auto_rescan
+                    .write()
+                    .await
+                    .set_picks_tracked(picked_count);
+                scanned
+            }
+            Ok(Err(err)) => {
+                warn!(%err, "Live scan failed");
+                let mut guard = state_bg.latest_snapshot.write().await;
+                guard.sequence = guard.sequence.max(next_seq);
+                guard.scanning = false;
+                guard.clone()
+            }
+            Err(err) => {
+                warn!(%err, "Scan task panicked");
+                let mut guard = state_bg.latest_snapshot.write().await;
+                guard.sequence = guard.sequence.max(next_seq);
+                guard.scanning = false;
+                guard.clone()
+            }
+        };
+        *state_bg.latest_snapshot.write().await = final_snap.clone();
+        let _ = state_bg.overlay_tx.send(final_snap);
+        let _ = state_bg
+            .stream_tx
+            .send(state_bg.build_stream_envelope().await);
+    });
 }
 
 #[derive(Serialize)]
@@ -168,7 +276,23 @@ async fn ingest_gsi(State(state): State<DaemonState>, Json(payload): Json<Value>
         mode = ?snapshot.mode,
         "Received GSI snapshot"
     );
+    let action = state
+        .auto_rescan
+        .write()
+        .await
+        .on_gsi_snapshot(&snapshot, now_epoch_ms());
     *state.latest_gsi.write().await = Some(snapshot);
+
+    if action == RescanAction::ResetDraft {
+        if let Some(pipeline) = &state.pipeline {
+            pipeline.reset_session();
+        }
+        let mut snap = state.latest_snapshot.write().await;
+        snap.sequence += 1;
+        clear_snapshot_draft_fields(&mut snap);
+        let _ = state.overlay_tx.send(snap.clone());
+    }
+
     let envelope = state.build_stream_envelope().await;
     let _ = state.stream_tx.send(envelope);
     StatusCode::OK
@@ -257,6 +381,7 @@ async fn overlay_command(
     Json(cmd): Json<OverlayCommand>,
 ) -> Json<OverlaySnapshot> {
     let mut trigger_scan = false;
+    let mut should_rescore = false;
     match &cmd {
         OverlayCommand::SetRoleMode {
             mode,
@@ -264,44 +389,66 @@ async fn overlay_command(
         } => {
             *state.role_mode.write().await = *mode;
             *state.role_fixed_positions.write().await = fixed_positions.clone();
+            should_rescore = true;
+        }
+        OverlayCommand::SelectMySpot { .. } | OverlayCommand::SelectMyModel { .. } => {
+            should_rescore = true;
+        }
+        OverlayCommand::SetAutoRescan { enabled } => {
+            state.auto_rescan.write().await.enabled = *enabled;
         }
         OverlayCommand::TriggerScan { .. } => {
             trigger_scan = true;
         }
-        _ => {}
+        OverlayCommand::ResetDraft => {
+            return Json(reset_draft_state(&state).await);
+        }
+        OverlayCommand::CloseOverlay | OverlayCommand::ReportFailedScan => {}
     }
 
     let current_role_mode = *state.role_mode.read().await;
     let current_role_positions = state.role_fixed_positions.read().await.clone();
     let current_window = (*state.dota_window.read().await).map(window_bounds_to_rect);
+    let auto_enabled = state.auto_rescan.read().await.enabled;
 
     let updated = {
         let mut snap = state.latest_snapshot.write().await;
         snap.sequence += 1;
         snap.role_mode = current_role_mode;
         snap.role_fixed_positions = current_role_positions.clone();
+        snap.auto_rescan_enabled = auto_enabled;
         snap.dota_window = current_window;
-        match cmd {
+        match &cmd {
+            OverlayCommand::SelectMySpot { hero_order, .. } => {
+                snap.selected_spot_hero_order = Some(*hero_order);
+            }
+            OverlayCommand::SelectMyModel { hero_order, .. } => {
+                snap.selected_model_hero_order = Some(*hero_order);
+            }
             OverlayCommand::TriggerScan { .. } => {
                 snap.scanning = true;
             }
-            OverlayCommand::SelectMySpot { hero_order, .. } => {
-                snap.selected_spot_hero_order = Some(hero_order);
-            }
-            OverlayCommand::SelectMyModel { hero_order, .. } => {
-                snap.selected_model_hero_order = Some(hero_order);
-            }
-            OverlayCommand::ResetDraft => {
-                snap.scanning = false;
-                snap.slots.clear();
-                snap.op_combinations.clear();
-                snap.trap_combinations.clear();
-                snap.selected_spot_hero_order = None;
-                snap.selected_model_hero_order = None;
-            }
             OverlayCommand::SetRoleMode { .. }
+            | OverlayCommand::SetAutoRescan { .. }
+            | OverlayCommand::ResetDraft
             | OverlayCommand::CloseOverlay
             | OverlayCommand::ReportFailedScan => {}
+        }
+
+        if should_rescore {
+            if let Some(pipeline) = &state.pipeline {
+                let opts = ScanOptions {
+                    role_mode: current_role_mode,
+                    role_fixed_positions: current_role_positions.clone(),
+                    selected_spot_hero_order: snap.selected_spot_hero_order,
+                    selected_model_hero_order: snap.selected_model_hero_order,
+                    auto_rescan_enabled: auto_enabled,
+                    dota_window: current_window,
+                };
+                if let Some(rescored) = pipeline.rescore_cached(&opts, snap.sequence) {
+                    *snap = rescored;
+                }
+            }
         }
         snap.clone()
     };
@@ -310,44 +457,7 @@ async fn overlay_command(
     let _ = state.stream_tx.send(state.build_stream_envelope().await);
 
     if trigger_scan {
-        if let Some(pipeline) = state.pipeline.clone() {
-            let state_bg = state.clone();
-            let options = ScanOptions {
-                role_mode: current_role_mode,
-                role_fixed_positions: current_role_positions,
-                selected_spot_hero_order: updated.selected_spot_hero_order,
-                selected_model_hero_order: updated.selected_model_hero_order,
-                dota_window: current_window,
-            };
-            let next_seq = updated.sequence + 1;
-            tokio::spawn(async move {
-                let res =
-                    tokio::task::spawn_blocking(move || pipeline.scan_live_game(&options, next_seq))
-                        .await;
-                let final_snap = match res {
-                    Ok(Ok(scanned)) => scanned,
-                    Ok(Err(err)) => {
-                        warn!(%err, "Live scan failed");
-                        let mut guard = state_bg.latest_snapshot.write().await;
-                        guard.sequence = guard.sequence.max(next_seq);
-                        guard.scanning = false;
-                        guard.clone()
-                    }
-                    Err(err) => {
-                        warn!(%err, "Scan task panicked");
-                        let mut guard = state_bg.latest_snapshot.write().await;
-                        guard.sequence = guard.sequence.max(next_seq);
-                        guard.scanning = false;
-                        guard.clone()
-                    }
-                };
-                *state_bg.latest_snapshot.write().await = final_snap.clone();
-                let _ = state_bg.overlay_tx.send(final_snap);
-                let _ = state_bg
-                    .stream_tx
-                    .send(state_bg.build_stream_envelope().await);
-            });
-        }
+        spawn_background_scan(&state).await;
     }
 
     Json(updated)
@@ -481,6 +591,23 @@ mod tests {
         assert_eq!(snap1.sequence, 1);
         assert_eq!(snap1.selected_spot_hero_order, Some(3));
 
+        let auto_cmd = OverlayCommand::SetAutoRescan { enabled: true };
+        let res_auto = app
+            .clone()
+            .oneshot(
+                Request::post("/overlay/command")
+                    .header("content-type", "application/json")
+                    .body(Body::from(serde_json::to_string(&auto_cmd).unwrap()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(res_auto.status(), StatusCode::OK);
+        let snap_auto: OverlaySnapshot =
+            serde_json::from_slice(&to_bytes(res_auto.into_body(), 1024 * 64).await.unwrap())
+                .unwrap();
+        assert!(snap_auto.auto_rescan_enabled);
+
         let res2 = app
             .clone()
             .oneshot(
@@ -496,7 +623,7 @@ mod tests {
         assert_eq!(res2.status(), StatusCode::OK);
         let snap2: OverlaySnapshot =
             serde_json::from_slice(&to_bytes(res2.into_body(), 1024 * 64).await.unwrap()).unwrap();
-        assert_eq!(snap2.sequence, 2);
+        assert_eq!(snap2.sequence, 3);
         assert_eq!(snap2.selected_spot_hero_order, None);
 
         let res3 = app
@@ -506,7 +633,7 @@ mod tests {
         assert_eq!(res3.status(), StatusCode::OK);
         let snap3: OverlaySnapshot =
             serde_json::from_slice(&to_bytes(res3.into_body(), 1024 * 64).await.unwrap()).unwrap();
-        assert_eq!(snap3.sequence, 2);
+        assert_eq!(snap3.sequence, 3);
     }
 
     #[tokio::test]

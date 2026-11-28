@@ -5,7 +5,6 @@ use std::path::Path;
 use rusqlite::{Connection, OpenFlags, OptionalExtension};
 use serde::Serialize;
 
-#[cfg_attr(not(test), allow(dead_code))]
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct HeroRow {
     pub hero_id: i64,
@@ -40,6 +39,15 @@ pub struct AbilityRow {
 pub struct AbilitySynergyRow {
     pub base_ability_id: i64,
     pub synergy_ability_id: i64,
+    pub synergy_winrate: f64,
+    pub synergy_increase: Option<f64>,
+    pub is_op: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct HeroAbilitySynergyRow {
+    pub hero_id: i64,
+    pub ability_id: i64,
     pub synergy_winrate: f64,
     pub synergy_increase: Option<f64>,
     pub is_op: bool,
@@ -100,7 +108,6 @@ impl AdDatabase {
         })
     }
 
-    #[cfg_attr(not(test), allow(dead_code))]
     pub fn load_heroes(&self) -> rusqlite::Result<Vec<HeroRow>> {
         let mut stmt = self.conn.prepare(
             "SELECT hero_id, name, display_name, winrate, pick_rate, windrun_id
@@ -169,6 +176,24 @@ impl AdDatabase {
         })?;
         rows.collect()
     }
+
+    pub fn load_hero_ability_synergies(&self) -> rusqlite::Result<Vec<HeroAbilitySynergyRow>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT hero_id, ability_id, synergy_winrate, synergy_increase, COALESCE(is_op, 0)
+             FROM HeroAbilitySynergies",
+        )?;
+        let rows = stmt.query_map([], |row| {
+            let op_int: i64 = row.get(4)?;
+            Ok(HeroAbilitySynergyRow {
+                hero_id: row.get(0)?,
+                ability_id: row.get(1)?,
+                synergy_winrate: row.get(2)?,
+                synergy_increase: row.get(3)?,
+                is_op: op_int != 0,
+            })
+        })?;
+        rows.collect()
+    }
 }
 
 #[cfg(test)]
@@ -205,6 +230,14 @@ mod tests {
         assert_eq!(
             i64::try_from(synergies.len()).ok(),
             Some(summary.ability_synergies_count)
+        );
+
+        let hero_synergies = db
+            .load_hero_ability_synergies()
+            .expect("load hero ability synergies");
+        assert_eq!(
+            i64::try_from(hero_synergies.len()).ok(),
+            Some(summary.hero_ability_synergies_count)
         );
     }
 }

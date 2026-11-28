@@ -2,6 +2,7 @@
 //! local web Control Panel assets, SQLite storage, ML/OCR pipeline, and overlay IPC.
 
 mod app;
+mod auto_rescan;
 mod db;
 mod scanner;
 
@@ -15,7 +16,11 @@ use std::{
 use tracing::{info, warn};
 
 use crate::{
-    app::{build_router, window_bounds_to_rect, DaemonState},
+    app::{
+        build_router, now_epoch_ms, reset_draft_state, spawn_background_scan,
+        window_bounds_to_rect, DaemonState,
+    },
+    auto_rescan::RescanAction,
     db::{AdDatabase, DbSummary},
     scanner::ScanPipeline,
 };
@@ -98,6 +103,7 @@ async fn main() -> anyhow::Result<()> {
         resolve_pipeline(&resources_dir),
         resolve_web_dir(),
     );
+
     let tracker_state = state.clone();
     tokio::spawn(async move {
         let mut ticker = tokio::time::interval(Duration::from_secs(2));
@@ -130,6 +136,31 @@ async fn main() -> anyhow::Result<()> {
                     snap.clone()
                 };
                 let _ = tracker_state.overlay_tx.send(updated);
+            }
+        }
+    });
+
+    let rescan_state = state.clone();
+    tokio::spawn(async move {
+        let mut ticker = tokio::time::interval(Duration::from_secs(1));
+        loop {
+            ticker.tick().await;
+            let action = rescan_state
+                .auto_rescan
+                .write()
+                .await
+                .poll_tick(now_epoch_ms());
+            match action {
+                RescanAction::None => {}
+                RescanAction::ResetDraft => {
+                    reset_draft_state(&rescan_state).await;
+                }
+                RescanAction::TriggerInitialScan
+                | RescanAction::TriggerTurnRescan { .. }
+                | RescanAction::TriggerRoundBreakRescan => {
+                    info!(?action, "Auto-rescan triggering live capture");
+                    spawn_background_scan(&rescan_state).await;
+                }
             }
         }
     });

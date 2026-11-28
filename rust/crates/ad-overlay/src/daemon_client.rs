@@ -25,12 +25,16 @@ pub fn empty_snapshot() -> OverlaySnapshot {
         resolution_source: ResolutionSource::Preset,
         scanning: false,
         slots: Vec::new(),
+        hero_models: Vec::new(),
+        hero_spots: Vec::new(),
+        picked_abilities: Vec::new(),
         selected_spot_hero_order: None,
         selected_model_hero_order: None,
         op_combinations: Vec::new(),
         trap_combinations: Vec::new(),
         role_mode: RoleMode::Off,
         role_fixed_positions: Vec::new(),
+        auto_rescan_enabled: false,
         dota_window: None,
     }
 }

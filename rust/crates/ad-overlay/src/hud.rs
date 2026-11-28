@@ -1,9 +1,13 @@
 //! Native GPU overlay (`eframe` / `wgpu`) with stateless pointer passthrough,
-//! Role Mode quick bar, OP/Trap combo drawers, and dynamic Dota 2 window tracking.
+//! Role Mode quick bar, OP/Trap combo drawers, My Spot / My Model selection, and
+//! dynamic Dota 2 window tracking.
 
 use std::sync::{Arc, RwLock};
 
-use ad_protocol::{OverlayCommand, OverlaySnapshot, Rect, RoleMode, SlotHighlight, SynergyCombo};
+use ad_protocol::{
+    HeroModelHighlight, OverlayCommand, OverlaySnapshot, Rect, RoleMode, SlotHighlight,
+    SynergyCombo,
+};
 use eframe::egui::{self, Align2, Color32, CornerRadius, FontId, Pos2, Stroke, StrokeKind, Vec2};
 use tokio::sync::mpsc;
 
@@ -32,6 +36,13 @@ pub struct OverlayHudApp {
     role_area_id: egui::Id,
     op_drawer_id: egui::Id,
     trap_drawer_id: egui::Id,
+    spot_base_id: egui::Id,
+    model_base_id: egui::Id,
+}
+
+enum HoveredCard<'a> {
+    Ability(&'a SlotHighlight),
+    HeroModel(&'a HeroModelHighlight),
 }
 
 impl OverlayHudApp {
@@ -62,6 +73,8 @@ impl OverlayHudApp {
             role_area_id: egui::Id::unique("ad_role_bar"),
             op_drawer_id: egui::Id::unique("ad_op_drawer"),
             trap_drawer_id: egui::Id::unique("ad_trap_drawer"),
+            spot_base_id: egui::Id::unique("ad_spot_btn"),
+            model_base_id: egui::Id::unique("ad_model_btn"),
         }
     }
 
@@ -96,7 +109,10 @@ impl OverlayHudApp {
     fn sync_passthrough(&mut self, ctx: &egui::Context) {
         let pointer_pos = ctx.input(|i| i.pointer.latest_pos());
         let in_region = pointer_pos
-            .map(|p| self.hit_tester.is_interactive(p.x.round() as i32, p.y.round() as i32))
+            .map(|p| {
+                self.hit_tester
+                    .is_interactive(p.x.round() as i32, p.y.round() as i32)
+            })
             .unwrap_or(false);
         let interactive = in_region || ctx.egui_wants_pointer_input();
         let passthrough = !interactive;
@@ -106,7 +122,83 @@ impl OverlayHudApp {
         }
     }
 
-    fn draw_slot_highlights(
+    fn draw_rank_pill(painter: &egui::Painter, rect: egui::Rect, rank: u8) {
+        let pill_rect = egui::Rect::from_min_size(rect.min, Vec2::new(26.0, 16.0));
+        painter.rect_filled(pill_rect, CornerRadius::same(3), BG_SLATE);
+        painter.text(
+            pill_rect.center(),
+            Align2::CENTER_CENTER,
+            format!("#{rank}"),
+            FontId::proportional(11.0),
+            GOLD_BORDER,
+        );
+    }
+
+    fn draw_card_tooltip(
+        painter: &egui::Painter,
+        anchor: Rect,
+        badge: Option<(&str, Color32)>,
+        title: &str,
+        winrate: Option<f64>,
+        pick_rate: Option<f64>,
+        score: Option<f64>,
+    ) {
+        let tip_pos = Pos2::new((anchor.x + anchor.width as i32 + 10) as f32, anchor.y as f32);
+        let tip_rect = egui::Rect::from_min_size(tip_pos, Vec2::new(220.0, 92.0));
+        painter.rect_filled(tip_rect, CornerRadius::same(6), BG_SLATE);
+        painter.rect_stroke(
+            tip_rect,
+            CornerRadius::same(6),
+            Stroke::new(1.0, GOLD_BORDER),
+            StrokeKind::Inside,
+        );
+
+        if let Some((label, color)) = badge {
+            painter.text(
+                tip_pos + Vec2::new(8.0, 6.0),
+                Align2::LEFT_TOP,
+                label,
+                FontId::proportional(10.0),
+                color,
+            );
+        }
+        painter.text(
+            tip_pos + Vec2::new(8.0, 20.0),
+            Align2::LEFT_TOP,
+            title,
+            FontId::proportional(13.5),
+            Color32::WHITE,
+        );
+        if let Some(wr) = winrate {
+            painter.text(
+                tip_pos + Vec2::new(8.0, 42.0),
+                Align2::LEFT_TOP,
+                format!("Winrate: {:.1}%", wr * 100.0),
+                FontId::proportional(11.5),
+                TEAL_PICK,
+            );
+        }
+        if let Some(pick) = pick_rate {
+            painter.text(
+                tip_pos + Vec2::new(8.0, 58.0),
+                Align2::LEFT_TOP,
+                format!("Avg Pick: #{pick:.1}"),
+                FontId::proportional(11.5),
+                Color32::LIGHT_GRAY,
+            );
+        }
+        if let Some(s) = score {
+            painter.text(
+                tip_pos + Vec2::new(8.0, 74.0),
+                Align2::LEFT_TOP,
+                format!("Score: {s:.3}"),
+                FontId::proportional(11.0),
+                GOLD_BORDER,
+            );
+        }
+    }
+
+    fn draw_board_highlights(
         &self,
         ctx: &egui::Context,
         snap: &OverlaySnapshot,
@@ -116,7 +208,7 @@ impl OverlayHudApp {
             return;
         }
         let painter = ctx.layer_painter(egui::LayerId::background());
-        let mut hovered_slot: Option<&SlotHighlight> = None;
+        let mut hovered: Option<HoveredCard<'_>> = None;
 
         for slot in &snap.slots {
             let r = egui::Rect::from_min_size(
@@ -141,94 +233,147 @@ impl OverlayHudApp {
                     StrokeKind::Inside,
                 );
             }
-
             if let Some(rank) = slot.top_rank {
-                let pill_rect = egui::Rect::from_min_size(r.min, Vec2::new(26.0, 16.0));
-                painter.rect_filled(pill_rect, CornerRadius::same(3), BG_SLATE);
-                painter.text(
-                    pill_rect.center(),
-                    Align2::CENTER_CENTER,
-                    format!("#{rank}"),
-                    FontId::proportional(11.0),
-                    GOLD_BORDER,
-                );
+                Self::draw_rank_pill(&painter, r, rank);
             }
-
             if let Some(pt) = pointer {
                 if r.contains(pt) {
-                    hovered_slot = Some(slot);
+                    hovered = Some(HoveredCard::Ability(slot));
                 }
             }
         }
 
-        if let Some(slot) = hovered_slot {
-            let tip_pos = Pos2::new(
-                (slot.bounds.x + slot.bounds.width as i32 + 10) as f32,
-                slot.bounds.y as f32,
+        for model in &snap.hero_models {
+            let r = egui::Rect::from_min_size(
+                Pos2::new(model.bounds.x as f32, model.bounds.y as f32),
+                Vec2::new(model.bounds.width as f32, model.bounds.height as f32),
             );
-            let tip_rect = egui::Rect::from_min_size(tip_pos, Vec2::new(220.0, 92.0));
-            painter.rect_filled(tip_rect, CornerRadius::same(6), BG_SLATE);
-            painter.rect_stroke(
-                tip_rect,
-                CornerRadius::same(6),
-                Stroke::new(1.0, GOLD_BORDER),
-                StrokeKind::Inside,
-            );
-
-            let badge = if slot.is_synergy_pick {
-                Some(("SYNERGY PICK", BLUE_SYNERGY))
-            } else if let Some(rank) = slot.top_rank {
-                Some((
-                    if rank <= 3 { "TOP PICK" } else { "RECOMMENDED" },
-                    TEAL_PICK,
-                ))
+            let stroke_color = if model.is_my_model {
+                Some(TEAL_PICK)
+            } else if model.is_top_tier {
+                Some(GOLD_BORDER)
+            } else if model.is_unknown {
+                Some(AMBER_UNKNOWN)
             } else {
                 None
             };
-            if let Some((label, color)) = badge {
-                painter.text(
-                    tip_pos + Vec2::new(8.0, 6.0),
-                    Align2::LEFT_TOP,
-                    label,
-                    FontId::proportional(10.0),
-                    color,
-                );
-            }
 
-            painter.text(
-                tip_pos + Vec2::new(8.0, 20.0),
-                Align2::LEFT_TOP,
-                &slot.display_name,
-                FontId::proportional(13.5),
-                Color32::WHITE,
+            if let Some(c) = stroke_color {
+                painter.rect_stroke(
+                    r,
+                    CornerRadius::same(4),
+                    Stroke::new(2.0, c),
+                    StrokeKind::Inside,
+                );
+            }
+            if let Some(rank) = model.top_rank {
+                Self::draw_rank_pill(&painter, r, rank);
+            }
+            if let Some(pt) = pointer {
+                if r.contains(pt) {
+                    hovered = Some(HoveredCard::HeroModel(model));
+                }
+            }
+        }
+
+        match hovered {
+            Some(HoveredCard::Ability(slot)) => {
+                let badge = if slot.is_synergy_pick {
+                    Some(("SYNERGY PICK", BLUE_SYNERGY))
+                } else if let Some(rank) = slot.top_rank {
+                    Some((
+                        if rank <= 3 { "TOP PICK" } else { "RECOMMENDED" },
+                        TEAL_PICK,
+                    ))
+                } else {
+                    None
+                };
+                Self::draw_card_tooltip(
+                    &painter,
+                    slot.bounds,
+                    badge,
+                    &slot.display_name,
+                    slot.winrate,
+                    slot.pick_rate,
+                    slot.consolidated_score,
+                );
+            }
+            Some(HoveredCard::HeroModel(model)) => {
+                let badge = if model.is_my_model {
+                    Some(("MY MODEL", TEAL_PICK))
+                } else if model.top_rank.is_some() {
+                    Some(("TOP HERO MODEL", GOLD_BORDER))
+                } else {
+                    Some(("HERO MODEL", Color32::LIGHT_GRAY))
+                };
+                Self::draw_card_tooltip(
+                    &painter,
+                    model.bounds,
+                    badge,
+                    &model.display_name,
+                    model.winrate,
+                    model.pick_rate,
+                    model.consolidated_score,
+                );
+            }
+            None => {}
+        }
+    }
+
+    fn draw_spot_and_model_buttons(
+        &self,
+        ctx: &egui::Context,
+        snap: &OverlaySnapshot,
+        regions: &mut Vec<HitRegion>,
+    ) {
+        if snap.scanning {
+            return;
+        }
+
+        for spot in &snap.hero_spots {
+            let pos = Pos2::new(spot.bounds.x as f32 + 4.0, spot.bounds.y as f32 + 4.0);
+            let resp = egui::Area::new(self.spot_base_id.with(spot.hero_order))
+                .fixed_pos(pos)
+                .show(ctx, |ui| {
+                    let label = if spot.is_my_spot { "★ My Spot" } else { "My Spot" };
+                    if ui.selectable_label(spot.is_my_spot, label).clicked() {
+                        self.send_cmd(OverlayCommand::SelectMySpot {
+                            hero_order: spot.hero_order,
+                            db_hero_id: 0,
+                        });
+                    }
+                });
+            Self::push_rect_region(
+                regions,
+                &format!("spot_{}", spot.hero_order),
+                resp.response.rect,
             );
-            if let Some(wr) = slot.winrate {
-                painter.text(
-                    tip_pos + Vec2::new(8.0, 42.0),
-                    Align2::LEFT_TOP,
-                    format!("Winrate: {:.1}%", wr * 100.0),
-                    FontId::proportional(11.5),
-                    TEAL_PICK,
-                );
+        }
+
+        for model in &snap.hero_models {
+            if model.is_unknown {
+                continue;
             }
-            if let Some(pick) = slot.pick_rate {
-                painter.text(
-                    tip_pos + Vec2::new(8.0, 58.0),
-                    Align2::LEFT_TOP,
-                    format!("Avg Pick: #{pick:.1}"),
-                    FontId::proportional(11.5),
-                    Color32::LIGHT_GRAY,
-                );
-            }
-            if let Some(score) = slot.consolidated_score {
-                painter.text(
-                    tip_pos + Vec2::new(8.0, 74.0),
-                    Align2::LEFT_TOP,
-                    format!("Score: {score:.3}"),
-                    FontId::proportional(11.0),
-                    GOLD_BORDER,
-                );
-            }
+            let pos = Pos2::new(
+                model.bounds.x as f32,
+                (model.bounds.y + model.bounds.height as i32 - 18).max(0) as f32,
+            );
+            let resp = egui::Area::new(self.model_base_id.with(model.hero_order))
+                .fixed_pos(pos)
+                .show(ctx, |ui| {
+                    let label = if model.is_my_model { "★ Model" } else { "Model" };
+                    if ui.selectable_label(model.is_my_model, label).clicked() {
+                        self.send_cmd(OverlayCommand::SelectMyModel {
+                            hero_order: model.hero_order,
+                            db_hero_id: model.db_hero_id.unwrap_or(0),
+                        });
+                    }
+                });
+            Self::push_rect_region(
+                regions,
+                &format!("model_{}", model.hero_order),
+                resp.response.rect,
+            );
         }
     }
 
@@ -308,9 +453,10 @@ impl eframe::App for OverlayHudApp {
 
         self.sync_window_bounds(ctx, snap.dota_window);
         let pointer_pos = ctx.input(|i| i.pointer.latest_pos());
-        self.draw_slot_highlights(ctx, &snap, pointer_pos);
+        self.draw_board_highlights(ctx, &snap, pointer_pos);
 
         let mut regions = Vec::new();
+        self.draw_spot_and_model_buttons(ctx, &snap, &mut regions);
 
         // 1. Controls bar
         let controls_resp = egui::Area::new(self.controls_area_id)
@@ -338,6 +484,15 @@ impl eframe::App for OverlayHudApp {
 
                             if ui.button("Reset").clicked() {
                                 self.send_cmd(OverlayCommand::ResetDraft);
+                            }
+
+                            if ui
+                                .selectable_label(snap.auto_rescan_enabled, "Auto")
+                                .clicked()
+                            {
+                                self.send_cmd(OverlayCommand::SetAutoRescan {
+                                    enabled: !snap.auto_rescan_enabled,
+                                });
                             }
 
                             if !snap.op_combinations.is_empty()
