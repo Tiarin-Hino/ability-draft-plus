@@ -1,26 +1,28 @@
 //! Win32 transparent layered topmost overlay window and OS-cursor passthrough watcher.
 
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc, RwLock,
-};
+use std::sync::{Arc, RwLock};
 
 use ad_protocol::Rect;
 use anyhow::Context;
+use tracing::{info, warn};
 use windows::{
-    core::{w, PCWSTR},
+    core::w,
     Win32::{
         Foundation::{COLORREF, HWND, LPARAM, LRESULT, POINT, WPARAM},
         Graphics::Gdi::{CreateSolidBrush, ScreenToClient},
         System::LibraryLoader::GetModuleHandleW,
-        UI::WindowsAndMessaging::{
-            CreateWindowExW, DefWindowProcW, DispatchMessageW, FindWindowW, GetCursorPos,
-            GetMessageW, GetWindowLongPtrW, IsWindow, PostQuitMessage, RegisterClassW,
-            SetLayeredWindowAttributes, SetWindowLongPtrW, ShowWindow, TranslateMessage,
-            CW_USEDEFAULT, GWLP_USERDATA, GWL_EXSTYLE, HTCLIENT, HTTRANSPARENT, LWA_ALPHA,
-            MA_NOACTIVATE, MSG, SW_SHOWNOACTIVATE, WM_DESTROY, WM_MOUSEACTIVATE, WM_NCHITTEST,
-            WNDCLASSW, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST,
-            WS_EX_TRANSPARENT, WS_POPUP,
+        UI::{
+            Input::KeyboardAndMouse::{GetAsyncKeyState, VK_LBUTTON},
+            WindowsAndMessaging::{
+                CreateWindowExW, DefWindowProcW, DispatchMessageW, GetCursorPos, GetMessageW,
+                GetWindowLongPtrW, IsWindow, PostQuitMessage, RegisterClassW,
+                SetLayeredWindowAttributes, SetWindowLongPtrW, SetWindowPos, ShowWindow,
+                TranslateMessage, WindowFromPoint, CW_USEDEFAULT, GWLP_USERDATA, GWL_EXSTYLE,
+                HTCLIENT, HTTRANSPARENT, LWA_ALPHA, MA_NOACTIVATE, MSG, SWP_FRAMECHANGED,
+                SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, SW_SHOWNOACTIVATE,
+                WM_DESTROY, WM_MOUSEACTIVATE, WM_NCHITTEST, WNDCLASSW, WS_EX_LAYERED,
+                WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_EX_TRANSPARENT, WS_POPUP,
+            },
         },
     },
 };
@@ -34,90 +36,119 @@ fn point_in_rect(x: i32, y: i32, r: &Rect) -> bool {
         && i64::from(y) < i64::from(r.y) + i64::from(r.height)
 }
 
-fn find_window_by_title(wide_title: &[u16]) -> Option<HWND> {
-    match unsafe { FindWindowW(PCWSTR::null(), PCWSTR(wide_title.as_ptr())) } {
-        Ok(hwnd) if !hwnd.is_invalid() => Some(hwnd),
-        _ => None,
-    }
-}
-
 /// Polls OS cursor position independently of `WM_MOUSEMOVE` (which Windows stops sending when
-/// `WS_EX_TRANSPARENT` is set) and toggles ONLY `WS_EX_TRANSPARENT` while keeping `WS_EX_LAYERED`
-/// permanently set so DWM per-pixel alpha transparency never breaks.
+/// `WS_EX_TRANSPARENT` is set) and toggles ONLY `WS_EX_TRANSPARENT` while keeping
+/// `WS_EX_LAYERED | WS_EX_NOACTIVATE` permanently set and flushing changes with `SWP_FRAMECHANGED`.
 pub fn spawn_cursor_passthrough_watcher(
-    window_title: &str,
+    raw_hwnd: isize,
     hit_tester: Arc<RwLock<HitTester>>,
     hover_rects: Arc<RwLock<Vec<Rect>>>,
     cursor_phys: Arc<RwLock<Option<(i32, i32)>>>,
-    pointer_down: Arc<AtomicBool>,
     request_repaint: Arc<dyn Fn() + Send + Sync>,
 ) {
-    let wide_title: Vec<u16> = window_title
-        .encode_utf16()
-        .chain(std::iter::once(0))
-        .collect();
-
     std::thread::spawn(move || {
-        let mut cached_hwnd: Option<HWND> = None;
+        let hwnd = HWND(raw_hwnd as *mut core::ffi::c_void);
+        let mut dragging_hud = false;
+        let mut last_lbutton_down = false;
         let mut last_interactive: Option<bool> = None;
         let mut last_hovered: Option<usize> = None;
         let mut last_cursor: Option<(i32, i32)> = None;
+        let mut logged_init = false;
 
         let layered_bit = WS_EX_LAYERED.0 as isize;
         let transparent_bit = WS_EX_TRANSPARENT.0 as isize;
+        let noactivate_bit = WS_EX_NOACTIVATE.0 as isize;
+        let swp_flags =
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED;
 
         loop {
             std::thread::sleep(std::time::Duration::from_millis(16));
 
-            let valid = cached_hwnd.is_some_and(|h| unsafe { IsWindow(Some(h)).as_bool() });
-            if !valid {
-                cached_hwnd = find_window_by_title(&wide_title);
+            if !unsafe { IsWindow(Some(hwnd)).as_bool() } {
+                break;
             }
-            let Some(hwnd) = cached_hwnd else {
-                continue;
-            };
 
-            let mut pt = POINT::default();
-            if unsafe { GetCursorPos(&mut pt) }.is_err() {
+            let mut screen_pt = POINT::default();
+            if unsafe { GetCursorPos(&mut screen_pt) }.is_err() {
                 continue;
             }
-            if !unsafe { ScreenToClient(hwnd, &mut pt) }.as_bool() {
+            let mut client_pt = screen_pt;
+            if !unsafe { ScreenToClient(hwnd, &mut client_pt) }.as_bool() {
                 continue;
             }
 
+            let lbutton_down = unsafe { GetAsyncKeyState(i32::from(VK_LBUTTON.0)) } < 0;
             let hit_interactive = hit_tester
                 .read()
-                .map(|guard| guard.is_interactive(pt.x, pt.y))
+                .map(|guard| guard.is_interactive(client_pt.x, client_pt.y))
                 .unwrap_or(false);
-            let interactive = hit_interactive || pointer_down.load(Ordering::Relaxed);
+
+            if !lbutton_down {
+                dragging_hud = false;
+            } else if !last_lbutton_down && hit_interactive {
+                dragging_hud = true;
+            }
+            last_lbutton_down = lbutton_down;
+
+            let interactive = hit_interactive || dragging_hud;
             let hovered = hover_rects
                 .read()
                 .ok()
-                .and_then(|rects| rects.iter().position(|r| point_in_rect(pt.x, pt.y, r)));
+                .and_then(|rects| rects.iter().position(|r| point_in_rect(client_pt.x, client_pt.y, r)));
 
-            unsafe {
-                let ex = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
-                let next_ex = if interactive {
-                    (ex | layered_bit) & !transparent_bit
-                } else {
-                    ex | layered_bit | transparent_bit
-                };
-                if next_ex != ex {
+            let ex_before = unsafe { GetWindowLongPtrW(hwnd, GWL_EXSTYLE) };
+            let next_ex = if interactive {
+                (ex_before | layered_bit | noactivate_bit) & !transparent_bit
+            } else {
+                ex_before | layered_bit | noactivate_bit | transparent_bit
+            };
+            let mut swp_ok = true;
+            if next_ex != ex_before {
+                unsafe {
                     SetWindowLongPtrW(hwnd, GWL_EXSTYLE, next_ex);
+                    swp_ok = SetWindowPos(hwnd, None, 0, 0, 0, 0, swp_flags).is_ok();
+                }
+                if !swp_ok {
+                    warn!(
+                        hwnd = format_args!("0x{:x}", raw_hwnd),
+                        ex_before = format_args!("0x{:x}", ex_before),
+                        next_ex = format_args!("0x{:x}", next_ex),
+                        "SetWindowPos(SWP_FRAMECHANGED) failed after GWL_EXSTYLE update"
+                    );
                 }
             }
 
-            if last_interactive != Some(interactive) {
+            let transition = last_interactive != Some(interactive);
+            if !logged_init || transition {
+                logged_init = true;
+                let ex_after = unsafe { GetWindowLongPtrW(hwnd, GWL_EXSTYLE) };
+                let wfp = unsafe { WindowFromPoint(screen_pt) };
+                info!(
+                    hwnd = format_args!("0x{:x}", raw_hwnd),
+                    interactive,
+                    hit_interactive,
+                    dragging_hud,
+                    client_x = client_pt.x,
+                    client_y = client_pt.y,
+                    ex_before = format_args!("0x{:x}", ex_before),
+                    ex_after = format_args!("0x{:x}", ex_after),
+                    swp_ok,
+                    window_from_point_is_overlay = (wfp == hwnd),
+                    "Win32 overlay passthrough state"
+                );
+            }
+
+            if transition {
                 last_interactive = Some(interactive);
                 if let Ok(mut guard) = cursor_phys.write() {
-                    *guard = Some((pt.x, pt.y));
+                    *guard = Some((client_pt.x, client_pt.y));
                 }
-                last_cursor = Some((pt.x, pt.y));
+                last_cursor = Some((client_pt.x, client_pt.y));
                 request_repaint();
                 continue;
             }
 
-            let cur_pos = Some((pt.x, pt.y));
+            let cur_pos = Some((client_pt.x, client_pt.y));
             if last_hovered != hovered || (hovered.is_some() && last_cursor != cur_pos) {
                 last_hovered = hovered;
                 last_cursor = cur_pos;

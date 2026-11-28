@@ -2,8 +2,6 @@
 //! DPI-aligned coordinates, Role Mode quick bar, OP/Trap combo drawers, and
 //! My Spot / My Model selection.
 
-#[cfg(target_os = "windows")]
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
 
 use ad_protocol::{
@@ -12,6 +10,7 @@ use ad_protocol::{
 };
 use eframe::egui::{self, Align2, Color32, CornerRadius, FontId, Pos2, Stroke, StrokeKind, Vec2};
 use tokio::sync::mpsc;
+use tracing::info;
 
 use crate::{
     daemon_client::{empty_snapshot, spawn_daemon_bridge, DaemonConnectionState},
@@ -54,8 +53,6 @@ pub struct OverlayHudApp {
     hit_tester: Arc<RwLock<HitTester>>,
     hover_rects: Arc<RwLock<Vec<Rect>>>,
     cursor_phys: Arc<RwLock<Option<(i32, i32)>>>,
-    #[cfg(target_os = "windows")]
-    pointer_down: Arc<AtomicBool>,
     #[cfg(not(target_os = "windows"))]
     last_passthrough: Option<bool>,
     last_window_bounds: Option<Rect>,
@@ -81,8 +78,6 @@ impl OverlayHudApp {
         let hit_tester = Arc::new(RwLock::new(HitTester::new()));
         let hover_rects = Arc::new(RwLock::new(Vec::new()));
         let cursor_phys = Arc::new(RwLock::new(None));
-        #[cfg(target_os = "windows")]
-        let pointer_down = Arc::new(AtomicBool::new(false));
         let (cmd_tx, cmd_rx) = mpsc::unbounded_channel();
 
         let egui_ctx = cc.egui_ctx.clone();
@@ -96,15 +91,25 @@ impl OverlayHudApp {
 
         #[cfg(target_os = "windows")]
         {
-            let repaint_ctx = cc.egui_ctx.clone();
-            crate::win32_surface::spawn_cursor_passthrough_watcher(
-                "Ability Draft Plus Overlay",
-                hit_tester.clone(),
-                hover_rects.clone(),
-                cursor_phys.clone(),
-                pointer_down.clone(),
-                Arc::new(move || repaint_ctx.request_repaint()),
-            );
+            use raw_window_handle::{HasWindowHandle as _, RawWindowHandle};
+            match cc.window_handle().map(|h| h.as_raw()) {
+                Ok(RawWindowHandle::Win32(win32)) => {
+                    let repaint_ctx = cc.egui_ctx.clone();
+                    crate::win32_surface::spawn_cursor_passthrough_watcher(
+                        win32.hwnd.get(),
+                        hit_tester.clone(),
+                        hover_rects.clone(),
+                        cursor_phys.clone(),
+                        Arc::new(move || repaint_ctx.request_repaint()),
+                    );
+                }
+                Ok(other) => {
+                    tracing::warn!(?other, "Unexpected non-Win32 raw window handle");
+                }
+                Err(err) => {
+                    tracing::warn!(%err, "Failed to read raw Win32 HWND from CreationContext");
+                }
+            }
         }
 
         Self {
@@ -114,8 +119,6 @@ impl OverlayHudApp {
             hit_tester,
             hover_rects,
             cursor_phys,
-            #[cfg(target_os = "windows")]
-            pointer_down,
             #[cfg(not(target_os = "windows"))]
             last_passthrough: None,
             last_window_bounds: None,
@@ -143,14 +146,20 @@ impl OverlayHudApp {
             return;
         };
         let ppp = ctx.pixels_per_point().max(0.5);
+        #[cfg(target_os = "windows")]
+        if rect.width > 1 {
+            // Always keep Windows DWM click-through forwarding intact by shrinking 1px off width.
+            rect.width = rect.width.saturating_sub(1);
+        }
+        #[cfg(not(target_os = "windows"))]
         if let Some(monitor) = ctx.input(|i| i.viewport().monitor_size) {
             let mon_phys_w = (monitor.x * ppp).round() as u32;
             let mon_phys_h = (monitor.y * ppp).round() as u32;
             if rect.width >= mon_phys_w && rect.height >= mon_phys_h {
-                // Keep Windows DWM click-through forwarding intact by shrinking 1px off full width.
                 rect.width = rect.width.saturating_sub(1);
             }
         }
+        info!(?rect, ppp, "Syncing overlay window bounds to dota_window");
         ctx.send_viewport_cmd(egui::ViewportCommand::Maximized(false));
         ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(Pos2::new(
             rect.x as f32 / ppp,
@@ -162,19 +171,17 @@ impl OverlayHudApp {
         )));
     }
 
-    fn sync_passthrough(&mut self, ctx: &egui::Context, _ppp: f32) {
+    fn sync_passthrough(&mut self, _ctx: &egui::Context, _ppp: f32) {
         #[cfg(target_os = "windows")]
         {
             // Never call ViewportCommand::MousePassthrough on Windows: winit strips WS_EX_LAYERED
             // when IGNORE_CURSOR_EVENT turns off, turning the transparent surface solid white.
             // win32_surface::spawn_cursor_passthrough_watcher toggles WS_EX_TRANSPARENT directly.
-            let down = ctx.input(|i| i.pointer.any_down());
-            self.pointer_down.store(down, Ordering::Relaxed);
         }
 
         #[cfg(not(target_os = "windows"))]
         {
-            let os_hit = ctx
+            let os_hit = _ctx
                 .input(|i| i.pointer.latest_pos())
                 .and_then(|p| {
                     let px = (p.x * _ppp).round() as i32;
@@ -185,10 +192,10 @@ impl OverlayHudApp {
                         .map(|guard| guard.is_interactive(px, py))
                 })
                 .unwrap_or(false);
-            let interactive = os_hit || ctx.egui_wants_pointer_input();
+            let interactive = os_hit || _ctx.egui_wants_pointer_input();
             let passthrough = !interactive;
             if self.last_passthrough != Some(passthrough) {
-                ctx.send_viewport_cmd(egui::ViewportCommand::MousePassthrough(passthrough));
+                _ctx.send_viewport_cmd(egui::ViewportCommand::MousePassthrough(passthrough));
                 self.last_passthrough = Some(passthrough);
             }
         }

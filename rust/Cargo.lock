@@ -188,6 +188,7 @@ dependencies = [
  "ad-protocol",
  "anyhow",
  "eframe",
+ "raw-window-handle",
  "reqwest",
  "serde_json",
  "tokio",
