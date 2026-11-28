@@ -110,7 +110,33 @@ impl OverlayHudApp {
                     tracing::warn!(%err, "Failed to read raw Win32 HWND from CreationContext");
                 }
             }
+
+            let scan_tx = cmd_tx.clone();
+            let scan_ctx = cc.egui_ctx.clone();
+            let reset_tx = cmd_tx.clone();
+            let reset_ctx = cc.egui_ctx.clone();
+            crate::win32_surface::spawn_global_hotkeys(
+                Arc::new(move || {
+                    let _ = scan_tx.send(OverlayCommand::TriggerScan { is_initial: true });
+                    scan_ctx.request_repaint();
+                }),
+                Arc::new(move || {
+                    let _ = reset_tx.send(OverlayCommand::ResetDraft);
+                    reset_ctx.request_repaint();
+                }),
+            );
         }
+
+        let initial_applied = {
+            #[cfg(target_os = "windows")]
+            {
+                Some(crate::win32_surface::initial_overlay_bounds_phys())
+            }
+            #[cfg(not(target_os = "windows"))]
+            {
+                None
+            }
+        };
 
         Self {
             snapshot,
@@ -121,7 +147,7 @@ impl OverlayHudApp {
             cursor_phys,
             #[cfg(not(target_os = "windows"))]
             last_passthrough: None,
-            last_window_bounds: None,
+            last_window_bounds: initial_applied,
             show_op_drawer: false,
             show_trap_drawer: false,
             controls_area_id: egui::Id::unique("ad_controls_bar"),
@@ -138,10 +164,6 @@ impl OverlayHudApp {
     }
 
     fn sync_window_bounds(&mut self, ctx: &egui::Context, target: Option<Rect>) {
-        if self.last_window_bounds == target {
-            return;
-        }
-        self.last_window_bounds = target;
         let Some(mut rect) = target else {
             return;
         };
@@ -159,7 +181,12 @@ impl OverlayHudApp {
                 rect.width = rect.width.saturating_sub(1);
             }
         }
+        if self.last_window_bounds == Some(rect) {
+            return;
+        }
+        self.last_window_bounds = Some(rect);
         info!(?rect, ppp, "Syncing overlay window bounds to dota_window");
+        #[cfg(not(target_os = "windows"))]
         ctx.send_viewport_cmd(egui::ViewportCommand::Maximized(false));
         ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(Pos2::new(
             rect.x as f32 / ppp,
@@ -726,14 +753,29 @@ impl eframe::App for OverlayHudApp {
 }
 
 pub fn run_hud(daemon_url: String) -> anyhow::Result<()> {
+    let mut viewport = egui::ViewportBuilder::default()
+        .with_title("Ability Draft Plus Overlay")
+        .with_transparent(true)
+        .with_decorations(false)
+        .with_always_on_top()
+        .with_mouse_passthrough(true);
+
+    #[cfg(target_os = "windows")]
+    {
+        let (x, y, w, h) = crate::win32_surface::initial_overlay_bounds_logical();
+        viewport = viewport
+            .with_position(Pos2::new(x, y))
+            .with_inner_size(Vec2::new(w, h))
+            .with_active(false)
+            .with_taskbar(false);
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        viewport = viewport.with_maximized(true);
+    }
+
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default()
-            .with_title("Ability Draft Plus Overlay")
-            .with_transparent(true)
-            .with_decorations(false)
-            .with_always_on_top()
-            .with_mouse_passthrough(true)
-            .with_maximized(true),
+        viewport,
         renderer: eframe::Renderer::Wgpu,
         ..Default::default()
     };

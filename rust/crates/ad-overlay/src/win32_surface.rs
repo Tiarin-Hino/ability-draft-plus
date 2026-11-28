@@ -9,19 +9,23 @@ use windows::{
     core::w,
     Win32::{
         Foundation::{COLORREF, HWND, LPARAM, LRESULT, POINT, WPARAM},
-        Graphics::Gdi::{CreateSolidBrush, ScreenToClient},
+        Graphics::Gdi::{CreateSolidBrush, GetDC, GetDeviceCaps, ReleaseDC, ScreenToClient, LOGPIXELSX},
         System::LibraryLoader::GetModuleHandleW,
         UI::{
-            Input::KeyboardAndMouse::{GetAsyncKeyState, VK_LBUTTON},
+            Input::KeyboardAndMouse::{
+                GetAsyncKeyState, RegisterHotKey, UnregisterHotKey, HOT_KEY_MODIFIERS, MOD_CONTROL,
+                MOD_NOREPEAT, MOD_SHIFT, VK_LBUTTON,
+            },
             WindowsAndMessaging::{
                 CreateWindowExW, DefWindowProcW, DispatchMessageW, GetCursorPos, GetMessageW,
-                GetWindowLongPtrW, IsWindow, PostQuitMessage, RegisterClassW,
+                GetSystemMetrics, GetWindowLongPtrW, IsWindow, PostQuitMessage, RegisterClassW,
                 SetLayeredWindowAttributes, SetWindowLongPtrW, SetWindowPos, ShowWindow,
                 TranslateMessage, WindowFromPoint, CW_USEDEFAULT, GWLP_USERDATA, GWL_EXSTYLE,
-                HTCLIENT, HTTRANSPARENT, LWA_ALPHA, MA_NOACTIVATE, MSG, SWP_FRAMECHANGED,
-                SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, SW_SHOWNOACTIVATE,
-                WM_DESTROY, WM_MOUSEACTIVATE, WM_NCHITTEST, WNDCLASSW, WS_EX_LAYERED,
-                WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_EX_TRANSPARENT, WS_POPUP,
+                HTCLIENT, HTTRANSPARENT, LWA_ALPHA, MA_NOACTIVATE, MSG, SM_CXSCREEN, SM_CYSCREEN,
+                SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER,
+                SW_SHOWNOACTIVATE, WM_DESTROY, WM_HOTKEY, WM_MOUSEACTIVATE, WM_NCHITTEST,
+                WNDCLASSW, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST,
+                WS_EX_TRANSPARENT, WS_POPUP,
             },
         },
     },
@@ -34,6 +38,42 @@ fn point_in_rect(x: i32, y: i32, r: &Rect) -> bool {
         && y >= r.y
         && i64::from(x) < i64::from(r.x) + i64::from(r.width)
         && i64::from(y) < i64::from(r.y) + i64::from(r.height)
+}
+
+/// Returns the initial primary-monitor physical bounds (shrunk 1px off width for DWM click-through).
+pub fn initial_overlay_bounds_phys() -> Rect {
+    let (w, h) = unsafe {
+        let cx = GetSystemMetrics(SM_CXSCREEN).max(640);
+        let cy = GetSystemMetrics(SM_CYSCREEN).max(480);
+        ((cx - 1).max(640) as u32, cy as u32)
+    };
+    Rect {
+        x: 0,
+        y: 0,
+        width: w,
+        height: h,
+    }
+}
+
+/// Returns initial `(x, y, width, height)` in logical points so `winit` creates the overlay
+/// at full monitor dimensions BEFORE `WS_EX_LAYERED` is applied (preventing frozen 800x600 hit-test bounds).
+pub fn initial_overlay_bounds_logical() -> (f32, f32, f32, f32) {
+    let phys = initial_overlay_bounds_phys();
+    let scale = unsafe {
+        let hdc = GetDC(None);
+        if hdc.is_invalid() {
+            1.0
+        } else {
+            let dpi = GetDeviceCaps(Some(hdc), LOGPIXELSX);
+            let _ = ReleaseDC(None, hdc);
+            if dpi > 0 {
+                (dpi as f32 / 96.0).max(0.5)
+            } else {
+                1.0
+            }
+        }
+    };
+    (0.0, 0.0, phys.width as f32 / scale, phys.height as f32 / scale)
 }
 
 /// Polls OS cursor position independently of `WM_MOUSEMOVE` (which Windows stops sending when
@@ -97,10 +137,12 @@ pub fn spawn_cursor_passthrough_watcher(
                 .and_then(|rects| rects.iter().position(|r| point_in_rect(client_pt.x, client_pt.y, r)));
 
             let ex_before = unsafe { GetWindowLongPtrW(hwnd, GWL_EXSTYLE) };
+            // Keep WS_EX_LAYERED | WS_EX_NOACTIVATE permanently set so wgpu transparent DWM
+            // composition never exposes a white backdrop; toggle ONLY WS_EX_TRANSPARENT.
             let next_ex = if interactive {
                 (ex_before | layered_bit | noactivate_bit) & !transparent_bit
             } else {
-                ex_before | layered_bit | noactivate_bit | transparent_bit
+                ex_before | layered_bit | transparent_bit | noactivate_bit
             };
             let mut swp_ok = true;
             if next_ex != ex_before {
@@ -161,6 +203,55 @@ pub fn spawn_cursor_passthrough_watcher(
                 if let Ok(mut guard) = cursor_phys.write() {
                     *guard = cur_pos;
                 }
+            }
+        }
+    });
+}
+
+const HOTKEY_SCAN_ID: i32 = 1;
+const HOTKEY_RESET_ID: i32 = 2;
+
+/// Registers global Windows hotkeys (`Ctrl+Shift+S` scan, `Ctrl+Shift+R` reset) so triggers work
+/// even while Dota 2 holds keyboard focus and the overlay stays non-activating.
+pub fn spawn_global_hotkeys(
+    on_scan: Arc<dyn Fn() + Send + Sync>,
+    on_reset: Arc<dyn Fn() + Send + Sync>,
+) {
+    std::thread::spawn(move || {
+        let mods: HOT_KEY_MODIFIERS = MOD_CONTROL | MOD_SHIFT | MOD_NOREPEAT;
+        let scan_ok = unsafe { RegisterHotKey(None, HOTKEY_SCAN_ID, mods, b'S' as u32) }.is_ok();
+        let reset_ok = unsafe { RegisterHotKey(None, HOTKEY_RESET_ID, mods, b'R' as u32) }.is_ok();
+        if scan_ok {
+            info!("Registered global Windows hotkey Ctrl+Shift+S (Scan)");
+        } else {
+            warn!("Failed to register global hotkey Ctrl+Shift+S (already in use)");
+        }
+        if reset_ok {
+            info!("Registered global Windows hotkey Ctrl+Shift+R (Reset)");
+        } else {
+            warn!("Failed to register global hotkey Ctrl+Shift+R (already in use)");
+        }
+        if !scan_ok && !reset_ok {
+            return;
+        }
+
+        let mut msg = MSG::default();
+        while unsafe { GetMessageW(&mut msg, None, 0, 0) }.as_bool() {
+            if msg.message == WM_HOTKEY {
+                match msg.wParam.0 as i32 {
+                    HOTKEY_SCAN_ID => on_scan(),
+                    HOTKEY_RESET_ID => on_reset(),
+                    _ => {}
+                }
+            }
+        }
+
+        unsafe {
+            if scan_ok {
+                let _ = UnregisterHotKey(None, HOTKEY_SCAN_ID);
+            }
+            if reset_ok {
+                let _ = UnregisterHotKey(None, HOTKEY_RESET_ID);
             }
         }
     });
